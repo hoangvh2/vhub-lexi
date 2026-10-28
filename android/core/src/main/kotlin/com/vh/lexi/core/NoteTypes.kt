@@ -113,18 +113,18 @@ private fun firstExampleWith(n: Note): Pair<String, Cloze>? {
 
 private fun meaningLine(n: Note) = n.f("vi").str().ifEmpty { n.f("en").str() }
 
-private fun detailBlocks(n: Note, l: CardLayout, skipExamples: Boolean = false): List<Block> = buildList {
-    val vi = n.f("vi").str()
-    val en = n.f("en").str()
+private fun detailBlocks(n: Note, l: CardLayout, skipExamples: Boolean = false, skipVi: Boolean = false, skipEn: Boolean = false): List<Block> = buildList {
+    val vi = if (skipVi) "" else n.f("vi").str()
+    val en = if (skipEn) "" else n.f("en").str()
     if (l.showVi && vi.isNotEmpty()) add(Block.Text(vi, "strong"))
     if (l.showEn && en.isNotEmpty()) add(Block.Text(en, "muted"))
     if (l.showExamples && !skipExamples) n.f("examples").items().forEach { add(Block.Quote(it)) }
     if (l.showMnemonic && n.f("mnemonic").str().isNotEmpty()) add(Block.Text(n.f("mnemonic").str(), "muted"))
 }
 
-private fun wordHeader(n: Note, l: CardLayout): List<Block> = buildList {
+private fun wordHeader(n: Note, l: CardLayout, skipPos: Boolean = false): List<Block> = buildList {
     add(Block.Title(n.f("word").str()))
-    if (l.showPos && n.f("pos").str().isNotEmpty()) add(Block.Badge(n.f("pos").str()))
+    if (l.showPos && !skipPos && n.f("pos").str().isNotEmpty()) add(Block.Badge(n.f("pos").str()))
     if (l.showIpa && n.f("ipa").str().isNotEmpty()) add(Block.Ipa(n.f("ipa").str()))
     add(Block.Speak(n.f("word").str()))
 }
@@ -160,8 +160,9 @@ private object Recall : TemplateDef {
         if (vi.isNotEmpty()) add(Block.Text(vi, "strong")) else if (en.isNotEmpty()) add(Block.Text(en, "strong"))
         if (vi.isNotEmpty() && en.isNotEmpty() && layout.showEn) add(Block.Text(en, "muted"))
     }
+    // The front stays on screen above the back once revealed; its badge is not repeated.
     override fun back(note: Note, layout: CardLayout) = buildList<Block> {
-        addAll(wordHeader(note, layout))
+        addAll(wordHeader(note, layout, skipPos = true))
         if (layout.showExamples) note.f("examples").items().forEach { add(Block.Quote(it)) }
     }
     override fun expected(note: Note) = listOf(note.f("word").str())
@@ -180,10 +181,12 @@ private object ClozeTemplate : TemplateDef {
         if (hint.isNotEmpty()) add(Block.Text(hint, "muted"))
         if (layout.showPos && note.f("pos").str().isNotEmpty()) add(Block.Badge(note.f("pos").str()))
     }
+    // The front (blanked sentence, hint, badge) stays on screen above the back once revealed, so the
+    // back adds only the word and what the hint lacked.
     override fun back(note: Note, layout: CardLayout) = buildList<Block> {
-        firstExampleWith(note)?.let { add(Block.Quote(it.first)) }
-        addAll(wordHeader(note, layout))
-        addAll(detailBlocks(note, layout, skipExamples = true))
+        val usedVi = note.f("vi").str().isNotEmpty()
+        addAll(wordHeader(note, layout, skipPos = true))
+        addAll(detailBlocks(note, layout, skipExamples = true, skipVi = usedVi, skipEn = !usedVi))
     }
     override fun expected(note: Note): List<String> {
         val c = firstExampleWith(note)
