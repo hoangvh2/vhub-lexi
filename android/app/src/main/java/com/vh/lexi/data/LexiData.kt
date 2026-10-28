@@ -32,7 +32,7 @@ import java.util.UUID
 
 data class Reviewed(val prev: Card, val next: Card, val logId: Id, val delta: DailyDelta)
 
-enum class SyncState { OFF, LOADING, SYNCED, PENDING, OFFLINE, DENIED, ERROR }
+typealias SyncState = com.vh.lexi.core.SyncState
 
 /**
  * The app's data: Room is what every screen reads; Firestore (when signed in) is kept in step by [CloudSync].

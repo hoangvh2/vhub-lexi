@@ -6,17 +6,20 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.WriteBatch
 import com.vh.lexi.core.Card
 import com.vh.lexi.core.DailyDelta
 import com.vh.lexi.core.ReviewLog
+import com.vh.lexi.core.SyncStatus
 import com.vh.lexi.data.Col
 import com.vh.lexi.data.Doc
 import com.vh.lexi.data.LexiData
 import com.vh.lexi.data.SyncState
 import com.vh.lexi.data.toDoc
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,9 +50,7 @@ class CloudSync(
     private val listeners = mutableListOf<ListenerRegistration>()
     private val applying = Mutex()
     private val merged = HashSet<String>()
-    private var pendingWrites = false
-    private var fromCache = true
-    private var failed = false
+    private val status = SyncStatus()
 
     private fun col(name: String) = db.collection("users").document(uid!!).collection(name)
 
@@ -58,18 +59,15 @@ class CloudSync(
         stop()
         this.uid = uid
         merged.clear()
-        failed = false
-        _state.value = SyncState.LOADING
+        _state.value = status.start()
         data.cloud = this
         for ((name, limit) in LIMITS) {
-            listeners += col(name).limit(limit).addSnapshotListener { snap, err ->
+            // INCLUDE: the server acknowledging a write, or confirming the cached list, changes only metadata.
+            // Without it those snapshots never arrive: the pill stays "Đang đồng bộ…" and local-only docs never upload.
+            listeners += col(name).limit(limit).addSnapshotListener(MetadataChanges.INCLUDE) { snap, err ->
                 if (err != null) return@addSnapshotListener fail(err)
                 if (snap == null) return@addSnapshotListener
-                if (name == Col.CARDS) {
-                    pendingWrites = snap.metadata.hasPendingWrites()
-                    fromCache = snap.metadata.isFromCache
-                    publish()
-                }
+                if (name == Col.CARDS) publish { status.onSnapshot(snap.metadata.hasPendingWrites(), snap.metadata.isFromCache, it) }
                 val changes = snap.documentChanges.filter { !it.document.metadata.hasPendingWrites() }
                 val upserts = changes.filter { it.type != DocumentChange.Type.REMOVED }.map { it.document.data }
                 val removes = changes.filter { it.type == DocumentChange.Type.REMOVED }.map { it.document.id }
@@ -92,7 +90,7 @@ class CloudSync(
         listeners.clear()
         uid = null
         if (data.cloud === this) data.cloud = null
-        _state.value = SyncState.OFF
+        _state.value = status.stop()
     }
 
     private suspend fun apply(name: String, upserts: List<Doc>, removes: List<String>, serverIds: Set<String>, authoritative: Boolean) {
@@ -105,24 +103,20 @@ class CloudSync(
         }
     }
 
-    private fun publish() {
-        _state.value = when {
-            uid == null -> SyncState.OFF
-            failed -> SyncState.ERROR
-            pendingWrites -> SyncState.PENDING
-            fromCache -> SyncState.OFFLINE
-            else -> SyncState.SYNCED
-        }
+    @Synchronized
+    private fun publish(update: (now: Long) -> SyncState) {
+        if (uid == null) return
+        _state.value = update(System.currentTimeMillis())
     }
 
     private fun fail(e: Exception) {
         Log.w(TAG, "Firestore error", e)
-        if ((e as? FirebaseFirestoreException)?.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
-            _state.value = SyncState.DENIED
-            onDenied()
-        } else {
-            failed = true
-            publish()
+        val denied = (e as? FirebaseFirestoreException)?.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+        publish { status.onError(denied, it) }
+        if (denied) onDenied()
+        else scope.launch {
+            delay(SyncStatus.ERROR_HOLD_MS + 100)
+            publish(status::publish)
         }
     }
 
