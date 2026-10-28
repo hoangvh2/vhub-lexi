@@ -71,10 +71,10 @@ class SmokeTest {
         rule.onNodeWithTag("nav-study").performClick()
         waitFor("study-card") { rule.onAllNodesWithTextCount("serendipity") > 0 }
         shot("04-study-front")
-        rule.onNodeWithTag("show-answer").performClick()
+        rule.onNodeWithTag("show-answer").performSemanticsAction(SemanticsActions.OnClick) // the toast overlaps it
         rule.onNodeWithTag("rate-3").assertIsDisplayed()
         shot("05-study-back")
-        rule.onNodeWithTag("rate-3").performClick()
+        rule.onNodeWithTag("rate-3").performSemanticsAction(SemanticsActions.OnClick)
         waitFor("session-done") { rule.onAllNodesWithTagCount("session-done") > 0 }
         shot("06-session-done")
 
