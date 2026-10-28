@@ -1,10 +1,12 @@
 package com.vh.lexi
 
-import android.graphics.Bitmap
+import android.os.ParcelFileDescriptor
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -13,24 +15,39 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.ui.MainActivity
 import org.junit.Rule
 import org.junit.Test
-import java.io.File
-import java.io.FileOutputStream
 
 /**
  * End-to-end on a real (emulated) device, phone-only mode: add a word through the offline dictionary, study it,
- * look at every screen. Screenshots are written to the app's external files dir (/sdcard/Android/data/com.vh.lexi/files/lexi-shots) for review (CI publishes them).
+ * look at every screen. Screenshots are written to /data/local/tmp/lexi-shots for review (CI publishes them).
  */
 @OptIn(ExperimentalTestApi::class)
 class SmokeTest {
+    private companion object { const val SHOTS = "/data/local/tmp/lexi-shots" }
+
     @get:Rule
     val rule = createAndroidComposeRule<MainActivity>()
 
+    // The shell (uid 2000) owns /data/local/tmp, so the screenshots are taken through UiAutomation's shell and
+    // survive the uninstall that Gradle does after the run; CI pulls them from there.
+    private fun sh(cmd: String) {
+        val pfd = InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd)
+        ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes() }
+    }
+
     private fun shot(name: String) {
         rule.waitForIdle()
-        val bmp: Bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
-        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
-        val dir = File(ctx.getExternalFilesDir(null), "lexi-shots").also { it.mkdirs() }
-        FileOutputStream(File(dir, "$name.png")).use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
+        sh("mkdir -p $SHOTS")
+        sh("screencap -p $SHOTS/$name.png")
+    }
+
+    /** waitUntil that leaves a screenshot and the semantics tree behind when it times out. */
+    private fun waitFor(label: String, cond: () -> Boolean) {
+        try {
+            rule.waitUntil(10_000, cond)
+        } catch (e: Throwable) {
+            shot("fail-$label")
+            throw AssertionError("timeout waiting for $label\n" + rule.onRoot().printToString(maxDepth = 12).take(6000), e)
+        }
     }
 
     @Test
@@ -40,7 +57,7 @@ class SmokeTest {
 
         rule.onNodeWithTag("nav-add").performClick()
         rule.onNodeWithTag("word-input").performTextInput("serendipity")
-        rule.waitUntil(10_000) { rule.onAllNodesWithTextCount("good luck in making") > 0 }
+        waitFor("lookup") { rule.onAllNodesWithTextCount("good luck in making") > 0 }
         shot("02-add-lookup")
 
         rule.onNodeWithTag("vi-input").performTextInput("sự tình cờ may mắn")
@@ -48,17 +65,17 @@ class SmokeTest {
         rule.onNodeWithTag("save-word").performClick()
 
         rule.onNodeWithTag("nav-study").performClick()
-        rule.waitUntil(10_000) { rule.onAllNodesWithTextCount("serendipity") > 0 }
+        waitFor("study-card") { rule.onAllNodesWithTextCount("serendipity") > 0 }
         shot("04-study-front")
         rule.onNodeWithTag("show-answer").performClick()
         rule.onNodeWithTag("rate-3").assertIsDisplayed()
         shot("05-study-back")
         rule.onNodeWithTag("rate-3").performClick()
-        rule.waitUntil(10_000) { rule.onAllNodesWithTagCount("session-done") > 0 }
+        waitFor("session-done") { rule.onAllNodesWithTagCount("session-done") > 0 }
         shot("06-session-done")
 
         rule.onNodeWithTag("nav-library").performClick()
-        rule.waitUntil(10_000) { rule.onAllNodesWithTextCount("serendipity") > 0 }
+        waitFor("library-item") { rule.onAllNodesWithTextCount("serendipity") > 0 }
         shot("07-library")
         rule.onNodeWithTag("nav-stats").performClick()
         shot("08-stats")

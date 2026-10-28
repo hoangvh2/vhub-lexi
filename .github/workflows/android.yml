@@ -96,7 +96,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
           working-directory: android
-          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest; status=$?; adb pull /sdcard/Android/data/com.vh.lexi/files/lexi-shots screenshots || true; exit $status
+          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest; status=$?; adb pull /data/local/tmp/lexi-shots screenshots || true; exit $status
       - name: Publish screenshots for review (also on failure)
         if: always() && github.event_name == 'push'
         run: |
