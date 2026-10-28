@@ -18,6 +18,7 @@ import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 import { arpabetToIpa } from "../../shared/ipa.ts";
 import { parseWordNet, type WnWord } from "./wordnet.ts";
 import { parseCmudict } from "./cmudict.ts";
@@ -127,7 +128,7 @@ async function main() {
   // Report.
   let raw = 0;
   for (const f of readdirSync(outDir)) raw += readFileSync(join(outDir, f)).length;
-  const gz = execFileSync("sh", ["-c", `cat ${outDir}/*.json | gzip -9 | wc -c`]).toString().trim();
+  const gz = gzipSync(Buffer.concat(readdirSync(outDir).filter((f) => f.endsWith(".json")).sort().map((f) => readFileSync(join(outDir, f)))), { level: 9 }).length;
   console.log(JSON.stringify({ version, words: entries.length, withIpa, shards: payload.size, rawBytes: raw, gzipBytes: Number(gz) }, null, 2));
 
   if (flag("--copy-web")) {
