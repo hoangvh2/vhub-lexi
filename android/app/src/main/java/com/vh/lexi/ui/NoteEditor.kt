@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -22,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.vh.lexi.core.FieldValue
 import com.vh.lexi.core.Note
@@ -59,7 +59,10 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
         onDismissRequest = onClose,
         title = { Text("Sửa từ") },
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState()).heightIn(max = 460.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // AlertDialog already bounds the text slot to the room left by the title and buttons (also when the
+            // keyboard shrinks the window), so the form only needs to scroll. A heightIn after verticalScroll would
+            // clip the content instead of the viewport and leave nothing to scroll.
+            Column(Modifier.verticalScroll(rememberScrollState()).testTag("note-editor-form"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 for (f in def.fields) {
                     OutlinedTextField(
                         value = texts[f.key].orEmpty(),
@@ -81,7 +84,7 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
                         }
                     }
                 }
-                OutlinedTextField(value = tags, onValueChange = { tags = it }, label = { Text("Thẻ gắn (phân cách bằng dấu phẩy)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = tags, onValueChange = { tags = it }, label = { Text("Thẻ gắn (phân cách bằng dấu phẩy)") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("note-editor-tags"))
                 if (cards.isNotEmpty()) {
                     Text("Thẻ ôn tập", style = MaterialTheme.typography.labelMedium, color = Lexi.colors.muted)
                     for (c in cards) {
@@ -101,7 +104,7 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
             }
         },
         confirmButton = {
-            Button(enabled = valid, onClick = {
+            Button(enabled = valid, modifier = Modifier.testTag("note-editor-save"), onClick = {
                 // A field the user edited is no longer "AI": keep the label only on untouched values.
                 val untouched = note.aiFields.filter { k -> value(k) == note.fields[k] || (value(k) is FieldValue.Items && note.fields[k] is FieldValue.Items && (value(k) as FieldValue.Items).value.map { it.trim() }.filter { it.isNotEmpty() } == (note.fields[k] as FieldValue.Items).value) }
                 scope.launch {
