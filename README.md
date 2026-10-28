@@ -1,6 +1,6 @@
 # VH Lexi
 
-Học từ vựng tiếng Anh bằng flashcard và lặp lại ngắt quãng (FSRS). Gõ một từ, thẻ tự điền phiên âm, loại từ, định nghĩa và ví dụ từ từ điển **offline**; nghĩa tiếng Việt và ví dụ tự nhiên có thể do AI điền. Dữ liệu đồng bộ giữa **app Android native** và **web** (`lexi.vhub.id.vn`) qua Firebase.
+Học từ vựng tiếng Anh bằng flashcard và lặp lại ngắt quãng (FSRS). Gõ một từ, thẻ tự điền phiên âm, loại từ, định nghĩa, ví dụ và gợi ý nghĩa tiếng Việt từ từ điển **offline**; AI có thể điền thêm nghĩa, ví dụ tự nhiên và mẹo nhớ. Dữ liệu đồng bộ giữa **app Android native** và **web** (`lexi.vhub.id.vn`) qua Firebase.
 
 Thiết kế để mở rộng sang TOEIC / IELTS: mọi nội dung là một *loại ghi chú* (note type) đăng ký trong một registry, xem [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -8,7 +8,7 @@ Thiết kế để mở rộng sang TOEIC / IELTS: mọi nội dung là một *l
 
 | Phần | Trạng thái | Kiểm chứng |
 |---|---|---|
-| Từ điển offline (CMUdict + WordNet) | Chạy được | Test đơn vị, đo trên bản build thật |
+| Từ điển offline (CMUdict + WordNet + nghĩa Việt từ Wiktionary) | Chạy được | Test đơn vị, đo trên bản build thật |
 | Web (Preact PWA) | Chạy được, offline | Unit, e2e Playwright dưới đúng CSP production, CI |
 | Backend Firebase (rules, `enrich`) | Chạy trên emulator | Rules test, CloudRepo trên emulator Auth + Firestore, CI |
 | Terraform + `deploy.mjs` | `terraform validate` đạt | **Chưa `apply` lên project thật** |
@@ -20,7 +20,7 @@ Chi tiết, rủi ro và việc còn lại: [docs/STATUS.md](docs/STATUS.md).
 ## Chạy thử nhanh (web, không cần Firebase)
 
 ```bash
-node tools/dict/build.ts --copy-web     # tải CMUdict + WordNet, dựng gói từ điển (~6 MB nén)
+node tools/dict/build.ts --copy-web     # tải CMUdict + WordNet, dựng gói từ điển (~7,6 MB nén)
 cd web && npm ci && npm run dev         # http://localhost:5173, dữ liệu lưu trong IndexedDB
 ```
 

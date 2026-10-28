@@ -4,9 +4,6 @@ name: Dictionary - Vietnamese meanings
 # it to the branch the workflow runs on. Run it by hand (Actions tab) when a fresher extract is wanted.
 on:
   workflow_dispatch:
-  push:
-    branches: [spike/wiktionary-vi]
-    paths: ["tools/dict/wiktionary.ts", "tools/dict/extract-vi.ts", ".github/workflows/dict-vi.yml"]
 
 permissions:
   contents: write
