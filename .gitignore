@@ -1,0 +1,39 @@
+node_modules/
+dist/
+dist-dict/
+.cache/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Terraform: state contains secrets; tfvars contains emails. Never commit.
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/terraform.tfvars
+infra/*.auto.tfvars
+infra/.terraform.lock.hcl.bak
+infra/tfplan
+
+# Generated
+firestore.rules
+web/public/dict/
+web/.vite/
+functions/lib/
+.firebase/
+firebase-debug.log
+ui-debug.log
+
+# Android
+android/.gradle/
+android/build/
+android/**/build/
+android/local.properties
+android/app/src/main/assets/dict/
+*.apk
+*.aab
+.idea/
+*-debug.log
+infra/.build/

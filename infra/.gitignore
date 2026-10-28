@@ -1,0 +1,12 @@
+# Terraform keeps your allowlist, project id and (in the state) the Gemini key: none of it is committed.
+*.tfvars
+!terraform.tfvars.example
+*.tfstate
+*.tfstate.*
+.terraform/
+.build/
+crash.log
+*.auto.tfvars
+
+# The lock file is created by your own `terraform init` (it records hashes for your platform).
+.terraform.lock.hcl
