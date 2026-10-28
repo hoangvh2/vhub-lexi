@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CardState, dayId, nextDayStart, normalizePrefs, DEFAULT_PREFS, type Card, type Note } from "@shared/model.ts";
-import { checkTyped, clozeSentence, suggestedRating, template, wantedTemplates } from "@shared/notetypes.ts";
+import { type Block, checkTyped, clozeSentence, suggestedRating, template, wantedTemplates } from "@shared/notetypes.ts";
 import { answer, formatInterval, makeScheduler, newCard, preview } from "../src/lib/scheduler.ts";
 import { buildQueue, pickNext } from "../src/lib/queue.ts";
 import { cardCounts, forecast, heatmap, level, retention, streak } from "../src/lib/stats.ts";
@@ -154,6 +154,24 @@ describe("note types", () => {
     const cloze = template("vocab", "cloze")!;
     expect(cloze.front(n, DEFAULT_PREFS.layout)[0]).toEqual({ k: "quote", text: "Children are often more _____ than adults." });
     expect(cloze.expected!(n)).toContain("resilient");
+  });
+  it("revealed card (front + back) shows each line once", () => {
+    // Study screens keep the front on screen and append the back once revealed.
+    const visible = (b: Block) => (b.k === "speak" ? null : `${b.k === "quote" ? "quote" : "line"}:${b.text.replace("_____", "")}`);
+    const fill = (b: Block) => (b.k === "quote" ? b.text : null);
+    for (const n of [note(), note({ vi: "" }), note({ vi: "", en: "" })]) {
+      for (const id of ["recognize", "recall", "cloze"]) {
+        const t = template("vocab", id)!;
+        if (!t.applies(n)) continue;
+        const front = t.front(n, DEFAULT_PREFS.layout);
+        const back = t.back(n, DEFAULT_PREFS.layout);
+        const shown = [...front, ...back].map(visible).filter(Boolean);
+        expect(new Set(shown).size, `${id} ${JSON.stringify(shown)}`).toBe(shown.length);
+        // The cloze sentence must not come back in full under its blanked copy.
+        const blanked = front.map(fill).filter((s): s is string => !!s?.includes("_____"));
+        for (const q of back.map(fill).filter(Boolean)) for (const s of blanked) expect(q).not.toBe(s.replace("_____", t.expected!(n)[0]));
+      }
+    }
   });
 });
 

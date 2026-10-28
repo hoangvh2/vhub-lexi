@@ -148,10 +148,10 @@ function meaningLine(note: Note): string {
   return str(note.fields.vi) || str(note.fields.en);
 }
 
-function detailBlocks(note: Note, l: CardLayout, opts: { skipExamples?: boolean } = {}): Block[] {
+function detailBlocks(note: Note, l: CardLayout, opts: { skipExamples?: boolean; skipVi?: boolean; skipEn?: boolean } = {}): Block[] {
   const out: Block[] = [];
-  const vi = str(note.fields.vi);
-  const en = str(note.fields.en);
+  const vi = opts.skipVi ? "" : str(note.fields.vi);
+  const en = opts.skipEn ? "" : str(note.fields.en);
   if (l.showVi && vi) out.push({ k: "text", text: vi, tone: "strong" });
   if (l.showEn && en) out.push({ k: "text", text: en, tone: "muted" });
   if (l.showExamples && !opts.skipExamples) for (const e of list(note.fields.examples)) out.push({ k: "quote", text: e });
@@ -159,9 +159,9 @@ function detailBlocks(note: Note, l: CardLayout, opts: { skipExamples?: boolean 
   return out;
 }
 
-function wordHeader(note: Note, l: CardLayout): Block[] {
+function wordHeader(note: Note, l: CardLayout, opts: { skipPos?: boolean } = {}): Block[] {
   const out: Block[] = [{ k: "title", text: str(note.fields.word) }];
-  if (l.showPos && str(note.fields.pos)) out.push({ k: "badge", text: str(note.fields.pos) });
+  if (l.showPos && !opts.skipPos && str(note.fields.pos)) out.push({ k: "badge", text: str(note.fields.pos) });
   if (l.showIpa && str(note.fields.ipa)) out.push({ k: "ipa", text: str(note.fields.ipa) });
   out.push({ k: "speak", text: str(note.fields.word) });
   return out;
@@ -198,7 +198,9 @@ const recall: TemplateDef = {
     if (vi && en && l.showEn) out.push({ k: "text", text: en, tone: "muted" });
     return out;
   },
-  back: (n, l) => [...wordHeader(n, l), ...(l.showExamples ? list(n.fields.examples).map((e): Block => ({ k: "quote", text: e })) : [])],
+  // The front stays on screen above the back once revealed, so the back adds only what is new:
+  // the part-of-speech badge is already on the front.
+  back: (n, l) => [...wordHeader(n, l, { skipPos: true }), ...(l.showExamples ? list(n.fields.examples).map((e): Block => ({ k: "quote", text: e })) : [])],
   expected: (n) => [str(n.fields.word)],
   speak: { back: (n) => str(n.fields.word) },
 };
@@ -218,13 +220,11 @@ const cloze: TemplateDef = {
     if (l.showPos && str(n.fields.pos)) out.push({ k: "badge", text: str(n.fields.pos) });
     return out;
   },
+  // The front (blanked sentence, hint, badge) stays on screen above the back once revealed, so the
+  // back must not repeat the sentence, the hint or the badge: it adds the word and what the hint lacked.
   back: (n, l) => {
-    const c = firstExampleWith(n);
-    const out: Block[] = [];
-    if (c) out.push({ k: "quote", text: c.sentence });
-    out.push(...wordHeader(n, l));
-    out.push(...detailBlocks(n, l, { skipExamples: true }));
-    return out;
+    const usedVi = !!str(n.fields.vi);
+    return [...wordHeader(n, l, { skipPos: true }), ...detailBlocks(n, l, { skipExamples: true, skipVi: usedVi, skipEn: !usedVi })];
   },
   expected: (n) => {
     const c = firstExampleWith(n);

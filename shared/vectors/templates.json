@@ -115,10 +115,6 @@
        "text": "resilient"
       },
       {
-       "k": "badge",
-       "text": "adjective"
-      },
-      {
        "k": "ipa",
        "text": "rɪˈzɪljənt"
       },
@@ -161,16 +157,8 @@
      ],
      "back": [
       {
-       "k": "quote",
-       "text": "Children are often more resilient than adults."
-      },
-      {
        "k": "title",
        "text": "resilient"
-      },
-      {
-       "k": "badge",
-       "text": "adjective"
       },
       {
        "k": "ipa",
@@ -179,11 +167,6 @@
       {
        "k": "speak",
        "text": "resilient"
-      },
-      {
-       "k": "text",
-       "text": "kiên cường",
-       "tone": "strong"
       },
       {
        "k": "text",
@@ -289,10 +272,6 @@
        "text": "resilient"
       },
       {
-       "k": "badge",
-       "text": "adjective"
-      },
-      {
        "k": "speak",
        "text": "resilient"
       }
@@ -323,25 +302,12 @@
      ],
      "back": [
       {
-       "k": "quote",
-       "text": "Children are often more resilient than adults."
-      },
-      {
        "k": "title",
        "text": "resilient"
       },
       {
-       "k": "badge",
-       "text": "adjective"
-      },
-      {
        "k": "speak",
        "text": "resilient"
-      },
-      {
-       "k": "text",
-       "text": "kiên cường",
-       "tone": "strong"
       },
       {
        "k": "text",
@@ -448,10 +414,6 @@
        "text": "resilient"
       },
       {
-       "k": "badge",
-       "text": "adjective"
-      },
-      {
        "k": "ipa",
        "text": "rɪˈzɪljənt"
       },
@@ -545,10 +507,6 @@
        "text": "resilient"
       },
       {
-       "k": "badge",
-       "text": "adjective"
-      },
-      {
        "k": "speak",
        "text": "resilient"
       }
@@ -653,10 +611,6 @@
        "text": "run"
       },
       {
-       "k": "badge",
-       "text": "verb"
-      },
-      {
        "k": "ipa",
        "text": "rɪˈzɪljənt"
       },
@@ -695,16 +649,8 @@
      ],
      "back": [
       {
-       "k": "quote",
-       "text": "She is running fast."
-      },
-      {
        "k": "title",
        "text": "run"
-      },
-      {
-       "k": "badge",
-       "text": "verb"
       },
       {
        "k": "ipa",
@@ -713,11 +659,6 @@
       {
        "k": "speak",
        "text": "run"
-      },
-      {
-       "k": "text",
-       "text": "able to recover quickly",
-       "tone": "muted"
       },
       {
        "k": "text",
@@ -812,10 +753,6 @@
        "text": "run"
       },
       {
-       "k": "badge",
-       "text": "verb"
-      },
-      {
        "k": "speak",
        "text": "run"
       }
@@ -846,16 +783,8 @@
      ],
      "back": [
       {
-       "k": "quote",
-       "text": "She is running fast."
-      },
-      {
        "k": "title",
        "text": "run"
-      },
-      {
-       "k": "badge",
-       "text": "verb"
       },
       {
        "k": "speak",
@@ -922,10 +851,6 @@
       }
      ],
      "back": [
-      {
-       "k": "quote",
-       "text": "Please look after the kids."
-      },
       {
        "k": "title",
        "text": "look after"
@@ -996,10 +921,6 @@
       }
      ],
      "back": [
-      {
-       "k": "quote",
-       "text": "Please look after the kids."
-      },
       {
        "k": "title",
        "text": "look after"
