@@ -14,13 +14,14 @@ Cập nhật theo kết quả CI và các lần chạy thật, không theo dự 
 | Function `enrich` | 13 test đơn vị (validate đầu vào/đầu ra, retry, hạn mức, allowlist, CORS); build bundle thành công |
 | Terraform | `fmt` + `validate` đạt (provider google 8.9) |
 | Lõi Kotlin (Android) | Test JVM phát lại vector do TypeScript sinh: FSRS 10 kịch bản, mẫu thẻ, cloze, kiểm tra đáp án, morphology, hàng đợi: khớp |
-| CI | Workflow `Web and backend` (cả job `terraform`) xanh trên nhánh |
+| App Android trên emulator | CI chạy APK debug trên emulator Android 15 (chế độ chỉ-lưu-trên-máy): thêm từ qua từ điển offline → ôn → thư viện → thống kê → cài đặt; chụp 9 màn hình, đã xem bằng mắt (release `android-ci-screens`) |
+| CI | `Web and backend` (cả job `terraform`) và `Android` (test lõi, lint, APK release, emulator) xanh trên nhánh; Playwright từng chập chờn do 2 race (phím bấm trước khi effect chạy; test offline đọc sớm), đã sửa gốc và CI xanh sau đó |
 
 Một lỗi thật do test tích hợp bắt được và đã sửa: `increment(-0)` bị Firestore lưu thành số thực, rules (`is int`) từ chối nên "hoàn tác" thẻ mới sẽ thất bại.
 
 ## Chưa kiểm chứng
 
-- **App Android chưa chạy trên máy hay emulator.** Chỉ có kết quả build/lint/test lõi từ CI (xem mục dưới). Giao diện Compose, đăng nhập Google (Credential Manager), đồng bộ thật, TTS: chưa thấy chạy.
+- **App Android mới chạy trên emulator ở chế độ cục bộ.** Chưa chạy trên máy thật; đăng nhập Google (Credential Manager), đồng bộ Firestore thật và TTS chưa thấy chạy. Smoke test chỉ phủ một luồng.
 - **Chưa `terraform apply`/deploy lên project Google thật**; chưa nối `lexi.vhub.id.vn`; chưa đăng nhập Google thật trên web.
 - **Chưa gọi Gemini thật**: tên model mặc định (`gemini-3.5-flash-lite`) lấy từ my-recap; chất lượng nghĩa tiếng Việt và chi phí chưa đo.
 - App Check bản web (reCAPTCHA Enterprise) chưa thử; Android không dùng App Check (xem ARCHITECTURE).
@@ -35,4 +36,5 @@ Một lỗi thật do test tích hợp bắt được và đã sửa: `increment
 4. Bài kiểm tra e2e chưa phủ đăng nhập (Auth emulator) và sửa ghi chú trên giao diện.
 5. Mẹo nhớ/ví dụ do AI sinh chỉ được lọc cơ học (phải chứa từ); chưa có bước kiểm chất lượng.
 6. TOEIC/IELTS: kiến trúc sẵn sàng (xem ARCHITECTURE.md) nhưng chưa có loại ghi chú nào ngoài `vocab`.
-7. Test e2e có một lần chập chờn trong lúc phát triển (đã gia cố, chưa tái hiện); theo dõi trên CI.
+7. Android: thông báo (snackbar) hiện ở đáy, che các nút chấm điểm khoảng 4 giây sau khi lưu từ; cần chuyển lên đầu màn hình.
+8. Android: trường hợp bàn phím che nút Lưu ở màn Thêm từ (người dùng phải cuộn); test phải gọi action thay vì chạm.
