@@ -17,9 +17,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Discover kaikki.org raw data files
+      - name: Build dictionary pack
+        run: node tools/dict/build.ts
+      - name: Download sources
         run: |
-          for p in https://kaikki.org/dictionary/rawdata.html https://kaikki.org/dictionary/English/index.html https://kaikki.org/viwiktionary/rawdata.html https://kaikki.org/viwiktionary/index.html; do
-            echo "== $p"
-            curl -sSL "$p" | grep -oE 'href="[^"]*(jsonl|gz|json)[^"]*"' | head -40 || true
-          done
+          mkdir -p /tmp/sp && cd /tmp/sp
+          curl -sSfL -o en.jsonl https://kaikki.org/dictionary/English/kaikki.org-dictionary-English.jsonl
+          curl -sSfL https://kaikki.org/viwiktionary/raw-wiktextract-data.jsonl.gz | gunzip > vi.jsonl
+          curl -sSfL -o freq.txt https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa.txt
+          ls -la; head -c 600 vi.jsonl; echo; grep -m1 '"vi"' en.jsonl | head -c 600
+      - name: Measure coverage
+        run: node tools/dict/spike/measure.mjs dist-dict/$(node -p "require('./dist-dict/latest.json').version") /tmp/sp/en.jsonl /tmp/sp/vi.jsonl /tmp/sp/freq.txt
