@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.hasText
 import androidx.test.platform.app.InstrumentationRegistry
@@ -62,6 +63,9 @@ class SmokeTest {
         waitFor("lookup") { rule.onAllNodesWithTextCount("good luck in making") > 0 }
         shot("02-add-lookup")
 
+        // The Vietnamese meaning is suggested from the offline pack (Wiktionary); replace it with our own.
+        waitFor("vi-suggestion") { rule.onAllNodesWithTextCount("khả năng cầu may") > 0 }
+        rule.onNodeWithTag("vi-input").performTextClearance()
         rule.onNodeWithTag("vi-input").performTextInput("sự tình cờ may mắn")
         shot("03-add-filled")
         // The button is under the keyboard; a touch injection would miss it, so invoke its click action directly.

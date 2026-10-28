@@ -6,7 +6,7 @@ Cập nhật theo kết quả CI và các lần chạy thật, không theo dự 
 
 | Hạng mục | Bằng chứng |
 |---|---|
-| Dựng từ điển | `tools/dict` build thật: 146.874 mục, 36.182 có IPA, ~6,2 MB nén; 4 test đơn vị (IPA, morphology, tách gloss, CMUdict) |
+| Dựng từ điển | `tools/dict` build thật: 146.874 mục, 36.182 có IPA, 52.299 có nghĩa tiếng Việt (Wiktionary), ~7,6 MB nén; 6 test đơn vị (IPA, morphology, tách gloss, CMUdict, trích + gộp nghĩa Wiktionary) |
 | Lõi web (FSRS, hàng đợi, mẫu thẻ, cloze, thống kê, repo IndexedDB, import/export) | 32 test vitest |
 | Giao diện web | 10 kịch bản Playwright (thêm từ, ôn, gõ đáp án, hoàn tác, xoá có xác nhận, **offline sau lần truy cập đầu**, 3 cỡ màn hình không tràn ngang) chạy dưới đúng CSP của `firebase.json` |
 | Rules Firestore | 15 test trên emulator, gồm tài liệu do chính code app sinh ra (`fixtures.json`) |
@@ -26,7 +26,7 @@ Một lỗi thật do test tích hợp bắt được và đã sửa: `increment
 - **Chưa gọi Gemini thật**: tên model mặc định (`gemini-3.5-flash-lite`) lấy từ my-recap; chất lượng nghĩa tiếng Việt và chi phí chưa đo.
 - App Check bản web (reCAPTCHA Enterprise) chưa thử; Android không dùng App Check (xem ARCHITECTURE).
 - Sync Android↔web chưa thử chéo thật (chỉ thử web↔web trên emulator, và Android đọc/ghi cùng định dạng document nhưng chưa chạy).
-- Giấy phép/chất lượng từ điển Anh-Việt: chưa có (xem DICTIONARY.md).
+- Chất lượng nghĩa Việt từ Wiktionary: mới xem mẫu ~30 từ, chưa kiểm định hàng loạt (xem DICTIONARY.md).
 
 ## Giới hạn / nợ kỹ thuật
 

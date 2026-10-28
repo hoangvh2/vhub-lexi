@@ -6,7 +6,7 @@ import { addNote, removeNote, reviewCard, savePrefs, setSuspended, undoReview, u
 import { LocalRepo } from "../src/data/local.ts";
 import { validateExport } from "../src/data/repo.ts";
 import { cards, daily, decks, notes, prefs, startRepo, stopRepo, currentRepo } from "../src/data/state.ts";
-import { Dictionary } from "../src/lib/dict.ts";
+import { Dictionary, viFor } from "../src/lib/dict.ts";
 
 let n = 0;
 async function fresh() {
@@ -155,6 +155,12 @@ describe.skipIf(!existsSync(join(packDir, "latest.json")))("dictionary client (r
     const s2 = await dict.suggest("resil");
     expect(s2[0].word.startsWith("resil")).toBe(true);
     expect(await dict.suggest("a")).toEqual([]);
+  });
+  it("carries Vietnamese meanings by part of speech", async () => {
+    const book = (await dict.lookup("book"))!.entry;
+    expect(viFor(book, "noun")).toContain("sách");
+    expect(viFor(book, "verb")).not.toBe("");
+    expect(viFor((await dict.lookup("serendipity"))!.entry, "verb")).toBe(""); // never another WordNet part of speech
   });
   it("returns null for gibberish and survives a missing pack", async () => {
     expect(await dict.lookup("qzxwv")).toBeNull();

@@ -14,7 +14,7 @@ const ACCENTS: Array<[Prefs["accent"], string]> = [["teal", "#0e7c66"], ["blue",
 export function Settings({ email }: { email: string | null }) {
   const p = useStore(prefs);
   const s = useStore(sync);
-  const [meta, setMeta] = useState<{ words: number; withIpa: number; version: string } | null>(null);
+  const [meta, setMeta] = useState<{ words: number; withIpa: number; withVi?: number; version: string } | null>(null);
   const file = useRef<HTMLInputElement>(null);
   const [prefetch, setPrefetch] = useState<string | null>(null);
 
@@ -180,8 +180,8 @@ export function Settings({ email }: { email: string | null }) {
       <section class="panel col">
         <h2>Về VH Lexi</h2>
         <p class="muted" style={{ fontSize: "13px" }}>
-          Từ điển offline: {meta ? `${meta.words.toLocaleString("vi-VN")} mục, ${meta.withIpa.toLocaleString("vi-VN")} có phiên âm (${meta.version})` : "chưa tải"}.
-          Phiên âm từ CMU Pronouncing Dictionary; loại từ, định nghĩa và ví dụ từ Princeton WordNet 3.1 (© Princeton University, WordNet License).
+          Từ điển offline: {meta ? `${meta.words.toLocaleString("vi-VN")} mục, ${meta.withIpa.toLocaleString("vi-VN")} có phiên âm${meta.withVi ? `, ${meta.withVi.toLocaleString("vi-VN")} có nghĩa tiếng Việt` : ""} (${meta.version})` : "chưa tải"}.
+          Phiên âm từ CMU Pronouncing Dictionary; loại từ, định nghĩa và ví dụ từ Princeton WordNet 3.1 (© Princeton University, WordNet License); nghĩa tiếng Việt gợi ý từ Wiktionary (CC BY-SA 4.0).
           Lập lịch ôn tập: FSRS qua thư viện ts-fsrs.
         </p>
       </section>

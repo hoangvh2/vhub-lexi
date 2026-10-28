@@ -4,15 +4,28 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Offline dictionary pack reader. The pack is built by tools/dict (CMUdict + WordNet) and bundled in the
+ * Offline dictionary pack reader. The pack is built by tools/dict (CMUdict + WordNet + Wiktionary) and bundled in the
  * APK assets: `dict/meta.json`, `dict/<xx>.json` (entries whose word starts with the two letters xx, "_" otherwise).
  */
 data class DictSense(val def: String, val examples: List<String>)
 data class DictPos(val pos: String, val senses: List<DictSense>) // pos: n v a r
-data class DictEntry(val word: String, val ipa: String, val rank: Int, val pos: List<DictPos>)
+/** Vietnamese meanings from Wiktionary; pos is a WordNet code (n v a r) or a label such as "pron", "prep". */
+data class DictVi(val pos: String, val text: String)
+data class DictEntry(val word: String, val ipa: String, val rank: Int, val pos: List<DictPos>, val vi: List<DictVi> = emptyList())
 data class Lookup(val entry: DictEntry, val inflectedFrom: String? = null)
 
 val POS_NAMES = mapOf("n" to "noun", "v" to "verb", "a" to "adjective", "r" to "adverb")
+
+/**
+ * The Vietnamese meaning to suggest for [posName] ("noun", "verb"…): the row of that part of speech; failing
+ * that, a row outside the four WordNet ones (a pronoun, a preposition…). Never a meaning of another WordNet
+ * part of speech. Port of viFor in web/src/lib/dict.ts.
+ */
+fun DictEntry.viFor(posName: String): String {
+    val code = POS_NAMES.entries.firstOrNull { it.value == posName }?.key
+    vi.firstOrNull { it.pos == code }?.let { return it.text }
+    return vi.firstOrNull { it.pos !in POS_NAMES }?.text ?: ""
+}
 
 fun interface ShardSource {
     /** Contents of "<key>.json" in the pack, or null when absent. */
@@ -49,6 +62,7 @@ class Dictionary(private val source: ShardSource) {
                     DictSense(s.getString(0), if (s.length() > 1) s.getJSONArray(1).let { ex -> List(ex.length()) { ex.getString(it) } } else emptyList())
                 })
             },
+            vi = if (r.length() > 4) r.getJSONArray(4).let { v -> List(v.length()) { v.getJSONArray(it).let { p -> DictVi(p.getString(0), p.getString(1)) } } } else emptyList(),
         )
     }
 

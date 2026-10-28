@@ -24,7 +24,11 @@ describe("core flow (local-only mode)", () => {
     assert.match(preview, /serendipity/);
     assert.match(preview, /ˌsɛrənˈdɪpɪti/);
     assert.match(preview, /good luck in making unexpected/);
+    // The Vietnamese meaning is suggested from the offline pack (Wiktionary) and can be overwritten.
+    assert.match(await page.inputValue('[data-testid=vi-input]'), /khả năng cầu may/);
+    await page.waitForSelector('[data-testid=vi-source]');
     await page.fill('[data-testid=vi-input]', "sự tình cờ may mắn");
+    assert.equal(await page.locator('[data-testid=vi-source]').count(), 0);
     await page.click('[data-testid=save-word]');
 
     await page.goto(`${base}/#/study`);

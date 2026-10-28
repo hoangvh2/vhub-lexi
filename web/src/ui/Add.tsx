@@ -4,7 +4,7 @@ import { template, wantedTemplates } from "@shared/notetypes.ts";
 import { addNote, createDeck } from "../data/actions.ts";
 import { callEnrich, firebaseConfigured } from "../data/firebase.ts";
 import { decks, notes, prefs } from "../data/state.ts";
-import { POS_NAMES, dictionary, normalizeWord, type DictEntry, type Lookup } from "../lib/dict.ts";
+import { POS_NAMES, dictionary, normalizeWord, viFor, type DictEntry, type Lookup } from "../lib/dict.ts";
 import { useStore } from "../lib/store.ts";
 import { Blocks } from "./Blocks.tsx";
 import { Icon, toast } from "./common.tsx";
@@ -39,7 +39,7 @@ function draftFromSenses(e: DictEntry, picked: SenseRef[]): Draft {
     ipa: e.ipa,
     pos: first?.pos ?? "",
     en: picked.map((s) => s.def).join("; "),
-    vi: "",
+    vi: first ? viFor(e, first.pos) : "",
     examples: [...new Set(picked.flatMap((s) => s.ex))].slice(0, 3),
     mnemonic: "",
     ai: new Set(),
@@ -110,7 +110,12 @@ export function Add() {
     if (!hit) return;
     const next = picked.includes(i) ? picked.filter((x) => x !== i) : [...picked, i].sort((a, b) => a - b);
     setPicked(next);
-    setDraft((d) => ({ ...draftFromSenses(hit.entry, next.map((k) => senses[k])), vi: d.vi, mnemonic: d.mnemonic, ai: d.ai }));
+    setDraft((d) => {
+      const fresh = draftFromSenses(hit.entry, next.map((k) => senses[k]));
+      // Follow the part of speech while the meaning is still the dictionary's; keep anything the user or AI wrote.
+      const fromDict = !d.vi || (!d.ai.has("vi") && d.vi === viFor(hit.entry, d.pos));
+      return { ...fresh, vi: fromDict ? fresh.vi : d.vi, mnemonic: d.mnemonic, ai: d.ai };
+    });
   }
 
   const manual = !hit && !searching && normalizeWord(q).length >= 2;
@@ -176,6 +181,7 @@ export function Add() {
   }
 
   const aiTag = (k: string) => (draft.ai.has(k) ? <span class="ai-tag">AI</span> : null);
+  const viFromDict = !!hit && !!draft.vi && !draft.ai.has("vi") && draft.vi === viFor(hit.entry, draft.pos);
   const edit = (k: keyof Draft) => (e: Event) => {
     const v = (e.currentTarget as HTMLInputElement).value;
     setDraft((d) => {
@@ -261,7 +267,14 @@ export function Add() {
             <div class="col area-fields">
               <div class="row">
                 <div class="field grow">
-                  <label for="vi">Nghĩa tiếng Việt {aiTag("vi")}</label>
+                  <label for="vi">
+                    Nghĩa tiếng Việt {aiTag("vi")}
+                    {viFromDict && (
+                      <span class="ai-tag" title="Gợi ý từ Wiktionary (CC BY-SA), nên đọc lại trước khi lưu" data-testid="vi-source">
+                        Wiktionary
+                      </span>
+                    )}
+                  </label>
                   <input id="vi" class="input" value={draft.vi} onInput={edit("vi")} placeholder={aiAvailable ? "Nhập hoặc bấm “Điền bằng AI”" : "Nhập nghĩa tiếng Việt"} data-testid="vi-input" />
                 </div>
                 {aiAvailable && (
