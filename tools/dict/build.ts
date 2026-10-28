@@ -10,15 +10,16 @@
  * Output: <out>/<version>/{meta.json, <xx>.json}. Shards are keyed by the first two
  * letters so the web app can fetch only what a typed word needs.
  *
- * Vietnamese meanings are NOT in the pack: the Anh-Viet sources found so far have an unverified
- * licence (see docs/DICTIONARY.md). They come from the optional AI step instead.
+ * Vietnamese meanings come from tools/dict/data/vi-wiktionary.json.gz (Wiktionary, CC BY-SA), a committed
+ * extract refreshed by tools/dict/extract-vi.ts. Entry layout: [word, ipa, rank, pos[], vi?] where
+ * vi = [[pos, "meaning; meaning"], ...] and is left out when Wiktionary has nothing for the word.
  */
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { gzipSync } from "node:zlib";
+import { gunzipSync, gzipSync } from "node:zlib";
 import { arpabetToIpa } from "../../shared/ipa.ts";
 import { parseWordNet, type WnWord } from "./wordnet.ts";
 import { parseCmudict } from "./cmudict.ts";
@@ -75,10 +76,16 @@ async function main() {
   console.log("Parsing…");
   const prons = parseCmudict(cmu.toString("utf8"));
   const wn = parseWordNet(dictDir);
+  const viPath = join(here, "data", "vi-wiktionary.json.gz");
+  const viData = existsSync(viPath)
+    ? (JSON.parse(gunzipSync(readFileSync(viPath)).toString("utf8")) as { source: { fetched: string }; words: Record<string, Array<[string, string]>> })
+    : null;
+  if (!viData) console.warn(`! ${viPath} not found: building without Vietnamese meanings`);
 
   // Assemble entries.
   const entries: Array<{ w: string; e: unknown[] }> = [];
   let withIpa = 0;
+  let withVi = 0;
   for (const [word, rec] of wn.words) {
     const arpa = prons.get(word.replaceAll(" ", ""))?.[0] ?? prons.get(word)?.[0];
     let ipa = "";
@@ -90,7 +97,10 @@ async function main() {
         ipa = "";
       }
     }
-    entries.push({ w: word, e: [word, ipa, rec.rank, rec.pos.map((p) => [p.pos, p.senses.map((s) => (s.ex.length ? [s.def, s.ex] : [s.def]))])] });
+    const e: unknown[] = [word, ipa, rec.rank, rec.pos.map((p) => [p.pos, p.senses.map((s) => (s.ex.length ? [s.def, s.ex] : [s.def]))])];
+    const vi = viData?.words[word];
+    if (vi) (e.push(vi), withVi++);
+    entries.push({ w: word, e });
   }
   entries.sort((a, b) => (a.w < b.w ? -1 : a.w > b.w ? 1 : 0));
 
@@ -116,10 +126,12 @@ async function main() {
     format: 1,
     words: entries.length,
     withIpa,
+    withVi,
     shards: [...payload.keys()].sort(),
     sources: [
       { name: "CMU Pronouncing Dictionary", commit: CMU_COMMIT, license: "BSD-style (see CMU source repository)" },
       { name: "Princeton WordNet", version: "3.1", package: `wordnet-db@${WN_VERSION}`, license: "WordNet License (attribution)" },
+      ...(viData ? [{ name: "Wiktionary (en + vi editions, via kaikki.org)", fetched: viData.source.fetched, license: "CC BY-SA 4.0" }] : []),
     ],
   };
   writeFileSync(join(outDir, "meta.json"), JSON.stringify(meta));
@@ -129,7 +141,7 @@ async function main() {
   let raw = 0;
   for (const f of readdirSync(outDir)) raw += readFileSync(join(outDir, f)).length;
   const gz = gzipSync(Buffer.concat(readdirSync(outDir).filter((f) => f.endsWith(".json")).sort().map((f) => readFileSync(join(outDir, f)))), { level: 9 }).length;
-  console.log(JSON.stringify({ version, words: entries.length, withIpa, shards: payload.size, rawBytes: raw, gzipBytes: Number(gz) }, null, 2));
+  console.log(JSON.stringify({ version, words: entries.length, withIpa, withVi, shards: payload.size, rawBytes: raw, gzipBytes: Number(gz) }, null, 2));
 
   if (flag("--copy-web")) {
     const dest = join(root, "web", "public", "dict");

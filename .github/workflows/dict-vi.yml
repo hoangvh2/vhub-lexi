@@ -1,0 +1,36 @@
+name: Dictionary - Vietnamese meanings
+
+# Re-extracts tools/dict/data/vi-wiktionary.json.gz from the latest kaikki.org Wiktionary dumps and commits
+# it to the branch the workflow runs on. Run it by hand (Actions tab) when a fresher extract is wanted.
+on:
+  workflow_dispatch:
+  push:
+    branches: [spike/wiktionary-vi]
+    paths: ["tools/dict/wiktionary.ts", "tools/dict/extract-vi.ts", ".github/workflows/dict-vi.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Unit tests
+        run: npm run dict:test
+      - name: Build the pack (decides which words are kept)
+        run: node tools/dict/build.ts
+      - name: Extract Vietnamese meanings
+        run: node tools/dict/extract-vi.ts
+      - name: Commit the extract
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/dict/data/vi-wiktionary.json.gz
+          git diff --cached --quiet && { echo "No change"; exit 0; }
+          git commit -m "dict: refresh Vietnamese meanings from Wiktionary"
+          git push
