@@ -31,7 +31,7 @@ class ModelTest {
 class DictTest {
     private val se = """{"v":1,"e":[
       ["serendipity","ˌsɛrənˈdɪpɪti",0,[["n",[["good luck in making unexpected and fortunate discoveries"]]]]],
-      ["serene","sɝˈin",3,[["a",[["completely calm",["a serene smile"]]]]]]
+      ["serene","sɝˈin",3,[["a",[["completely calm",["a serene smile"]]]]],[["a","thanh bình; trầm lặng"]]]
     ]}""".trimIndent()
     private val pr = """{"v":1,"e":[
       ["procrastinate","proʊˈkræstɪneɪt",0,[["v",[["postpone doing what one should be doing",["do not procrastinate"]]]]]]
@@ -45,6 +45,17 @@ class DictTest {
         assertEquals("ˌsɛrənˈdɪpɪti", r.entry.ipa)
         assertEquals("n", r.entry.pos[0].pos)
         assertTrue(dict.lookup("serene")!!.entry.pos[0].senses[0].def.isNotEmpty())
+        assertEquals(emptyList(), r.entry.vi)
+    }
+
+    @Test
+    fun `vietnamese meaning follows the part of speech`() {
+        val serene = dict.lookup("serene")!!.entry
+        assertEquals("thanh bình; trầm lặng", serene.viFor("adjective"))
+        assertEquals("", serene.viFor("noun"))
+        val pronoun = DictEntry("it", "", 0, emptyList(), listOf(DictVi("n", "công nghệ thông tin"), DictVi("pron", "nó")))
+        assertEquals("công nghệ thông tin", pronoun.viFor("noun"))
+        assertEquals("nó", pronoun.viFor("verb"))
     }
 
     @Test

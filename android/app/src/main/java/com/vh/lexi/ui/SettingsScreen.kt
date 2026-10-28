@@ -184,7 +184,7 @@ fun SettingsScreen(app: LexiApp) {
             Text("Về VH Lexi", style = MaterialTheme.typography.titleMedium)
             Text(
                 (if (app.hasDictionary) "Từ điển offline đã có trong ứng dụng. " else "Bản cài này chưa kèm từ điển offline. ") +
-                    "Phiên âm từ CMU Pronouncing Dictionary; loại từ, định nghĩa và ví dụ từ Princeton WordNet 3.1 (© Princeton University, WordNet License). Lập lịch ôn tập: FSRS.",
+                    "Phiên âm từ CMU Pronouncing Dictionary; loại từ, định nghĩa và ví dụ từ Princeton WordNet 3.1 (© Princeton University, WordNet License); nghĩa tiếng Việt gợi ý từ Wiktionary (CC BY-SA 4.0). Lập lịch ôn tập: FSRS.",
                 color = c.muted, fontSize = 13.sp,
             )
             Text("Phiên bản ${BuildConfig.VERSION_NAME}", color = c.muted, fontSize = 12.sp)

@@ -60,6 +60,7 @@ test("wiktionary: translations first, glosses fill in, names and other languages
 test("wiktionary: meanings are cleaned, de-duplicated and bounded", () => {
   assert.equal(cleanMeaning(", (chính trị) điều đình."), "(chính trị) điều đình");
   assert.equal(cleanMeaning("CNTT"), "CNTT");
+  assert.equal(joinMeanings(["a", "ờ"], [], "a"), "ờ");
   assert.equal(joinMeanings(["sách", "Sách"], ["Sách.", "Sổ sách kế toán.", "Kinh thánh.", "Thêm nữa."]), "sách; sổ sách kế toán; kinh thánh");
   const long = joinMeanings([], ["a".repeat(60), "b".repeat(40), "c".repeat(10)]);
   assert.ok(long.length <= MAX_LEN, long);

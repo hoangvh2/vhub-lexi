@@ -67,9 +67,9 @@ export function cleanMeaning(s: string): string {
 }
 
 /** Up to MAX_MEANINGS distinct meanings, joined with "; ", cut at a meaning boundary near MAX_LEN. */
-export function joinMeanings(translations: string[], glosses: string[]): string {
+export function joinMeanings(translations: string[], glosses: string[], word = ""): string {
   const out: string[] = [];
-  const seen = new Set<string>();
+  const seen = new Set<string>([word.toLowerCase()]); // "a" -> "a" says nothing
   let len = 0;
   for (const raw of [...translations, ...glosses]) {
     const m = cleanMeaning(raw);
@@ -91,7 +91,7 @@ export function finalize(c: Collected): Record<string, Array<[string, string]>> 
     const rows: Array<[string, string]> = [];
     for (const pos of POS_ORDER) {
       const v = c.get(word)!.get(pos);
-      const text = v ? joinMeanings(v[0], v[1]) : "";
+      const text = v ? joinMeanings(v[0], v[1], word) : "";
       if (text) rows.push([pos, text]);
     }
     if (rows.length) out[word] = rows;

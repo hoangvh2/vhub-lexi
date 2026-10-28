@@ -19,6 +19,8 @@ export interface DictEntry {
   /** WordNet tagged-sense count: bigger = more common. */
   rank: number;
   pos: Array<{ pos: PosCode; senses: DictSense[] }>;
+  /** Vietnamese meanings from Wiktionary by part of speech: a PosCode or a label such as "pron", "prep". */
+  vi: Array<{ pos: string; text: string }>;
 }
 export interface Lookup {
   entry: DictEntry;
@@ -26,7 +28,7 @@ export interface Lookup {
   inflectedFrom?: string;
 }
 
-type Raw = [string, string, number, Array<[PosCode, Array<[string, string[]?]>]>];
+type Raw = [string, string, number, Array<[PosCode, Array<[string, string[]?]>]>, Array<[string, string]>?];
 
 export function shardKey(word: string): string {
   return /^[a-z]{2}/.test(word) ? word.slice(0, 2) : "_";
@@ -42,7 +44,13 @@ export function normalizeWord(s: string): string {
 }
 
 function decode(r: Raw): DictEntry {
-  return { word: r[0], ipa: r[1], rank: r[2], pos: r[3].map(([pos, senses]) => ({ pos, senses: senses.map(([def, ex]) => ({ def, ex: ex ?? [] })) })) };
+  return {
+    word: r[0],
+    ipa: r[1],
+    rank: r[2],
+    pos: r[3].map(([pos, senses]) => ({ pos, senses: senses.map(([def, ex]) => ({ def, ex: ex ?? [] })) })),
+    vi: (r[4] ?? []).map(([pos, text]) => ({ pos, text })),
+  };
 }
 
 export class Dictionary {
@@ -157,3 +165,16 @@ export class Dictionary {
 export const dictionary = new Dictionary();
 
 export const POS_NAMES: Record<PosCode, string> = { n: "noun", v: "verb", a: "adjective", r: "adverb" };
+
+/**
+ * The Vietnamese meaning to suggest for `posName` ("noun", "verb"…): the row of that part of speech; failing
+ * that, a row outside the four WordNet ones (a pronoun, a preposition…) so function words still get one.
+ * Never a meaning of another WordNet part of speech: a verb meaning on a noun card would mislead.
+ * Mirrored by Dictionary.viFor in android/core Dict.kt.
+ */
+export function viFor(e: DictEntry, posName: string): string {
+  const code = (Object.keys(POS_NAMES) as PosCode[]).find((k) => POS_NAMES[k] === posName);
+  const own = e.vi.find((v) => v.pos === code);
+  if (own) return own.text;
+  return e.vi.find((v) => !(v.pos in POS_NAMES))?.text ?? "";
+}

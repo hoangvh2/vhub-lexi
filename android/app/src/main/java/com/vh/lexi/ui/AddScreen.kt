@@ -50,6 +50,7 @@ import com.vh.lexi.core.POS_NAMES
 import com.vh.lexi.core.normalizeWord
 import com.vh.lexi.core.str
 import com.vh.lexi.core.template
+import com.vh.lexi.core.viFor
 import com.vh.lexi.core.wantedTemplates
 import com.vh.lexi.ui.theme.Lexi
 import kotlinx.coroutines.Dispatchers
@@ -73,12 +74,17 @@ private class Draft(
     var mnemonic by mutableStateOf(mnemonic)
     var ai by mutableStateOf(ai)
 
+    /** True while the Vietnamese meaning is still the dictionary's suggestion (not typed, not from AI). */
+    fun viFromDict(e: DictEntry?) = e != null && vi.isNotEmpty() && "vi" !in ai && vi == e.viFor(pos)
+
     fun fillFrom(e: DictEntry, picked: List<SenseRef>, keepUser: Boolean) {
+        val followPos = !keepUser || vi.isEmpty() || viFromDict(e)
         word = e.word; ipa = e.ipa
         pos = picked.firstOrNull()?.pos ?: ""
+        if (followPos) vi = e.viFor(pos)
         en = picked.joinToString("; ") { it.def }
         examples = picked.flatMap { it.ex }.distinct().take(3).joinToString("\n")
-        if (!keepUser) { vi = ""; mnemonic = ""; ai = emptySet() }
+        if (!keepUser) { mnemonic = ""; ai = emptySet() }
     }
 
     fun clear() { word = ""; ipa = ""; pos = ""; en = ""; vi = ""; examples = ""; mnemonic = ""; ai = emptySet() }
@@ -258,7 +264,7 @@ fun AddScreen(app: LexiApp) {
         if (word.isNotEmpty()) {
             OutlinedTextField(
                 value = draft.vi, onValueChange = { draft.vi = it; edited("vi") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("vi-input"),
-                label = { Text("Nghĩa tiếng Việt" + if ("vi" in draft.ai) " · AI" else "") },
+                label = { Text("Nghĩa tiếng Việt" + if ("vi" in draft.ai) " · AI" else if (draft.viFromDict(hit?.entry)) " · Wiktionary" else "") },
                 placeholder = { Text(if (aiAvailable) "Nhập hoặc bấm “Điền bằng AI”" else "Nhập nghĩa tiếng Việt") },
             )
             if (aiAvailable) OutlinedButton(onClick = ::enrich, enabled = !aiBusy) { Icon(Icons.Filled.AutoAwesome, null); Text(if (aiBusy) "  Đang điền…" else "  Điền bằng AI") }
