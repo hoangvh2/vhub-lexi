@@ -130,7 +130,7 @@ class Cloud(private val context: Context, private val data: LexiData, private va
         val fn = functions ?: error("Chưa kết nối tài khoản")
         try {
             val payload = hashMapOf<String, Any?>("word" to word, "pos" to pos, "en" to en, "examples" to examples)
-            val res = fn.getHttpsCallable("enrich").call(payload).await().data as? Map<*, *> ?: error("Phản hồi không hợp lệ")
+            val res = fn.getHttpsCallable("enrich").call(payload).await().getData() as? Map<*, *> ?: error("Phản hồi không hợp lệ")
             return Enriched(
                 vi = res["vi"] as? String ?: "",
                 en = res["en"] as? String,

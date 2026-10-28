@@ -81,8 +81,13 @@ export function Study({ deckId }: { deckId: Id | null }) {
   const tpl = card && note ? template(note.type, card.template) : undefined;
   const outcomes = useMemo(() => (card && revealed ? preview(sched, card, now) : null), [card?.id, card?.updatedAt, revealed, sched]);
 
-  // New card on screen: reset the answer UI, start the timer, maybe read it aloud.
+  // New card on screen: reset the answer UI, start the timer, maybe read it aloud. Only when the card really
+  // changed: the effect runs after paint, and must not wipe an answer the learner revealed in the meantime.
+  const shownId = useRef<Id | null>(null);
   useEffect(() => {
+    const id = card?.id ?? null;
+    if (shownId.current === id) return;
+    shownId.current = id;
     setRevealed(false);
     setTyped("");
     setVerdict(null);

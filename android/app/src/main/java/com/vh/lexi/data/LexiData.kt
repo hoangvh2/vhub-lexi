@@ -1,6 +1,7 @@
 package com.vh.lexi.data
 
 import androidx.room.withTransaction
+import com.vh.lexi.cloud.CloudSync
 import com.vh.lexi.core.Card
 import com.vh.lexi.core.CardState
 import com.vh.lexi.core.Daily
@@ -37,7 +38,7 @@ enum class SyncState { OFF, LOADING, SYNCED, PENDING, OFFLINE, DENIED, ERROR }
  * The app's data: Room is what every screen reads; Firestore (when signed in) is kept in step by [CloudSync].
  * Writes go to Room first, then to the cloud (queued by Firestore while offline).
  */
-class LexiData(private val db: LexiDb, scope: CoroutineScope) {
+class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
     private val dao = db.docs()
 
     /** Set while a signed-in account is syncing. */
@@ -241,7 +242,7 @@ class LexiData(private val db: LexiDb, scope: CoroutineScope) {
     // ---------------------------------------------------------------- backup
 
     suspend fun exportJson(): String {
-        fun arr(col: String) = JSONArray(dao.all(col).map { JSONObject(it.json) })
+        suspend fun arr(col: String) = JSONArray(dao.all(col).map { JSONObject(it.json) })
         val prefsDoc = dao.get(Col.SETTINGS, Col.PREFS_ID)
         return JSONObject()
             .put("app", "vhub-lexi").put("version", 1).put("exportedAt", System.currentTimeMillis())
