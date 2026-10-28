@@ -23,6 +23,8 @@ node infra/deploy.mjs
 
 Việc script làm: build + test function → `terraform apply` (API, Firebase, Firestore + rules từ `firestore.rules.tmpl`, App Check, Secret Manager, Gemini key, function `enrich`, budget nếu có) → dựng từ điển → build web với cấu hình Terraform xuất ra → `firebase deploy --only hosting`. Lần đầu sẽ mở trình duyệt để đăng nhập `gcloud` và Firebase CLI.
 
+**Chỉ deploy lại web (nhanh):** `node infra/deploy.mjs --web-only` bỏ qua function, Terraform và gcloud; dùng lại `node_modules`, từ điển đã dựng và cấu hình lưu từ lần chạy đầy đủ gần nhất (`infra/.build/outputs.json`). Thêm `--skip-tests` để bỏ qua test web.
+
 **TAY (một lần):** Firebase Console → Authentication → Get started → bật nhà cung cấp **Google**. Link được in cuối lệnh deploy.
 
 ## 3. Nối `lexi.vhub.id.vn` (TAY)
