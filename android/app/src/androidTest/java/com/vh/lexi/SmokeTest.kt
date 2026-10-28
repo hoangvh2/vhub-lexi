@@ -9,6 +9,8 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.hasText
 import androidx.test.platform.app.InstrumentationRegistry
@@ -62,7 +64,8 @@ class SmokeTest {
 
         rule.onNodeWithTag("vi-input").performTextInput("sự tình cờ may mắn")
         shot("03-add-filled")
-        rule.onNodeWithTag("save-word").performClick()
+        // The button is under the keyboard; a touch injection would miss it, so invoke its click action directly.
+        rule.onNodeWithTag("save-word").performSemanticsAction(SemanticsActions.OnClick)
         waitFor("saved") { rule.onAllNodesWithTextCount("Đã thêm") > 0 }
 
         rule.onNodeWithTag("nav-study").performClick()
