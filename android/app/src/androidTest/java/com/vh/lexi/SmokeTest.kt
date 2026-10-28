@@ -63,6 +63,7 @@ class SmokeTest {
         rule.onNodeWithTag("vi-input").performTextInput("sự tình cờ may mắn")
         shot("03-add-filled")
         rule.onNodeWithTag("save-word").performClick()
+        waitFor("saved") { rule.onAllNodesWithTextCount("Đã thêm") > 0 }
 
         rule.onNodeWithTag("nav-study").performClick()
         waitFor("study-card") { rule.onAllNodesWithTextCount("serendipity") > 0 }
