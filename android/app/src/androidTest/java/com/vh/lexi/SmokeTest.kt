@@ -18,7 +18,7 @@ import java.io.FileOutputStream
 
 /**
  * End-to-end on a real (emulated) device, phone-only mode: add a word through the offline dictionary, study it,
- * look at every screen. Screenshots are written to /data/local/tmp/lexi-shots for review (CI publishes them).
+ * look at every screen. Screenshots are written to the app's external files dir (/sdcard/Android/data/com.vh.lexi/files/lexi-shots) for review (CI publishes them).
  */
 @OptIn(ExperimentalTestApi::class)
 class SmokeTest {
@@ -28,7 +28,8 @@ class SmokeTest {
     private fun shot(name: String) {
         rule.waitForIdle()
         val bmp: Bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
-        val dir = File("/data/local/tmp/lexi-shots").also { it.mkdirs() }
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val dir = File(ctx.getExternalFilesDir(null), "lexi-shots").also { it.mkdirs() }
         FileOutputStream(File(dir, "$name.png")).use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
     }
 
