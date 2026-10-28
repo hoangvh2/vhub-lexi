@@ -1,0 +1,1271 @@
+{
+ "layouts": [
+  {
+   "showIpa": true,
+   "showPos": true,
+   "showEn": true,
+   "showVi": true,
+   "showExamples": true,
+   "showMnemonic": true
+  },
+  {
+   "showIpa": false,
+   "showPos": true,
+   "showEn": false,
+   "showVi": true,
+   "showExamples": false,
+   "showMnemonic": true
+  }
+ ],
+ "cases": [
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "layoutIndex": 0,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "muted"
+      },
+      {
+       "k": "quote",
+       "text": "Children are often more resilient than adults."
+      },
+      {
+       "k": "quote",
+       "text": "The team stayed resilient."
+      },
+      {
+       "k": "text",
+       "text": "re-silient: springs back",
+       "tone": "muted"
+      }
+     ],
+     "expected": null,
+     "speakFront": "resilient",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "muted"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "quote",
+       "text": "Children are often more resilient than adults."
+      },
+      {
+       "k": "quote",
+       "text": "The team stayed resilient."
+      }
+     ],
+     "expected": [
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "resilient"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "Children are often more _____ than adults."
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "muted"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      }
+     ],
+     "back": [
+      {
+       "k": "quote",
+       "text": "Children are often more resilient than adults."
+      },
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "muted"
+      },
+      {
+       "k": "text",
+       "text": "re-silient: springs back",
+       "tone": "muted"
+      }
+     ],
+     "expected": [
+      "resilient",
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "Children are often more resilient than adults."
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "layoutIndex": 1,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "text",
+       "text": "re-silient: springs back",
+       "tone": "muted"
+      }
+     ],
+     "expected": null,
+     "speakFront": "resilient",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      }
+     ],
+     "expected": [
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "resilient"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "Children are often more _____ than adults."
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "muted"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      }
+     ],
+     "back": [
+      {
+       "k": "quote",
+       "text": "Children are often more resilient than adults."
+      },
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "text",
+       "text": "re-silient: springs back",
+       "tone": "muted"
+      }
+     ],
+     "expected": [
+      "resilient",
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "Children are often more resilient than adults."
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [],
+     "mnemonic": ""
+    }
+   },
+   "layoutIndex": 0,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "muted"
+      }
+     ],
+     "expected": null,
+     "speakFront": "resilient",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "muted"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      }
+     ],
+     "expected": [
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "resilient"
+    },
+    "cloze": {
+     "applies": false
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall"
+   ],
+   "wantedDefault": [
+    "recognize"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [],
+     "mnemonic": ""
+    }
+   },
+   "layoutIndex": 1,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      }
+     ],
+     "expected": null,
+     "speakFront": "resilient",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      }
+     ],
+     "expected": [
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "resilient"
+    },
+    "cloze": {
+     "applies": false
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall"
+   ],
+   "wantedDefault": [
+    "recognize"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "She is running fast."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "layoutIndex": 0,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "muted"
+      },
+      {
+       "k": "quote",
+       "text": "She is running fast."
+      },
+      {
+       "k": "text",
+       "text": "re-silient: springs back",
+       "tone": "muted"
+      }
+     ],
+     "expected": null,
+     "speakFront": "run",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      },
+      {
+       "k": "quote",
+       "text": "She is running fast."
+      }
+     ],
+     "expected": [
+      "run"
+     ],
+     "speakFront": null,
+     "speakBack": "run"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "She is _____ fast."
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "muted"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      }
+     ],
+     "back": [
+      {
+       "k": "quote",
+       "text": "She is running fast."
+      },
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "muted"
+      },
+      {
+       "k": "text",
+       "text": "re-silient: springs back",
+       "tone": "muted"
+      }
+     ],
+     "expected": [
+      "running",
+      "run"
+     ],
+     "speakFront": null,
+     "speakBack": "She is running fast."
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "She is running fast."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "layoutIndex": 1,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "re-silient: springs back",
+       "tone": "muted"
+      }
+     ],
+     "expected": null,
+     "speakFront": "run",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      }
+     ],
+     "expected": [
+      "run"
+     ],
+     "speakFront": null,
+     "speakBack": "run"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "She is _____ fast."
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "muted"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      }
+     ],
+     "back": [
+      {
+       "k": "quote",
+       "text": "She is running fast."
+      },
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      },
+      {
+       "k": "text",
+       "text": "re-silient: springs back",
+       "tone": "muted"
+      }
+     ],
+     "expected": [
+      "running",
+      "run"
+     ],
+     "speakFront": null,
+     "speakBack": "She is running fast."
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "look after",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "",
+     "vi": "",
+     "en": "",
+     "examples": [
+      "Please look after the kids."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "layoutIndex": 0,
+   "templates": {
+    "recognize": {
+     "applies": false
+    },
+    "recall": {
+     "applies": false
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "Please _____ the kids."
+      }
+     ],
+     "back": [
+      {
+       "k": "quote",
+       "text": "Please look after the kids."
+      },
+      {
+       "k": "title",
+       "text": "look after"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "look after"
+      },
+      {
+       "k": "text",
+       "text": "re-silient: springs back",
+       "tone": "muted"
+      }
+     ],
+     "expected": [
+      "look after",
+      "look after"
+     ],
+     "speakFront": null,
+     "speakBack": "Please look after the kids."
+    }
+   },
+   "wanted": [
+    "cloze"
+   ],
+   "wantedDefault": [
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "look after",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "",
+     "vi": "",
+     "en": "",
+     "examples": [
+      "Please look after the kids."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "layoutIndex": 1,
+   "templates": {
+    "recognize": {
+     "applies": false
+    },
+    "recall": {
+     "applies": false
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "Please _____ the kids."
+      }
+     ],
+     "back": [
+      {
+       "k": "quote",
+       "text": "Please look after the kids."
+      },
+      {
+       "k": "title",
+       "text": "look after"
+      },
+      {
+       "k": "speak",
+       "text": "look after"
+      },
+      {
+       "k": "text",
+       "text": "re-silient: springs back",
+       "tone": "muted"
+      }
+     ],
+     "expected": [
+      "look after",
+      "look after"
+     ],
+     "speakFront": null,
+     "speakBack": "Please look after the kids."
+    }
+   },
+   "wanted": [
+    "cloze"
+   ],
+   "wantedDefault": [
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "",
+     "examples": [],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "layoutIndex": 0,
+   "templates": {
+    "recognize": {
+     "applies": false
+    },
+    "recall": {
+     "applies": false
+    },
+    "cloze": {
+     "applies": false
+    }
+   },
+   "wanted": [],
+   "wantedDefault": []
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "",
+     "examples": [],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "layoutIndex": 1,
+   "templates": {
+    "recognize": {
+     "applies": false
+    },
+    "recall": {
+     "applies": false
+    },
+    "cloze": {
+     "applies": false
+    }
+   },
+   "wanted": [],
+   "wantedDefault": []
+  }
+ ],
+ "clozes": [
+  {
+   "sentence": "She is running fast.",
+   "word": "run",
+   "result": {
+    "text": "She is _____ fast.",
+    "answer": "running"
+   }
+  },
+  {
+   "sentence": "They studied hard.",
+   "word": "study",
+   "result": {
+    "text": "They _____ hard.",
+    "answer": "studied"
+   }
+  },
+  {
+   "sentence": "Please look after the kids.",
+   "word": "look after",
+   "result": {
+    "text": "Please _____ the kids.",
+    "answer": "look after"
+   }
+  },
+  {
+   "sentence": "Nothing here.",
+   "word": "resilient",
+   "result": null
+  },
+  {
+   "sentence": "Children are often more resilient than adults.",
+   "word": "resilient",
+   "result": {
+    "text": "Children are often more _____ than adults.",
+    "answer": "resilient"
+   }
+  },
+  {
+   "sentence": "He put it away, putting it back later.",
+   "word": "put",
+   "result": {
+    "text": "He _____ it away, putting it back later.",
+    "answer": "put"
+   }
+  },
+  {
+   "sentence": "Cats are cute.",
+   "word": "cat",
+   "result": {
+    "text": "_____ are cute.",
+    "answer": "Cats"
+   }
+  },
+  {
+   "sentence": "The bigger one.",
+   "word": "big",
+   "result": null
+  },
+  {
+   "sentence": "Prices keep rising.",
+   "word": "rise",
+   "result": {
+    "text": "Prices keep _____.",
+    "answer": "rising"
+   }
+  },
+  {
+   "sentence": "An apple a day.",
+   "word": "apple",
+   "result": {
+    "text": "An _____ a day.",
+    "answer": "apple"
+   }
+  },
+  {
+   "sentence": "It is what it is.",
+   "word": "is",
+   "result": {
+    "text": "It _____ what it is.",
+    "answer": "is"
+   }
+  }
+ ],
+ "typed": [
+  {
+   "typed": "Resilient",
+   "expected": [
+    "resilient"
+   ],
+   "verdict": "correct",
+   "normalized": "resilient"
+  },
+  {
+   "typed": "  resilient ",
+   "expected": [
+    "resilient"
+   ],
+   "verdict": "correct",
+   "normalized": "resilient"
+  },
+  {
+   "typed": "resiliant",
+   "expected": [
+    "resilient"
+   ],
+   "verdict": "close",
+   "normalized": "resiliant"
+  },
+  {
+   "typed": "cat",
+   "expected": [
+    "cut"
+   ],
+   "verdict": "wrong",
+   "normalized": "cat"
+  },
+  {
+   "typed": "",
+   "expected": [
+    "x"
+   ],
+   "verdict": "wrong",
+   "normalized": ""
+  },
+  {
+   "typed": "look  after",
+   "expected": [
+    "look after"
+   ],
+   "verdict": "correct",
+   "normalized": "look after"
+  },
+  {
+   "typed": "Café",
+   "expected": [
+    "cafe"
+   ],
+   "verdict": "correct",
+   "normalized": "cafe"
+  },
+  {
+   "typed": "it's",
+   "expected": [
+    "its"
+   ],
+   "verdict": "wrong",
+   "normalized": "it's"
+  },
+  {
+   "typed": "resilient!",
+   "expected": [
+    "resilient"
+   ],
+   "verdict": "correct",
+   "normalized": "resilient"
+  },
+  {
+   "typed": "procrastinatee",
+   "expected": [
+    "procrastinate"
+   ],
+   "verdict": "close",
+   "normalized": "procrastinatee"
+  },
+  {
+   "typed": "abc",
+   "expected": [
+    "abd"
+   ],
+   "verdict": "wrong",
+   "normalized": "abc"
+  }
+ ]
+}
