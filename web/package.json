@@ -1,0 +1,32 @@
+{
+  "name": "vhub-lexi-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "VH Lexi web (lexi.vhub.id.vn): flashcards, spaced repetition, offline dictionary. Installable PWA backed by Firebase.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "vectors": "node ../shared/vectors/make-fsrs-vectors.ts",
+    "test:int": "vitest run -c vitest.int.config.ts"
+  },
+  "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "*",
+    "@fontsource/be-vietnam-pro": "*",
+    "@fontsource/noto-sans": "*",
+    "firebase": "^13.0.0",
+    "preact": "^11.0.1",
+    "ts-fsrs": "*"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "@types/node": "^26.6.5",
+    "fake-indexeddb": "*",
+    "jsdom": "^29.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
+  }
+}

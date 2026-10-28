@@ -1,0 +1,108 @@
+name: Web and backend
+
+on:
+  push:
+    paths: &paths
+      - "web/**"
+      - "shared/**"
+      - "tools/**"
+      - "functions/**"
+      - "tests/**"
+      - "scripts/**"
+      - "infra/**"
+      - "firebase.json"
+      - "firestore.rules.tmpl"
+      - "package.json"
+      - ".github/workflows/web.yml"
+  pull_request:
+    paths: *paths
+  workflow_dispatch:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Unit, rules, emulator and end-to-end tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            functions/package-lock.json
+            tests/package-lock.json
+      - uses: actions/setup-java@v4 # the Firestore emulator is a Java program
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('tests/package-lock.json') }}
+
+      - name: Install
+        run: |
+          npm ci --prefix web
+          npm ci --prefix functions
+          npm ci --prefix tests
+
+      - name: Dictionary - unit tests and build (CMUdict + WordNet, pinned by SHA-256)
+        run: |
+          npm run dict:test
+          node tools/dict/build.ts --copy-web
+
+      - name: Functions - typecheck, unit tests, build
+        run: |
+          npm run typecheck --prefix functions
+          npm test --prefix functions
+          npm run build --prefix functions
+
+      - name: Web - typecheck, unit tests, production build
+        run: |
+          npm run typecheck --prefix web
+          npm test --prefix web
+          npm run build --prefix web
+
+      - name: Production bundle must not contain emulator or test hooks
+        run: "! grep -rE \"127\\.0\\.0\\.1|9099\" web/dist/assets"
+
+      - name: Firestore rules tests (emulator)
+        run: npm run rules --prefix tests
+        env:
+          ALLOWED_EMAILS: owner@example.com
+
+      - name: CloudRepo against the Auth + Firestore emulators
+        run: |
+          node scripts/configure.mjs
+          tests/node_modules/.bin/firebase emulators:exec --only auth,firestore --project demo-lexi "npm --prefix web run test:int"
+        env:
+          ALLOWED_EMAILS: owner@example.com,second@example.com
+
+      - name: End-to-end (Playwright, production CSP)
+        run: |
+          npm i --no-save --prefix tests playwright
+          npx --prefix tests playwright install --with-deps chromium
+          npm run e2e --prefix tests
+
+  terraform:
+    name: Terraform validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+      - run: |
+          mkdir -p infra/.build/functions && echo '{}' > infra/.build/functions/package.json
+          terraform -chdir=infra fmt -check
+          terraform -chdir=infra init -backend=false
+          terraform -chdir=infra validate

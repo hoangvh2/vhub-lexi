@@ -1,0 +1,217 @@
+rules_version = '2';
+
+// GENERATED into firestore.rules by scripts/configure.mjs; Terraform fills the same template at deploy time.
+// The allowlist comes from ALLOWED_EMAILS (terraform.tfvars / CI secret), so addresses never live in the repository.
+//
+// Model: every document belongs to one person under /users/{uid}. Only a verified Google account on the
+// allowlist, signed in as that uid, can touch it. Every write is shape-checked: unknown fields, wrong types
+// and oversized text are rejected, so a bug in any client cannot corrupt the data. Everything else is denied.
+//
+// To add a note type (TOEIC question, IELTS prompt…): add its name to NOTE_TYPES below and a branch to
+// validFields(); nothing else in these rules changes.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function allowedUser() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.auth.token.email.lower() in [__ALLOWED_EMAILS__];
+    }
+
+    function owner(uid) {
+      return allowedUser() && request.auth.uid == uid;
+    }
+
+    function okId(s) {
+      return s is string && s.matches('^[A-Za-z0-9_.@-]{1,90}$');
+    }
+    function optStr(d, k, max) {
+      return !(k in d) || (d[k] is string && d[k].size() <= max);
+    }
+    function optInt(d, k) {
+      return !(k in d) || d[k] is int;
+    }
+    function optBool(d, k) {
+      return !(k in d) || d[k] is bool;
+    }
+    function optList(d, k, max) {
+      return !(k in d) || (d[k] is list && d[k].size() <= max);
+    }
+    function intIn(v, lo, hi) {
+      return v is int && v >= lo && v <= hi;
+    }
+
+    // ------------------------------------------------------------ decks
+    function validDeck(d, id) {
+      return d.keys().hasAll(['id', 'name', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['id', 'name', 'newPerDay', 'createdAt', 'updatedAt'])
+        && d.id == id
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 60
+        && (!('newPerDay' in d) || intIn(d.newPerDay, 0, 200))
+        && d.createdAt is int && d.updatedAt is int;
+    }
+
+    // ------------------------------------------------------------ notes
+    // NOTE_TYPES: the note types the app knows. Add new ones here and in validFields().
+    function vocabFields(f) {
+      return f.keys().hasAll(['word'])
+        && f.keys().hasOnly(['word', 'ipa', 'pos', 'vi', 'en', 'examples', 'mnemonic'])
+        && f.word is string && f.word.size() > 0 && f.word.size() <= 80
+        && optStr(f, 'ipa', 80)
+        && optStr(f, 'pos', 30)
+        && optStr(f, 'vi', 300)
+        && optStr(f, 'en', 400)
+        && optStr(f, 'mnemonic', 300)
+        && optList(f, 'examples', 8);
+    }
+
+    function validFields(type, f) {
+      return f is map && f.size() <= 12
+        && (type == 'vocab' && vocabFields(f));
+    }
+
+    function validNote(d, id) {
+      return d.keys().hasAll(['id', 'type', 'deckId', 'fields', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['id', 'type', 'deckId', 'fields', 'aiFields', 'tags', 'createdAt', 'updatedAt'])
+        && d.id == id
+        && d.type is string && d.type in ['vocab']
+        && okId(d.deckId)
+        && validFields(d.type, d.fields)
+        && optList(d, 'aiFields', 12)
+        && optList(d, 'tags', 10)
+        && d.createdAt is int && d.updatedAt is int;
+    }
+
+    // ------------------------------------------------------------ cards (note + template + FSRS memory state)
+    function validCard(d, id) {
+      return d.keys().hasAll(['id', 'noteId', 'deckId', 'template', 'state', 'due', 'stability', 'difficulty',
+                              'scheduledDays', 'learningSteps', 'reps', 'lapses', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['id', 'noteId', 'deckId', 'template', 'state', 'due', 'stability', 'difficulty',
+                             'scheduledDays', 'learningSteps', 'reps', 'lapses', 'lastReview', 'suspended', 'createdAt', 'updatedAt'])
+        && d.id == id
+        && okId(d.noteId) && okId(d.deckId)
+        && d.template is string && d.template.matches('^[a-z0-9_-]{1,30}$')
+        && d.id == d.noteId + '.' + d.template
+        && intIn(d.state, 0, 3)
+        && d.due is int
+        && d.stability is number && d.stability >= 0 && d.stability <= 100000
+        && d.difficulty is number && d.difficulty >= 0 && d.difficulty <= 100
+        && d.scheduledDays is number && d.scheduledDays >= 0 && d.scheduledDays <= 100000
+        && intIn(d.learningSteps, 0, 20)
+        && intIn(d.reps, 0, 1000000)
+        && intIn(d.lapses, 0, 1000000)
+        && optInt(d, 'lastReview')
+        && optBool(d, 'suspended')
+        && d.createdAt is int && d.updatedAt is int;
+    }
+
+    // ------------------------------------------------------------ review log (append-only history)
+    function validReview(d, id) {
+      return d.keys().hasOnly(['id', 'cardId', 'noteId', 'deckId', 'rating', 'state', 'stability', 'difficulty',
+                               'scheduledDays', 'reviewedAt', 'durationMs', 'device'])
+        && d.keys().hasAll(['id', 'cardId', 'noteId', 'deckId', 'rating', 'state', 'reviewedAt', 'device'])
+        && d.id == id
+        && okId(d.cardId) && okId(d.noteId) && okId(d.deckId)
+        && intIn(d.rating, 1, 4)
+        && intIn(d.state, 0, 3)
+        && d.reviewedAt is int
+        && d.device in ['web', 'android']
+        && (!('durationMs' in d) || intIn(d.durationMs, 0, 3600000))
+        && (!('stability' in d) || d.stability is number)
+        && (!('difficulty' in d) || d.difficulty is number)
+        && (!('scheduledDays' in d) || d.scheduledDays is number);
+    }
+
+    // ------------------------------------------------------------ per-day counters (atomic increments)
+    function validDaily(d, id) {
+      return d.keys().hasAll(['id'])
+        && d.keys().hasOnly(['id', 'newCards', 'reviews', 'again', 'hard', 'good', 'easy', 'ms', 'updatedAt'])
+        && d.id == id && id.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && optInt(d, 'newCards') && optInt(d, 'reviews') && optInt(d, 'again') && optInt(d, 'hard')
+        && optInt(d, 'good') && optInt(d, 'easy') && optInt(d, 'ms') && optInt(d, 'updatedAt');
+    }
+
+    // ------------------------------------------------------------ preferences
+    function validLayout(l) {
+      return l is map
+        && l.keys().hasOnly(['showIpa', 'showPos', 'showEn', 'showVi', 'showExamples', 'showMnemonic'])
+        && optBool(l, 'showIpa') && optBool(l, 'showPos') && optBool(l, 'showEn')
+        && optBool(l, 'showVi') && optBool(l, 'showExamples') && optBool(l, 'showMnemonic');
+    }
+
+    function validPrefs(d) {
+      return d.keys().hasOnly(['desiredRetention', 'newPerDay', 'maxReviewsPerDay', 'templates', 'layout', 'autoSpeak',
+                               'theme', 'accent', 'aiEnabled', 'dayStartHour', 'defaultDeckId', 'updatedAt'])
+        && (!('desiredRetention' in d) || (d.desiredRetention is number && d.desiredRetention >= 0.7 && d.desiredRetention <= 0.99))
+        && (!('newPerDay' in d) || intIn(d.newPerDay, 0, 200))
+        && (!('maxReviewsPerDay' in d) || intIn(d.maxReviewsPerDay, 0, 9999))
+        && (!('templates' in d) || (d.templates is map && d.templates.size() <= 10))
+        && (!('layout' in d) || validLayout(d.layout))
+        && (!('autoSpeak' in d) || d.autoSpeak in ['off', 'front', 'back'])
+        && (!('theme' in d) || d.theme in ['system', 'light', 'dark'])
+        && (!('accent' in d) || d.accent in ['teal', 'blue', 'orange', 'violet'])
+        && optBool(d, 'aiEnabled')
+        && (!('dayStartHour' in d) || intIn(d.dayStartHour, 0, 23))
+        && optStr(d, 'defaultDeckId', 90)
+        && optInt(d, 'updatedAt');
+    }
+
+    // ------------------------------------------------------------ routes
+    match /users/{uid}/decks/{id} {
+      allow get: if owner(uid);
+      allow list: if owner(uid) && request.query.limit <= 200;
+      allow create, update: if owner(uid) && validDeck(request.resource.data, id);
+      allow delete: if owner(uid);
+    }
+
+    match /users/{uid}/notes/{id} {
+      allow get: if owner(uid);
+      allow list: if owner(uid) && request.query.limit <= 5000;
+      allow create: if owner(uid) && validNote(request.resource.data, id);
+      allow update: if owner(uid) && validNote(request.resource.data, id)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.type == resource.data.type;
+      allow delete: if owner(uid);
+    }
+
+    match /users/{uid}/cards/{id} {
+      allow get: if owner(uid);
+      allow list: if owner(uid) && request.query.limit <= 10000;
+      allow create: if owner(uid) && validCard(request.resource.data, id);
+      allow update: if owner(uid) && validCard(request.resource.data, id)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.noteId == resource.data.noteId;
+      allow delete: if owner(uid);
+    }
+
+    // Append-only: a log entry is written once; the only delete is the learner's "undo".
+    match /users/{uid}/reviews/{id} {
+      allow get: if owner(uid);
+      allow list: if owner(uid) && request.query.limit <= 20000;
+      allow create: if owner(uid) && validReview(request.resource.data, id);
+      allow delete: if owner(uid);
+    }
+
+    match /users/{uid}/daily/{id} {
+      allow get: if owner(uid);
+      allow list: if owner(uid) && request.query.limit <= 800;
+      allow create, update: if owner(uid) && validDaily(request.resource.data, id);
+      allow delete: if owner(uid);
+    }
+
+    match /users/{uid}/settings/prefs {
+      allow get: if owner(uid);
+      allow create, update: if owner(uid) && validPrefs(request.resource.data);
+      allow delete: if owner(uid);
+    }
+    match /users/{uid}/settings/{other} {
+      allow list: if owner(uid) && request.query.limit <= 5;
+    }
+
+    // Quota counters (users/{uid}/meta/*) and anything unknown: only the Cloud Functions (admin SDK) can touch them.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

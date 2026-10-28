@@ -1,0 +1,12 @@
+{
+  "name": "vhub-lexi",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "VH Lexi: personal English study app (flashcards now, TOEIC/IELTS later). Android native + web, synced through Firebase.",
+  "scripts": {
+    "dict:build": "node tools/dict/build.ts",
+    "dict:test": "node --test tools/dict/dict.test.ts",
+    "vectors": "npm --prefix web run vectors"
+  }
+}

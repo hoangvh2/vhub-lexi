@@ -1,0 +1,175 @@
+{
+  "deck": {
+    "id": "deck1",
+    "name": "Mặc định",
+    "createdAt": 1768446000000,
+    "updatedAt": 1768446000000
+  },
+  "note": {
+    "id": "note1",
+    "type": "vocab",
+    "deckId": "deck1",
+    "createdAt": 1768446000000,
+    "updatedAt": 1768446000000,
+    "tags": [
+      "toeic"
+    ],
+    "aiFields": [
+      "vi"
+    ],
+    "fields": {
+      "word": "resilient",
+      "ipa": "rɪˈzɪljənt",
+      "pos": "adjective",
+      "vi": "kiên cường",
+      "en": "able to recover quickly",
+      "examples": [
+        "Children are resilient."
+      ],
+      "mnemonic": "re-silient: springs back"
+    }
+  },
+  "cards": {
+    "fresh": {
+      "id": "note1.recognize",
+      "noteId": "note1",
+      "deckId": "deck1",
+      "template": "recognize",
+      "state": 0,
+      "due": 1768446000000,
+      "stability": 0,
+      "difficulty": 0,
+      "scheduledDays": 0,
+      "learningSteps": 0,
+      "reps": 0,
+      "lapses": 0,
+      "createdAt": 1768446000000,
+      "updatedAt": 1768446000000
+    },
+    "learning": {
+      "id": "note1.recognize",
+      "noteId": "note1",
+      "deckId": "deck1",
+      "template": "recognize",
+      "state": 1,
+      "due": 1768446600000,
+      "stability": 2.3065,
+      "difficulty": 2.11810397,
+      "scheduledDays": 0,
+      "learningSteps": 1,
+      "reps": 1,
+      "lapses": 0,
+      "createdAt": 1768446000000,
+      "updatedAt": 1768446000000,
+      "lastReview": 1768446000000
+    },
+    "review": {
+      "id": "note1.cloze",
+      "noteId": "note1",
+      "deckId": "deck1",
+      "template": "cloze",
+      "state": 2,
+      "due": 1769137200000,
+      "stability": 8.2956,
+      "difficulty": 1,
+      "scheduledDays": 8,
+      "learningSteps": 0,
+      "reps": 1,
+      "lapses": 0,
+      "createdAt": 1768446000000,
+      "updatedAt": 1768446000000,
+      "lastReview": 1768446000000
+    },
+    "lapsed": {
+      "id": "note1.cloze",
+      "noteId": "note1",
+      "deckId": "deck1",
+      "template": "cloze",
+      "state": 3,
+      "due": 1769137800000,
+      "stability": 1.38863246,
+      "difficulty": 7.02698957,
+      "scheduledDays": 0,
+      "learningSteps": 0,
+      "reps": 2,
+      "lapses": 1,
+      "createdAt": 1768446000000,
+      "updatedAt": 1769137200000,
+      "lastReview": 1769137200000
+    },
+    "suspended": {
+      "id": "note1.recall",
+      "noteId": "note1",
+      "deckId": "deck1",
+      "template": "recall",
+      "state": 0,
+      "due": 1768446000000,
+      "stability": 0,
+      "difficulty": 0,
+      "scheduledDays": 0,
+      "learningSteps": 0,
+      "reps": 0,
+      "lapses": 0,
+      "createdAt": 1768446000000,
+      "updatedAt": 1768446000000,
+      "suspended": true
+    }
+  },
+  "review": {
+    "id": "note1.recognize@1768446000000",
+    "cardId": "note1.recognize",
+    "noteId": "note1",
+    "deckId": "deck1",
+    "rating": 3,
+    "state": 0,
+    "stability": 2.3065,
+    "difficulty": 2.11810397,
+    "scheduledDays": 0,
+    "reviewedAt": 1768446000000,
+    "durationMs": 4200,
+    "device": "web"
+  },
+  "daily": {
+    "id": "2026-01-14",
+    "newCards": 1,
+    "reviews": 0,
+    "again": 0,
+    "hard": 0,
+    "good": 1,
+    "easy": 0,
+    "ms": 4200,
+    "updatedAt": 1768446000000
+  },
+  "delta": {
+    "id": "2026-01-14",
+    "newCards": 1,
+    "reviews": 0,
+    "rating": 3,
+    "ms": 4200
+  },
+  "prefs": {
+    "desiredRetention": 0.9,
+    "newPerDay": 10,
+    "maxReviewsPerDay": 200,
+    "templates": {
+      "vocab": [
+        "recognize",
+        "cloze"
+      ]
+    },
+    "layout": {
+      "showIpa": true,
+      "showPos": true,
+      "showEn": true,
+      "showVi": true,
+      "showExamples": true,
+      "showMnemonic": true
+    },
+    "autoSpeak": "off",
+    "theme": "system",
+    "accent": "teal",
+    "aiEnabled": true,
+    "dayStartHour": 4,
+    "updatedAt": 1768446000000
+  }
+}

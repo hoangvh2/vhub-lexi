@@ -1,0 +1,14 @@
+{
+  "name": "vhub-lexi-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e": "node --test e2e/web.test.mjs",
+    "rules": "node ../scripts/configure.mjs && firebase emulators:exec --only firestore --project demo-lexi \"node --test rules/rules.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.0.0",
+    "firebase-tools": "15.34.1"
+  }
+}

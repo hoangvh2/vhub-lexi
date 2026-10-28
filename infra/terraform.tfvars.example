@@ -1,0 +1,24 @@
+# Copy to terraform.tfvars (git-ignored) and fill in. Never commit terraform.tfvars or terraform.tfstate.
+
+project_id = "your-lexi-project-id" # a NEW project for Lexi, billing enabled
+
+# Google accounts that may sign in and use the app. Change the list, run deploy again.
+allowed_emails = [
+  "you@gmail.com",
+]
+
+# Your hostname, after connecting it to Firebase Hosting (infra/README.md section 8).
+custom_domain = "lexi.vhub.id.vn"
+
+# Leave unset: Terraform creates a Gemini key restricted to the Generative Language API and puts it in Secret Manager.
+# gemini_api_key = "AIza..."
+
+# Optional: monthly budget alert (emails the billing admins at 50/90/100% and on forecast).
+# billing_account_id = "XXXXXX-XXXXXX-XXXXXX"
+# monthly_budget     = 5
+# budget_currency    = "USD" # must match the billing account's currency
+
+# Android app: SHA-1 of the certificate(s) that sign the APK (infra/README.md section 9).
+# A sideloaded APK cannot get App Check tokens, so Firestore must not require them.
+# android_sha1      = ["AA:BB:...:FF"]
+enforce_app_check = false
