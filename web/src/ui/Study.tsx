@@ -81,9 +81,10 @@ export function Study({ deckId }: { deckId: Id | null }) {
   const tpl = card && note ? template(note.type, card.template) : undefined;
   const outcomes = useMemo(() => (card && revealed ? preview(sched, card, now) : null), [card?.id, card?.updatedAt, revealed, sched]);
 
-  // New card on screen: reset the answer UI, start the timer, maybe read it aloud. Only when the card really
-  // changed: the effect runs after paint, and must not wipe an answer the learner revealed in the meantime.
-  const shownId = useRef<Id | null>(null);
+  // New card on screen: reset the answer UI and start the timer. Effects run after paint, so the reset is keyed to
+  // a real change of card (the first card is already in its initial state) and cannot wipe an answer that the
+  // learner revealed before the effect ran.
+  const shownId = useRef<Id | null>(card?.id ?? null);
   useEffect(() => {
     const id = card?.id ?? null;
     if (shownId.current === id) return;
@@ -92,6 +93,10 @@ export function Study({ deckId }: { deckId: Id | null }) {
     setTyped("");
     setVerdict(null);
     shownAt.current = Date.now();
+  }, [card?.id]);
+
+  // Read the front aloud when a card appears (if the learner chose that).
+  useEffect(() => {
     if (card && note && tpl && p.autoSpeak === "front") {
       const t = tpl.speak?.front?.(note);
       if (t) speak(t);

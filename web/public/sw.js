@@ -26,7 +26,7 @@ async function networkFirst(req, cacheName, fallbackKey) {
   const cache = await caches.open(cacheName);
   try {
     const res = await fetch(req);
-    if (res.ok) cache.put(fallbackKey ?? req, res.clone());
+    if (res.ok) await cache.put(fallbackKey ?? req, res.clone()).catch(() => undefined);
     return res;
   } catch (err) {
     const hit = await cache.match(fallbackKey ?? req);
@@ -40,7 +40,7 @@ async function cacheFirst(req, cacheName) {
   const hit = await cache.match(req);
   if (hit) return hit;
   const res = await fetch(req);
-  if (res.ok) cache.put(req, res.clone());
+  if (res.ok) await cache.put(req, res.clone()).catch(() => undefined); // stored before the page can go offline
   return res;
 }
 
