@@ -160,6 +160,7 @@ it("cross-platform vectors are up to date", () => {
   for (const [name, text] of files) {
     const path = join(dir, name);
     if (process.env.UPDATE_VECTORS || !existsSync(path)) writeFileSync(path, text + (text.endsWith("\n") ? "" : "\n"));
-    expect(readFileSync(path, "utf8").trim(), name).toBe(text.trim());
+    // A Windows checkout with core.autocrlf turns LF into CRLF; the content is what matters.
+    expect(readFileSync(path, "utf8").replace(/\r\n/g, "\n").trim(), name).toBe(text.trim());
   }
 });
