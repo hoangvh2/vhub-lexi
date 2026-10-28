@@ -8,13 +8,14 @@
 //   node infra/deploy.mjs --plan     show what Terraform would change, change nothing
 //   node infra/deploy.mjs --skip-web only the Terraform part (function, rules, allowlist...)
 //   node infra/deploy.mjs --web-only         only build + publish the web app, no Terraform/gcloud (alias: --skip-terraform).
-//                                            Faster: reuses node_modules and the dictionary if present and reads the
-//                                            settings saved by the last full run (infra/.build/outputs.json).
+//                                            Faster: reuses node_modules, and the dictionary unless its sources changed
+//                                            since it was built; reads the settings saved by the last full run
+//                                            (infra/.build/outputs.json).
 //   node infra/deploy.mjs --skip-tests       do not run the web unit tests before building
 //
 // Needs: terraform (>= 1.10), gcloud, node 22, npm. Reads infra/terraform.tfvars (never committed).
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -120,10 +121,24 @@ if (!skipTf || Object.keys(cached).length === 0) {
 }
 
 // ---------------------------------------------------------------- dictionary + web
-if (skipTf && existsSync(join(root, "web", "public", "dict", "latest.json"))) {
-  console.log("\nOffline dictionary already built (web/public/dict): skipped.");
+/** The pack is reusable when it exists and nothing that goes into it (code, pins, committed data) is newer. */
+function dictionaryUpToDate() {
+  const built = join(root, "web", "public", "dict", "latest.json");
+  if (!existsSync(built) || !existsSync(join(root, "dist-dict", "latest.json"))) return false;
+  const dir = join(root, "tools", "dict");
+  const inputs = [
+    ...readdirSync(dir).filter((f) => f.endsWith(".ts") || f.endsWith(".json")).map((f) => join(dir, f)),
+    ...(existsSync(join(dir, "data")) ? readdirSync(join(dir, "data")).map((f) => join(dir, "data", f)) : []),
+    join(root, "shared", "ipa.ts"),
+  ];
+  const at = statSync(built).mtimeMs;
+  return inputs.every((f) => !existsSync(f) || statSync(f).mtimeMs <= at);
+}
+
+if (skipTf && dictionaryUpToDate()) {
+  console.log("\nOffline dictionary already built and its sources are unchanged (web/public/dict): skipped.");
 } else {
-  say("Building the offline dictionary (CMUdict + WordNet)");
+  say("Building the offline dictionary (CMUdict + WordNet + Wiktionary)");
   run("node", ["tools/dict/build.ts", "--copy-web"], { cwd: root });
 }
 
