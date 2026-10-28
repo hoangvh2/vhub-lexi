@@ -13,7 +13,9 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.ui.MainActivity
 import org.junit.Rule
@@ -85,6 +87,20 @@ class SmokeTest {
         rule.onNodeWithTag("nav-library").performClick()
         waitFor("library-item") { rule.onAllNodesWithTextCount("serendipity") > 0 }
         shot("07-library")
+
+        // Edit dialog: the form is taller than the dialog, so its last field must be reachable by scrolling and
+        // the buttons must stay on screen, also with the keyboard open (regression: the form did not scroll).
+        rule.onNodeWithText("serendipity").performClick()
+        waitFor("note-editor") { rule.onAllNodesWithTagCount("note-editor-form") > 0 }
+        rule.onNodeWithTag("note-editor-save").assertIsDisplayed()
+        rule.onNodeWithTag("note-editor-form").performScrollToNode(hasTestTag("note-editor-tags"))
+        rule.onNodeWithTag("note-editor-tags").assertIsDisplayed().performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag("note-editor-tags").assertIsDisplayed()
+        rule.onNodeWithTag("note-editor-save").assertIsDisplayed()
+        shot("07b-note-editor-scrolled")
+        rule.onNodeWithText("Huỷ").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("note-editor-closed") { rule.onAllNodesWithTagCount("note-editor-form") == 0 }
         rule.onNodeWithTag("nav-stats").performClick()
         shot("08-stats")
         rule.onNodeWithTag("nav-settings").performClick()
