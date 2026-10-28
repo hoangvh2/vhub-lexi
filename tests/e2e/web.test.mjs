@@ -126,8 +126,7 @@ describe("core flow (local-only mode)", () => {
     await page.reload();
     await page.waitForSelector('[data-testid=word-input]');
     await page.fill('[data-testid=word-input]', "ephemeral");
-    await page.waitForSelector('[data-testid=preview]');
-    assert.match(await page.textContent('[data-testid=preview]'), /lasting a very short time/);
+    await page.waitForFunction(() => document.querySelector('[data-testid=preview]')?.textContent?.includes("lasting a very short time"));
     await ctx.close();
   });
 });

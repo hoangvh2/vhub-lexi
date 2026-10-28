@@ -170,7 +170,15 @@ export function Study({ deckId }: { deckId: Id | null }) {
   };
 
   // Keyboard: Space/Enter reveal, 1-4 rate, U undo, R replay.
+  // The handler is swapped in during render (not in an effect) so a key pressed right after the UI changes
+  // always sees the latest state; the listener itself is attached once.
+  const onKeyRef = useRef<(e: KeyboardEvent) => void>(() => undefined);
   useEffect(() => {
+    const listener = (e: KeyboardEvent) => onKeyRef.current(e);
+    addEventListener("keydown", listener);
+    return () => removeEventListener("keydown", listener);
+  }, []);
+  {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
       const typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT");
@@ -195,9 +203,8 @@ export function Study({ deckId }: { deckId: Id | null }) {
         if (t) speak(t);
       }
     };
-    addEventListener("keydown", onKey);
-    return () => removeEventListener("keydown", onKey);
-  });
+    onKeyRef.current = onKey;
+  }
 
   if (!ready) return <div class="page"><p class="muted">Đang tải dữ liệu…</p></div>;
 
