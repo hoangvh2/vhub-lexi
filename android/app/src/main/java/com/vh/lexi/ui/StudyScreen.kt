@@ -45,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -245,7 +246,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
             }
 
             if (!revealed && tpl.mode == AnswerMode.FLIP) {
-                Button(onClick = { reveal() }, Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text("Hiện đáp án", fontSize = 16.sp) }
+                Button(onClick = { reveal() }, Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("show-answer")) { Text("Hiện đáp án", fontSize = 16.sp) }
             } else if (revealed) {
                 val fsrs = remember(prefs.desiredRetention) { Fsrs(prefs.desiredRetention) }
                 val suggested = verdict?.let(::suggestedRating)
@@ -254,7 +255,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                         val (fg, soft) = when (r) { 1 -> c.again to c.againSoft; 2 -> c.hard to c.hardSoft; 3 -> c.good to c.goodSoft; else -> c.easy to c.easySoft }
                         val next = fsrs.next(card, now, r)
                         Surface(
-                            onClick = { rate(r) }, modifier = Modifier.weight(1f).heightIn(min = 62.dp), shape = RoundedCornerShape(14.dp),
+                            onClick = { rate(r) }, modifier = Modifier.weight(1f).heightIn(min = 62.dp).testTag("rate-$r"), shape = RoundedCornerShape(14.dp),
                             color = if (suggested == r) soft else c.surface, border = BorderStroke(1.5.dp, if (suggested == r) fg else c.line),
                         ) {
                             Column(Modifier.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
@@ -293,7 +294,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
 @Composable
 private fun DoneCard(session: Session, waitingMs: Long?, hasMoreNew: Boolean, canUndo: Boolean, onContinue: () -> Unit, onMore: () -> Unit, onUndo: () -> Unit, onAdd: () -> Unit) {
     val c = Lexi.colors
-    Panel {
+    Panel(Modifier.testTag("session-done")) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(if (session.answered > 0) "Xong!" else "Hết thẻ hôm nay", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = c.accent)
             if (session.answered > 0) {

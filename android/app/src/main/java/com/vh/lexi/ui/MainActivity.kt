@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -114,7 +115,7 @@ private fun Main(app: LexiApp) {
             bottomBar = {
                 NavigationBar(containerColor = Lexi.colors.surface) {
                     for (t in Tab.entries) NavigationBarItem(
-                        selected = tab == t, onClick = { tab = t }, label = { Text(t.label, fontSize = 11.sp, maxLines = 1) },
+                        selected = tab == t, onClick = { tab = t }, modifier = Modifier.testTag("nav-${t.name.lowercase()}"), label = { Text(t.label, fontSize = 11.sp, maxLines = 1) },
                         icon = {
                             if (t == Tab.STUDY && due > 0) BadgedBox(badge = { Badge { Text("$due") } }) { Icon(t.icon, t.label) } else Icon(t.icon, t.label)
                         },

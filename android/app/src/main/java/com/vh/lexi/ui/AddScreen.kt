@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -200,7 +201,7 @@ fun AddScreen(app: LexiApp) {
             value = q, onValueChange = { q = it }, singleLine = true, label = { Text("Từ hoặc cụm từ tiếng Anh") },
             textStyle = androidx.compose.ui.text.TextStyle(fontSize = 22.sp),
             keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, capitalization = KeyboardCapitalization.None),
-            modifier = Modifier.fillMaxWidth().focusRequester(focus),
+            modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("word-input"),
         )
 
         if (suggestions.isNotEmpty() && normalizeWord(q) != hit?.entry?.word) {
@@ -222,7 +223,7 @@ fun AddScreen(app: LexiApp) {
         if (word.isNotEmpty()) {
             val tpl = template("vocab", "recognize")!!
             Text("Xem trước thẻ", style = MaterialTheme.typography.labelMedium, color = c.muted)
-            Panel {
+            Panel(Modifier.testTag("preview")) {
                 BlocksView(tpl.front(previewNote, prefs.layout), onSpeak = app.speech::speak)
                 androidx.compose.material3.HorizontalDivider(color = c.line)
                 BlocksView(tpl.back(previewNote, prefs.layout), onSpeak = app.speech::speak)
@@ -256,7 +257,7 @@ fun AddScreen(app: LexiApp) {
 
         if (word.isNotEmpty()) {
             OutlinedTextField(
-                value = draft.vi, onValueChange = { draft.vi = it; edited("vi") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                value = draft.vi, onValueChange = { draft.vi = it; edited("vi") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("vi-input"),
                 label = { Text("Nghĩa tiếng Việt" + if ("vi" in draft.ai) " · AI" else "") },
                 placeholder = { Text(if (aiAvailable) "Nhập hoặc bấm “Điền bằng AI”" else "Nhập nghĩa tiếng Việt") },
             )
@@ -283,7 +284,7 @@ fun AddScreen(app: LexiApp) {
                 OutlinedTextField(value = newDeck.orEmpty(), onValueChange = { newDeck = it }, singleLine = true, label = { Text("Tên bộ thẻ mới (vd: TOEIC)") }, modifier = Modifier.fillMaxWidth())
             }
             if (duplicate) Pill("“$word” đã có trong thư viện. Lưu sẽ tạo thêm một bản.", PillKind.WARN)
-            Button(onClick = ::save, enabled = canSave, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.Check, null); Text("  Lưu · $cardCount thẻ") }
+            Button(onClick = ::save, enabled = canSave, modifier = Modifier.fillMaxWidth().testTag("save-word")) { Icon(Icons.Filled.Check, null); Text("  Lưu · $cardCount thẻ") }
             if (!canSave) Text("Cần có nghĩa tiếng Việt hoặc định nghĩa tiếng Anh.", color = c.muted, fontSize = 13.sp)
         }
     }
