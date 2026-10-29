@@ -17,7 +17,11 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.semantics.SemanticsProperties
+import com.vh.lexi.core.FieldValue
+import kotlinx.coroutines.runBlocking
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.core.view.WindowCompat
@@ -25,6 +29,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.test.uiautomator.UiDevice
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.ui.MainActivity
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -88,10 +93,11 @@ class SmokeTest {
     }
 
     /** Screen bounds of a node in the activity window (edge-to-edge, so window = screen apart from the decor offset). */
-    private fun screenBounds(tag: String): Rect {
+    /** [unmerged]: for a node inside another one's merged semantics, such as a text field's supporting text. */
+    private fun screenBounds(tag: String, unmerged: Boolean = false): Rect {
         // positionInWindow + size, not boundsInWindow: the latter is clipped to the scroll viewport, so a field cut off
         // by the edge of its scroll container would still look fully on screen.
-        val n = rule.onNodeWithTag(tag).fetchSemanticsNode()
+        val n = rule.onNodeWithTag(tag, useUnmergedTree = unmerged).fetchSemanticsNode()
         val at = IntArray(2).also { rule.activity.window.decorView.getLocationOnScreen(it) }
         val left = n.positionInWindow.x.toInt() + at[0]
         val top = n.positionInWindow.y.toInt() + at[1]
@@ -188,17 +194,78 @@ class SmokeTest {
         shot("09-settings")
         // A field in the middle of a long scrolling screen is brought into view above the keyboard.
         // After the dialog closed the activity window takes focus back asynchronously; a tap before that is dropped.
+        // Even after hasWindowFocus() the tap was still dropped in 2 of 3 CI runs (field not focused, no keyboard), so
+        // focus it through its semantics action: what is tested here is the scrolling once the keyboard is up.
         waitFor("window-focus") { rule.activity.hasWindowFocus() }
-        rule.onNodeWithTag("day-start-input").performScrollTo().performClick()
+        rule.onNodeWithTag("day-start-input").performScrollTo().performSemanticsAction(SemanticsActions.RequestFocus)
         kb = waitForKeyboard("settings")
         assertAboveKeyboard("day-start-input", screenBounds("day-start-input"), kb)
         shot("09b-settings-keyboard")
         hideKeyboard()
+
+        typingCardNamesTheTargetWord()
+    }
+
+    /**
+     * Two words with the same Vietnamese meaning, typing cards only: the card shows the target's first letter and length
+     * and lists the other word as "not this"; typing the other word (inflected) is a retry, not a lapse.
+     */
+    private fun typingCardNamesTheTargetWord() {
+        val app = rule.activity.application as LexiApp
+        val recallOnly = mapOf("vocab" to listOf("recall"))
+        runBlocking { app.data.savePrefs(app.data.prefs.value.copy(templates = recallOnly)) }
+        // Cards are made from the stored prefs, which reach `prefs` asynchronously.
+        waitFor("prefs") { app.data.prefs.value.templates == recallOnly }
+        runBlocking {
+            // Their own deck, so the study screen can be narrowed to them (serendipity now has a recall card too).
+            val deck = app.data.createDeck("Thuyết phục")
+            for (w in listOf("convince", "persuade")) {
+                app.data.addNote("vocab", mapOf("word" to FieldValue.Text(w), "pos" to FieldValue.Text("verb"), "vi" to FieldValue.Text("thuyết phục, làm cho tin"), "en" to FieldValue.Text("$w: definition")), deck.id)
+            }
+        }
+        rule.onNodeWithTag("nav-study").performClick()
+        waitFor("deck-picker") { rule.onAllNodesWithTextCount("Tất cả bộ thẻ") > 0 }
+        rule.onNodeWithText("Tất cả bộ thẻ").performClick()
+        waitFor("deck-menu") { rule.onAllNodesWithTextCount("Thuyết phục") > 0 }
+        rule.onNodeWithText("Thuyết phục").performClick()
+        waitFor("typing-card") { rule.onAllNodesWithTagCount("answer-hint") > 0 }
+        val notThese = rule.textOf("not-these")
+        val (target, other) = if ("persuade" in notThese) "convince" to "persuade" else "persuade" to "convince"
+        assertTrue(rule.textOf("card-mode"), rule.textOf("card-mode").contains("GÕ TỪ TIẾNG ANH"))
+        assertTrue(rule.textOf("answer-hint"), rule.textOf("answer-hint").contains("8 chữ cái"))
+        shot("10-typing-card")
+
+        rule.onNode(hasSetTextAction()).performTextInput("${other}d")
+        rule.onNodeWithTag("type-check").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("mixed-up") { rule.onAllNodesWithTagCount("mixed-up", unmerged = true) > 0 }
+        assertTrue(rule.textOf("mixed-up"), rule.textOf("mixed-up").contains("Đúng nghĩa, nhưng là từ khác: $other"))
+        // The field still has focus: the message must not hide under the keyboard (it is the field's supporting text).
+        val kb = waitForKeyboard("typing")
+        assertAboveKeyboard("mixed-up", screenBounds("mixed-up", unmerged = true), kb)
+        shot("11-typing-mixed-up")
+        hideKeyboard()
+
+        rule.onNode(hasSetTextAction()).performTextClearance()
+        rule.onNode(hasSetTextAction()).performTextInput(target)
+        rule.onNodeWithTag("type-check").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("verdict") { rule.onAllNodesWithTagCount("verdict") > 0 }
+        assertTrue(rule.textOf("verdict"), rule.textOf("verdict").contains("Chính xác · lần đầu gõ “$other”"))
+        rule.onNodeWithTag("compare").performScrollTo()
+        shot("12-typing-compare")
+        rule.onNodeWithTag("rate-2").performSemanticsAction(SemanticsActions.OnClick)
     }
 }
+
+/** All the text inside the node with [tag] (its own and its children's); also finds tags merged into a parent. */
+private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.textOf(tag: String): String =
+    onAllNodes(androidx.compose.ui.test.hasTestTag(tag), useUnmergedTree = true).fetchSemanticsNodes().flatMap { it.texts() }.joinToString(" ")
+
+private fun androidx.compose.ui.semantics.SemanticsNode.texts(): List<String> =
+    config.getOrElse(SemanticsProperties.Text) { emptyList() }.map { it.text } + children.flatMap { it.texts() }
 
 private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.onAllNodesWithTextCount(text: String) =
     onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().size
 
-private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.onAllNodesWithTagCount(tag: String) =
-    onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().size
+/** [unmerged]: also finds a tag inside merged semantics, such as a text field's supporting text. */
+private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.onAllNodesWithTagCount(tag: String, unmerged: Boolean = false) =
+    onAllNodes(androidx.compose.ui.test.hasTestTag(tag), useUnmergedTree = unmerged).fetchSemanticsNodes().size

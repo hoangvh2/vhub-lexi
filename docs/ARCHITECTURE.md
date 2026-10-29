@@ -39,6 +39,15 @@ FSRS-6 (thư viện `ts-fsrs` ở web, bản port Kotlin ở Android), `enable_s
 
 Hàng đợi: thẻ đang học đến hạn → thẻ ôn đến hạn trước mốc đầu ngày học kế tiếp (mặc định 04:00) → thẻ mới (giới hạn mỗi ngày, rải đều giữa thẻ ôn); thẻ cùng ghi chú bị ẩn trong phiên sau khi trả lời một thẻ.
 
+## Thẻ gõ và từ dễ nhầm
+
+Nhiều từ có cùng nghĩa Việt (convince, persuade: "thuyết phục, làm cho tin"; ~31% từ đơn trong gói có nghĩa đầu trùng với từ khác), nên thẻ gõ phải chỉ ra đúng một từ. `shared/confusables.ts` (port: `android/core/.../Confusables.kt`, vector `shared/vectors/confusables.json`) tìm trong **chính các ghi chú của người học** những từ trùng một cụm nghĩa Việt (bỏ ngoặc, bỏ "sự/việc/cuộc/tính/một cách") hoặc trùng tiền tố dài (persuade/persuasion). Không dùng mạng hay từ điển; WordNet không xếp convince và persuade cùng synset nên không đủ.
+
+- Mặt trước thẻ gõ: tiêu đề chế độ, chữ cái đầu + số chữ của đáp án, dòng "không phải: …" (tối đa 3 từ dễ nhầm). "Gợi ý thêm chữ" mở từng chữ, không bao giờ mở hết.
+- Gõ một từ dễ nhầm (kể cả dạng chia: persuaded) lần đầu: "Đúng nghĩa, nhưng là từ khác", được gõ lại, không chấm. Lần hai sai thì chấm như thường.
+- Đúng nhưng đã cần gợi ý thêm hoặc gõ lại: gợi ý xếp hạng hạ từ Tốt xuống Khó (`suggestedRatingWith`), để FSRS không tưởng là đã thuộc. Từ đồng nghĩa **không** được chấm đúng, vì thẻ kiểm tra đúng từ đó.
+- Sau khi lật (mọi mẫu thẻ): khối "Dễ nhầm với" đặt từ đang ôn cạnh các từ dễ nhầm (loại từ, nghĩa Việt, định nghĩa Anh).
+
 ## Thêm nội dung TOEIC / IELTS
 
 Mọi thứ ngoài lớp "mẫu thẻ" đã không biết gì về từ vựng. Để thêm một loại ghi chú:

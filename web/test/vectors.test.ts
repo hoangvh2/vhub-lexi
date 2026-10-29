@@ -11,6 +11,7 @@ import { CardState, DEFAULT_PREFS, normalizePrefs, type Card, type Note, type Ra
 import { IRREGULAR } from "@shared/irregular.ts";
 import { baseForms } from "@shared/morphy.ts";
 import { checkTyped, clozeSentence, normalizeAnswer, template, wantedTemplates } from "@shared/notetypes.ts";
+import { answerHint, confusables, letterCount, matchConfusable, meaningPhrases, suggestedRatingWith } from "@shared/confusables.ts";
 import { buildQueue, pickNext } from "../src/lib/queue.ts";
 import { answer, makeScheduler, newCard } from "../src/lib/scheduler.ts";
 
@@ -87,6 +88,40 @@ function templateVectors() {
   return { layouts, cases, clozes, typed };
 }
 
+function confusableVectors() {
+  const v = (id: string, word: string, vi: string, pos = "verb", type = "vocab"): Note => ({
+    id, type, deckId: "d1", createdAt: T0, updatedAt: T0, fields: { word, vi, pos, en: `${word}: definition` } as Note["fields"],
+  });
+  const notes: Note[] = [
+    v("n1", "convince", "thuyết phục; làm cho tin, làm cho nghe theo, thuyết phục"),
+    v("n2", "persuade", "thuyết phục; làm cho tin; thuyết phục"),
+    v("n3", "persuasion", "sự làm cho tin, sự thuyết phục; sự tin, sự tin chắc; tín ngưỡng; giáo phái", "noun"),
+    v("n4", "important", "quan trọng; trọng yếu", "adjective"),
+    v("n5", "importance", "tầm quan trọng", "noun"),
+    v("n6", "significant", "quan trọng; đầy ý nghĩa", "adjective"),
+    v("n7", "impose", "áp đặt"),
+    v("n8", "Convince", "làm cho tin"),
+    v("n9", "persuade", "thuyết phục", "verb", "toeic"),
+    v("n10", "look after", "chăm sóc; trông nom"),
+    v("n11", "take care of", "chăm sóc"),
+    v("n12", "", "thuyết phục"),
+    v("n13", "begin", "bắt đầu (đi, làm việc...); khởi đầu"),
+    v("n14", "start", "bắt đầu; khởi hành"),
+    v("n15", "Bắt", "BẮT ĐẦU"),
+  ];
+  const phrases = ["thuyết phục; làm cho tin", "sự làm cho tin, sự thuyết phục; sự tin", "bắt đầu (đi, làm việc...); chạy (máy)", "một cách nhanh chóng / mau lẹ", "", "  ;; , ", "Tính kiên nhẫn. “Bền bỉ”!", "x; y; x"]
+    .map((vi) => ({ vi, phrases: meaningPhrases(vi) }));
+  const lists = notes.map((n) => ({ noteId: n.id, confusables: confusables(n, notes) }));
+  const conv = confusables(notes[0], notes);
+  const typed = ["persuade", "Persuaded", "persuasions", "persuading", "convince", "resilient", "", "persuasion!"].map((t) => ({ typed: t, match: matchConfusable(t, conv)?.noteId ?? null }));
+  const hints = [["convince", 0], ["convince", 1], ["convince", 3], ["convince", 99], ["look after", 1], ["look after", 5], ["well-being", 2], ["it's", 1], ["ox", 1], ["café", 2], ["", 1]]
+    .map(([a, n]) => ({ answer: a, shown: n, hint: answerHint(a as string, n as number), letters: letterCount(a as string) }));
+  const ratings = (["correct", "close", "wrong"] as const).flatMap((verdict) =>
+    [[0, false], [1, false], [0, true], [2, true]].map(([extraHints, retried]) => ({ verdict, extraHints, retried, rating: suggestedRatingWith(verdict, { extraHints: extraHints as number, retried: retried as boolean }) })),
+  );
+  return { notes, phrases, lists, typed, hints, ratings };
+}
+
 function morphyVectors() {
   const words = ["running", "studies", "boxes", "bigger", "loved", "went", "children", "a", "cat", "stopped", "tried", "making", "happier", "geese", "bought", "was", "mice", "caught", "lives", "buses", "wolves", "better", "dogs", "watches", "flies", "hoped", "hopping", "taken", "ran", "Running", "  went "];
   return words.map((w) => ({ word: w, forms: baseForms(w, IRREGULAR) }));
@@ -154,6 +189,7 @@ it("cross-platform vectors are up to date", () => {
     ["fsrs.json", JSON.stringify(fsrsVectors(), null, 1)],
     ["templates.json", JSON.stringify(templateVectors(), null, 1)],
     ["morphy.json", JSON.stringify(morphyVectors(), null, 1)],
+    ["confusables.json", JSON.stringify(confusableVectors(), null, 1)],
     ["queue.json", JSON.stringify(queueVectors(), null, 1)],
     [join("../../android/core/src/main/kotlin/com/vh/lexi/core/Irregular.kt"), irregularKotlin()],
   ];

@@ -1,0 +1,658 @@
+{
+ "notes": [
+  {
+   "id": "n1",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "convince",
+    "vi": "thuyết phục; làm cho tin, làm cho nghe theo, thuyết phục",
+    "pos": "verb",
+    "en": "convince: definition"
+   }
+  },
+  {
+   "id": "n2",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "persuade",
+    "vi": "thuyết phục; làm cho tin; thuyết phục",
+    "pos": "verb",
+    "en": "persuade: definition"
+   }
+  },
+  {
+   "id": "n3",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "persuasion",
+    "vi": "sự làm cho tin, sự thuyết phục; sự tin, sự tin chắc; tín ngưỡng; giáo phái",
+    "pos": "noun",
+    "en": "persuasion: definition"
+   }
+  },
+  {
+   "id": "n4",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "important",
+    "vi": "quan trọng; trọng yếu",
+    "pos": "adjective",
+    "en": "important: definition"
+   }
+  },
+  {
+   "id": "n5",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "importance",
+    "vi": "tầm quan trọng",
+    "pos": "noun",
+    "en": "importance: definition"
+   }
+  },
+  {
+   "id": "n6",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "significant",
+    "vi": "quan trọng; đầy ý nghĩa",
+    "pos": "adjective",
+    "en": "significant: definition"
+   }
+  },
+  {
+   "id": "n7",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "impose",
+    "vi": "áp đặt",
+    "pos": "verb",
+    "en": "impose: definition"
+   }
+  },
+  {
+   "id": "n8",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "Convince",
+    "vi": "làm cho tin",
+    "pos": "verb",
+    "en": "Convince: definition"
+   }
+  },
+  {
+   "id": "n9",
+   "type": "toeic",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "persuade",
+    "vi": "thuyết phục",
+    "pos": "verb",
+    "en": "persuade: definition"
+   }
+  },
+  {
+   "id": "n10",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "look after",
+    "vi": "chăm sóc; trông nom",
+    "pos": "verb",
+    "en": "look after: definition"
+   }
+  },
+  {
+   "id": "n11",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "take care of",
+    "vi": "chăm sóc",
+    "pos": "verb",
+    "en": "take care of: definition"
+   }
+  },
+  {
+   "id": "n12",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "",
+    "vi": "thuyết phục",
+    "pos": "verb",
+    "en": ": definition"
+   }
+  },
+  {
+   "id": "n13",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "begin",
+    "vi": "bắt đầu (đi, làm việc...); khởi đầu",
+    "pos": "verb",
+    "en": "begin: definition"
+   }
+  },
+  {
+   "id": "n14",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "start",
+    "vi": "bắt đầu; khởi hành",
+    "pos": "verb",
+    "en": "start: definition"
+   }
+  },
+  {
+   "id": "n15",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "Bắt",
+    "vi": "BẮT ĐẦU",
+    "pos": "verb",
+    "en": "Bắt: definition"
+   }
+  }
+ ],
+ "phrases": [
+  {
+   "vi": "thuyết phục; làm cho tin",
+   "phrases": [
+    "thuyết phục",
+    "làm cho tin"
+   ]
+  },
+  {
+   "vi": "sự làm cho tin, sự thuyết phục; sự tin",
+   "phrases": [
+    "làm cho tin",
+    "thuyết phục",
+    "tin"
+   ]
+  },
+  {
+   "vi": "bắt đầu (đi, làm việc...); chạy (máy)",
+   "phrases": [
+    "bắt đầu",
+    "chạy"
+   ]
+  },
+  {
+   "vi": "một cách nhanh chóng / mau lẹ",
+   "phrases": [
+    "nhanh chóng",
+    "mau lẹ"
+   ]
+  },
+  {
+   "vi": "",
+   "phrases": []
+  },
+  {
+   "vi": "  ;; , ",
+   "phrases": []
+  },
+  {
+   "vi": "Tính kiên nhẫn. “Bền bỉ”!",
+   "phrases": [
+    "kiên nhẫn bền bỉ"
+   ]
+  },
+  {
+   "vi": "x; y; x",
+   "phrases": []
+  }
+ ],
+ "lists": [
+  {
+   "noteId": "n1",
+   "confusables": [
+    {
+     "noteId": "n2",
+     "word": "persuade",
+     "pos": "verb",
+     "vi": "thuyết phục; làm cho tin; thuyết phục",
+     "en": "persuade: definition",
+     "reason": "meaning"
+    },
+    {
+     "noteId": "n3",
+     "word": "persuasion",
+     "pos": "noun",
+     "vi": "sự làm cho tin, sự thuyết phục; sự tin, sự tin chắc; tín ngưỡng; giáo phái",
+     "en": "persuasion: definition",
+     "reason": "meaning"
+    }
+   ]
+  },
+  {
+   "noteId": "n2",
+   "confusables": [
+    {
+     "noteId": "n1",
+     "word": "convince",
+     "pos": "verb",
+     "vi": "thuyết phục; làm cho tin, làm cho nghe theo, thuyết phục",
+     "en": "convince: definition",
+     "reason": "meaning"
+    },
+    {
+     "noteId": "n3",
+     "word": "persuasion",
+     "pos": "noun",
+     "vi": "sự làm cho tin, sự thuyết phục; sự tin, sự tin chắc; tín ngưỡng; giáo phái",
+     "en": "persuasion: definition",
+     "reason": "meaning"
+    }
+   ]
+  },
+  {
+   "noteId": "n3",
+   "confusables": [
+    {
+     "noteId": "n1",
+     "word": "convince",
+     "pos": "verb",
+     "vi": "thuyết phục; làm cho tin, làm cho nghe theo, thuyết phục",
+     "en": "convince: definition",
+     "reason": "meaning"
+    },
+    {
+     "noteId": "n2",
+     "word": "persuade",
+     "pos": "verb",
+     "vi": "thuyết phục; làm cho tin; thuyết phục",
+     "en": "persuade: definition",
+     "reason": "meaning"
+    }
+   ]
+  },
+  {
+   "noteId": "n4",
+   "confusables": [
+    {
+     "noteId": "n6",
+     "word": "significant",
+     "pos": "adjective",
+     "vi": "quan trọng; đầy ý nghĩa",
+     "en": "significant: definition",
+     "reason": "meaning"
+    },
+    {
+     "noteId": "n5",
+     "word": "importance",
+     "pos": "noun",
+     "vi": "tầm quan trọng",
+     "en": "importance: definition",
+     "reason": "spelling"
+    }
+   ]
+  },
+  {
+   "noteId": "n5",
+   "confusables": [
+    {
+     "noteId": "n4",
+     "word": "important",
+     "pos": "adjective",
+     "vi": "quan trọng; trọng yếu",
+     "en": "important: definition",
+     "reason": "spelling"
+    }
+   ]
+  },
+  {
+   "noteId": "n6",
+   "confusables": [
+    {
+     "noteId": "n4",
+     "word": "important",
+     "pos": "adjective",
+     "vi": "quan trọng; trọng yếu",
+     "en": "important: definition",
+     "reason": "meaning"
+    }
+   ]
+  },
+  {
+   "noteId": "n7",
+   "confusables": []
+  },
+  {
+   "noteId": "n8",
+   "confusables": [
+    {
+     "noteId": "n2",
+     "word": "persuade",
+     "pos": "verb",
+     "vi": "thuyết phục; làm cho tin; thuyết phục",
+     "en": "persuade: definition",
+     "reason": "meaning"
+    },
+    {
+     "noteId": "n3",
+     "word": "persuasion",
+     "pos": "noun",
+     "vi": "sự làm cho tin, sự thuyết phục; sự tin, sự tin chắc; tín ngưỡng; giáo phái",
+     "en": "persuasion: definition",
+     "reason": "meaning"
+    }
+   ]
+  },
+  {
+   "noteId": "n9",
+   "confusables": []
+  },
+  {
+   "noteId": "n10",
+   "confusables": [
+    {
+     "noteId": "n11",
+     "word": "take care of",
+     "pos": "verb",
+     "vi": "chăm sóc",
+     "en": "take care of: definition",
+     "reason": "meaning"
+    }
+   ]
+  },
+  {
+   "noteId": "n11",
+   "confusables": [
+    {
+     "noteId": "n10",
+     "word": "look after",
+     "pos": "verb",
+     "vi": "chăm sóc; trông nom",
+     "en": "look after: definition",
+     "reason": "meaning"
+    }
+   ]
+  },
+  {
+   "noteId": "n12",
+   "confusables": []
+  },
+  {
+   "noteId": "n13",
+   "confusables": [
+    {
+     "noteId": "n15",
+     "word": "Bắt",
+     "pos": "verb",
+     "vi": "BẮT ĐẦU",
+     "en": "Bắt: definition",
+     "reason": "meaning"
+    },
+    {
+     "noteId": "n14",
+     "word": "start",
+     "pos": "verb",
+     "vi": "bắt đầu; khởi hành",
+     "en": "start: definition",
+     "reason": "meaning"
+    }
+   ]
+  },
+  {
+   "noteId": "n14",
+   "confusables": [
+    {
+     "noteId": "n15",
+     "word": "Bắt",
+     "pos": "verb",
+     "vi": "BẮT ĐẦU",
+     "en": "Bắt: definition",
+     "reason": "meaning"
+    },
+    {
+     "noteId": "n13",
+     "word": "begin",
+     "pos": "verb",
+     "vi": "bắt đầu (đi, làm việc...); khởi đầu",
+     "en": "begin: definition",
+     "reason": "meaning"
+    }
+   ]
+  },
+  {
+   "noteId": "n15",
+   "confusables": [
+    {
+     "noteId": "n13",
+     "word": "begin",
+     "pos": "verb",
+     "vi": "bắt đầu (đi, làm việc...); khởi đầu",
+     "en": "begin: definition",
+     "reason": "meaning"
+    },
+    {
+     "noteId": "n14",
+     "word": "start",
+     "pos": "verb",
+     "vi": "bắt đầu; khởi hành",
+     "en": "start: definition",
+     "reason": "meaning"
+    }
+   ]
+  }
+ ],
+ "typed": [
+  {
+   "typed": "persuade",
+   "match": "n2"
+  },
+  {
+   "typed": "Persuaded",
+   "match": "n2"
+  },
+  {
+   "typed": "persuasions",
+   "match": "n3"
+  },
+  {
+   "typed": "persuading",
+   "match": "n2"
+  },
+  {
+   "typed": "convince",
+   "match": null
+  },
+  {
+   "typed": "resilient",
+   "match": null
+  },
+  {
+   "typed": "",
+   "match": null
+  },
+  {
+   "typed": "persuasion!",
+   "match": "n3"
+  }
+ ],
+ "hints": [
+  {
+   "answer": "convince",
+   "shown": 0,
+   "hint": "________",
+   "letters": 8
+  },
+  {
+   "answer": "convince",
+   "shown": 1,
+   "hint": "c_______",
+   "letters": 8
+  },
+  {
+   "answer": "convince",
+   "shown": 3,
+   "hint": "con_____",
+   "letters": 8
+  },
+  {
+   "answer": "convince",
+   "shown": 99,
+   "hint": "convinc_",
+   "letters": 8
+  },
+  {
+   "answer": "look after",
+   "shown": 1,
+   "hint": "l___ _____",
+   "letters": 9
+  },
+  {
+   "answer": "look after",
+   "shown": 5,
+   "hint": "look a____",
+   "letters": 9
+  },
+  {
+   "answer": "well-being",
+   "shown": 2,
+   "hint": "we__-_____",
+   "letters": 9
+  },
+  {
+   "answer": "it's",
+   "shown": 1,
+   "hint": "i_'_",
+   "letters": 3
+  },
+  {
+   "answer": "ox",
+   "shown": 1,
+   "hint": "o_",
+   "letters": 2
+  },
+  {
+   "answer": "café",
+   "shown": 2,
+   "hint": "ca__",
+   "letters": 4
+  },
+  {
+   "answer": "",
+   "shown": 1,
+   "hint": "",
+   "letters": 0
+  }
+ ],
+ "ratings": [
+  {
+   "verdict": "correct",
+   "extraHints": 0,
+   "retried": false,
+   "rating": 3
+  },
+  {
+   "verdict": "correct",
+   "extraHints": 1,
+   "retried": false,
+   "rating": 2
+  },
+  {
+   "verdict": "correct",
+   "extraHints": 0,
+   "retried": true,
+   "rating": 2
+  },
+  {
+   "verdict": "correct",
+   "extraHints": 2,
+   "retried": true,
+   "rating": 2
+  },
+  {
+   "verdict": "close",
+   "extraHints": 0,
+   "retried": false,
+   "rating": 2
+  },
+  {
+   "verdict": "close",
+   "extraHints": 1,
+   "retried": false,
+   "rating": 2
+  },
+  {
+   "verdict": "close",
+   "extraHints": 0,
+   "retried": true,
+   "rating": 2
+  },
+  {
+   "verdict": "close",
+   "extraHints": 2,
+   "retried": true,
+   "rating": 2
+  },
+  {
+   "verdict": "wrong",
+   "extraHints": 0,
+   "retried": false,
+   "rating": 1
+  },
+  {
+   "verdict": "wrong",
+   "extraHints": 1,
+   "retried": false,
+   "rating": 1
+  },
+  {
+   "verdict": "wrong",
+   "extraHints": 0,
+   "retried": true,
+   "rating": 1
+  },
+  {
+   "verdict": "wrong",
+   "extraHints": 2,
+   "retried": true,
+   "rating": 1
+  }
+ ]
+}
