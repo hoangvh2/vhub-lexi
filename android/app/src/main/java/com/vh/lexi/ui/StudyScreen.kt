@@ -284,6 +284,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                                     (mixedUp?.let { " · lần đầu gõ “${it.word}”" } ?: if (extraHints > 0) " · có dùng gợi ý" else ""),
                                 when (v) { Verdict.CORRECT -> PillKind.OK; Verdict.CLOSE -> PillKind.WARN; Verdict.WRONG -> PillKind.BAD },
                                 Modifier.testTag("verdict"),
+                                wrap = true,
                             )
                         }
                         BlocksView(tpl.back(note, prefs.layout), onSpeak = app.speech::speak)
@@ -396,7 +397,7 @@ private fun NotThese(others: List<Confusable>) {
 private fun MixedUp(other: Confusable) {
     val c = Lexi.colors
     Column(Modifier.fillMaxWidth().testTag("mixed-up"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Pill("Đúng nghĩa, nhưng là từ khác: ${other.word}", PillKind.WARN)
+        Pill("Đúng nghĩa, nhưng là từ khác: ${other.word}", PillKind.WARN, wrap = true)
         Text("Gõ lại một lần, lần này không tính là quên.", fontSize = 13.sp, color = c.muted, textAlign = TextAlign.Center)
         if (other.en.isNotEmpty()) {
             Text(

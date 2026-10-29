@@ -93,10 +93,11 @@ class SmokeTest {
     }
 
     /** Screen bounds of a node in the activity window (edge-to-edge, so window = screen apart from the decor offset). */
-    private fun screenBounds(tag: String): Rect {
+    /** [unmerged]: for a node inside another one's merged semantics, such as a text field's supporting text. */
+    private fun screenBounds(tag: String, unmerged: Boolean = false): Rect {
         // positionInWindow + size, not boundsInWindow: the latter is clipped to the scroll viewport, so a field cut off
         // by the edge of its scroll container would still look fully on screen.
-        val n = rule.onNodeWithTag(tag).fetchSemanticsNode()
+        val n = rule.onNodeWithTag(tag, useUnmergedTree = unmerged).fetchSemanticsNode()
         val at = IntArray(2).also { rule.activity.window.decorView.getLocationOnScreen(it) }
         val left = n.positionInWindow.x.toInt() + at[0]
         val top = n.positionInWindow.y.toInt() + at[1]
@@ -238,7 +239,7 @@ class SmokeTest {
         assertTrue(rule.textOf("mixed-up"), rule.textOf("mixed-up").contains("Đúng nghĩa, nhưng là từ khác: $other"))
         // The field still has focus: the message must not hide under the keyboard (it is the field's supporting text).
         val kb = waitForKeyboard("typing")
-        assertAboveKeyboard("mixed-up", screenBounds("mixed-up"), kb)
+        assertAboveKeyboard("mixed-up", screenBounds("mixed-up", unmerged = true), kb)
         shot("11-typing-mixed-up")
         hideKeyboard()
 
@@ -253,9 +254,9 @@ class SmokeTest {
     }
 }
 
-/** All the text inside the node with [tag] (its own and its children's). */
+/** All the text inside the node with [tag] (its own and its children's); also finds tags merged into a parent. */
 private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.textOf(tag: String): String =
-    onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().flatMap { it.texts() }.joinToString(" ")
+    onAllNodes(androidx.compose.ui.test.hasTestTag(tag), useUnmergedTree = true).fetchSemanticsNodes().flatMap { it.texts() }.joinToString(" ")
 
 private fun androidx.compose.ui.semantics.SemanticsNode.texts(): List<String> =
     config.getOrElse(SemanticsProperties.Text) { emptyList() }.map { it.text } + children.flatMap { it.texts() }
@@ -263,5 +264,6 @@ private fun androidx.compose.ui.semantics.SemanticsNode.texts(): List<String> =
 private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.onAllNodesWithTextCount(text: String) =
     onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().size
 
+// Unmerged, so a tag inside merged semantics (a text field's supporting text) is found too.
 private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.onAllNodesWithTagCount(tag: String) =
-    onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().size
+    onAllNodes(androidx.compose.ui.test.hasTestTag(tag), useUnmergedTree = true).fetchSemanticsNodes().size

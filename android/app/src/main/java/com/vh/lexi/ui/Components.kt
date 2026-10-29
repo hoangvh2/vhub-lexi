@@ -109,7 +109,8 @@ fun Panel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> 
 enum class PillKind { PLAIN, OK, WARN, BAD, AI }
 
 @Composable
-fun Pill(text: String, kind: PillKind = PillKind.PLAIN, modifier: Modifier = Modifier) {
+/** A short label; [wrap] lets a longer one (a verdict quoting the learner's answer) break lines instead of being cut off. */
+fun Pill(text: String, kind: PillKind = PillKind.PLAIN, modifier: Modifier = Modifier, wrap: Boolean = false) {
     val c = Lexi.colors
     val (bg, fg) = when (kind) {
         PillKind.PLAIN -> c.surface2 to c.muted
@@ -118,8 +119,8 @@ fun Pill(text: String, kind: PillKind = PillKind.PLAIN, modifier: Modifier = Mod
         PillKind.BAD -> c.againSoft to c.again
         PillKind.AI -> c.easySoft to c.easy
     }
-    Box(modifier.background(bg, CircleShape).padding(horizontal = 10.dp, vertical = 3.dp)) {
-        Text(text, color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    Box(modifier.background(bg, if (wrap) RoundedCornerShape(12.dp) else CircleShape).padding(horizontal = 10.dp, vertical = 3.dp)) {
+        Text(text, color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = if (wrap) Int.MAX_VALUE else 1, textAlign = if (wrap) TextAlign.Center else null)
     }
 }
 
