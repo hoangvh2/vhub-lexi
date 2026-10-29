@@ -249,7 +249,8 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                 shape = RoundedCornerShape(22.dp), color = c.surface, border = BorderStroke(1.dp, c.line), shadowElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp).then(if (!revealed && tpl.mode == AnswerMode.FLIP) Modifier.clickable { reveal() } else Modifier),
             ) {
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
+                // Tight enough that the mode header does not push the rating buttons below the fold on a 640dp-tall screen.
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)) {
                     ModeHeader(tpl.id, tpl.label)
                     BlocksView(tpl.front(note, prefs.layout), onSpeak = app.speech::speak)
                     if (tpl.mode == AnswerMode.TYPE && !revealed && answer.isNotEmpty()) {
