@@ -142,7 +142,8 @@ class SmokeTest {
         waitFor("study-card") { rule.onAllNodesWithTextCount("serendipity") > 0 }
         shot("04-study-front")
         rule.onNodeWithTag("show-answer").performSemanticsAction(SemanticsActions.OnClick) // the toast overlaps it
-        rule.onNodeWithTag("rate-3").assertIsDisplayed()
+        // The mnemonic typed above makes the back taller than the 640dp CI screen, so the buttons may need a scroll.
+        rule.onNodeWithTag("rate-3").performScrollTo().assertIsDisplayed()
         shot("05-study-back")
         rule.onNodeWithTag("rate-3").performSemanticsAction(SemanticsActions.OnClick)
         waitFor("session-done") { rule.onAllNodesWithTagCount("session-done") > 0 }
