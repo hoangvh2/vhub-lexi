@@ -187,6 +187,8 @@ class SmokeTest {
         rule.onNodeWithTag("nav-settings").performClick()
         shot("09-settings")
         // A field in the middle of a long scrolling screen is brought into view above the keyboard.
+        // After the dialog closed the activity window takes focus back asynchronously; a tap before that is dropped.
+        waitFor("window-focus") { rule.activity.hasWindowFocus() }
         rule.onNodeWithTag("day-start-input").performScrollTo().performClick()
         kb = waitForKeyboard("settings")
         assertAboveKeyboard("day-start-input", screenBounds("day-start-input"), kb)
