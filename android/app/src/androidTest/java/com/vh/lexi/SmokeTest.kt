@@ -109,7 +109,8 @@ class SmokeTest {
 
     /** A view in a dialog window, found through accessibility (dialogs are separate windows). */
     private fun dialogTextBounds(text: String): Rect {
-        device.wait(Until.findObject(By.text(text)), 5_000)?.let { return it.visibleBounds }
+        // textContains: a text field node also carries its label, so its text is not exactly what was typed.
+        device.wait(Until.findObject(By.textContains(text)), 5_000)?.let { return it.visibleBounds }
         shot("fail-find-$text")
         val tree = java.io.ByteArrayOutputStream().also { device.dumpWindowHierarchy(it) }.toString()
         throw AssertionError("no \"$text\" on screen\n" + tree.lines().filter { "text=\"\"" !in it || "bounds" in it }.joinToString("\n").take(8000))
