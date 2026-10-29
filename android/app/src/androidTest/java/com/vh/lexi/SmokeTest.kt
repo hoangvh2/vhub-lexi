@@ -194,8 +194,10 @@ class SmokeTest {
         shot("09-settings")
         // A field in the middle of a long scrolling screen is brought into view above the keyboard.
         // After the dialog closed the activity window takes focus back asynchronously; a tap before that is dropped.
+        // Even after hasWindowFocus() the tap was still dropped in 2 of 3 CI runs (field not focused, no keyboard), so
+        // focus it through its semantics action: what is tested here is the scrolling once the keyboard is up.
         waitFor("window-focus") { rule.activity.hasWindowFocus() }
-        rule.onNodeWithTag("day-start-input").performScrollTo().performClick()
+        rule.onNodeWithTag("day-start-input").performScrollTo().performSemanticsAction(SemanticsActions.RequestFocus)
         kb = waitForKeyboard("settings")
         assertAboveKeyboard("day-start-input", screenBounds("day-start-input"), kb)
         shot("09b-settings-keyboard")
@@ -235,7 +237,7 @@ class SmokeTest {
 
         rule.onNode(hasSetTextAction()).performTextInput("${other}d")
         rule.onNodeWithTag("type-check").performSemanticsAction(SemanticsActions.OnClick)
-        waitFor("mixed-up") { rule.onAllNodesWithTagCount("mixed-up") > 0 }
+        waitFor("mixed-up") { rule.onAllNodesWithTagCount("mixed-up", unmerged = true) > 0 }
         assertTrue(rule.textOf("mixed-up"), rule.textOf("mixed-up").contains("Đúng nghĩa, nhưng là từ khác: $other"))
         // The field still has focus: the message must not hide under the keyboard (it is the field's supporting text).
         val kb = waitForKeyboard("typing")
@@ -264,6 +266,6 @@ private fun androidx.compose.ui.semantics.SemanticsNode.texts(): List<String> =
 private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.onAllNodesWithTextCount(text: String) =
     onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().size
 
-// Unmerged, so a tag inside merged semantics (a text field's supporting text) is found too.
-private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.onAllNodesWithTagCount(tag: String) =
-    onAllNodes(androidx.compose.ui.test.hasTestTag(tag), useUnmergedTree = true).fetchSemanticsNodes().size
+/** [unmerged]: also finds a tag inside merged semantics, such as a text field's supporting text. */
+private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.onAllNodesWithTagCount(tag: String, unmerged: Boolean = false) =
+    onAllNodes(androidx.compose.ui.test.hasTestTag(tag), useUnmergedTree = unmerged).fetchSemanticsNodes().size
