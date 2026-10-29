@@ -62,6 +62,7 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
             // AlertDialog already bounds the text slot to the room left by the title and buttons (also when the
             // keyboard shrinks the window), so the form only needs to scroll. A heightIn after verticalScroll would
             // clip the content instead of the viewport and leave nothing to scroll.
+            ResizeDialogForKeyboard()
             Column(Modifier.verticalScroll(rememberScrollState()).testTag("note-editor-form"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 for (f in def.fields) {
                     OutlinedTextField(

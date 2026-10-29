@@ -1,5 +1,6 @@
 package com.vh.lexi.ui
 
+import android.view.WindowManager
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -32,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,11 +45,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogWindowProvider
 import com.vh.lexi.core.Block
+import kotlinx.coroutines.delay
 import com.vh.lexi.ui.theme.Lexi
 
 /**
@@ -62,11 +67,25 @@ fun Modifier.keepVisibleWhileTyping(): Modifier = composed {
     val keyboard = WindowInsets.ime.getBottom(LocalDensity.current)
     LaunchedEffect(focused, keyboard) {
         if (focused) {
-            withFrameNanos { } // measure against the viewport laid out for the new keyboard height
+            // The keyboard height changes every frame while it slides in; wait until it settles and the viewport
+            // has been laid out for it, otherwise the request is measured against the old viewport or cancelled.
+            delay(150)
+            withFrameNanos { }
             requester.bringIntoView()
         }
     }
     bringIntoViewRequester(requester).onFocusEvent { focused = it.isFocused }
+}
+
+/**
+ * Call inside a dialog that has text fields. Dialog windows pan for the keyboard by default (the whole dialog slides
+ * up until the focused field clears it), which pushes the buttons under the keyboard. Resizing instead keeps the
+ * buttons above it and lets the form scroll in the room that is left.
+ */
+@Composable
+fun ResizeDialogForKeyboard() {
+    val window = (LocalView.current.parent as? DialogWindowProvider)?.window
+    SideEffect { window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE) }
 }
 
 /** Shows a short message (snackbar) with an optional action. Provided by MainActivity. */

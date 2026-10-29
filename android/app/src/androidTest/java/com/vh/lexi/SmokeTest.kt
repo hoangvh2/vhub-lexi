@@ -91,9 +91,13 @@ class SmokeTest {
 
     /** Screen bounds of a node in the activity window (edge-to-edge, so window = screen apart from the decor offset). */
     private fun screenBounds(tag: String): Rect {
-        val b = rule.onNodeWithTag(tag).fetchSemanticsNode().boundsInWindow
+        // positionInWindow + size, not boundsInWindow: the latter is clipped to the scroll viewport, so a field cut off
+        // by the edge of its scroll container would still look fully on screen.
+        val n = rule.onNodeWithTag(tag).fetchSemanticsNode()
         val at = IntArray(2).also { rule.activity.window.decorView.getLocationOnScreen(it) }
-        return Rect(b.left.toInt() + at[0], b.top.toInt() + at[1], b.right.toInt() + at[0], b.bottom.toInt() + at[1])
+        val left = n.positionInWindow.x.toInt() + at[0]
+        val top = n.positionInWindow.y.toInt() + at[1]
+        return Rect(left, top, left + n.size.width, top + n.size.height)
     }
 
     private fun assertAboveKeyboard(what: String, bounds: Rect, keyboardTop: Int) {
