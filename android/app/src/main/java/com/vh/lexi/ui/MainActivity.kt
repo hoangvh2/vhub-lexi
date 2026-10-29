@@ -7,8 +7,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
@@ -111,7 +113,6 @@ private fun Main(app: LexiApp) {
     CompositionLocalProvider(LocalToaster provides toaster) {
         Scaffold(
             containerColor = Lexi.colors.bg,
-            snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {
                 NavigationBar(containerColor = Lexi.colors.surface) {
                     for (t in Tab.entries) NavigationBarItem(
@@ -123,7 +124,11 @@ private fun Main(app: LexiApp) {
                 }
             },
         ) { padding ->
-            Box(Modifier.padding(padding).fillMaxSize()) {
+            // Edge-to-edge: the window no longer shrinks for the keyboard (adjustResize only dispatches insets), and
+            // Scaffold's default insets leave the IME out. Pad the content by the part of the keyboard that is not
+            // already covered by the bottom bar, so every tab ends right above the keyboard and its scroll
+            // containers can bring the focused field (and sticky actions) into view.
+            Box(Modifier.padding(padding).consumeWindowInsets(padding).imePadding().fillMaxSize()) {
                 androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("VH Lexi", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Lexi.colors.ink, modifier = Modifier.weight(1f))
@@ -140,6 +145,8 @@ private fun Main(app: LexiApp) {
                         }
                     }
                 }
+                // Here rather than in Scaffold.snackbarHost, so a toast stays above the keyboard too.
+                SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.vh.lexi.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,6 +39,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -199,99 +202,109 @@ fun AddScreen(app: LexiApp) {
     fun edited(key: String) { draft.ai = draft.ai - key }
     val c = Lexi.colors
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ScreenHeader("Thêm từ") {
-            if (!app.hasDictionary) Pill("Chưa có từ điển offline", PillKind.WARN) else Pill("Từ điển offline", PillKind.OK)
-        }
-        OutlinedTextField(
-            value = q, onValueChange = { q = it }, singleLine = true, label = { Text("Từ hoặc cụm từ tiếng Anh") },
-            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 22.sp),
-            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, capitalization = KeyboardCapitalization.None),
-            modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("word-input"),
-        )
-
-        if (suggestions.isNotEmpty() && normalizeWord(q) != hit?.entry?.word) {
-            Surface(shape = RoundedCornerShape(12.dp), color = c.surface, border = BorderStroke(1.dp, c.line)) {
-                Column {
-                    for (s in suggestions) Row(
-                        Modifier.fillMaxWidth().clickable { scope.launch { withContext(Dispatchers.IO) { app.dictionary.lookup(s.word) }?.let(::choose) } }.padding(horizontal = 14.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Text(s.word, fontWeight = FontWeight.Bold)
-                        Text(s.pos.firstOrNull()?.senses?.firstOrNull()?.def?.take(50).orEmpty(), color = c.muted, maxLines = 1)
-                    }
-                }
+    // The save action lives in a bar under the scrolling form, so it sits right above the keyboard while typing
+    // instead of at the end of a long form that the keyboard covers.
+    Column(Modifier.fillMaxSize()) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            ScreenHeader("Thêm từ") {
+                if (!app.hasDictionary) Pill("Chưa có từ điển offline", PillKind.WARN) else Pill("Từ điển offline", PillKind.OK)
             }
-        }
-        hit?.inflectedFrom?.let { Text("“$it” là dạng của ${hit?.entry?.word}.", color = c.muted) }
-        if (manual) Text("Không có “${normalizeWord(q)}” trong từ điển offline. Bạn có thể tự nhập nghĩa${if (aiAvailable) " hoặc nhờ AI điền" else ""}.", color = c.muted)
+            OutlinedTextField(
+                value = q, onValueChange = { q = it }, singleLine = true, label = { Text("Từ hoặc cụm từ tiếng Anh") },
+                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 22.sp),
+                keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, capitalization = KeyboardCapitalization.None),
+                modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("word-input"),
+            )
 
-        if (word.isNotEmpty()) {
-            val tpl = template("vocab", "recognize")!!
-            Text("Xem trước thẻ", style = MaterialTheme.typography.labelMedium, color = c.muted)
-            Panel(Modifier.testTag("preview")) {
-                BlocksView(tpl.front(previewNote, prefs.layout), onSpeak = app.speech::speak)
-                androidx.compose.material3.HorizontalDivider(color = c.line)
-                BlocksView(tpl.back(previewNote, prefs.layout), onSpeak = app.speech::speak)
-            }
-        } else {
-            Panel { Text("Gõ một từ để xem thẻ hiện ra ngay. Phiên âm, loại từ, định nghĩa và ví dụ lấy từ từ điển offline.", color = c.muted) }
-        }
-
-        if (senses.isNotEmpty()) {
-            Text("Chọn nghĩa đưa vào thẻ", style = MaterialTheme.typography.labelMedium, color = c.muted)
-            senses.forEachIndexed { i, s ->
-                val on = i in picked
-                Surface(
-                    onClick = {
-                        val next = if (on) picked - i else (picked + i).sorted()
-                        picked = next
-                        hit?.let { draft.fillFrom(it.entry, next.map { k -> senses[k] }, keepUser = true) }
-                    },
-                    shape = RoundedCornerShape(12.dp), color = if (on) c.accentSoft else c.surface, border = BorderStroke(1.5.dp, if (on) c.accent else c.line),
-                ) {
-                    Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Pill(s.pos, PillKind.OK)
-                        Column(Modifier.weight(1f)) {
-                            Text(s.def)
-                            s.ex.firstOrNull()?.let { Text("“$it”", color = c.muted, fontSize = 13.sp) }
+            if (suggestions.isNotEmpty() && normalizeWord(q) != hit?.entry?.word) {
+                Surface(shape = RoundedCornerShape(12.dp), color = c.surface, border = BorderStroke(1.dp, c.line)) {
+                    Column {
+                        for (s in suggestions) Row(
+                            Modifier.fillMaxWidth().clickable { scope.launch { withContext(Dispatchers.IO) { app.dictionary.lookup(s.word) }?.let(::choose) } }.padding(horizontal = 14.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Text(s.word, fontWeight = FontWeight.Bold)
+                            Text(s.pos.firstOrNull()?.senses?.firstOrNull()?.def?.take(50).orEmpty(), color = c.muted, maxLines = 1)
                         }
                     }
                 }
             }
-        }
+            hit?.inflectedFrom?.let { Text("“$it” là dạng của ${hit?.entry?.word}.", color = c.muted) }
+            if (manual) Text("Không có “${normalizeWord(q)}” trong từ điển offline. Bạn có thể tự nhập nghĩa${if (aiAvailable) " hoặc nhờ AI điền" else ""}.", color = c.muted)
 
-        if (word.isNotEmpty()) {
-            OutlinedTextField(
-                value = draft.vi, onValueChange = { draft.vi = it; edited("vi") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("vi-input"),
-                label = { Text("Nghĩa tiếng Việt" + if ("vi" in draft.ai) " · AI" else if (draft.viFromDict(hit?.entry)) " · Wiktionary" else "") },
-                placeholder = { Text(if (aiAvailable) "Nhập hoặc bấm “Điền bằng AI”" else "Nhập nghĩa tiếng Việt") },
-            )
-            if (aiAvailable) OutlinedButton(onClick = ::enrich, enabled = !aiBusy) { Icon(Icons.Filled.AutoAwesome, null); Text(if (aiBusy) "  Đang điền…" else "  Điền bằng AI") }
-            if (hit == null) OutlinedTextField(value = draft.en, onValueChange = { draft.en = it; edited("en") }, label = { Text("Định nghĩa tiếng Anh" + if ("en" in draft.ai) " · AI" else "") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(
-                value = draft.examples, onValueChange = { draft.examples = it; edited("examples") }, minLines = 2, modifier = Modifier.fillMaxWidth(),
-                label = { Text("Ví dụ (mỗi dòng một câu)" + if ("examples" in draft.ai) " · AI" else "") },
-            )
-            OutlinedTextField(value = draft.mnemonic, onValueChange = { draft.mnemonic = it; edited("mnemonic") }, label = { Text("Mẹo nhớ" + if ("mnemonic" in draft.ai) " · AI" else "") }, modifier = Modifier.fillMaxWidth())
-
-            val deckName = decks.firstOrNull { it.id == (deckId ?: prefs.defaultDeckId) }?.name ?: decks.firstOrNull()?.name ?: "Mặc định"
-            if (newDeck == null) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    androidx.compose.foundation.layout.Box {
-                        OutlinedButton(onClick = { deckMenu = true }) { Text("Bộ thẻ: $deckName") }
-                        DropdownMenu(expanded = deckMenu, onDismissRequest = { deckMenu = false }) {
-                            for (d in decks) DropdownMenuItem(text = { Text(d.name) }, onClick = { deckId = d.id; deckMenu = false })
-                        }
-                    }
-                    OutlinedButton(onClick = { newDeck = "" }) { Text("+ Mới") }
+            if (word.isNotEmpty()) {
+                val tpl = template("vocab", "recognize")!!
+                Text("Xem trước thẻ", style = MaterialTheme.typography.labelMedium, color = c.muted)
+                Panel(Modifier.testTag("preview")) {
+                    BlocksView(tpl.front(previewNote, prefs.layout), onSpeak = app.speech::speak)
+                    androidx.compose.material3.HorizontalDivider(color = c.line)
+                    BlocksView(tpl.back(previewNote, prefs.layout), onSpeak = app.speech::speak)
                 }
             } else {
-                OutlinedTextField(value = newDeck.orEmpty(), onValueChange = { newDeck = it }, singleLine = true, label = { Text("Tên bộ thẻ mới (vd: TOEIC)") }, modifier = Modifier.fillMaxWidth())
+                Panel { Text("Gõ một từ để xem thẻ hiện ra ngay. Phiên âm, loại từ, định nghĩa và ví dụ lấy từ từ điển offline.", color = c.muted) }
             }
-            if (duplicate) Pill("“$word” đã có trong thư viện. Lưu sẽ tạo thêm một bản.", PillKind.WARN)
-            Button(onClick = ::save, enabled = canSave, modifier = Modifier.fillMaxWidth().testTag("save-word")) { Icon(Icons.Filled.Check, null); Text("  Lưu · $cardCount thẻ") }
-            if (!canSave) Text("Cần có nghĩa tiếng Việt hoặc định nghĩa tiếng Anh.", color = c.muted, fontSize = 13.sp)
+
+            if (senses.isNotEmpty()) {
+                Text("Chọn nghĩa đưa vào thẻ", style = MaterialTheme.typography.labelMedium, color = c.muted)
+                senses.forEachIndexed { i, s ->
+                    val on = i in picked
+                    Surface(
+                        onClick = {
+                            val next = if (on) picked - i else (picked + i).sorted()
+                            picked = next
+                            hit?.let { draft.fillFrom(it.entry, next.map { k -> senses[k] }, keepUser = true) }
+                        },
+                        shape = RoundedCornerShape(12.dp), color = if (on) c.accentSoft else c.surface, border = BorderStroke(1.5.dp, if (on) c.accent else c.line),
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Pill(s.pos, PillKind.OK)
+                            Column(Modifier.weight(1f)) {
+                                Text(s.def)
+                                s.ex.firstOrNull()?.let { Text("“$it”", color = c.muted, fontSize = 13.sp) }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (word.isNotEmpty()) {
+                OutlinedTextField(
+                    value = draft.vi, onValueChange = { draft.vi = it; edited("vi") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("vi-input"),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    label = { Text("Nghĩa tiếng Việt" + if ("vi" in draft.ai) " · AI" else if (draft.viFromDict(hit?.entry)) " · Wiktionary" else "") },
+                    placeholder = { Text(if (aiAvailable) "Nhập hoặc bấm “Điền bằng AI”" else "Nhập nghĩa tiếng Việt") },
+                )
+                if (aiAvailable) OutlinedButton(onClick = ::enrich, enabled = !aiBusy) { Icon(Icons.Filled.AutoAwesome, null); Text(if (aiBusy) "  Đang điền…" else "  Điền bằng AI") }
+                if (hit == null) OutlinedTextField(value = draft.en, onValueChange = { draft.en = it; edited("en") }, label = { Text("Định nghĩa tiếng Anh" + if ("en" in draft.ai) " · AI" else "") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    value = draft.examples, onValueChange = { draft.examples = it; edited("examples") }, minLines = 2, modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Ví dụ (mỗi dòng một câu)" + if ("examples" in draft.ai) " · AI" else "") },
+                )
+                OutlinedTextField(value = draft.mnemonic, onValueChange = { draft.mnemonic = it; edited("mnemonic") }, label = { Text("Mẹo nhớ" + if ("mnemonic" in draft.ai) " · AI" else "") }, modifier = Modifier.fillMaxWidth().testTag("mnemonic-input"))
+
+                val deckName = decks.firstOrNull { it.id == (deckId ?: prefs.defaultDeckId) }?.name ?: decks.firstOrNull()?.name ?: "Mặc định"
+                if (newDeck == null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        androidx.compose.foundation.layout.Box {
+                            OutlinedButton(onClick = { deckMenu = true }) { Text("Bộ thẻ: $deckName") }
+                            DropdownMenu(expanded = deckMenu, onDismissRequest = { deckMenu = false }) {
+                                for (d in decks) DropdownMenuItem(text = { Text(d.name) }, onClick = { deckId = d.id; deckMenu = false })
+                            }
+                        }
+                        OutlinedButton(onClick = { newDeck = "" }) { Text("+ Mới") }
+                    }
+                } else {
+                    OutlinedTextField(value = newDeck.orEmpty(), onValueChange = { newDeck = it }, singleLine = true, label = { Text("Tên bộ thẻ mới (vd: TOEIC)") }, modifier = Modifier.fillMaxWidth())
+                }
+                if (duplicate) Pill("“$word” đã có trong thư viện. Lưu sẽ tạo thêm một bản.", PillKind.WARN)
+            }
+        }
+        if (word.isNotEmpty()) {
+            HorizontalDivider(color = c.line)
+            Column(Modifier.fillMaxWidth().background(c.bg).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Button(onClick = ::save, enabled = canSave, modifier = Modifier.fillMaxWidth().testTag("save-word")) { Icon(Icons.Filled.Check, null); Text("  Lưu · $cardCount thẻ") }
+                if (!canSave) Text("Cần có nghĩa tiếng Việt hoặc định nghĩa tiếng Anh.", color = c.muted, fontSize = 13.sp)
+            }
         }
     }
 }

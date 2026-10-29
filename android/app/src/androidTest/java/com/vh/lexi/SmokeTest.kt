@@ -1,6 +1,9 @@
 package com.vh.lexi
 
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.graphics.Rect
 import android.os.ParcelFileDescriptor
+import android.view.accessibility.AccessibilityWindowInfo
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -15,7 +18,13 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.ui.MainActivity
 import org.junit.Rule
@@ -55,8 +64,52 @@ class SmokeTest {
         }
     }
 
+    // --- Soft keyboard. CI emulators have a hardware keyboard, which hides the on-screen one unless this is set.
+
+    private val device get() = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+
+    /** Top edge of the on-screen keyboard in screen pixels, or null while it is not shown. */
+    private fun keyboardTop(): Int? {
+        val ua = InstrumentationRegistry.getInstrumentation().uiAutomation
+        ua.serviceInfo = ua.serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS }
+        return ua.windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            ?.let { w -> Rect().also(w::getBoundsInScreen) }?.takeIf { it.height() > 0 }?.top
+    }
+
+    private fun waitForKeyboard(label: String): Int {
+        waitFor("keyboard-$label") { keyboardTop() != null }
+        rule.waitForIdle() // let the layout follow the keyboard insets
+        Thread.sleep(500) // the IME window animates in; its bounds settle after the insets do
+        rule.waitForIdle()
+        return keyboardTop()!!
+    }
+
+    private fun hideKeyboard() {
+        rule.runOnUiThread { WindowCompat.getInsetsController(rule.activity.window, rule.activity.window.decorView).hide(WindowInsetsCompat.Type.ime()) }
+        waitFor("keyboard-hidden") { keyboardTop() == null }
+    }
+
+    /** Screen bounds of a node in the activity window (edge-to-edge, so window = screen apart from the decor offset). */
+    private fun screenBounds(tag: String): Rect {
+        val b = rule.onNodeWithTag(tag).fetchSemanticsNode().boundsInWindow
+        val at = IntArray(2).also { rule.activity.window.decorView.getLocationOnScreen(it) }
+        return Rect(b.left.toInt() + at[0], b.top.toInt() + at[1], b.right.toInt() + at[0], b.bottom.toInt() + at[1])
+    }
+
+    private fun assertAboveKeyboard(what: String, bounds: Rect, keyboardTop: Int) {
+        if (bounds.isEmpty || bounds.bottom > keyboardTop) {
+            shot("fail-keyboard-$what")
+            throw AssertionError("$what is under the keyboard: bounds=$bounds, keyboard top=$keyboardTop")
+        }
+    }
+
+    /** A view in a dialog window, found through accessibility (dialogs are separate windows). */
+    private fun dialogTextBounds(text: String): Rect =
+        device.wait(Until.findObject(By.text(text)), 5_000)?.visibleBounds ?: throw AssertionError("no \"$text\" on screen")
+
     @Test
     fun addStudyAndBrowse() {
+        sh("settings put secure show_ime_with_hard_keyboard 1")
         rule.waitForIdle()
         shot("01-start")
 
@@ -70,9 +123,20 @@ class SmokeTest {
         rule.onNodeWithTag("vi-input").performTextClearance()
         rule.onNodeWithTag("vi-input").performTextInput("sự tình cờ may mắn")
         shot("03-add-filled")
-        // The button is under the keyboard; a touch injection would miss it, so invoke its click action directly.
-        rule.onNodeWithTag("save-word").performSemanticsAction(SemanticsActions.OnClick)
+
+        // Keyboard open on the last field: the field and the save bar must sit above the keyboard, and a real touch
+        // on the save button must reach it (regression: the keyboard covered the lower form and the save button).
+        rule.onNodeWithTag("mnemonic-input").performScrollTo().performClick()
+        var kb = waitForKeyboard("add")
+        rule.onNodeWithTag("mnemonic-input").performTextInput("seren-dipity: tình cờ")
+        rule.waitForIdle()
+        assertAboveKeyboard("mnemonic-input", screenBounds("mnemonic-input"), kb)
+        val save = screenBounds("save-word")
+        assertAboveKeyboard("save-word", save, kb)
+        shot("03b-add-keyboard")
+        device.click(save.centerX(), save.centerY())
         waitFor("saved") { rule.onAllNodesWithTextCount("Đã thêm") > 0 }
+        hideKeyboard()
 
         rule.onNodeWithTag("nav-study").performClick()
         waitFor("study-card") { rule.onAllNodesWithTextCount("serendipity") > 0 }
@@ -88,23 +152,32 @@ class SmokeTest {
         waitFor("library-item") { rule.onAllNodesWithTextCount("serendipity") > 0 }
         shot("07-library")
 
-        // Edit dialog: the form is taller than the dialog, so its last field must be reachable by scrolling and
-        // the buttons must stay on screen, also with the keyboard open (regression: the form did not scroll).
+        // Edit dialog: the form is taller than the dialog, so its last field must be reachable by scrolling, and
+        // with the keyboard open that field and the buttons must stay above the keyboard.
         rule.onNodeWithText("serendipity").performClick()
         waitFor("note-editor") { rule.onAllNodesWithTagCount("note-editor-form") > 0 }
         rule.onNodeWithTag("note-editor-save").assertIsDisplayed()
         rule.onNodeWithTag("note-editor-form").performScrollToNode(hasTestTag("note-editor-tags"))
         rule.onNodeWithTag("note-editor-tags").assertIsDisplayed().performClick()
+        kb = waitForKeyboard("note-editor")
+        rule.onNodeWithTag("note-editor-tags").performTextInput("ielts")
         rule.waitForIdle()
-        rule.onNodeWithTag("note-editor-tags").assertIsDisplayed()
-        rule.onNodeWithTag("note-editor-save").assertIsDisplayed()
-        shot("07b-note-editor-scrolled")
+        assertAboveKeyboard("note-editor-tags", dialogTextBounds("ielts"), kb)
+        assertAboveKeyboard("note-editor-save", dialogTextBounds("Lưu"), kb)
+        shot("07b-note-editor-keyboard")
         rule.onNodeWithText("Huỷ").performSemanticsAction(SemanticsActions.OnClick)
         waitFor("note-editor-closed") { rule.onAllNodesWithTagCount("note-editor-form") == 0 }
+        waitFor("keyboard-hidden-after-dialog") { keyboardTop() == null }
         rule.onNodeWithTag("nav-stats").performClick()
         shot("08-stats")
         rule.onNodeWithTag("nav-settings").performClick()
         shot("09-settings")
+        // A field in the middle of a long scrolling screen is brought into view above the keyboard.
+        rule.onNodeWithTag("day-start-input").performScrollTo().performClick()
+        kb = waitForKeyboard("settings")
+        assertAboveKeyboard("day-start-input", screenBounds("day-start-input"), kb)
+        shot("09b-settings-keyboard")
+        hideKeyboard()
     }
 }
 
