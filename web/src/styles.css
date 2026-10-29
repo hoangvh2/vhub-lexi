@@ -216,6 +216,31 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .rate .r3 { color: var(--good); } .rate .r3:hover, .rate .r3.suggest { background: var(--good-soft); border-color: var(--good); }
 .rate .r4 { color: var(--easy); } .rate .r4:hover, .rate .r4.suggest { background: var(--easy-soft); border-color: var(--easy); }
 .show-btn { width: 100%; min-height: 56px; font-size: 16px; }
+/* What the card asks for, and the fingerprint of the word to type (first letter + length, words not to type). */
+.mode-head { align-self: stretch; display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.mode-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.mode-dot.recall { background: var(--easy); } .mode-dot.cloze { background: var(--hard); }
+.mode-q { align-self: stretch; font-size: 13px; color: var(--muted); margin-bottom: -10px; }
+.target { width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.skel { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; font-family: var(--f-mono); font-size: 20px; font-weight: 700; }
+.skel span { width: 22px; height: 30px; border-bottom: 2.5px solid var(--line); text-align: center; color: var(--accent); line-height: 30px; }
+.skel span.on { border-color: var(--accent); }
+.skel .gap { width: 12px; }
+.skel-note { font-size: 12px; color: var(--muted); }
+.notthis { font-size: 13px; color: var(--muted); background: var(--surface-2); border-radius: 10px; padding: 6px 12px; text-align: center; }
+.notthis s { color: var(--ink); text-decoration-thickness: 1.5px; }
+.mixed { width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: 13px; animation: nudge 0.35s; }
+.mixed-en { background: var(--surface-2); border-radius: 10px; padding: 6px 12px; }
+@keyframes nudge { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+@media (prefers-reduced-motion: reduce) { .mixed { animation: none; } }
+.compare { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.compare-head { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.compare-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.compare-grid > div { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.45; min-width: 0; text-align: left; }
+.compare-grid > div.me { background: var(--accent-soft); }
+.compare-grid b { font-size: 15px; }
+.compare-grid small { color: var(--muted); }
+.compare-grid .vi { font-weight: 600; }
 .study-tools { display: flex; gap: 6px; justify-content: space-between; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
 .done { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 36px 16px; text-align: center; }
 .done .big { font-family: var(--f-display); font-size: 56px; font-weight: 800; color: var(--accent); }

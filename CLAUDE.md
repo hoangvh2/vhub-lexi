@@ -9,7 +9,7 @@ Mọi thao tác **xoá dữ liệu, xoá bộ thẻ, đăng xuất** (và các v
 
 ## Hai bản cài đặt phải khớp nhau
 
-Lập lịch FSRS, hàng đợi ôn tập, mẫu thẻ, cloze, kiểm tra đáp án gõ và morphology có **một bản tham chiếu TypeScript** (`web/src`, `shared/`) và **một bản port Kotlin** (`android/core`). `shared/vectors/*.json` sinh từ TypeScript (`UPDATE_VECTORS=1 npx vitest run test/vectors.test.ts` trong `web/`); test Kotlin phát lại chúng. Đổi hành vi ở một bên thì sinh lại vector và sửa bên kia cho đến khi test khớp.
+Lập lịch FSRS, hàng đợi ôn tập, mẫu thẻ, cloze, kiểm tra đáp án gõ, từ dễ nhầm (`shared/confusables.ts`) và morphology có **một bản tham chiếu TypeScript** (`web/src`, `shared/`) và **một bản port Kotlin** (`android/core`). `shared/vectors/*.json` sinh từ TypeScript (`UPDATE_VECTORS=1 npx vitest run test/vectors.test.ts` trong `web/`); test Kotlin phát lại chúng. Đổi hành vi ở một bên thì sinh lại vector và sửa bên kia cho đến khi test khớp.
 
 ## Dữ liệu và bảo mật
 

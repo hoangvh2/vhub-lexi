@@ -99,6 +99,58 @@ describe("core flow (local-only mode)", () => {
     await ctx.close();
   });
 
+  it("typing cards name the target word and treat a same-meaning word as a retry, not a lapse", async () => {
+    const { ctx, page, errors } = await open(browser, base);
+    await page.goto(`${base}/#/settings`);
+    await page.waitForSelector('[data-testid=tpl-recall]');
+    await page.check('[data-testid=tpl-recall]');
+    await page.uncheck('[data-testid=tpl-recognize]');
+    await page.uncheck('[data-testid=tpl-cloze]');
+    await addWord(page, base, "convince", "thuyết phục, làm cho tin");
+    await addWord(page, base, "persuade", "thuyết phục, làm cho tin");
+    await page.goto(`${base}/#/study`);
+    await page.waitForSelector('[data-testid=type-input]');
+    assert.match(await page.textContent('[data-testid=card-mode]'), /Gõ từ tiếng Anh/);
+    // Which of the two is on screen: the other one is listed as "not this".
+    const notThese = await page.textContent('[data-testid=not-these]');
+    const [target, other] = /persuade/.test(notThese) ? ["convince", "persuade"] : ["persuade", "convince"];
+    assert.match(notThese, new RegExp(other));
+    assert.equal(await page.getAttribute('[data-testid=answer-hint]', 'aria-label'), `Đáp án có 8 chữ cái, bắt đầu bằng ${target[0]}`);
+    assert.equal((await page.textContent('[data-testid=answer-hint]')).trim(), target[0]);
+
+    // The other word (inflected, even): told which word it was, the card stays open for one more try.
+    await page.fill('[data-testid=type-input]', `${other}d`);
+    await page.click('[data-testid=type-check]');
+    await page.waitForSelector('[data-testid=mixed-up]');
+    assert.match(await page.textContent('[data-testid=mixed-up]'), new RegExp(`Đúng nghĩa, nhưng là từ khác: ${other}`));
+    assert.equal(await page.getAttribute('[data-testid=study-card]', 'data-revealed'), "false");
+    assert.equal(await page.inputValue('[data-testid=type-input]'), "");
+
+    // One more hint letter, then the right word: correct, but the suggestion drops to Hard.
+    await page.click('[data-testid=more-hint]');
+    assert.equal((await page.textContent('[data-testid=answer-hint]')).trim(), target.slice(0, 2));
+    await page.fill('[data-testid=type-input]', target);
+    await page.click('[data-testid=type-check]');
+    await page.waitForSelector('[data-testid=verdict]');
+    assert.match(await page.textContent('[data-testid=verdict]'), new RegExp(`Chính xác · lần đầu gõ “${other}”`));
+    assert.match(await page.getAttribute('[data-testid=rate-2]', 'class'), /suggest/);
+    assert.match(await page.textContent('[data-testid=compare]'), new RegExp(`Dễ nhầm với.*${other}`));
+    await page.click('[data-testid=rate-2]');
+
+    // A second same-meaning slip on the next card is a plain miss.
+    await page.waitForSelector('[data-testid=type-input]');
+    await page.fill('[data-testid=type-input]', target);
+    await page.click('[data-testid=type-check]');
+    await page.waitForSelector('[data-testid=mixed-up]');
+    await page.fill('[data-testid=type-input]', target);
+    await page.click('[data-testid=type-check]');
+    await page.waitForSelector('[data-testid=verdict]');
+    assert.match(await page.textContent('[data-testid=verdict]'), /Chưa đúng/);
+    assert.match(await page.getAttribute('[data-testid=rate-1]', 'class'), /suggest/);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
   it("deleting needs confirmation: Cancel keeps the word, Delete removes it", async () => {
     const { ctx, page } = await open(browser, base);
     await addWord(page, base, "leverage", "đòn bẩy");

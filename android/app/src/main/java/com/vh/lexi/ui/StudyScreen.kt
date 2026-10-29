@@ -7,12 +7,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -46,7 +50,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -55,6 +64,13 @@ import com.vh.lexi.LexiApp
 import com.vh.lexi.core.AnswerMode
 import com.vh.lexi.core.Card
 import com.vh.lexi.core.CardState
+import com.vh.lexi.core.Confusable
+import com.vh.lexi.core.answerHint
+import com.vh.lexi.core.confusables
+import com.vh.lexi.core.letterCount
+import com.vh.lexi.core.matchConfusable
+import com.vh.lexi.core.str
+import com.vh.lexi.core.suggestedRatingWith
 import com.vh.lexi.core.Fsrs
 import com.vh.lexi.core.LEARN_AHEAD_MS
 import com.vh.lexi.core.QueueInput
@@ -65,7 +81,6 @@ import com.vh.lexi.core.checkTyped
 import com.vh.lexi.core.dayId
 import com.vh.lexi.core.isLeech
 import com.vh.lexi.core.pickNext
-import com.vh.lexi.core.suggestedRating
 import com.vh.lexi.core.template
 import com.vh.lexi.data.Reviewed
 import com.vh.lexi.ui.theme.Lexi
@@ -95,6 +110,9 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
     var revealed by remember { mutableStateOf(false) }
     var typed by remember { mutableStateOf("") }
     var verdict by remember { mutableStateOf<Verdict?>(null) }
+    // Typing cards: hint letters shown beyond the first, and the confusable word typed on the first try (one retry).
+    var extraHints by remember { mutableStateOf(0) }
+    var mixedUp by remember { mutableStateOf<Confusable?>(null) }
     var editing by remember { mutableStateOf<String?>(null) }
     var deckMenu by remember { mutableStateOf(false) }
     val history = remember { mutableStateListOf<Reviewed>() }
@@ -127,9 +145,10 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
         ?: pickNext(queue, SessionState(session.shown, session.shownNew), now).also { holder[0] = it?.id }
     val note = card?.let { notesById[it.noteId] }
     val tpl = if (card != null && note != null) template(note.type, card.template) else null
+    val similar = remember(note, notes) { note?.let { confusables(it, notes) } ?: emptyList() }
 
     LaunchedEffect(card?.id) {
-        revealed = false; typed = ""; verdict = null; shownAt = System.currentTimeMillis()
+        revealed = false; typed = ""; verdict = null; extraHints = 0; mixedUp = null; shownAt = System.currentTimeMillis()
         if (tpl != null && note != null && prefs.autoSpeak == "front") tpl.speakFront(note)?.let { app.speech.speak(it) }
     }
 
@@ -138,6 +157,19 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
         revealed = true
         if (v != null) verdict = v
         if (prefs.autoSpeak != "off") tpl.speakBack(note)?.let { app.speech.speak(it) }
+    }
+
+    fun submitTyped() {
+        if (tpl == null || note == null) return
+        val v = checkTyped(typed, tpl.expected(note))
+        // Another word of the learner's with this meaning: not a lapse. Say which word it was and allow one more try.
+        val other = if (v == Verdict.WRONG && mixedUp == null) matchConfusable(typed, similar) else null
+        if (other != null) {
+            mixedUp = other
+            typed = ""
+            return
+        }
+        reveal(v)
     }
 
     fun rate(r: Int) {
@@ -188,6 +220,8 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
     val total = queue.counts.new + queue.counts.learning + queue.counts.review
     val doneFrac = if (session.answered + total == 0) 1f else session.answered.toFloat() / (session.answered + total)
     val kind = card?.let { if (it.state == CardState.NEW) "new" else if (it.state == CardState.REVIEW) "review" else "learn" }
+    val answer = if (note != null && tpl != null) tpl.expected(note).firstOrNull() ?: "" else ""
+    val letters = letterCount(answer)
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -216,29 +250,43 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp).then(if (!revealed && tpl.mode == AnswerMode.FLIP) Modifier.clickable { reveal() } else Modifier),
             ) {
                 Column(Modifier.padding(horizontal = 20.dp, vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
+                    ModeHeader(tpl.id, tpl.label)
                     BlocksView(tpl.front(note, prefs.layout), onSpeak = app.speech::speak)
+                    if (tpl.mode == AnswerMode.TYPE && !revealed && answer.isNotEmpty()) {
+                        AnswerHint(answerHint(answer, 1 + extraHints), letters, answer.trim().split(Regex("\\s+")).size)
+                        if (similar.isNotEmpty()) NotThese(similar.take(3))
+                    }
                     if (tpl.mode == AnswerMode.TYPE && !revealed) {
                         OutlinedTextField(
                             value = typed, onValueChange = { typed = it }, singleLine = true, placeholder = { Text("Gõ đáp án…") },
+                            // Part of the field, so keepVisibleWhileTyping keeps it above the keyboard together with the input.
+                            supportingText = mixedUp?.let { o -> { MixedUp(o) } },
                             textStyle = androidx.compose.ui.text.TextStyle(fontSize = 20.sp, textAlign = TextAlign.Center),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, autoCorrectEnabled = false),
-                            keyboardActions = KeyboardActions(onDone = { reveal(checkTyped(typed, tpl.expected(note))) }),
+                            keyboardActions = KeyboardActions(onDone = { submitTyped() }),
                             modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping(),
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { reveal(checkTyped(typed, tpl.expected(note))) }) { Text("Kiểm tra") }
+                            Button(onClick = { submitTyped() }, Modifier.testTag("type-check")) { Text("Kiểm tra") }
                             TextButton(onClick = { reveal(Verdict.WRONG) }) { Text("Không nhớ") }
+                        }
+                        if (letters - 1 - extraHints > 1) {
+                            OutlinedButton(onClick = { extraHints++ }, Modifier.testTag("more-hint")) { Text("Gợi ý thêm chữ") }
                         }
                     }
                     if (revealed) {
                         androidx.compose.material3.HorizontalDivider(color = c.line)
                         verdict?.let { v ->
                             Pill(
-                                (when (v) { Verdict.CORRECT -> "Chính xác"; Verdict.CLOSE -> "Gần đúng"; Verdict.WRONG -> "Chưa đúng" }) + if (typed.isNotBlank() && v != Verdict.CORRECT) " · bạn gõ “$typed”" else "",
+                                (when (v) { Verdict.CORRECT -> "Chính xác"; Verdict.CLOSE -> "Gần đúng"; Verdict.WRONG -> "Chưa đúng" }) +
+                                    (if (typed.isNotBlank() && v != Verdict.CORRECT) " · bạn gõ “$typed”" else "") +
+                                    (mixedUp?.let { " · lần đầu gõ “${it.word}”" } ?: if (extraHints > 0) " · có dùng gợi ý" else ""),
                                 when (v) { Verdict.CORRECT -> PillKind.OK; Verdict.CLOSE -> PillKind.WARN; Verdict.WRONG -> PillKind.BAD },
+                                Modifier.testTag("verdict"),
                             )
                         }
                         BlocksView(tpl.back(note, prefs.layout), onSpeak = app.speech::speak)
+                        if (similar.isNotEmpty()) Compare(note.fields["word"].str(), note.fields["pos"].str(), note.fields["en"].str(), similar.take(3))
                     } else if (tpl.mode == AnswerMode.FLIP) {
                         Text("Chạm thẻ để xem đáp án", color = c.muted, fontSize = 13.sp)
                     }
@@ -249,7 +297,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                 Button(onClick = { reveal() }, Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("show-answer")) { Text("Hiện đáp án", fontSize = 16.sp) }
             } else if (revealed) {
                 val fsrs = remember(prefs.desiredRetention) { Fsrs(prefs.desiredRetention) }
-                val suggested = verdict?.let(::suggestedRating)
+                val suggested = verdict?.let { suggestedRatingWith(it, extraHints, mixedUp != null) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for ((r, label) in listOf(1 to "Quên", 2 to "Khó", 3 to "Tốt", 4 to "Dễ")) {
                         val (fg, soft) = when (r) { 1 -> c.again to c.againSoft; 2 -> c.hard to c.hardSoft; 3 -> c.good to c.goodSoft; else -> c.easy to c.easySoft }
@@ -282,13 +330,102 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (isLeech(card)) Pill("Khó · quên ${card.lapses}", PillKind.BAD)
-                    Pill(tpl.label.substringBefore(" ("), PillKind.PLAIN)
                 }
             }
         }
     }
 
     editing?.let { id -> notesById[id]?.let { NoteEditor(data, it) { editing = null } } }
+}
+
+/** What the card asks for, in the learner's words; shown at the top of the card. */
+private val MODE_TITLE = mapOf("recognize" to "Nhớ nghĩa của từ", "recall" to "Gõ từ tiếng Anh", "cloze" to "Điền từ vào câu")
+
+@Composable
+private fun ModeHeader(templateId: String, label: String) {
+    val c = Lexi.colors
+    Column(Modifier.fillMaxWidth().testTag("card-mode"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.size(8.dp).background(when (templateId) { "recall" -> c.easy; "cloze" -> c.hard; else -> c.accent }, CircleShape))
+            Text((MODE_TITLE[templateId] ?: label).uppercase(), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.7.sp, color = c.muted)
+        }
+        if (templateId == "recall") Text("Từ tiếng Anh nào có nghĩa là…", fontSize = 13.sp, color = c.muted)
+    }
+}
+
+/** The answer's first letter(s) and its length: "c _ _ _ _ _ _ _", "8 chữ cái". */
+@Composable
+private fun AnswerHint(hint: String, letters: Int, words: Int) {
+    val c = Lexi.colors
+    // Narrower cells for long answers so "procrastination" still fits on one line of a phone card.
+    val long = hint.length > 11
+    val cell = if (long) 13.dp else 20.dp
+    Column(Modifier.testTag("answer-hint"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(if (long) 3.dp else 4.dp)) {
+            for (ch in hint) {
+                if (ch == ' ') Spacer(Modifier.width(cell / 2))
+                else Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(if (ch == '_') "" else ch.toString(), Modifier.width(cell), fontSize = if (long) 15.sp else 19.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = c.accent, textAlign = TextAlign.Center)
+                    Box(Modifier.width(cell).height(2.5.dp).background(if (ch == '_') c.line else c.accent))
+                }
+            }
+        }
+        Text((if (words > 1) "$words từ, " else "") + "$letters chữ cái", fontSize = 12.sp, color = c.muted)
+    }
+}
+
+@Composable
+private fun NotThese(others: List<Confusable>) {
+    val c = Lexi.colors
+    val text = buildAnnotatedString {
+        append("Trong bộ thẻ của bạn, ")
+        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("không phải") }
+        append(": ")
+        others.forEachIndexed { i, o ->
+            if (i > 0) append(" · ")
+            withStyle(SpanStyle(color = c.ink, textDecoration = TextDecoration.LineThrough)) { append(o.word) }
+        }
+    }
+    Text(text, Modifier.fillMaxWidth().background(c.surface2, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 6.dp).testTag("not-these"), fontSize = 13.sp, color = c.muted, textAlign = TextAlign.Center)
+}
+
+/** First try was another of the learner's words with this meaning: name it, show its definition, allow a retry. */
+@Composable
+private fun MixedUp(other: Confusable) {
+    val c = Lexi.colors
+    Column(Modifier.fillMaxWidth().testTag("mixed-up"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Pill("Đúng nghĩa, nhưng là từ khác: ${other.word}", PillKind.WARN)
+        Text("Gõ lại một lần, lần này không tính là quên.", fontSize = 13.sp, color = c.muted, textAlign = TextAlign.Center)
+        if (other.en.isNotEmpty()) {
+            Text(
+                buildAnnotatedString {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(other.word) }
+                    append((if (other.pos.isNotEmpty()) " (${other.pos})" else "") + ": " + other.en)
+                },
+                Modifier.background(c.surface2, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 6.dp), fontSize = 13.sp, color = c.ink, textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+/** After the answer: the word under review next to the learner's words it is easy to mix up with. */
+@Composable
+private fun Compare(word: String, pos: String, en: String, others: List<Confusable>) {
+    val c = Lexi.colors
+    @Composable
+    fun Item(w: String, p: String, vi: String, def: String, mine: Boolean) {
+        Column(Modifier.fillMaxWidth().background(if (mine) c.accentSoft else c.surface2, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(w, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = c.ink)
+            if (p.isNotEmpty()) Text(p, fontSize = 12.sp, color = c.muted)
+            if (vi.isNotEmpty()) Text(vi, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
+            if (def.isNotEmpty()) Text(def, fontSize = 13.sp, color = c.ink)
+        }
+    }
+    Column(Modifier.fillMaxWidth().testTag("compare"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("DỄ NHẦM VỚI", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.7.sp, color = c.muted)
+        Item(word, pos, "", en, mine = true)
+        for (o in others) Item(o.word, o.pos, o.vi, o.en, mine = false)
+    }
 }
 
 @Composable

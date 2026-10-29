@@ -7,13 +7,13 @@ Cập nhật theo kết quả CI và các lần chạy thật, không theo dự 
 | Hạng mục | Bằng chứng |
 |---|---|
 | Dựng từ điển | `tools/dict` build thật: 146.874 mục, 36.182 có IPA, 52.299 có nghĩa tiếng Việt (Wiktionary), ~7,6 MB nén; 6 test đơn vị (IPA, morphology, tách gloss, CMUdict, trích + gộp nghĩa Wiktionary) |
-| Lõi web (FSRS, hàng đợi, mẫu thẻ, cloze, thống kê, repo IndexedDB, import/export) | 32 test vitest |
-| Giao diện web | 10 kịch bản Playwright (thêm từ, ôn, gõ đáp án, hoàn tác, xoá có xác nhận, **offline sau lần truy cập đầu**, 3 cỡ màn hình không tràn ngang) chạy dưới đúng CSP của `firebase.json` |
+| Lõi web (FSRS, hàng đợi, mẫu thẻ, cloze, từ dễ nhầm, thống kê, repo IndexedDB, import/export) | 36 test vitest |
+| Giao diện web | 11 kịch bản Playwright (thêm từ, ôn, gõ đáp án, từ dễ nhầm, hoàn tác, xoá có xác nhận, **offline sau lần truy cập đầu**, 3 cỡ màn hình không tràn ngang) chạy dưới đúng CSP của `firebase.json` |
 | Rules Firestore | 15 test trên emulator, gồm tài liệu do chính code app sinh ra (`fixtures.json`) |
 | `CloudRepo` ↔ Firestore | 4 test trên emulator Auth + Firestore thật: hai thiết bị cùng tài khoản thấy ghi của nhau, bộ đếm theo ngày cộng dồn, undo lan truyền, tài khoản ngoài allowlist bị từ chối |
 | Function `enrich` | 13 test đơn vị (validate đầu vào/đầu ra, retry, hạn mức, allowlist, CORS); build bundle thành công |
 | Terraform | `fmt` + `validate` đạt (provider google 8.9) |
-| Lõi Kotlin (Android) | Test JVM phát lại vector do TypeScript sinh: FSRS 10 kịch bản, mẫu thẻ, cloze, kiểm tra đáp án, morphology, hàng đợi: khớp |
+| Lõi Kotlin (Android) | Test JVM phát lại vector do TypeScript sinh: FSRS 10 kịch bản, mẫu thẻ, cloze, kiểm tra đáp án, từ dễ nhầm, morphology, hàng đợi: khớp |
 | App Android trên emulator | CI chạy APK debug trên emulator Android 15 (chế độ chỉ-lưu-trên-máy): thêm từ qua từ điển offline → ôn → thư viện → thống kê → cài đặt; chụp 9 màn hình, đã xem bằng mắt (release `android-ci-screens`) |
 | CI | `Web and backend` (cả job `terraform`) và `Android` (test lõi, lint, APK release, emulator) xanh trên nhánh; Playwright từng chập chờn do 2 race (phím bấm trước khi effect chạy; test offline đọc sớm), đã sửa gốc và CI xanh sau đó |
 

@@ -138,3 +138,40 @@ class QueueVectorsTest {
         }
     }
 }
+
+class ConfusablesVectorsTest {
+    private val root = JSONObject(vectors("confusables.json"))
+    private val notes = root.getJSONArray("notes").objects().map(::noteFromJson)
+
+    @Test
+    fun `meaning phrases match`() {
+        for (c in root.getJSONArray("phrases").objects()) assertEquals(c.getJSONArray("phrases").strings(), meaningPhrases(c.getString("vi")), c.toString())
+    }
+
+    @Test
+    fun `confusable lists match the web app`() {
+        for (l in root.getJSONArray("lists").objects()) {
+            val note = notes.first { it.id == l.getString("noteId") }
+            val expected = l.getJSONArray("confusables").objects().map {
+                Confusable(it.getString("noteId"), it.getString("word"), it.getString("pos"), it.getString("vi"), it.getString("en"), it.getString("reason"))
+            }
+            assertEquals(expected, confusables(note, notes), "note ${note.id}")
+        }
+    }
+
+    @Test
+    fun `typed confusables, hints and ratings match`() {
+        val conv = confusables(notes[0], notes)
+        for (t in root.getJSONArray("typed").objects()) {
+            assertEquals(if (t.isNull("match")) null else t.getString("match"), matchConfusable(t.getString("typed"), conv)?.noteId, t.toString())
+        }
+        for (h in root.getJSONArray("hints").objects()) {
+            assertEquals(h.getString("hint"), answerHint(h.getString("answer"), h.getInt("shown")), h.toString())
+            assertEquals(h.getInt("letters"), letterCount(h.getString("answer")), h.toString())
+        }
+        for (r in root.getJSONArray("ratings").objects()) {
+            val v = Verdict.valueOf(r.getString("verdict").uppercase())
+            assertEquals(r.getInt("rating"), suggestedRatingWith(v, r.getInt("extraHints"), r.getBoolean("retried")), r.toString())
+        }
+    }
+}

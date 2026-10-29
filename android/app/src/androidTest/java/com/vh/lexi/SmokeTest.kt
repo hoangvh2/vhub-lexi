@@ -17,7 +17,11 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.semantics.SemanticsProperties
+import com.vh.lexi.core.FieldValue
+import kotlinx.coroutines.runBlocking
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.core.view.WindowCompat
@@ -25,6 +29,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.test.uiautomator.UiDevice
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.ui.MainActivity
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -194,8 +199,66 @@ class SmokeTest {
         assertAboveKeyboard("day-start-input", screenBounds("day-start-input"), kb)
         shot("09b-settings-keyboard")
         hideKeyboard()
+
+        typingCardNamesTheTargetWord()
+    }
+
+    /**
+     * Two words with the same Vietnamese meaning, typing cards only: the card shows the target's first letter and length
+     * and lists the other word as "not this"; typing the other word (inflected) is a retry, not a lapse.
+     */
+    private fun typingCardNamesTheTargetWord() {
+        val app = rule.activity.application as LexiApp
+        val recallOnly = mapOf("vocab" to listOf("recall"))
+        runBlocking { app.data.savePrefs(app.data.prefs.value.copy(templates = recallOnly)) }
+        // Cards are made from the stored prefs, which reach `prefs` asynchronously.
+        waitFor("prefs") { app.data.prefs.value.templates == recallOnly }
+        runBlocking {
+            // Their own deck, so the study screen can be narrowed to them (serendipity now has a recall card too).
+            val deck = app.data.createDeck("Thuyết phục")
+            for (w in listOf("convince", "persuade")) {
+                app.data.addNote("vocab", mapOf("word" to FieldValue.Text(w), "pos" to FieldValue.Text("verb"), "vi" to FieldValue.Text("thuyết phục, làm cho tin"), "en" to FieldValue.Text("$w: definition")), deck.id)
+            }
+        }
+        rule.onNodeWithTag("nav-study").performClick()
+        waitFor("deck-picker") { rule.onAllNodesWithTextCount("Tất cả bộ thẻ") > 0 }
+        rule.onNodeWithText("Tất cả bộ thẻ").performClick()
+        waitFor("deck-menu") { rule.onAllNodesWithTextCount("Thuyết phục") > 0 }
+        rule.onNodeWithText("Thuyết phục").performClick()
+        waitFor("typing-card") { rule.onAllNodesWithTagCount("answer-hint") > 0 }
+        val notThese = rule.textOf("not-these")
+        val (target, other) = if ("persuade" in notThese) "convince" to "persuade" else "persuade" to "convince"
+        assertTrue(rule.textOf("card-mode"), rule.textOf("card-mode").contains("GÕ TỪ TIẾNG ANH"))
+        assertTrue(rule.textOf("answer-hint"), rule.textOf("answer-hint").contains("8 chữ cái"))
+        shot("10-typing-card")
+
+        rule.onNode(hasSetTextAction()).performTextInput("${other}d")
+        rule.onNodeWithTag("type-check").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("mixed-up") { rule.onAllNodesWithTagCount("mixed-up") > 0 }
+        assertTrue(rule.textOf("mixed-up"), rule.textOf("mixed-up").contains("Đúng nghĩa, nhưng là từ khác: $other"))
+        // The field still has focus: the message must not hide under the keyboard (it is the field's supporting text).
+        val kb = waitForKeyboard("typing")
+        assertAboveKeyboard("mixed-up", screenBounds("mixed-up"), kb)
+        shot("11-typing-mixed-up")
+        hideKeyboard()
+
+        rule.onNode(hasSetTextAction()).performTextClearance()
+        rule.onNode(hasSetTextAction()).performTextInput(target)
+        rule.onNodeWithTag("type-check").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("verdict") { rule.onAllNodesWithTagCount("verdict") > 0 }
+        assertTrue(rule.textOf("verdict"), rule.textOf("verdict").contains("Chính xác · lần đầu gõ “$other”"))
+        rule.onNodeWithTag("compare").performScrollTo()
+        shot("12-typing-compare")
+        rule.onNodeWithTag("rate-2").performSemanticsAction(SemanticsActions.OnClick)
     }
 }
+
+/** All the text inside the node with [tag] (its own and its children's). */
+private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.textOf(tag: String): String =
+    onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().flatMap { it.texts() }.joinToString(" ")
+
+private fun androidx.compose.ui.semantics.SemanticsNode.texts(): List<String> =
+    config.getOrElse(SemanticsProperties.Text) { emptyList() }.map { it.text } + children.flatMap { it.texts() }
 
 private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.onAllNodesWithTextCount(text: String) =
     onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().size
