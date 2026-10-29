@@ -11,11 +11,9 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
@@ -32,19 +30,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.onFocusEvent
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -52,29 +50,29 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogWindowProvider
 import com.vh.lexi.core.Block
-import kotlinx.coroutines.delay
 import com.vh.lexi.ui.theme.Lexi
+import kotlinx.coroutines.launch
 
 /**
- * Keeps a focused text field entirely in view in its scroll container while the keyboard opens or changes height.
- * On its own Compose only scrolls the cursor line into view, which leaves the rest of the field (and of multi-line
- * fields) under the keyboard or under a bar pinned above it.
+ * Keeps a focused text field entirely in view in its scroll container, also when the keyboard (or a resized dialog)
+ * shrinks the viewport afterwards. On its own Compose only scrolls the cursor line into view, which leaves the rest
+ * of the field half under the keyboard or under a bar pinned above it. Driven by layout rather than by the keyboard
+ * height, so it does not depend on when the inset animation and the viewport resize land.
  */
 @OptIn(ExperimentalFoundationApi::class)
 fun Modifier.keepVisibleWhileTyping(): Modifier = composed {
     val requester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
     var focused by remember { mutableStateOf(false) }
-    val keyboard = WindowInsets.ime.getBottom(LocalDensity.current)
-    LaunchedEffect(focused, keyboard) {
-        if (focused) {
-            // The keyboard height changes every frame while it slides in; wait until it settles and the viewport
-            // has been laid out for it, otherwise the request is measured against the old viewport or cancelled.
-            delay(150)
-            withFrameNanos { }
-            requester.bringIntoView()
+    bringIntoViewRequester(requester)
+        .onFocusEvent {
+            focused = it.isFocused
+            if (focused) scope.launch { requester.bringIntoView() }
         }
-    }
-    bringIntoViewRequester(requester).onFocusEvent { focused = it.isFocused }
+        .onGloballyPositioned { c ->
+            // Clipped by the viewport while focused: scroll it back into full view (a no-op once it fits).
+            if (focused && c.boundsInWindow().height < c.size.height - 1) scope.launch { requester.bringIntoView() }
+        }
 }
 
 /**
@@ -82,6 +80,7 @@ fun Modifier.keepVisibleWhileTyping(): Modifier = composed {
  * up until the focused field clears it), which pushes the buttons under the keyboard. Resizing instead keeps the
  * buttons above it and lets the form scroll in the room that is left.
  */
+@Suppress("DEPRECATION") // ADJUST_RESIZE is deprecated for edge-to-edge windows; dialog windows still fit system windows
 @Composable
 fun ResizeDialogForKeyboard() {
     val window = (LocalView.current.parent as? DialogWindowProvider)?.window
