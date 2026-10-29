@@ -225,7 +225,7 @@ private fun NumberField(label: String, value: Int, modifier: Modifier = Modifier
     var text by remember(value) { mutableStateOf(value.toString()) }
     OutlinedTextField(
         value = text, onValueChange = { t -> text = t.filter { it.isDigit() }.take(4); text.toIntOrNull()?.let(onChange) },
-        label = { Text(label) }, singleLine = true, modifier = modifier.fillMaxWidth(),
+        label = { Text(label) }, singleLine = true, modifier = modifier.fillMaxWidth().keepVisibleWhileTyping(),
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
     )
 }

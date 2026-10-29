@@ -104,8 +104,12 @@ class SmokeTest {
     }
 
     /** A view in a dialog window, found through accessibility (dialogs are separate windows). */
-    private fun dialogTextBounds(text: String): Rect =
-        device.wait(Until.findObject(By.text(text)), 5_000)?.visibleBounds ?: throw AssertionError("no \"$text\" on screen")
+    private fun dialogTextBounds(text: String): Rect {
+        device.wait(Until.findObject(By.text(text)), 5_000)?.let { return it.visibleBounds }
+        shot("fail-find-$text")
+        val tree = java.io.ByteArrayOutputStream().also { device.dumpWindowHierarchy(it) }.toString()
+        throw AssertionError("no \"$text\" on screen\n" + tree.lines().filter { "text=\"\"" !in it || "bounds" in it }.joinToString("\n").take(8000))
+    }
 
     @Test
     fun addStudyAndBrowse() {
@@ -130,9 +134,10 @@ class SmokeTest {
         var kb = waitForKeyboard("add")
         rule.onNodeWithTag("mnemonic-input").performTextInput("seren-dipity: tình cờ")
         rule.waitForIdle()
-        assertAboveKeyboard("mnemonic-input", screenBounds("mnemonic-input"), kb)
         val save = screenBounds("save-word")
         assertAboveKeyboard("save-word", save, kb)
+        // The whole field, not just its cursor line, is in view above the save bar.
+        assertAboveKeyboard("mnemonic-input (vs save bar)", screenBounds("mnemonic-input"), save.top)
         shot("03b-add-keyboard")
         device.click(save.centerX(), save.centerY())
         waitFor("saved") { rule.onAllNodesWithTextCount("Đã thêm") > 0 }

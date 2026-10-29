@@ -223,7 +223,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                             textStyle = androidx.compose.ui.text.TextStyle(fontSize = 20.sp, textAlign = TextAlign.Center),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, autoCorrectEnabled = false),
                             keyboardActions = KeyboardActions(onDone = { reveal(checkTyped(typed, tpl.expected(note))) }),
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping(),
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = { reveal(checkTyped(typed, tpl.expected(note))) }) { Text("Kiểm tra") }

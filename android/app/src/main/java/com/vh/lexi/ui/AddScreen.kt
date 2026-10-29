@@ -269,18 +269,18 @@ fun AddScreen(app: LexiApp) {
 
             if (word.isNotEmpty()) {
                 OutlinedTextField(
-                    value = draft.vi, onValueChange = { draft.vi = it; edited("vi") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("vi-input"),
+                    value = draft.vi, onValueChange = { draft.vi = it; edited("vi") }, singleLine = true, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping().testTag("vi-input"),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     label = { Text("Nghĩa tiếng Việt" + if ("vi" in draft.ai) " · AI" else if (draft.viFromDict(hit?.entry)) " · Wiktionary" else "") },
                     placeholder = { Text(if (aiAvailable) "Nhập hoặc bấm “Điền bằng AI”" else "Nhập nghĩa tiếng Việt") },
                 )
                 if (aiAvailable) OutlinedButton(onClick = ::enrich, enabled = !aiBusy) { Icon(Icons.Filled.AutoAwesome, null); Text(if (aiBusy) "  Đang điền…" else "  Điền bằng AI") }
-                if (hit == null) OutlinedTextField(value = draft.en, onValueChange = { draft.en = it; edited("en") }, label = { Text("Định nghĩa tiếng Anh" + if ("en" in draft.ai) " · AI" else "") }, modifier = Modifier.fillMaxWidth())
+                if (hit == null) OutlinedTextField(value = draft.en, onValueChange = { draft.en = it; edited("en") }, label = { Text("Định nghĩa tiếng Anh" + if ("en" in draft.ai) " · AI" else "") }, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping())
                 OutlinedTextField(
-                    value = draft.examples, onValueChange = { draft.examples = it; edited("examples") }, minLines = 2, modifier = Modifier.fillMaxWidth(),
+                    value = draft.examples, onValueChange = { draft.examples = it; edited("examples") }, minLines = 2, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping(),
                     label = { Text("Ví dụ (mỗi dòng một câu)" + if ("examples" in draft.ai) " · AI" else "") },
                 )
-                OutlinedTextField(value = draft.mnemonic, onValueChange = { draft.mnemonic = it; edited("mnemonic") }, label = { Text("Mẹo nhớ" + if ("mnemonic" in draft.ai) " · AI" else "") }, modifier = Modifier.fillMaxWidth().testTag("mnemonic-input"))
+                OutlinedTextField(value = draft.mnemonic, onValueChange = { draft.mnemonic = it; edited("mnemonic") }, label = { Text("Mẹo nhớ" + if ("mnemonic" in draft.ai) " · AI" else "") }, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping().testTag("mnemonic-input"))
 
                 val deckName = decks.firstOrNull { it.id == (deckId ?: prefs.defaultDeckId) }?.name ?: decks.firstOrNull()?.name ?: "Mặc định"
                 if (newDeck == null) {
@@ -294,7 +294,7 @@ fun AddScreen(app: LexiApp) {
                         OutlinedButton(onClick = { newDeck = "" }) { Text("+ Mới") }
                     }
                 } else {
-                    OutlinedTextField(value = newDeck.orEmpty(), onValueChange = { newDeck = it }, singleLine = true, label = { Text("Tên bộ thẻ mới (vd: TOEIC)") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = newDeck.orEmpty(), onValueChange = { newDeck = it }, singleLine = true, label = { Text("Tên bộ thẻ mới (vd: TOEIC)") }, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping())
                 }
                 if (duplicate) Pill("“$word” đã có trong thư viện. Lưu sẽ tạo thêm một bản.", PillKind.WARN)
             }
