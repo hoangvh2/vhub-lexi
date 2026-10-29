@@ -160,7 +160,10 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
         AlertDialog(
             onDismissRequest = { deckDialog = null },
             title = { Text(if (id == null) "Bộ thẻ mới" else "Sửa bộ thẻ") },
-            text = { OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, label = { Text("Tên bộ thẻ") }) },
+            text = {
+                ResizeDialogForKeyboard()
+                OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, label = { Text("Tên bộ thẻ") })
+            },
             dismissButton = {
                 Row {
                     if (id != null) TextButton(onClick = { confirmDeck = decks.firstOrNull { it.id == id }; deckDialog = null }) { Text("Xoá bộ thẻ", color = MaterialTheme.colorScheme.error) }

@@ -1,6 +1,8 @@
 package com.vh.lexi.ui
 
+import android.view.WindowManager
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +17,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,15 +30,62 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.focus.onFocusEvent
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogWindowProvider
 import com.vh.lexi.core.Block
 import com.vh.lexi.ui.theme.Lexi
+import kotlinx.coroutines.launch
+
+/**
+ * Keeps a focused text field entirely in view in its scroll container, also when the keyboard (or a resized dialog)
+ * shrinks the viewport afterwards. On its own Compose only scrolls the cursor line into view, which leaves the rest
+ * of the field half under the keyboard or under a bar pinned above it. Driven by layout rather than by the keyboard
+ * height, so it does not depend on when the inset animation and the viewport resize land.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+fun Modifier.keepVisibleWhileTyping(): Modifier = composed {
+    val requester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
+    var focused by remember { mutableStateOf(false) }
+    bringIntoViewRequester(requester)
+        .onFocusEvent {
+            focused = it.isFocused
+            if (focused) scope.launch { requester.bringIntoView() }
+        }
+        .onGloballyPositioned { c ->
+            // Clipped by the viewport while focused: scroll it back into full view (a no-op once it fits).
+            if (focused && c.boundsInWindow().height < c.size.height - 1) scope.launch { requester.bringIntoView() }
+        }
+}
+
+/**
+ * Call inside a dialog that has text fields. Dialog windows pan for the keyboard by default (the whole dialog slides
+ * up until the focused field clears it), which pushes the buttons under the keyboard. Resizing instead keeps the
+ * buttons above it and lets the form scroll in the room that is left.
+ */
+@Suppress("DEPRECATION") // ADJUST_RESIZE is deprecated for edge-to-edge windows; dialog windows still fit system windows
+@Composable
+fun ResizeDialogForKeyboard() {
+    val window = (LocalView.current.parent as? DialogWindowProvider)?.window
+    SideEffect { window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE) }
+}
 
 /** Shows a short message (snackbar) with an optional action. Provided by MainActivity. */
 class Toaster(val show: (message: String, action: String?, onAction: (() -> Unit)?) -> Unit) {

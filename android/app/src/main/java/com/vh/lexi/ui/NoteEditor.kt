@@ -62,6 +62,7 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
             // AlertDialog already bounds the text slot to the room left by the title and buttons (also when the
             // keyboard shrinks the window), so the form only needs to scroll. A heightIn after verticalScroll would
             // clip the content instead of the viewport and leave nothing to scroll.
+            ResizeDialogForKeyboard()
             Column(Modifier.verticalScroll(rememberScrollState()).testTag("note-editor-form"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 for (f in def.fields) {
                     OutlinedTextField(
@@ -70,7 +71,7 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
                         label = { Text(f.label + if (note.aiFields.contains(f.key)) " · AI" else "") },
                         singleLine = f.kind == "text",
                         minLines = if (f.kind == "list") 2 else 1,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping(),
                     )
                 }
                 if (decks.size > 1) {
@@ -84,7 +85,7 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
                         }
                     }
                 }
-                OutlinedTextField(value = tags, onValueChange = { tags = it }, label = { Text("Thẻ gắn (phân cách bằng dấu phẩy)") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("note-editor-tags"))
+                OutlinedTextField(value = tags, onValueChange = { tags = it }, label = { Text("Thẻ gắn (phân cách bằng dấu phẩy)") }, singleLine = true, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping().testTag("note-editor-tags"))
                 if (cards.isNotEmpty()) {
                     Text("Thẻ ôn tập", style = MaterialTheme.typography.labelMedium, color = Lexi.colors.muted)
                     for (c in cards) {

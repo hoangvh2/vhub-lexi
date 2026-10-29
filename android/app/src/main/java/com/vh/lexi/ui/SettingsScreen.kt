@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -103,7 +104,7 @@ fun SettingsScreen(app: LexiApp) {
             Text("Cao hơn = nhớ chắc hơn nhưng ôn nhiều hơn. 90% là điểm cân bằng thường dùng; 85% nếu muốn ít thẻ hơn.", color = c.muted, fontSize = 13.sp)
             NumberField("Từ mới mỗi ngày", p.newPerDay) { set(p.copy(newPerDay = it.coerceIn(0, 200))) }
             NumberField("Tối đa thẻ ôn mỗi ngày", p.maxReviewsPerDay) { set(p.copy(maxReviewsPerDay = it.coerceIn(0, 9999))) }
-            NumberField("Ngày mới bắt đầu lúc (giờ)", p.dayStartHour) { set(p.copy(dayStartHour = it.coerceIn(0, 23))) }
+            NumberField("Ngày mới bắt đầu lúc (giờ)", p.dayStartHour, Modifier.testTag("day-start-input")) { set(p.copy(dayStartHour = it.coerceIn(0, 23))) }
             Text("Tự đọc phát âm", fontWeight = FontWeight.SemiBold)
             Segments(listOf("off" to "Tắt", "front" to "Khi hiện thẻ", "back" to "Khi lật thẻ"), p.autoSpeak) { set(p.copy(autoSpeak = it)) }
         }
@@ -220,11 +221,11 @@ private fun RetentionSlider(value: Double, onChange: (Double) -> Unit) {
 }
 
 @Composable
-private fun NumberField(label: String, value: Int, onChange: (Int) -> Unit) {
+private fun NumberField(label: String, value: Int, modifier: Modifier = Modifier, onChange: (Int) -> Unit) {
     var text by remember(value) { mutableStateOf(value.toString()) }
     OutlinedTextField(
         value = text, onValueChange = { t -> text = t.filter { it.isDigit() }.take(4); text.toIntOrNull()?.let(onChange) },
-        label = { Text(label) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+        label = { Text(label) }, singleLine = true, modifier = modifier.fillMaxWidth().keepVisibleWhileTyping(),
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
     )
 }
