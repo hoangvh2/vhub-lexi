@@ -22,9 +22,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
-import androidx.test.uiautomator.Until
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.ui.MainActivity
 import org.junit.Rule
@@ -107,13 +105,18 @@ class SmokeTest {
         }
     }
 
-    /** A view in a dialog window, found through accessibility (dialogs are separate windows). */
-    private fun dialogTextBounds(text: String): Rect {
-        // textContains: a text field node also carries its label, so its text is not exactly what was typed.
-        device.wait(Until.findObject(By.textContains(text)), 5_000)?.let { return it.visibleBounds }
-        shot("fail-find-$text")
-        val tree = java.io.ByteArrayOutputStream().also { device.dumpWindowHierarchy(it) }.toString()
-        throw AssertionError("no \"$text\" on screen\n" + tree.lines().filter { "text=\"\"" !in it || "bounds" in it }.joinToString("\n").take(8000))
+    /**
+     * Screen bounds of a node in a dialog. Dialogs are separate windows, so the node's window position is offset by
+     * the dialog window's position, taken from the topmost application window.
+     */
+    private fun dialogScreenBounds(tag: String): Rect {
+        val ua = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val dialog = ua.windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
+            ?.let { w -> Rect().also(w::getBoundsInScreen) } ?: throw AssertionError("no dialog window")
+        val n = rule.onNodeWithTag(tag).fetchSemanticsNode()
+        val left = dialog.left + n.positionInWindow.x.toInt()
+        val top = dialog.top + n.positionInWindow.y.toInt()
+        return Rect(left, top, left + n.size.width, top + n.size.height)
     }
 
     @Test
@@ -173,8 +176,8 @@ class SmokeTest {
         kb = waitForKeyboard("note-editor")
         rule.onNodeWithTag("note-editor-tags").performTextInput("ielts")
         rule.waitForIdle()
-        assertAboveKeyboard("note-editor-tags", dialogTextBounds("ielts"), kb)
-        assertAboveKeyboard("note-editor-save", dialogTextBounds("Lưu"), kb)
+        assertAboveKeyboard("note-editor-tags", dialogScreenBounds("note-editor-tags"), kb)
+        assertAboveKeyboard("note-editor-save", dialogScreenBounds("note-editor-save"), kb)
         shot("07b-note-editor-keyboard")
         rule.onNodeWithText("Huỷ").performSemanticsAction(SemanticsActions.OnClick)
         waitFor("note-editor-closed") { rule.onAllNodesWithTagCount("note-editor-form") == 0 }
