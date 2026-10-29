@@ -249,9 +249,9 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                 shape = RoundedCornerShape(22.dp), color = c.surface, border = BorderStroke(1.dp, c.line), shadowElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp).then(if (!revealed && tpl.mode == AnswerMode.FLIP) Modifier.clickable { reveal() } else Modifier),
             ) {
-                // Tight enough that the mode header does not push the rating buttons below the fold on a 640dp-tall screen.
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)) {
-                    ModeHeader(tpl.id, tpl.label)
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
+                    // What the card asks for; once answered, the space goes to the answer so the rating row stays in view.
+                    if (!revealed) ModeHeader(tpl.id, tpl.label)
                     BlocksView(tpl.front(note, prefs.layout), onSpeak = app.speech::speak)
                     if (tpl.mode == AnswerMode.TYPE && !revealed && answer.isNotEmpty()) {
                         AnswerHint(answerHint(answer, 1 + extraHints), letters, answer.trim().split(Regex("\\s+")).size)
@@ -287,7 +287,6 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                             )
                         }
                         BlocksView(tpl.back(note, prefs.layout), onSpeak = app.speech::speak)
-                        if (similar.isNotEmpty()) Compare(note.fields["word"].str(), note.fields["pos"].str(), note.fields["en"].str(), similar.take(3))
                     } else if (tpl.mode == AnswerMode.FLIP) {
                         Text("Chạm thẻ để xem đáp án", color = c.muted, fontSize = 13.sp)
                     }
@@ -314,6 +313,8 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                         }
                     }
                 }
+                // Below the rating row, which must stay reachable without scrolling on a small phone.
+                if (similar.isNotEmpty()) Compare(note.fields["word"].str(), note.fields["pos"].str(), note.fields["en"].str(), similar.take(3))
             }
 
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {

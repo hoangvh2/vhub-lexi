@@ -277,11 +277,14 @@ export function Study({ deckId }: { deckId: Id | null }) {
             data-template={tpl.id}
             data-revealed={revealed}
           >
-            <div class="mode-head" data-testid="card-mode">
-              <span class={`mode-dot ${tpl.id}`} />
-              {MODE_TITLE[tpl.id] ?? tpl.label}
-            </div>
-            {tpl.id === "recall" && <div class="mode-q">Từ tiếng Anh nào có nghĩa là…</div>}
+            {/* What the card asks for; once answered, the space goes to the answer so the rating row stays in view. */}
+            {!revealed && (
+              <div class="mode-head" data-testid="card-mode">
+                <span class={`mode-dot ${tpl.id}`} />
+                {MODE_TITLE[tpl.id] ?? tpl.label}
+              </div>
+            )}
+            {!revealed && tpl.id === "recall" && <div class="mode-q">Từ tiếng Anh nào có nghĩa là…</div>}
             <Blocks blocks={tpl.front(note, p.layout)} cloze={tpl.id === "cloze"} />
             {tpl.mode === "type" && !revealed && answer && (
               <div class="target" data-testid="target">
@@ -348,7 +351,6 @@ export function Study({ deckId }: { deckId: Id | null }) {
                   </span>
                 )}
                 <Blocks blocks={tpl.back(note, p.layout)} />
-                {similar.length > 0 && <Compare word={str(note.fields.word)} pos={str(note.fields.pos)} en={str(note.fields.en)} others={similar.slice(0, 3)} />}
               </>
             )}
             {!revealed && tpl.mode === "flip" && <div class="hint">Bấm thẻ hoặc nhấn Space để xem đáp án</div>}
@@ -369,6 +371,8 @@ export function Study({ deckId }: { deckId: Id | null }) {
               ))}
             </div>
           ) : null}
+          {/* Below the rating row, which must stay reachable without scrolling on a small phone. */}
+          {revealed && similar.length > 0 && <Compare word={str(note.fields.word)} pos={str(note.fields.pos)} en={str(note.fields.en)} others={similar.slice(0, 3)} />}
 
           <div class="study-tools">
             <div class="row">
