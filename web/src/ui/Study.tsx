@@ -102,9 +102,9 @@ export function Study({ deckId }: { deckId: Id | null }) {
     shownAt.current = Date.now();
   }, [card?.id]);
 
-  // Read the front aloud when a card appears (if the learner chose that).
+  // Read the front aloud when a card appears: always on listening cards, otherwise if the learner chose that.
   useEffect(() => {
-    if (card && note && tpl && p.autoSpeak === "front") {
+    if (card && note && tpl && (p.autoSpeak === "front" || tpl.id === "listen")) {
       const t = tpl.speak?.front?.(note);
       if (t) speak(t);
     }
@@ -258,8 +258,7 @@ export function Study({ deckId }: { deckId: Id | null }) {
           <span class={`c-learn${kind === "learn" ? " on" : ""}`}>Đang học <b>{queue.counts.learning}</b></span>
           <span class={`c-rev${kind === "review" ? " on" : ""}`}>Ôn <b>{queue.counts.review}</b></span>
         </div>
-        <span class="spacer" />
-        <select class="select" style={{ width: "auto", minHeight: "36px", padding: "4px 10px" }} value={deckId ?? ""} aria-label="Chọn bộ thẻ" onChange={(e) => go(e.currentTarget.value ? `/study/${e.currentTarget.value}` : "/study")}>
+        <select class="select deck-pick" value={deckId ?? ""} aria-label="Chọn bộ thẻ" onChange={(e) => go(e.currentTarget.value ? `/study/${e.currentTarget.value}` : "/study")}>
           <option value="">Tất cả bộ thẻ</option>
           {allDecks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
@@ -271,7 +270,8 @@ export function Study({ deckId }: { deckId: Id | null }) {
       ) : (
         <div class="study">
           <div
-            class={`scard${revealed ? " revealed" : ""}`}
+            key={card.id}
+            class={`scard mode-${tpl.id}${revealed ? " revealed" : ""}`}
             onClick={() => tpl.mode === "flip" && !revealed && reveal()}
             data-testid="study-card"
             data-template={tpl.id}
@@ -284,7 +284,7 @@ export function Study({ deckId }: { deckId: Id | null }) {
                 {MODE_TITLE[tpl.id] ?? tpl.label}
               </div>
             )}
-            {!revealed && tpl.id === "recall" && <div class="mode-q">Từ tiếng Anh nào có nghĩa là…</div>}
+            {!revealed && MODE_Q[tpl.id] && <div class="mode-q">{MODE_Q[tpl.id]}</div>}
             <Blocks blocks={tpl.front(note, p.layout)} cloze={tpl.id === "cloze"} />
             {tpl.mode === "type" && !revealed && answer && (
               <div class="target" data-testid="target">
@@ -343,14 +343,17 @@ export function Study({ deckId }: { deckId: Id | null }) {
             {revealed && (
               <>
                 <div class="divider" />
-                {verdict && (
-                  <span class={`verdict ${verdict}`} data-testid="verdict">
-                    {verdict === "correct" ? "Chính xác" : verdict === "close" ? "Gần đúng" : "Chưa đúng"}
-                    {typed && verdict !== "correct" ? ` · bạn gõ “${typed}”` : ""}
-                    {mixedUp ? ` · lần đầu gõ “${mixedUp.word}”` : extraHints ? " · có dùng gợi ý" : ""}
-                  </span>
-                )}
-                <Blocks blocks={tpl.back(note, p.layout)} />
+                <div class="answer">
+                  {verdict && (
+                    <span class={`verdict ${verdict}`} data-testid="verdict">
+                      <Icon n={verdict === "wrong" ? "x" : "check"} size={16} />
+                      {verdict === "correct" ? "Chính xác" : verdict === "close" ? "Gần đúng" : "Chưa đúng"}
+                      {typed && verdict !== "correct" ? ` · bạn gõ “${typed}”` : ""}
+                      {mixedUp ? ` · lần đầu gõ “${mixedUp.word}”` : extraHints ? " · có dùng gợi ý" : ""}
+                    </span>
+                  )}
+                  <Blocks blocks={tpl.back(note, p.layout)} />
+                </div>
               </>
             )}
             {!revealed && tpl.mode === "flip" && <div class="hint">Bấm thẻ hoặc nhấn Space để xem đáp án</div>}
@@ -392,7 +395,9 @@ export function Study({ deckId }: { deckId: Id | null }) {
 }
 
 /** What the card asks for, in the learner's words; shown at the top of the card. */
-const MODE_TITLE: Record<string, string> = { recognize: "Nhớ nghĩa của từ", recall: "Gõ từ tiếng Anh", cloze: "Điền từ vào câu" };
+const MODE_TITLE: Record<string, string> = { recognize: "Nhớ nghĩa của từ", recall: "Gõ từ tiếng Anh", cloze: "Điền từ vào câu", listen: "Nghe và gõ từ" };
+/** The question under the title, where the mode needs one. */
+const MODE_Q: Record<string, string> = { recall: "Từ tiếng Anh nào có nghĩa là…", listen: "Nghe câu, gõ từ còn thiếu. Bấm loa để nghe lại." };
 
 /** After the answer: the word under review next to the learner's words it is easy to mix up with. */
 function Compare({ word, pos, en, others }: { word: string; pos: string; en: string; others: Confusable[] }) {

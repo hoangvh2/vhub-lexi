@@ -14,6 +14,14 @@ sealed interface Block {
     data class Badge(val text: String) : Block
     data class Text(val text: String, val tone: String? = null) : Block // tone: strong | muted
     data class Quote(val text: String) : Block
+    /** An example sentence; [at] = start until end (exclusive) of the studied word in it, [vi] = its translation. */
+    data class Example(val text: String, val at: Pair<Int, Int>? = null, val vi: String? = null) : Block
+    /** The learner's memory tip ("truyện chêm"), shown in its own box. */
+    data class Memo(val text: String) : Block
+    /** Secondary text, collapsed under [label] until the learner opens it. */
+    data class Fold(val label: String, val text: String) : Block
+    /** A large play button that reads [text] aloud (listening cards). */
+    data class Listen(val text: String) : Block
 }
 
 /** "flip" = think, reveal, self-rate; "type" = type the answer, then self-rate. */
@@ -32,7 +40,7 @@ interface TemplateDef {
     fun speakBack(note: Note): String? = null
 }
 
-data class FieldDef(val key: String, val label: String, val kind: String, val required: Boolean = false, val maxLength: Int)
+data class FieldDef(val key: String, val label: String, val kind: String, val required: Boolean = false, val maxLength: Int, val placeholder: String? = null)
 
 interface NoteTypeDef {
     val id: String
@@ -53,6 +61,12 @@ data class Cloze(val text: String, val answer: String)
 
 /** Blanks out [word] (allowing common inflections of its first word) in [sentence]; null when absent. */
 fun clozeSentence(sentence: String, word: String): Cloze? {
+    val (start, end) = findWord(sentence, word) ?: return null
+    return Cloze(sentence.substring(0, start) + "_____" + sentence.substring(end), sentence.substring(start, end))
+}
+
+/** Where [word] (or an inflection of its first word) occurs in [sentence]: start until end (exclusive), or null. */
+fun findWord(sentence: String, word: String): Pair<Int, Int>? {
     val parts = word.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
     if (parts.isEmpty()) return null
     val h = parts[0].lowercase()
@@ -63,7 +77,7 @@ fun clozeSentence(sentence: String, word: String): Cloze? {
     val headRe = if (h.length >= 4) "${escapeRe(stem)}[a-z]*" else "${escapeRe(h)}$last?(?:s|es|ed|d|ing)?"
     val re = Regex("(?<![A-Za-z])(${(listOf(headRe) + rest.map { escapeRe(it) }).joinToString("\\s+")})(?![A-Za-z])", RegexOption.IGNORE_CASE)
     val m = re.find(sentence) ?: return null
-    return Cloze(sentence.substring(0, m.range.first) + "_____" + sentence.substring(m.range.last + 1), m.groupValues[1])
+    return m.range.first to m.range.last + 1
 }
 
 fun normalizeAnswer(s: String): String =
@@ -105,21 +119,36 @@ fun suggestedRating(v: Verdict): Int = when (v) { Verdict.CORRECT -> 3; Verdict.
 
 private fun Note.f(key: String) = fields[key]
 
-private fun firstExampleWith(n: Note): Pair<String, Cloze>? {
+/** The first example that contains the word: its index (to find its translation), the sentence and the blanked version. */
+private data class Found(val index: Int, val sentence: String, val cloze: Cloze)
+
+private fun firstExampleWith(n: Note): Found? {
     val word = n.f("word").str()
-    for (ex in n.f("examples").items()) clozeSentence(ex, word)?.let { return ex to it }
+    for ((i, ex) in n.f("examples").items().withIndex()) clozeSentence(ex, word)?.let { return Found(i, ex, it) }
     return null
 }
 
 private fun meaningLine(n: Note) = n.f("vi").str().ifEmpty { n.f("en").str() }
 
+/** Translation of example [i]; translations are kept in the same order as the examples. */
+private fun exampleVi(n: Note, i: Int) = n.f("examplesVi").items().getOrNull(i) ?: ""
+
+private fun exampleBlock(n: Note, sentence: String, i: Int) =
+    Block.Example(sentence, findWord(sentence, n.f("word").str()), exampleVi(n, i).ifEmpty { null })
+
+private const val EN_LABEL = "Định nghĩa Anh-Anh"
+
+/**
+ * The answer side, in the order that makes a word click fastest for a Vietnamese learner: the Vietnamese meaning,
+ * then examples (word highlighted, with their translation), the memory tip, and the English definition folded away.
+ */
 private fun detailBlocks(n: Note, l: CardLayout, skipExamples: Boolean = false, skipVi: Boolean = false, skipEn: Boolean = false): List<Block> = buildList {
     val vi = if (skipVi) "" else n.f("vi").str()
     val en = if (skipEn) "" else n.f("en").str()
     if (l.showVi && vi.isNotEmpty()) add(Block.Text(vi, "strong"))
-    if (l.showEn && en.isNotEmpty()) add(Block.Text(en, "muted"))
-    if (l.showExamples && !skipExamples) n.f("examples").items().forEach { add(Block.Quote(it)) }
-    if (l.showMnemonic && n.f("mnemonic").str().isNotEmpty()) add(Block.Text(n.f("mnemonic").str(), "muted"))
+    if (l.showExamples && !skipExamples) n.f("examples").items().forEachIndexed { i, e -> add(exampleBlock(n, e, i)) }
+    if (l.showMnemonic && n.f("mnemonic").str().isNotEmpty()) add(Block.Memo(n.f("mnemonic").str()))
+    if (l.showEn && en.isNotEmpty()) add(if ((l.showVi && vi.isNotEmpty()) || skipVi) Block.Fold(EN_LABEL, en) else Block.Text(en, "strong"))
 }
 
 private fun wordHeader(n: Note, l: CardLayout, skipPos: Boolean = false): List<Block> = buildList {
@@ -158,41 +187,73 @@ private object Recall : TemplateDef {
         val vi = note.f("vi").str()
         val en = note.f("en").str()
         if (vi.isNotEmpty()) add(Block.Text(vi, "strong")) else if (en.isNotEmpty()) add(Block.Text(en, "strong"))
-        if (vi.isNotEmpty() && en.isNotEmpty() && layout.showEn) add(Block.Text(en, "muted"))
+        if (vi.isNotEmpty() && en.isNotEmpty() && layout.showEn) add(Block.Fold(EN_LABEL, en))
     }
     // The front stays on screen above the back once revealed; its badge is not repeated.
     override fun back(note: Note, layout: CardLayout) = buildList<Block> {
         addAll(wordHeader(note, layout, skipPos = true))
-        if (layout.showExamples) note.f("examples").items().forEach { add(Block.Quote(it)) }
+        if (layout.showExamples) note.f("examples").items().forEachIndexed { i, e -> add(exampleBlock(note, e, i)) }
     }
     override fun expected(note: Note) = listOf(note.f("word").str())
     override fun speakBack(note: Note) = note.f("word").str()
 }
 
+/** Typed answers for cards that blank the word out of an example (the inflected form or the base word). */
+private fun clozeExpected(note: Note): List<String> {
+    val c = firstExampleWith(note)
+    return if (c != null) listOf(c.cloze.answer, note.f("word").str()) else listOf(note.f("word").str())
+}
+
 private object ClozeTemplate : TemplateDef {
     override val id = "cloze"
     override val label = "Điền vào chỗ trống"
-    override val description = "Câu ví dụ che mất từ; cần có ví dụ chứa từ đó."
+    override val description = "Câu ví dụ che mất từ; gợi ý bằng bản dịch của câu (nếu có) hoặc nghĩa của từ."
     override val mode = AnswerMode.TYPE
     override fun applies(note: Note) = note.f("word").str().isNotEmpty() && firstExampleWith(note) != null
     override fun front(note: Note, layout: CardLayout) = buildList<Block> {
-        firstExampleWith(note)?.let { add(Block.Quote(it.second.text)) }
-        val hint = note.f("vi").str().ifEmpty { note.f("en").str() }
-        if (hint.isNotEmpty()) add(Block.Text(hint, "muted"))
+        val c = firstExampleWith(note)
+        c?.let { add(Block.Quote(it.cloze.text)) }
+        // The sentence's own translation points at exactly one word, which a bare meaning shared with synonyms does not.
+        val tr = c?.let { exampleVi(note, it.index) } ?: ""
+        if (tr.isNotEmpty()) add(Block.Text(tr))
+        else {
+            val hint = note.f("vi").str().ifEmpty { note.f("en").str() }
+            if (hint.isNotEmpty()) add(Block.Text(hint, "muted"))
+        }
         if (layout.showPos && note.f("pos").str().isNotEmpty()) add(Block.Badge(note.f("pos").str()))
     }
     // The front (blanked sentence, hint, badge) stays on screen above the back once revealed, so the
     // back adds only the word and what the hint lacked.
     override fun back(note: Note, layout: CardLayout) = buildList<Block> {
-        val usedVi = note.f("vi").str().isNotEmpty()
-        addAll(wordHeader(note, layout, skipPos = true))
-        addAll(detailBlocks(note, layout, skipExamples = true, skipVi = usedVi, skipEn = !usedVi))
-    }
-    override fun expected(note: Note): List<String> {
         val c = firstExampleWith(note)
-        return if (c != null) listOf(c.second.answer, note.f("word").str()) else listOf(note.f("word").str())
+        val usedTr = c != null && exampleVi(note, c.index).isNotEmpty()
+        val usedVi = !usedTr && note.f("vi").str().isNotEmpty()
+        val usedEn = !usedTr && !usedVi
+        addAll(wordHeader(note, layout, skipPos = true))
+        addAll(detailBlocks(note, layout, skipExamples = true, skipVi = usedVi, skipEn = usedEn))
     }
-    override fun speakBack(note: Note) = firstExampleWith(note)?.first
+    override fun expected(note: Note) = clozeExpected(note)
+    override fun speakBack(note: Note) = firstExampleWith(note)?.sentence
+}
+
+private object ListenTemplate : TemplateDef {
+    override val id = "listen"
+    override val label = "Nghe và gõ từ"
+    override val description = "Nghe câu ví dụ, gõ từ còn thiếu. Luyện tai cho phần Nghe của TOEIC."
+    override val mode = AnswerMode.TYPE
+    override fun applies(note: Note) = note.f("word").str().isNotEmpty() && firstExampleWith(note) != null
+    override fun front(note: Note, layout: CardLayout): List<Block> {
+        val c = firstExampleWith(note)!!
+        return listOf(Block.Listen(c.sentence), Block.Quote(c.cloze.text))
+    }
+    // After the answer: the word, the whole sentence with the word highlighted and translated, then the details.
+    override fun back(note: Note, layout: CardLayout): List<Block> {
+        val c = firstExampleWith(note)!!
+        return wordHeader(note, layout) + exampleBlock(note, c.sentence, c.index) + detailBlocks(note, layout, skipExamples = true)
+    }
+    override fun expected(note: Note) = clozeExpected(note)
+    override fun speakFront(note: Note) = firstExampleWith(note)?.sentence
+    override fun speakBack(note: Note) = note.f("word").str()
 }
 
 object Vocab : NoteTypeDef {
@@ -205,13 +266,14 @@ object Vocab : NoteTypeDef {
         FieldDef("vi", "Nghĩa tiếng Việt", "text", maxLength = 300),
         FieldDef("en", "Định nghĩa tiếng Anh", "longtext", maxLength = 400),
         FieldDef("examples", "Ví dụ", "list", maxLength = 300),
+        FieldDef("examplesVi", "Dịch ví dụ", "list", maxLength = 300, placeholder = "Mỗi dòng dịch một ví dụ, cùng thứ tự"),
         FieldDef("mnemonic", "Mẹo nhớ", "longtext", maxLength = 300),
     )
-    override val templates: List<TemplateDef> = listOf(Recognize, Recall, ClozeTemplate)
+    override val templates: List<TemplateDef> = listOf(Recognize, Recall, ClozeTemplate, ListenTemplate)
     override fun title(note: Note) = note.f("word").str()
     override fun subtitle(note: Note) = note.f("vi").str().ifEmpty { note.f("en").str() }
     override fun searchText(note: Note) =
-        (listOf(note.f("word").str(), note.f("vi").str(), note.f("en").str()) + note.f("examples").items() + note.tags).joinToString(" ").lowercase()
+        (listOf(note.f("word").str(), note.f("vi").str(), note.f("en").str()) + note.f("examples").items() + note.f("examplesVi").items() + note.tags).joinToString(" ").lowercase()
 }
 
 val NOTE_TYPES: Map<String, NoteTypeDef> = mapOf(Vocab.id to Vocab)

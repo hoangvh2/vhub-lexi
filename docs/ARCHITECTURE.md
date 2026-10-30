@@ -48,6 +48,13 @@ Nhiều từ có cùng nghĩa Việt (convince, persuade: "thuyết phục, làm
 - Đúng nhưng đã cần gợi ý thêm hoặc gõ lại: gợi ý xếp hạng hạ từ Tốt xuống Khó (`suggestedRatingWith`), để FSRS không tưởng là đã thuộc. Từ đồng nghĩa **không** được chấm đúng, vì thẻ kiểm tra đúng từ đó.
 - Sau khi lật (mọi mẫu thẻ): khối "Dễ nhầm với" đặt từ đang ôn cạnh các từ dễ nhầm (loại từ, nghĩa Việt, định nghĩa Anh).
 
+## Mặt đáp án và thẻ nghe
+
+- Thứ tự mặt đáp án: nghĩa Việt → ví dụ (từ đang học được tô như bút dạ, kèm bản dịch) → mẹo nhớ → định nghĩa Anh-Anh thu gọn. Người học Việt nắm nghĩa nhanh nhất qua tiếng Việt; định nghĩa Anh dùng để phân biệt sắc thái sau đó.
+- `examplesVi` là bản dịch của `examples`, cùng thứ tự (dòng thứ i dịch ví dụ thứ i). Thẻ điền vào câu gợi ý bằng bản dịch của câu khi có, vì bản dịch chỉ đúng một từ còn nghĩa rời thì trùng với từ đồng nghĩa.
+- Mẫu `listen` (Nghe và gõ từ): máy đọc câu ví dụ đầu tiên chứa từ (TTS có sẵn trên máy, không tốn phí), người học thấy câu đã che từ và gõ lại từ nghe được. Không bật mặc định; bật trong Cài đặt → Mẫu thẻ.
+- Block mới: `example`, `memo`, `fold`, `listen` (TS và Kotlin, khớp nhau qua `templates.json`).
+
 ## Thêm nội dung TOEIC / IELTS
 
 Mọi thứ ngoài lớp "mẫu thẻ" đã không biết gì về từ vựng. Để thêm một loại ghi chú:

@@ -20,7 +20,15 @@ export type Block =
   | { k: "speak"; text: string }
   | { k: "badge"; text: string }
   | { k: "text"; text: string; tone?: "strong" | "muted" }
-  | { k: "quote"; text: string };
+  | { k: "quote"; text: string }
+  /** An example sentence; `at` = [start, end) of the studied word in it (highlighted), `vi` = its translation. */
+  | { k: "example"; text: string; at?: [number, number]; vi?: string }
+  /** The learner's memory tip ("truyện chêm"), shown in its own box. */
+  | { k: "memo"; text: string }
+  /** Secondary text, collapsed under `label` until the learner opens it. */
+  | { k: "fold"; label: string; text: string }
+  /** A large play button that reads `text` aloud (listening cards). */
+  | { k: "listen"; text: string };
 
 /** How the learner answers: "flip" = think, reveal, self-rate; "type" = type it, then self-rate. */
 export type AnswerMode = "flip" | "type";
@@ -75,6 +83,13 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
  * Returns null when the word does not occur.
  */
 export function clozeSentence(sentence: string, word: string): { text: string; answer: string } | null {
+  const at = findWord(sentence, word);
+  if (!at) return null;
+  return { text: sentence.slice(0, at[0]) + "_____" + sentence.slice(at[1]), answer: sentence.slice(at[0], at[1]) };
+}
+
+/** Where `word` (or an inflection of its first word) occurs in `sentence`: [start, end), or null. */
+export function findWord(sentence: string, word: string): [number, number] | null {
   const parts = word.trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return null;
   const [head, ...rest] = parts;
@@ -87,8 +102,7 @@ export function clozeSentence(sentence: string, word: string): { text: string; a
   const headRe = h.length >= 4 ? `${escapeRe(stem)}[a-z]*` : `${escapeRe(h)}${last}?(?:s|es|ed|d|ing)?`;
   const re = new RegExp(`(?<![A-Za-z])(${[headRe, ...rest.map(escapeRe)].join("\\s+")})(?![A-Za-z])`, "i");
   const m = re.exec(sentence);
-  if (!m) return null;
-  return { text: sentence.slice(0, m.index) + "_____" + sentence.slice(m.index + m[0].length), answer: m[1] };
+  return m ? [m.index, m.index + m[0].length] : null;
 }
 
 export function normalizeAnswer(s: string): string {
@@ -135,11 +149,13 @@ export const suggestedRating = (v: AnswerVerdict): 1 | 2 | 3 => (v === "correct"
 const POS_LABEL: Record<string, string> = { n: "noun", v: "verb", a: "adjective", r: "adverb" };
 export const posLabel = (code: string) => POS_LABEL[code] ?? code;
 
-function firstExampleWith(note: Note): { sentence: string; cloze: { text: string; answer: string } } | null {
+/** The first example that contains the word, with its index (to find its translation) and the blanked version. */
+function firstExampleWith(note: Note): { sentence: string; index: number; cloze: { text: string; answer: string } } | null {
   const word = str(note.fields.word);
-  for (const ex of list(note.fields.examples)) {
+  const examples = list(note.fields.examples);
+  for (const [index, ex] of examples.entries()) {
     const c = clozeSentence(ex, word);
-    if (c) return { sentence: ex, cloze: c };
+    if (c) return { sentence: ex, index, cloze: c };
   }
   return null;
 }
@@ -148,14 +164,31 @@ function meaningLine(note: Note): string {
   return str(note.fields.vi) || str(note.fields.en);
 }
 
+/** Translation of example `i`; translations are kept in the same order as the examples. */
+function exampleVi(note: Note, i: number): string {
+  return list(note.fields.examplesVi)[i] ?? "";
+}
+
+function exampleBlock(note: Note, sentence: string, i: number): Block {
+  const at = findWord(sentence, str(note.fields.word));
+  const vi = exampleVi(note, i);
+  return { k: "example", text: sentence, ...(at ? { at } : {}), ...(vi ? { vi } : {}) };
+}
+
+const EN_LABEL = "Định nghĩa Anh-Anh";
+
+/**
+ * The answer side, in the order that makes a word click fastest for a Vietnamese learner: the Vietnamese meaning,
+ * then examples (word highlighted, with their translation), the memory tip, and the English definition folded away.
+ */
 function detailBlocks(note: Note, l: CardLayout, opts: { skipExamples?: boolean; skipVi?: boolean; skipEn?: boolean } = {}): Block[] {
   const out: Block[] = [];
   const vi = opts.skipVi ? "" : str(note.fields.vi);
   const en = opts.skipEn ? "" : str(note.fields.en);
   if (l.showVi && vi) out.push({ k: "text", text: vi, tone: "strong" });
-  if (l.showEn && en) out.push({ k: "text", text: en, tone: "muted" });
-  if (l.showExamples && !opts.skipExamples) for (const e of list(note.fields.examples)) out.push({ k: "quote", text: e });
-  if (l.showMnemonic && str(note.fields.mnemonic)) out.push({ k: "text", text: str(note.fields.mnemonic), tone: "muted" });
+  if (l.showExamples && !opts.skipExamples) list(note.fields.examples).forEach((e, i) => out.push(exampleBlock(note, e, i)));
+  if (l.showMnemonic && str(note.fields.mnemonic)) out.push({ k: "memo", text: str(note.fields.mnemonic) });
+  if (l.showEn && en) out.push((l.showVi && vi) || opts.skipVi ? { k: "fold", label: EN_LABEL, text: en } : { k: "text", text: en, tone: "strong" });
   return out;
 }
 
@@ -195,42 +228,72 @@ const recall: TemplateDef = {
     const en = str(n.fields.en);
     if (vi) out.push({ k: "text", text: vi, tone: "strong" });
     else if (en) out.push({ k: "text", text: en, tone: "strong" });
-    if (vi && en && l.showEn) out.push({ k: "text", text: en, tone: "muted" });
+    if (vi && en && l.showEn) out.push({ k: "fold", label: EN_LABEL, text: en });
     return out;
   },
   // The front stays on screen above the back once revealed, so the back adds only what is new:
   // the part-of-speech badge is already on the front.
-  back: (n, l) => [...wordHeader(n, l, { skipPos: true }), ...(l.showExamples ? list(n.fields.examples).map((e): Block => ({ k: "quote", text: e })) : [])],
+  back: (n, l) => [...wordHeader(n, l, { skipPos: true }), ...(l.showExamples ? list(n.fields.examples).map((e, i) => exampleBlock(n, e, i)) : [])],
   expected: (n) => [str(n.fields.word)],
   speak: { back: (n) => str(n.fields.word) },
 };
 
+/** Typed answers for cards that blank the word out of an example (the inflected form or the base word). */
+function clozeExpected(n: Note): string[] {
+  const c = firstExampleWith(n);
+  return c ? [c.cloze.answer, str(n.fields.word)] : [str(n.fields.word)];
+}
+
 const cloze: TemplateDef = {
   id: "cloze",
   label: "Điền vào chỗ trống",
-  description: "Câu ví dụ che mất từ; cần có ví dụ chứa từ đó.",
+  description: "Câu ví dụ che mất từ; gợi ý bằng bản dịch của câu (nếu có) hoặc nghĩa của từ.",
   mode: "type",
   applies: (n) => !!str(n.fields.word) && firstExampleWith(n) !== null,
   front: (n, l) => {
     const c = firstExampleWith(n);
     const out: Block[] = [];
     if (c) out.push({ k: "quote", text: c.cloze.text });
-    const hint = str(n.fields.vi) || str(n.fields.en);
-    if (hint) out.push({ k: "text", text: hint, tone: "muted" });
+    // The sentence's own translation points at exactly one word, which a bare meaning shared with synonyms does not.
+    const tr = c ? exampleVi(n, c.index) : "";
+    if (tr) out.push({ k: "text", text: tr });
+    else {
+      const hint = str(n.fields.vi) || str(n.fields.en);
+      if (hint) out.push({ k: "text", text: hint, tone: "muted" });
+    }
     if (l.showPos && str(n.fields.pos)) out.push({ k: "badge", text: str(n.fields.pos) });
     return out;
   },
   // The front (blanked sentence, hint, badge) stays on screen above the back once revealed, so the
   // back must not repeat the sentence, the hint or the badge: it adds the word and what the hint lacked.
   back: (n, l) => {
-    const usedVi = !!str(n.fields.vi);
-    return [...wordHeader(n, l, { skipPos: true }), ...detailBlocks(n, l, { skipExamples: true, skipVi: usedVi, skipEn: !usedVi })];
-  },
-  expected: (n) => {
     const c = firstExampleWith(n);
-    return c ? [c.cloze.answer, str(n.fields.word)] : [str(n.fields.word)];
+    const usedTr = !!(c && exampleVi(n, c.index));
+    const usedVi = !usedTr && !!str(n.fields.vi);
+    const usedEn = !usedTr && !usedVi;
+    return [...wordHeader(n, l, { skipPos: true }), ...detailBlocks(n, l, { skipExamples: true, skipVi: usedVi, skipEn: usedEn })];
   },
+  expected: clozeExpected,
   speak: { back: (n) => firstExampleWith(n)?.sentence ?? null },
+};
+
+const listen: TemplateDef = {
+  id: "listen",
+  label: "Nghe và gõ từ",
+  description: "Nghe câu ví dụ, gõ từ còn thiếu. Luyện tai cho phần Nghe của TOEIC.",
+  mode: "type",
+  applies: (n) => !!str(n.fields.word) && firstExampleWith(n) !== null,
+  front: (n) => {
+    const c = firstExampleWith(n)!;
+    return [{ k: "listen", text: c.sentence }, { k: "quote", text: c.cloze.text }];
+  },
+  // After the answer: the word, the whole sentence with the word highlighted and translated, then the details.
+  back: (n, l) => {
+    const c = firstExampleWith(n)!;
+    return [...wordHeader(n, l), exampleBlock(n, c.sentence, c.index), ...detailBlocks(n, l, { skipExamples: true })];
+  },
+  expected: clozeExpected,
+  speak: { front: (n) => firstExampleWith(n)?.sentence ?? null, back: (n) => str(n.fields.word) },
 };
 
 export const VOCAB: NoteTypeDef = {
@@ -243,13 +306,14 @@ export const VOCAB: NoteTypeDef = {
     { key: "vi", label: "Nghĩa tiếng Việt", kind: "text", maxLength: 300 },
     { key: "en", label: "Định nghĩa tiếng Anh", kind: "longtext", maxLength: 400 },
     { key: "examples", label: "Ví dụ", kind: "list", maxLength: 300 },
+    { key: "examplesVi", label: "Dịch ví dụ", kind: "list", maxLength: 300, placeholder: "Mỗi dòng dịch một ví dụ, cùng thứ tự" },
     { key: "mnemonic", label: "Mẹo nhớ", kind: "longtext", maxLength: 300 },
   ],
-  templates: [recognize, recall, cloze],
+  templates: [recognize, recall, cloze, listen],
   title: (n) => str(n.fields.word),
   subtitle: (n) => str(n.fields.vi) || str(n.fields.en),
   searchText: (n) =>
-    [str(n.fields.word), str(n.fields.vi), str(n.fields.en), ...list(n.fields.examples), ...(n.tags ?? [])].join(" ").toLowerCase(),
+    [str(n.fields.word), str(n.fields.vi), str(n.fields.en), ...list(n.fields.examples), ...list(n.fields.examplesVi), ...(n.tags ?? [])].join(" ").toLowerCase(),
 };
 
 export const NOTE_TYPES: Readonly<Record<string, NoteTypeDef>> = { vocab: VOCAB };

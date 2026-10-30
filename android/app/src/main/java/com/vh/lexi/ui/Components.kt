@@ -3,7 +3,10 @@ package com.vh.lexi.ui
 import android.view.WindowManager
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +25,9 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -43,7 +49,12 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -145,9 +156,9 @@ fun ConfirmDialog(title: String, message: String, confirm: String, destructive: 
 
 /** Renders template blocks (core/NoteTypes.kt): the same description drives the web UI. */
 @Composable
-fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifier = Modifier) {
+fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifier = Modifier, onSpeakSlow: (String) -> Unit = onSpeak, mode: Color = Lexi.colors.accent) {
     val c = Lexi.colors
-    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         for (b in blocks) when (b) {
             is Block.Title -> Text(b.text, fontSize = 38.sp, lineHeight = 42.sp, fontWeight = FontWeight.Bold, color = c.ink, textAlign = TextAlign.Center)
             is Block.Ipa -> Text("/" + b.text.trim('/') + "/", fontSize = 18.sp, color = c.muted)
@@ -161,13 +172,67 @@ fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifie
                 }
             }
             is Block.Text -> when (b.tone) {
-                "strong" -> Text(b.text, fontSize = 22.sp, lineHeight = 29.sp, fontWeight = FontWeight.SemiBold, color = c.ink, textAlign = TextAlign.Center)
-                "muted" -> Text(b.text, fontSize = 15.sp, color = c.muted, textAlign = TextAlign.Center)
-                else -> Text(b.text, fontSize = 15.sp, color = c.ink, textAlign = TextAlign.Center)
+                "strong" -> Text(b.text, fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold, color = c.ink, textAlign = TextAlign.Center)
+                "muted" -> Text(b.text, fontSize = 15.sp, lineHeight = 23.sp, color = c.muted, textAlign = TextAlign.Center)
+                else -> Text(b.text, fontSize = 17.sp, lineHeight = 26.sp, color = c.ink, textAlign = TextAlign.Center)
             }
             is Block.Quote -> Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-                Box(Modifier.width(3.dp).fillMaxHeight().background(c.accent))
-                Text(b.text, Modifier.padding(start = 12.dp), fontSize = 17.sp, lineHeight = 24.sp, color = c.ink)
+                Box(Modifier.width(3.dp).fillMaxHeight().background(mode))
+                Text(b.text, Modifier.padding(start = 12.dp), fontSize = 18.sp, lineHeight = 27.sp, color = c.ink)
+            }
+            // The sentence with the studied word highlighted like a marker pen, its translation underneath.
+            is Block.Example -> Column(
+                Modifier.fillMaxWidth().background(c.surface2, RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 12.dp).testTag("example"),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val text = buildAnnotatedString {
+                        val at = b.at
+                        if (at == null) append(b.text)
+                        else {
+                            append(b.text.substring(0, at.first))
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold, background = c.mark)) { append(b.text.substring(at.first, at.second)) }
+                            append(b.text.substring(at.second))
+                        }
+                    }
+                    Text(text, Modifier.weight(1f), fontSize = 17.sp, lineHeight = 26.sp, color = c.ink)
+                    Surface(onClick = { onSpeak(b.text) }, shape = CircleShape, color = c.surface, modifier = Modifier.size(32.dp)) {
+                        Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.VolumeUp, contentDescription = "Nghe câu ví dụ", tint = c.muted, modifier = Modifier.size(16.dp)) }
+                    }
+                }
+                b.vi?.let { Text(it, fontSize = 15.sp, lineHeight = 23.sp, color = c.muted) }
+            }
+            is Block.Memo -> Column(
+                Modifier.fillMaxWidth().background(c.memo, RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 12.dp).testTag("memo"),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Filled.AutoAwesome, null, tint = c.hard, modifier = Modifier.size(14.dp))
+                    Text("MẸO NHỚ", fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = c.hard)
+                }
+                Text(b.text, fontSize = 16.sp, lineHeight = 25.sp, color = c.ink)
+            }
+            is Block.Fold -> {
+                var open by remember(b) { mutableStateOf(false) }
+                Column(Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.clickable { open = !open }.heightIn(min = 36.dp).padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = c.muted, modifier = Modifier.size(18.dp))
+                        Text(b.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.muted)
+                    }
+                    AnimatedVisibility(open) { Text(b.text, Modifier.padding(start = 24.dp, bottom = 4.dp), fontSize = 15.sp, lineHeight = 23.sp, color = c.ink) }
+                }
+            }
+            is Block.Listen -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Surface(
+                    onClick = { onSpeak(b.text) }, shape = CircleShape, color = c.listen,
+                    border = BorderStroke(8.dp, c.listenSoft), modifier = Modifier.size(104.dp).testTag("listen-play"),
+                ) {
+                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.VolumeUp, contentDescription = "Nghe câu", tint = Color.White, modifier = Modifier.size(36.dp)) }
+                }
+                TextButton(onClick = { onSpeakSlow(b.text) }, modifier = Modifier.testTag("listen-slow")) { Text("Nghe chậm", fontWeight = FontWeight.SemiBold, color = c.ink) }
             }
         }
     }

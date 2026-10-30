@@ -1,6 +1,10 @@
 package com.vh.lexi.ui
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,11 +53,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -149,7 +157,8 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
 
     LaunchedEffect(card?.id) {
         revealed = false; typed = ""; verdict = null; extraHints = 0; mixedUp = null; shownAt = System.currentTimeMillis()
-        if (tpl != null && note != null && prefs.autoSpeak == "front") tpl.speakFront(note)?.let { app.speech.speak(it) }
+        // Listening cards always play the sentence; others read the front aloud if the learner chose that.
+        if (tpl != null && note != null && (prefs.autoSpeak == "front" || tpl.id == "listen")) tpl.speakFront(note)?.let { app.speech.speak(it) }
     }
 
     fun reveal(v: Verdict? = null) {
@@ -224,19 +233,22 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
     val letters = letterCount(answer)
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("Mới ${queue.counts.new}", color = c.easy, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, textDecoration = if (kind == "new") androidx.compose.ui.text.style.TextDecoration.Underline else null)
-            Text("Đang học ${queue.counts.learning}", color = c.again, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, textDecoration = if (kind == "learn") androidx.compose.ui.text.style.TextDecoration.Underline else null)
-            Text("Ôn ${queue.counts.review}", color = c.good, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, textDecoration = if (kind == "review") androidx.compose.ui.text.style.TextDecoration.Underline else null)
-            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                OutlinedButton(onClick = { deckMenu = true }) { Text(decks.firstOrNull { it.id == deckId }?.name ?: "Tất cả bộ thẻ", fontSize = 13.sp, maxLines = 1) }
-                DropdownMenu(expanded = deckMenu, onDismissRequest = { deckMenu = false }) {
-                    DropdownMenuItem(text = { Text("Tất cả bộ thẻ") }, onClick = { deckId = null; holder[0] = null; deckMenu = false })
-                    for (d in decks) DropdownMenuItem(text = { Text(d.name) }, onClick = { deckId = d.id; holder[0] = null; deckMenu = false })
-                }
+        // Deck picker on its own line: next to the three count chips it was squeezed to one letter on a 320dp phone.
+        Box {
+            OutlinedButton(onClick = { deckMenu = true }, Modifier.testTag("deck-pick")) {
+                Text(decks.firstOrNull { it.id == deckId }?.name ?: "Tất cả bộ thẻ", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            DropdownMenu(expanded = deckMenu, onDismissRequest = { deckMenu = false }) {
+                DropdownMenuItem(text = { Text("Tất cả bộ thẻ") }, onClick = { deckId = null; holder[0] = null; deckMenu = false })
+                for (d in decks) DropdownMenuItem(text = { Text(d.name) }, onClick = { deckId = d.id; holder[0] = null; deckMenu = false })
             }
         }
-        LinearProgressIndicator(progress = { doneFrac }, Modifier.fillMaxWidth(), color = c.accent, trackColor = c.line)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            CountChip("Mới ${queue.counts.new}", c.easy, kind == "new")
+            CountChip("Đang học ${queue.counts.learning}", c.again, kind == "learn")
+            CountChip("Ôn ${queue.counts.review}", c.good, kind == "review")
+        }
+        LinearProgressIndicator(progress = { doneFrac }, Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = c.accent, trackColor = c.surface2, gapSize = 0.dp, drawStopIndicator = {})
 
         if (card == null || note == null || tpl == null) {
             DoneCard(
@@ -245,16 +257,25 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                 onContinue = { ahead = LEARN_AHEAD_MS; holder[0] = null }, onMore = { extraNew += 5; holder[0] = null }, onUndo = ::undo, onAdd = onAdd,
             )
         } else {
+            val mode = modeColor(tpl.id)
+            // Each new card eases in (fade + small rise) instead of popping, so a long session feels calmer.
+            val appear = remember(card.id) { Animatable(0f) }
+            LaunchedEffect(card.id) { appear.animateTo(1f, tween(280)) }
             Surface(
-                shape = RoundedCornerShape(22.dp), color = c.surface, border = BorderStroke(1.dp, c.line), shadowElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp).then(if (!revealed && tpl.mode == AnswerMode.FLIP) Modifier.clickable { reveal() } else Modifier),
+                shape = RoundedCornerShape(26.dp), color = c.surface, border = BorderStroke(1.dp, c.line), shadowElevation = 3.dp,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp)
+                    .graphicsLayer { alpha = appear.value; translationY = (1f - appear.value) * 24f }
+                    .then(if (!revealed && tpl.mode == AnswerMode.FLIP) Modifier.clickable { reveal() } else Modifier),
             ) {
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
+              Column {
+                // The mode's colour along the top edge says which kind of card this is before any word is read.
+                Box(Modifier.fillMaxWidth().height(5.dp).background(mode))
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 24.dp).animateContentSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
                     // What the card asks for; once answered, the space goes to the answer so the rating row stays in view.
-                    if (!revealed) ModeHeader(tpl.id, tpl.label)
-                    BlocksView(tpl.front(note, prefs.layout), onSpeak = app.speech::speak)
+                    if (!revealed) ModeHeader(tpl.id, tpl.label, mode)
+                    BlocksView(tpl.front(note, prefs.layout), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
                     if (tpl.mode == AnswerMode.TYPE && !revealed && answer.isNotEmpty()) {
-                        AnswerHint(answerHint(answer, 1 + extraHints), letters, answer.trim().split(Regex("\\s+")).size)
+                        AnswerHint(answerHint(answer, 1 + extraHints), letters, answer.trim().split(Regex("\\s+")).size, mode)
                         if (similar.isNotEmpty()) NotThese(similar.take(3))
                     }
                     if (tpl.mode == AnswerMode.TYPE && !revealed) {
@@ -279,7 +300,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                         androidx.compose.material3.HorizontalDivider(color = c.line)
                         verdict?.let { v ->
                             Pill(
-                                (when (v) { Verdict.CORRECT -> "Chính xác"; Verdict.CLOSE -> "Gần đúng"; Verdict.WRONG -> "Chưa đúng" }) +
+                                (when (v) { Verdict.CORRECT -> "✓ Chính xác"; Verdict.CLOSE -> "✓ Gần đúng"; Verdict.WRONG -> "✕ Chưa đúng" }) +
                                     (if (typed.isNotBlank() && v != Verdict.CORRECT) " · bạn gõ “$typed”" else "") +
                                     (mixedUp?.let { " · lần đầu gõ “${it.word}”" } ?: if (extraHints > 0) " · có dùng gợi ý" else ""),
                                 when (v) { Verdict.CORRECT -> PillKind.OK; Verdict.CLOSE -> PillKind.WARN; Verdict.WRONG -> PillKind.BAD },
@@ -287,15 +308,16 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                                 wrap = true,
                             )
                         }
-                        BlocksView(tpl.back(note, prefs.layout), onSpeak = app.speech::speak)
+                        BlocksView(tpl.back(note, prefs.layout), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
                     } else if (tpl.mode == AnswerMode.FLIP) {
                         Text("Chạm thẻ để xem đáp án", color = c.muted, fontSize = 13.sp)
                     }
                 }
+              }
             }
 
             if (!revealed && tpl.mode == AnswerMode.FLIP) {
-                Button(onClick = { reveal() }, Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("show-answer")) { Text("Hiện đáp án", fontSize = 16.sp) }
+                Button(onClick = { reveal() }, Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("show-answer"), shape = RoundedCornerShape(16.dp)) { Text("Hiện đáp án", fontSize = 16.sp) }
             } else if (revealed) {
                 val fsrs = remember(prefs.desiredRetention) { Fsrs(prefs.desiredRetention) }
                 val suggested = verdict?.let { suggestedRatingWith(it, extraHints, mixedUp != null) }
@@ -304,8 +326,8 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                         val (fg, soft) = when (r) { 1 -> c.again to c.againSoft; 2 -> c.hard to c.hardSoft; 3 -> c.good to c.goodSoft; else -> c.easy to c.easySoft }
                         val next = fsrs.next(card, now, r)
                         Surface(
-                            onClick = { rate(r) }, modifier = Modifier.weight(1f).heightIn(min = 62.dp).testTag("rate-$r"), shape = RoundedCornerShape(14.dp),
-                            color = if (suggested == r) soft else c.surface, border = BorderStroke(1.5.dp, if (suggested == r) fg else c.line),
+                            onClick = { rate(r) }, modifier = Modifier.weight(1f).heightIn(min = 64.dp).testTag("rate-$r"), shape = RoundedCornerShape(16.dp),
+                            color = if (suggested == r) soft else soft.copy(alpha = 0.55f), border = BorderStroke(1.5.dp, if (suggested == r) fg else Color.Transparent),
                         ) {
                             Column(Modifier.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                                 Text(label, color = fg, fontWeight = FontWeight.Bold)
@@ -342,23 +364,43 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
 }
 
 /** What the card asks for, in the learner's words; shown at the top of the card. */
-private val MODE_TITLE = mapOf("recognize" to "Nhớ nghĩa của từ", "recall" to "Gõ từ tiếng Anh", "cloze" to "Điền từ vào câu")
+private val MODE_TITLE = mapOf("recognize" to "Nhớ nghĩa của từ", "recall" to "Gõ từ tiếng Anh", "cloze" to "Điền từ vào câu", "listen" to "Nghe và gõ từ")
+
+/** The question under the title, where the mode needs one. */
+private val MODE_Q = mapOf("recall" to "Từ tiếng Anh nào có nghĩa là…", "listen" to "Nghe câu, gõ từ còn thiếu. Bấm loa để nghe lại.")
+
+/** One colour per kind of card (same as the web app). */
+@Composable
+private fun modeColor(templateId: String): Color {
+    val c = Lexi.colors
+    return when (templateId) { "recall" -> c.easy; "cloze" -> c.hard; "listen" -> c.listen; else -> c.accent }
+}
 
 @Composable
-private fun ModeHeader(templateId: String, label: String) {
+private fun ModeHeader(templateId: String, label: String, mode: Color) {
     val c = Lexi.colors
     Column(Modifier.fillMaxWidth().testTag("card-mode"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.size(8.dp).background(when (templateId) { "recall" -> c.easy; "cloze" -> c.hard; else -> c.accent }, CircleShape))
-            Text((MODE_TITLE[templateId] ?: label).uppercase(), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.7.sp, color = c.muted)
+            Box(Modifier.size(8.dp).background(mode, CircleShape))
+            Text((MODE_TITLE[templateId] ?: label).uppercase(), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.7.sp, color = mode)
         }
-        if (templateId == "recall") Text("Từ tiếng Anh nào có nghĩa là…", fontSize = 13.sp, color = c.muted)
+        MODE_Q[templateId]?.let { Text(it, fontSize = 14.sp, lineHeight = 20.sp, color = c.muted) }
     }
+}
+
+/** Queue count as a small chip; the kind of the card on screen is outlined. */
+@Composable
+private fun CountChip(text: String, color: Color, on: Boolean) {
+    val c = Lexi.colors
+    Text(
+        text, Modifier.border(if (on) 1.5.dp else 1.dp, if (on) color else c.line, CircleShape).background(c.surface, CircleShape).padding(horizontal = 9.dp, vertical = 3.dp),
+        color = color, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1,
+    )
 }
 
 /** The answer's first letter(s) and its length: "c _ _ _ _ _ _ _", "8 chữ cái". */
 @Composable
-private fun AnswerHint(hint: String, letters: Int, words: Int) {
+private fun AnswerHint(hint: String, letters: Int, words: Int, mode: Color) {
     val c = Lexi.colors
     // Narrower cells for long answers so "procrastination" still fits on one line of a phone card.
     val long = hint.length > 11
@@ -368,8 +410,8 @@ private fun AnswerHint(hint: String, letters: Int, words: Int) {
             for (ch in hint) {
                 if (ch == ' ') Spacer(Modifier.width(cell / 2))
                 else Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(if (ch == '_') "" else ch.toString(), Modifier.width(cell), fontSize = if (long) 15.sp else 19.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = c.accent, textAlign = TextAlign.Center)
-                    Box(Modifier.width(cell).height(2.5.dp).background(if (ch == '_') c.line else c.accent))
+                    Text(if (ch == '_') "" else ch.toString(), Modifier.width(cell), fontSize = if (long) 15.sp else 19.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = mode, textAlign = TextAlign.Center)
+                    Box(Modifier.width(cell).height(2.5.dp).background(if (ch == '_') c.line else mode))
                 }
             }
         }

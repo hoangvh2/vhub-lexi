@@ -16,7 +16,7 @@ function build() {
   const sched = makeScheduler(0.9);
   const note: Note = {
     id: "note1", type: "vocab", deckId: "deck1", createdAt: T, updatedAt: T, tags: ["toeic"], aiFields: ["vi"],
-    fields: { word: "resilient", ipa: "rɪˈzɪljənt", pos: "adjective", vi: "kiên cường", en: "able to recover quickly", examples: ["Children are resilient."], mnemonic: "re-silient: springs back" },
+    fields: { word: "resilient", ipa: "rɪˈzɪljənt", pos: "adjective", vi: "kiên cường", en: "able to recover quickly", examples: ["Children are resilient."], examplesVi: ["Trẻ em rất kiên cường."], mnemonic: "re-silient: springs back" },
   };
   const fresh = newCard("note1", "deck1", "recognize", T);
   const learning = answer(sched, fresh, 3, T);

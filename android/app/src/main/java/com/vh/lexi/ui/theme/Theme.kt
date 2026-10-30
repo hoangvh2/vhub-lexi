@@ -23,6 +23,8 @@ data class LexiColors(
     val accent: Color, val onAccent: Color, val accentSoft: Color,
     val again: Color, val againSoft: Color, val hard: Color, val hardSoft: Color,
     val good: Color, val goodSoft: Color, val easy: Color, val easySoft: Color,
+    /** Listening cards; the marker-pen highlight of a word in its example; the memory-tip box. */
+    val listen: Color, val listenSoft: Color, val mark: Color, val memo: Color,
 )
 
 val BeVietnam = FontFamily(
@@ -46,11 +48,13 @@ fun lexiColors(accent: String, dark: Boolean): LexiColors {
         accent = a, onAccent = Color(0xFF06211B), accentSoft = soft,
         again = Color(0xFFFF8F84), againSoft = Color(0xFF47201C), hard = Color(0xFFF2B558), hardSoft = Color(0xFF3A2A0E),
         good = Color(0xFF3DCBA8), goodSoft = Color(0xFF12342C), easy = Color(0xFF8FB2FF), easySoft = Color(0xFF16264A),
+        listen = Color(0xFFB39DFA), listenSoft = Color(0xFF2A2148), mark = Color(0xFF6B5414), memo = Color(0xFF2E2611),
     ) else LexiColors(
         bg = Color(0xFFF2F5F7), surface = Color.White, surface2 = Color(0xFFEAF0F3), ink = Color(0xFF14202B), muted = Color(0xFF58697A), line = Color(0xFFD8E0E6),
         accent = a, onAccent = Color.White, accentSoft = soft,
         again = Color(0xFFB42318), againSoft = Color(0xFFFBE4E1), hard = Color(0xFF9A5B00), hardSoft = Color(0xFFFBEBD0),
         good = Color(0xFF0E7C66), goodSoft = Color(0xFFDCF2EB), easy = Color(0xFF2457C5), easySoft = Color(0xFFE3EBFB),
+        listen = Color(0xFF6D4FD1), listenSoft = Color(0xFFECE6FB), mark = Color(0xFFFFE08A), memo = Color(0xFFFDF4DC),
     )
 }
 

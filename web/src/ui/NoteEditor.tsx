@@ -69,7 +69,7 @@ export function NoteEditor({ note, onClose }: { note: Note; onClose: () => void 
                 id={`f-${f.key}`}
                 class="textarea"
                 value={f.kind === "list" ? ((fields[f.key] as string[]) ?? []).join("\n") : ((fields[f.key] as string) ?? "")}
-                placeholder={f.kind === "list" ? "Mỗi dòng một ví dụ" : ""}
+                placeholder={f.placeholder ?? (f.kind === "list" ? "Mỗi dòng một ví dụ" : "")}
                 onInput={(e) =>
                   setFields({ ...fields, [f.key]: f.kind === "list" ? e.currentTarget.value.split("\n") : e.currentTarget.value })
                 }

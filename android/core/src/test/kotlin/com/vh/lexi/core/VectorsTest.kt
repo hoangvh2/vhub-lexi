@@ -53,7 +53,7 @@ class TemplateVectorsTest {
             val note = noteFromJson(c.getJSONObject("note"))
             val layout = layouts[c.getInt("layoutIndex")]
             val per = c.getJSONObject("templates")
-            for (id in listOf("recognize", "recall", "cloze")) {
+            for (id in listOf("recognize", "recall", "cloze", "listen")) {
                 val e = per.getJSONObject(id)
                 val t = template("vocab", id)!!
                 val where = "case $n template $id"
@@ -66,7 +66,7 @@ class TemplateVectorsTest {
                 assertEquals(if (e.isNull("speakFront")) null else e.getString("speakFront"), t.speakFront(note), "$where speakFront")
                 assertEquals(if (e.isNull("speakBack")) null else e.getString("speakBack"), t.speakBack(note), "$where speakBack")
             }
-            val all = mapOf("vocab" to listOf("recognize", "recall", "cloze"))
+            val all = mapOf("vocab" to listOf("recognize", "recall", "cloze", "listen"))
             assertEquals(c.getJSONArray("wanted").strings(), wantedTemplates(note, all), "case $n wanted")
             assertEquals(c.getJSONArray("wantedDefault").strings(), wantedTemplates(note, Prefs().templates), "case $n wantedDefault")
         }
@@ -82,6 +82,9 @@ class TemplateVectorsTest {
                 assertEquals(c.getJSONObject("result").getString("text"), r?.text, c.toString())
                 assertEquals(c.getJSONObject("result").getString("answer"), r?.answer, c.toString())
             }
+            val at = findWord(c.getString("sentence"), c.getString("word"))
+            if (c.isNull("at")) assertNull(at, c.toString())
+            else assertEquals(c.getJSONArray("at").let { it.getInt(0) to it.getInt(1) }, at, c.toString())
         }
         for (c in root.getJSONArray("typed").objects()) {
             val exp = c.getJSONArray("expected").strings()

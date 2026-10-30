@@ -56,14 +56,15 @@ service cloud.firestore {
     // NOTE_TYPES: the note types the app knows. Add new ones here and in validFields().
     function vocabFields(f) {
       return f.keys().hasAll(['word'])
-        && f.keys().hasOnly(['word', 'ipa', 'pos', 'vi', 'en', 'examples', 'mnemonic'])
+        && f.keys().hasOnly(['word', 'ipa', 'pos', 'vi', 'en', 'examples', 'examplesVi', 'mnemonic'])
         && f.word is string && f.word.size() > 0 && f.word.size() <= 80
         && optStr(f, 'ipa', 80)
         && optStr(f, 'pos', 30)
         && optStr(f, 'vi', 300)
         && optStr(f, 'en', 400)
         && optStr(f, 'mnemonic', 300)
-        && optList(f, 'examples', 8);
+        && optList(f, 'examples', 8)
+        && optList(f, 'examplesVi', 8);
     }
 
     function validFields(type, f) {

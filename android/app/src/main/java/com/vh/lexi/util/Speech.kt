@@ -10,13 +10,18 @@ class Speech(context: Context) {
     private var tts: TextToSpeech? = TextToSpeech(context.applicationContext) { status ->
         if (status == TextToSpeech.SUCCESS) {
             tts?.language = Locale.US
-            tts?.setSpeechRate(0.92f)
             ready = true
         }
     }
 
-    fun speak(text: String) {
+    fun speak(text: String) = say(text, 0.92f)
+
+    /** Slower, for listening cards. */
+    fun speakSlow(text: String) = say(text, 0.7f)
+
+    private fun say(text: String, rate: Float) {
         if (!ready || text.isBlank()) return
+        tts?.setSpeechRate(rate)
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lexi")
     }
 
