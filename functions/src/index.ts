@@ -60,9 +60,14 @@ export const enrich = onCall(
       const allowed = await new FirestoreQuota(getFirestore()).consume(uid, LIMITS.dailyEnrich, new Date());
       if (!allowed) throw new HttpsError("resource-exhausted", "Hết lượt dùng AI hôm nay");
       const gemini = new GeminiClient({ apiKey: GEMINI_API_KEY.value(), model: GEMINI_MODEL.value(), baseUrl: GEMINI_BASE_URL });
-      const result = parseEnrichResult(await gemini.generateJson(SYSTEM_PROMPT, buildUserPrompt(input)), input);
-      // Counts and timings only: the words a person studies are personal data and stay out of logs.
-      logger.info("enrich", { uid: shortHash(uid), examples: result.examples.length, ms: Date.now() - started });
+      const { text, usage } = await gemini.generate(SYSTEM_PROMPT, buildUserPrompt(input));
+      const result = parseEnrichResult(text, input);
+      // Counts, tokens and timings only: the words a person studies are personal data and stay out of logs.
+      // The token counts are what Gemini bills, so the real cost per word can be read from the logs.
+      logger.info("enrich", {
+        uid: shortHash(uid), senses: result.senses.length, examples: result.examples.length, story: !!result.mnemonic,
+        tokensIn: usage.input, tokensOut: usage.output, tokensThinking: usage.thinking, ms: Date.now() - started,
+      });
       return result;
     } catch (e) {
       if (e instanceof HttpsError) throw e;

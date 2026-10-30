@@ -55,6 +55,13 @@ Nhiều từ có cùng nghĩa Việt (convince, persuade: "thuyết phục, làm
 - Mẫu `listen` (Nghe và gõ từ): máy đọc câu ví dụ đầu tiên chứa từ (TTS có sẵn trên máy, không tốn phí), người học thấy câu đã che từ và gõ lại từ nghe được. Không bật mặc định; bật trong Cài đặt → Mẫu thẻ.
 - Block mới: `example`, `memo`, `fold`, `listen` (TS và Kotlin, khớp nhau qua `templates.json`).
 
+## AI: nghĩa theo ngữ cảnh, truyện chêm, chạy hàng loạt
+
+- `enrich` trả tối đa 3 nghĩa theo ngữ cảnh (công việc/TOEIC trước), mỗi nghĩa một câu ví dụ kèm bản dịch, bản dịch cho mọi ví dụ sẵn có (`existingVi`) và một truyện chêm (câu tiếng Việt có chèn từ tiếng Anh) trong `mnemonic`. Các nghĩa được ghép vào trường `vi` dạng `(công việc) trình diễn; (chung) chứng minh`, nên không cần trường mới; web và Android hiển thị mỗi ngữ cảnh một dòng có nhãn.
+- Gộp vào ghi chú: `mergeEnrich` (`web/src/lib/enrich.ts`, port `android/core/.../Enrich.kt`). Không đè chữ người học viết: `vi`/`mnemonic` chỉ điền khi trống hoặc do AI viết trước đó, `en` chỉ khi trống; ví dụ mới thêm vào (tối đa 8). Câu có bản dịch được xếp lên trước câu chưa có, vì lưu ghi chú bỏ dòng trống và một bản dịch đứng sau chỗ trống sẽ lệch sang câu khác.
+- Chạy hàng loạt (web, Thư viện → Chọn → Điền bằng AI): `runBatch` (`web/src/lib/batch.ts`) gọi `enrich` cho từng từ, 3 lời gọi song song, lưu từng từ ngay khi có kết quả, chạy nền khi chuyển tab. Dừng khi người học bấm Dừng, hết hạn mức ngày (lọc “Chưa có AI” để chạy tiếp hôm sau) hoặc tài khoản bị từ chối; lỗi tạm thời thử lại 1 lần. Lựa chọn “Thay nghĩa tiếng Việt đang có” không hoàn tác được nên hỏi xác nhận (`confirmAndRun`).
+- Log của function chỉ ghi số đếm, số token (`tokensIn`, `tokensOut`, `tokensThinking`) và thời gian, không ghi từ vựng; dùng số token để đo chi phí thật.
+
 ## Thêm nội dung TOEIC / IELTS
 
 Mọi thứ ngoài lớp "mẫu thẻ" đã không biết gì về từ vựng. Để thêm một loại ghi chú:
@@ -70,7 +77,7 @@ IELTS Writing/Speaking có chấm bằng AI sẽ cần thêm một callable tron
 ## Bảo mật
 
 - Đăng nhập Google; chỉ email trong `allowed_emails` (điền vào rules lúc deploy, không nằm trong repo). Rules kiểm tra hình dạng mọi document và giới hạn kích thước truy vấn list.
-- `enrich` kiểm tra đăng nhập + allowlist + hạn mức 100 lượt/ngày; khoá Gemini nằm trong Secret Manager; lời nhắc nằm phía server; từ người dùng nhập được xem là dữ liệu.
+- `enrich` kiểm tra đăng nhập + allowlist + hạn mức 300 lượt/ngày; khoá Gemini nằm trong Secret Manager; lời nhắc nằm phía server; từ người dùng nhập được xem là dữ liệu.
 - CSP chặt trên Hosting (`default-src 'none'`); e2e chạy đúng CSP này.
 - **App Check**: bản web dùng reCAPTCHA Enterprise nếu bật `enforce_app_check`; APK cài ngoài Play không lấy được token nên mặc định `false` (cùng lựa chọn với my-recap). Rules + allowlist vẫn chặn truy cập trái phép.
 - Khoá ký APK `android/keystore/sideload.jks` **công khai có chủ đích** (để bản mới cài đè bản cũ); đừng dùng cho bản phát hành công khai.

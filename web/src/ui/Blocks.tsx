@@ -23,6 +23,7 @@ export function Blocks({ blocks, cloze }: { blocks: Block[]; cloze?: boolean }) 
           case "quote":
             return <div class={`b-quote${cloze && b.text.includes("_____") ? " cloze" : ""}`} key={i}>{b.text}</div>;
           case "text":
+            if (b.tone === "strong" && senses(b.text)) return <Senses key={i} list={senses(b.text)!} />;
             return <div class={b.tone === "strong" ? "b-strong" : b.tone === "muted" ? "b-muted" : "b-plain"} key={i}>{b.text}</div>;
           case "example":
             return (
@@ -82,5 +83,28 @@ function Listen({ text }: { text: string }) {
         Nghe chậm
       </button>
     </div>
+  );
+}
+
+/** "(công việc) trình diễn; (chung) chứng minh" → one line per setting, the setting as a small label. */
+export function senses(vi: string): Array<{ ctx: string; vi: string }> | null {
+  if (!vi.startsWith("(")) return null;
+  const out = vi.split(/;\s*(?=\()/).map((part) => {
+    const m = /^\(([^)]{1,24})\)\s*(.+)$/.exec(part.trim());
+    return m ? { ctx: m[1], vi: m[2] } : null;
+  });
+  return out.length && out.every(Boolean) ? (out as Array<{ ctx: string; vi: string }>) : null;
+}
+
+function Senses({ list }: { list: Array<{ ctx: string; vi: string }> }) {
+  return (
+    <ul class="b-senses" data-testid="senses">
+      {list.map((s, i) => (
+        <li key={i}>
+          <span class="b-ctx">{s.ctx}</span>
+          <span>{s.vi}</span>
+        </li>
+      ))}
+    </ul>
   );
 }

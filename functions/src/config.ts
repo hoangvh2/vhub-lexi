@@ -1,10 +1,14 @@
 /** Hard limits that keep one enrichment cheap and bounded, whoever calls it. */
 export const LIMITS = {
-  /** Enrichments one account may make per UTC day. */
-  dailyEnrich: 100,
+  /**
+   * Enrichments one account may make per UTC day. Sized for filling a word list in the background
+   * (1000 words in 4 days) while capping a runaway client at about 0.75 USD a day on the paid tier.
+   */
+  dailyEnrich: 300,
   maxWord: 80,
   maxContext: 400,
-  maxExamples: 3,
+  /** Every example of a note (the field holds 8) is sent, so each one gets a translation. */
+  maxExamples: 8,
 } as const;
 
 /** Override with the GEMINI_MODEL parameter (Terraform variable gemini_model). */

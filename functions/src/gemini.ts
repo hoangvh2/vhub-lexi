@@ -31,15 +31,20 @@ export class GeminiClient {
   constructor(private readonly cfg: GeminiConfig) {}
 
   /** Text in, JSON text out. */
-  generateJson(system: string, user: string): Promise<string> {
+  async generateJson(system: string, user: string): Promise<string> {
+    return (await this.generate(system, user)).text;
+  }
+
+  /** Same, plus the token counts Gemini bills for (to measure the real cost per word). */
+  generate(system: string, user: string): Promise<{ text: string; usage: TokenUsage }> {
     return this.call({
       system_instruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: user }] }],
-      generationConfig: { temperature: 0.3, responseMimeType: "application/json", maxOutputTokens: 800 },
+      generationConfig: { temperature: 0.4, responseMimeType: "application/json", maxOutputTokens: 1400 },
     });
   }
 
-  private async call(body: unknown): Promise<string> {
+  private async call(body: unknown): Promise<{ text: string; usage: TokenUsage }> {
     const url = `${this.cfg.baseUrl ?? GEMINI_BASE_URL}/models/${encodeURIComponent(this.cfg.model)}:generateContent`;
     const doFetch = this.cfg.fetchImpl ?? fetch;
     let last: GeminiError | undefined;
@@ -52,7 +57,10 @@ export class GeminiClient {
           body: JSON.stringify(body),
           signal: AbortSignal.timeout(this.cfg.timeoutMs ?? 40_000),
         });
-        if (res.ok) return parseGenerateResponse(await res.text());
+        if (res.ok) {
+          const json = await res.text();
+          return { text: parseGenerateResponse(json), usage: parseUsage(json) };
+        }
         const retryable = res.status === 429 || res.status >= 500;
         last = new GeminiError(describeStatus(res.status), retryable, res.status);
       } catch (e) {
@@ -65,6 +73,23 @@ export class GeminiClient {
       if (!last.retryable) break;
     }
     throw last ?? new GeminiError("Gemini không phản hồi", true);
+  }
+}
+
+/** Billed tokens of one call; thinking tokens are billed at the output price. */
+export interface TokenUsage {
+  input: number;
+  output: number;
+  thinking: number;
+}
+
+export function parseUsage(json: string): TokenUsage {
+  try {
+    const u = (JSON.parse(json) as { usageMetadata?: Record<string, unknown> }).usageMetadata ?? {};
+    const n = (v: unknown) => (typeof v === "number" && v >= 0 ? v : 0);
+    return { input: n(u.promptTokenCount), output: n(u.candidatesTokenCount), thinking: n(u.thoughtsTokenCount) };
+  } catch {
+    return { input: 0, output: 0, thinking: 0 };
   }
 }
 

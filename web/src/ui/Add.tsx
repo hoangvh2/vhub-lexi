@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { FieldValue, Note } from "@shared/model.ts";
-import { template, wantedTemplates } from "@shared/notetypes.ts";
+import { list, str, template, wantedTemplates } from "@shared/notetypes.ts";
 import { addNote, createDeck } from "../data/actions.ts";
 import { callEnrich, firebaseConfigured } from "../data/firebase.ts";
 import { decks, notes, prefs } from "../data/state.ts";
+import { mergeEnrich, type Enriched } from "../lib/enrich.ts";
 import { POS_NAMES, dictionary, normalizeWord, viFor, type DictEntry, type Lookup } from "../lib/dict.ts";
 import { useStore } from "../lib/store.ts";
 import { Blocks } from "./Blocks.tsx";
@@ -16,11 +17,12 @@ interface Draft {
   en: string;
   vi: string;
   examples: string[];
+  examplesVi: string[];
   mnemonic: string;
   /** Which fields currently hold AI-written text. */
   ai: Set<string>;
 }
-const EMPTY: Draft = { word: "", ipa: "", pos: "", en: "", vi: "", examples: [], mnemonic: "", ai: new Set() };
+const EMPTY: Draft = { word: "", ipa: "", pos: "", en: "", vi: "", examples: [], examplesVi: [], mnemonic: "", ai: new Set() };
 
 interface SenseRef {
   pos: string;
@@ -41,6 +43,7 @@ function draftFromSenses(e: DictEntry, picked: SenseRef[]): Draft {
     en: picked.map((s) => s.def).join("; "),
     vi: first ? viFor(e, first.pos) : "",
     examples: [...new Set(picked.flatMap((s) => s.ex))].slice(0, 3),
+    examplesVi: [],
     mnemonic: "",
     ai: new Set(),
   };
@@ -127,6 +130,7 @@ export function Add() {
     en: draft.en,
     vi: draft.vi,
     examples: draft.examples,
+    examplesVi: draft.examplesVi,
     mnemonic: draft.mnemonic,
   };
   const previewNote: Note = { id: "preview", type: "vocab", deckId: "", fields, createdAt: 0, updatedAt: 0 };
@@ -156,21 +160,12 @@ export function Add() {
     if (!word || aiBusy) return;
     setAiBusy(true);
     try {
-      const r = (await callEnrich(word, { pos: draft.pos, en: draft.en, examples: draft.examples })) as {
-        vi?: string; en?: string; examples?: string[]; mnemonic?: string;
-      };
+      const r = (await callEnrich(word, { pos: draft.pos, en: draft.en, examples: list(draft.examples) })) as Enriched;
       setDraft((d) => {
-        const ai = new Set(d.ai);
-        const next = { ...d };
-        if (r.vi) (next.vi = r.vi, ai.add("vi"));
-        if (!d.en && r.en) (next.en = r.en, ai.add("en"));
-        if (r.examples?.length) {
-          next.examples = [...new Set([...d.examples, ...r.examples])].slice(0, 5);
-          ai.add("examples");
-        }
-        if (r.mnemonic && !d.mnemonic) (next.mnemonic = r.mnemonic, ai.add("mnemonic"));
-        next.ai = ai;
-        return next;
+        // A meaning prefilled from the offline dictionary is replaced; one the learner typed is kept.
+        const m = mergeEnrich({ vi: d.vi, en: d.en, examples: d.examples, examplesVi: d.examplesVi, mnemonic: d.mnemonic }, [...d.ai], r, { overwriteVi: viFromDict });
+        const f = m.fields;
+        return { ...d, vi: str(f.vi), en: str(f.en), examples: list(f.examples), examplesVi: list(f.examplesVi), mnemonic: str(f.mnemonic), ai: new Set(m.aiFields) };
       });
     } catch (e) {
       const code = (e as { code?: string }).code ?? "";
@@ -306,8 +301,26 @@ export function Add() {
                 />
               </div>
               <div class="field">
-                <label for="mn">Mẹo nhớ {aiTag("mnemonic")}</label>
-                <input id="mn" class="input" value={draft.mnemonic} onInput={edit("mnemonic")} />
+                <label for="exvi">Dịch ví dụ (cùng thứ tự) {aiTag("examplesVi")}</label>
+                <textarea
+                  id="exvi"
+                  class="textarea"
+                  rows={2}
+                  value={draft.examplesVi.join("\n")}
+                  onInput={(e) => {
+                    const v = e.currentTarget.value.split("\n");
+                    setDraft((d) => {
+                      const ai = new Set(d.ai);
+                      ai.delete("examplesVi");
+                      return { ...d, examplesVi: v, ai };
+                    });
+                  }}
+                  data-testid="examples-vi-input"
+                />
+              </div>
+              <div class="field">
+                <label for="mn">Mẹo nhớ / truyện chêm {aiTag("mnemonic")}</label>
+                <textarea id="mn" class="textarea" rows={2} value={draft.mnemonic} onInput={edit("mnemonic")} data-testid="mnemonic-input" />
               </div>
               <div class="row">
                 <div class="field grow">
