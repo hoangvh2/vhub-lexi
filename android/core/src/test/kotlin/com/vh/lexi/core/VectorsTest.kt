@@ -118,6 +118,7 @@ class QueueVectorsTest {
                     cards = cards, eligible = { it.id != "ineligible" }, today = today, prefs = prefs, now = now,
                     deckId = if (inp.isNull("deckId")) null else inp.getString("deckId"), buried = inp.getJSONArray("buried").strings().toSet(),
                     learnAheadMs = inp.getLong("learnAheadMs"), zone = ZoneOffset.UTC,
+                    meanings = inp.optJSONObject("meanings")?.let { m -> m.keys().asSequence().associateWith { k -> m.getJSONArray(k).strings() } },
                 ),
             )
             val name = s.getString("name")

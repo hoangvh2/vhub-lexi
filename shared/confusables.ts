@@ -45,6 +45,16 @@ export function meaningPhrases(vi: string): string[] {
   return out;
 }
 
+/** Meaning phrases of every note that has some, keyed by note id (input for the study queue). */
+export function meaningsByNote(notes: readonly Note[]): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const n of notes) {
+    const p = meaningPhrases(str(n.fields.vi));
+    if (p.length) out.set(n.id, p);
+  }
+  return out;
+}
+
 function commonPrefix(a: string, b: string): number {
   let i = 0;
   while (i < a.length && i < b.length && a[i] === b[i]) i++;

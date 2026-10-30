@@ -42,6 +42,10 @@ fun meaningPhrases(vi: String): List<String> {
     return out
 }
 
+/** Meaning phrases of every note that has some, keyed by note id (input for the study queue). */
+fun meaningsByNote(notes: List<Note>): Map<Id, List<String>> =
+    notes.mapNotNull { n -> meaningPhrases(n.fields["vi"].str()).takeIf { it.isNotEmpty() }?.let { n.id to it } }.toMap()
+
 private fun commonPrefix(a: String, b: String): Int {
     var i = 0
     while (i < a.length && i < b.length && a[i] == b[i]) i++

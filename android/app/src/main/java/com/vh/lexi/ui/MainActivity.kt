@@ -48,6 +48,7 @@ import com.vh.lexi.LexiApp
 import com.vh.lexi.cloud.Account
 import com.vh.lexi.core.QueueInput
 import com.vh.lexi.core.buildQueue
+import com.vh.lexi.core.meaningsByNote
 import com.vh.lexi.core.dayId
 import com.vh.lexi.core.template
 import com.vh.lexi.data.SyncState
@@ -105,6 +106,7 @@ private fun Main(app: LexiApp) {
             QueueInput(
                 cards = cards, eligible = { c -> byId[c.noteId]?.let { n -> template(n.type, c.template)?.applies(n) == true } == true },
                 today = daily.firstOrNull { it.id == dayId(now, prefs.dayStartHour) }, prefs = prefs, now = now,
+                meanings = meaningsByNote(notes),
             ),
         )
         q.counts.new + q.counts.learning + q.counts.review

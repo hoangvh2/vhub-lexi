@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "preact/hooks";
+import { meaningsByNote } from "@shared/confusables.ts";
 import { dayId } from "@shared/model.ts";
 import { cards, daily, notes, prefs, sync, warnings } from "../data/state.ts";
 import { buildQueue } from "../lib/queue.ts";
@@ -46,6 +47,7 @@ export function App({ email }: { email: string | null }) {
     const now = Date.now();
     const q = buildQueue({
       cards: allCards, eligible: eligibility(allNotes), today: dailies.find((d) => d.id === dayId(now, p.dayStartHour)), prefs: p, now, deckId: null, buried: new Set(),
+      meanings: meaningsByNote(allNotes),
     });
     return q.counts.new + q.counts.learning + q.counts.review;
   }, [allCards, allNotes, dailies, p]);

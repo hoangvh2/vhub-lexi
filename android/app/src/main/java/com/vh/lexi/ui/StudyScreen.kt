@@ -85,6 +85,7 @@ import com.vh.lexi.core.QueueInput
 import com.vh.lexi.core.SessionState
 import com.vh.lexi.core.Verdict
 import com.vh.lexi.core.buildQueue
+import com.vh.lexi.core.meaningsByNote
 import com.vh.lexi.core.checkTyped
 import com.vh.lexi.core.dayId
 import com.vh.lexi.core.isLeech
@@ -136,14 +137,15 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
     }
 
     val notesById = remember(notes) { notes.associateBy { it.id } }
-    val queue = remember(cards, notesById, daily, prefs, now, deckId, buried, extraNew, ahead) {
+    val meanings = remember(notes) { meaningsByNote(notes) }
+    val queue = remember(cards, notesById, meanings, daily, prefs, now, deckId, buried, extraNew, ahead) {
         buildQueue(
             QueueInput(
                 cards = cards,
                 eligible = { c -> notesById[c.noteId]?.let { n -> template(n.type, c.template)?.applies(n) == true } == true },
                 today = daily.firstOrNull { it.id == dayId(now, prefs.dayStartHour) },
                 prefs = prefs.copy(newPerDay = prefs.newPerDay + extraNew),
-                now = now, deckId = deckId, buried = buried, learnAheadMs = ahead,
+                now = now, deckId = deckId, buried = buried, learnAheadMs = ahead, meanings = meanings,
             ),
         )
     }

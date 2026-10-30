@@ -7,12 +7,18 @@
  *
  * Siblings (cards of the same note) are buried for the rest of the session once one is answered,
  * so you never see "word → meaning" and "cloze of the same word" back to back.
+ *
+ * Near-synonyms learned at the same time interfere with each other (convince/persuade both mean "thuyết
+ * phục"), so a new word waits while another word sharing a Vietnamese meaning phrase is still settling:
+ * introduced in this queue, or reviewed but not yet on an interval of SETTLE_DAYS days.
  */
 import { CardState, nextDayStart, type Card, type Daily, type Id, type Prefs } from "@shared/model.ts";
 
 /** How far ahead "learn ahead" looks when the learner chooses to continue early. */
 export const LEARN_AHEAD_MS = 20 * 60_000;
 export const LEECH_LAPSES = 8;
+/** A card on an interval this long (days) is settled enough for a near-synonym to start. */
+export const SETTLE_DAYS = 3;
 
 export interface QueueInput {
   cards: readonly Card[];
@@ -28,6 +34,8 @@ export interface QueueInput {
   buried: ReadonlySet<Id>;
   /** Deck-specific new-card limits. */
   deckNewPerDay?: ReadonlyMap<Id, number>;
+  /** Vietnamese meaning phrases per note (meaningsByNote); when given, near-synonyms are introduced apart. */
+  meanings?: ReadonlyMap<Id, readonly string[]>;
 }
 
 export interface Queue {
@@ -61,13 +69,32 @@ export function buildQueue(i: QueueInput): Queue {
   const newLimit = Math.max(0, i.prefs.newPerDay - (i.today?.newCards ?? 0));
   const reviewLimit = Math.max(0, i.prefs.maxReviewsPerDay - (i.today?.reviews ?? 0));
 
+  // Meaning phrase -> notes still settling with it (any deck: interference does not care about decks).
+  const settling = new Map<string, Set<Id>>();
+  const hold = (noteId: Id) => {
+    for (const p of i.meanings?.get(noteId) ?? []) {
+      const owners = settling.get(p) ?? new Set<Id>();
+      owners.add(noteId);
+      settling.set(p, owners);
+    }
+  };
+  const blocked = (noteId: Id) =>
+    (i.meanings?.get(noteId) ?? []).some((p) => {
+      const owners = settling.get(p);
+      return !!owners && (owners.size > 1 || !owners.has(noteId));
+    });
+  if (i.meanings) {
+    for (const c of i.cards) if (!c.suspended && c.state !== CardState.New && c.scheduledDays < SETTLE_DAYS) hold(c.noteId);
+  }
+
   // One new card per note per session (siblings wait for the next session).
   const seen = new Set<Id>();
   const newCards: Card[] = [];
   for (const c of fresh) {
     if (newCards.length >= newLimit) break;
-    if (seen.has(c.noteId)) continue;
+    if (seen.has(c.noteId) || blocked(c.noteId)) continue;
     seen.add(c.noteId);
+    hold(c.noteId);
     newCards.push(c);
   }
   const reviewCapped = review.slice(0, reviewLimit);

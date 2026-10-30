@@ -31,7 +31,8 @@
    "deckId": null,
    "buried": [],
    "learnAheadMs": 0,
-   "now": 1768465800000
+   "now": 1768465800000,
+   "meanings": null
   },
   "counts": {
    "new": 3,
@@ -330,7 +331,8 @@
    "deckId": null,
    "buried": [],
    "learnAheadMs": 0,
-   "now": 1768465800000
+   "now": 1768465800000,
+   "meanings": null
   },
   "counts": {
    "new": 2,
@@ -618,7 +620,8 @@
     "n5"
    ],
    "learnAheadMs": 1200000,
-   "now": 1768465800000
+   "now": 1768465800000,
+   "meanings": null
   },
   "counts": {
    "new": 3,
@@ -907,7 +910,8 @@
    "deckId": "d2",
    "buried": [],
    "learnAheadMs": 0,
-   "now": 1768465800000
+   "now": 1768465800000,
+   "meanings": null
   },
   "counts": {
    "new": 1,
@@ -1146,6 +1150,537 @@
     "reps": 0,
     "lapses": 0,
     "createdAt": 1768465800000,
+    "updatedAt": 1768465800000
+   }
+  ]
+ },
+ {
+  "name": "near-synonyms",
+  "input": {
+   "prefs": {
+    "desiredRetention": 0.9,
+    "newPerDay": 10,
+    "maxReviewsPerDay": 200,
+    "templates": {
+     "vocab": [
+      "recognize",
+      "cloze"
+     ]
+    },
+    "layout": {
+     "showIpa": true,
+     "showPos": true,
+     "showEn": true,
+     "showVi": true,
+     "showExamples": true,
+     "showMnemonic": true
+    },
+    "autoSpeak": "off",
+    "theme": "system",
+    "accent": "teal",
+    "aiEnabled": true,
+    "dayStartHour": 4,
+    "updatedAt": 0
+   },
+   "today": null,
+   "deckId": null,
+   "buried": [],
+   "learnAheadMs": 0,
+   "now": 1768465800000,
+   "meanings": {
+    "s1": [
+     "thuyết phục"
+    ],
+    "s2": [
+     "thuyết phục",
+     "làm cho tin"
+    ],
+    "s3": [
+     "làm cho tin",
+     "bảo đảm"
+    ],
+    "s4": [
+     "giao hàng"
+    ],
+    "s5": [
+     "hoãn lại"
+    ],
+    "s6": [
+     "hoãn lại"
+    ],
+    "s7": [
+     "hủy bỏ"
+    ],
+    "s8": [
+     "hủy bỏ"
+    ],
+    "s9": [
+     "trì hoãn"
+    ],
+    "s10": [
+     "đàm phán"
+    ],
+    "s11": [
+     "đàm phán",
+     "thương lượng"
+    ]
+   }
+  },
+  "counts": {
+   "new": 9,
+   "learning": 1,
+   "review": 3
+  },
+  "learning": [
+   "learn-due"
+  ],
+  "review": [
+   "rev-over",
+   "rev-now",
+   "rev-later-today"
+  ],
+  "newCards": [
+   "other-deck",
+   "new1",
+   "new2",
+   "new3",
+   "syn-persuade",
+   "syn-assure",
+   "syn-other",
+   "syn-near-settled",
+   "own-new-sibling"
+  ],
+  "order": [
+   "learn-due",
+   "other-deck",
+   "new1",
+   "new2",
+   "rev-over",
+   "new3",
+   "syn-persuade",
+   "rev-now",
+   "syn-assure",
+   "syn-other",
+   "rev-later-today",
+   "syn-near-settled",
+   "own-new-sibling"
+  ],
+  "cards": [
+   {
+    "id": "new1",
+    "noteId": "n1",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800001,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "new1b",
+    "noteId": "n1",
+    "deckId": "d1",
+    "template": "cloze",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800002,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "new2",
+    "noteId": "n2",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800003,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "new3",
+    "noteId": "n3",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800004,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "rev-over",
+    "noteId": "n4",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 2,
+    "due": 1768293000000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "rev-now",
+    "noteId": "n5",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 2,
+    "due": 1768465799999,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "rev-later-today",
+    "noteId": "n6",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 2,
+    "due": 1768476600000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "rev-tomorrow",
+    "noteId": "n7",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 2,
+    "due": 1768573800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "learn-due",
+    "noteId": "n8",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 1,
+    "due": 1768465740000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "learn-soon",
+    "noteId": "n9",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 1,
+    "due": 1768466400000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "relearn-later",
+    "noteId": "n10",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 3,
+    "due": 1768468800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "suspended",
+    "noteId": "n11",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "suspended": true
+   },
+   {
+    "id": "other-deck",
+    "noteId": "n12",
+    "deckId": "d2",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "ineligible",
+    "noteId": "n13",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "syn-persuade",
+    "noteId": "s1",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800010,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "syn-convince",
+    "noteId": "s2",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800011,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "syn-assure",
+    "noteId": "s3",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800012,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "syn-other",
+    "noteId": "s4",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800013,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "settling-rev",
+    "noteId": "s5",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 2,
+    "due": 1768573800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 2,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "syn-near-settling",
+    "noteId": "s6",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800014,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "settled-rev",
+    "noteId": "s7",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 2,
+    "due": 1768573800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 10,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "syn-near-settled",
+    "noteId": "s8",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800015,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "own-learning",
+    "noteId": "s9",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 1,
+    "due": 1768468800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768379400000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "own-new-sibling",
+    "noteId": "s9",
+    "deckId": "d1",
+    "template": "cloze",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800016,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "relearn-other-deck",
+    "noteId": "s10",
+    "deckId": "d2",
+    "template": "recognize",
+    "state": 3,
+    "due": 1768468800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "syn-near-relearn",
+    "noteId": "s11",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768465800017,
     "updatedAt": 1768465800000
    }
   ]

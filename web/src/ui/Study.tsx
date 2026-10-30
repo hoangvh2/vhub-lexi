@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { dayId, type Card, type Id, type Rating } from "@shared/model.ts";
-import { answerHint, confusables, letterCount, matchConfusable, suggestedRatingWith, type Confusable } from "@shared/confusables.ts";
+import { answerHint, confusables, letterCount, matchConfusable, meaningsByNote, suggestedRatingWith, type Confusable } from "@shared/confusables.ts";
 import { checkTyped, str, template, type AnswerVerdict } from "@shared/notetypes.ts";
 import { reviewCard, setSuspended, undoReview, type Reviewed } from "../data/actions.ts";
 import { cards, daily, decks, loaded, notes, prefs } from "../data/state.ts";
@@ -54,6 +54,7 @@ export function Study({ deckId }: { deckId: Id | null }) {
 
   const eligible = useMemo(() => eligibility(allNotes), [allNotes]);
   const byId = useMemo(() => notesById(allNotes), [allNotes]);
+  const meanings = useMemo(() => meaningsByNote(allNotes), [allNotes]);
   const sched = useMemo(() => makeScheduler(p.desiredRetention), [p.desiredRetention]);
 
   const queue: Queue = useMemo(
@@ -67,8 +68,9 @@ export function Study({ deckId }: { deckId: Id | null }) {
         deckId,
         buried,
         learnAheadMs: ahead,
+        meanings,
       }),
-    [allCards, eligible, dailies, p, now, deckId, buried, extraNew, ahead],
+    [allCards, eligible, dailies, p, now, deckId, buried, extraNew, ahead, meanings],
   );
 
   // Keep showing the same card until it is answered, even if the queue changes underneath.

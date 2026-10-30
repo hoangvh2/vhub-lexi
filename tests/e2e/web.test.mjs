@@ -102,6 +102,19 @@ describe("core flow (local-only mode)", () => {
     await ctx.close();
   });
 
+  it("two new words with the same meaning are not introduced on the same day", async () => {
+    const { ctx, page, errors } = await open(browser, base);
+    await addWord(page, base, "convince", "thuyết phục, làm cho tin");
+    await addWord(page, base, "persuade", "thuyết phục, làm cho tin");
+    await addWord(page, base, "deliver", "giao hàng");
+    await page.goto(`${base}/#/study`);
+    await page.waitForSelector('[data-testid=counts]');
+    // convince and deliver start today; persuade waits until convince is settled.
+    assert.equal(await page.textContent('[data-testid=counts] .c-new b'), "2");
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
   it("typing cards name the target word and treat a same-meaning word as a retry, not a lapse", async () => {
     const { ctx, page, errors } = await open(browser, base);
     await page.goto(`${base}/#/settings`);
@@ -109,8 +122,18 @@ describe("core flow (local-only mode)", () => {
     await page.check('[data-testid=tpl-recall]');
     await page.uncheck('[data-testid=tpl-recognize]');
     await page.uncheck('[data-testid=tpl-cloze]');
-    await addWord(page, base, "convince", "thuyết phục, làm cho tin");
-    await addWord(page, base, "persuade", "thuyết phục, làm cho tin");
+    // convince is already settled (10-day interval, due now), so the new near-synonym persuade may start today.
+    const T = Date.now() - 60_000;
+    const vocab = (id, word) => ({ id, type: "vocab", deckId: "d1", createdAt: T, updatedAt: T, fields: { word, vi: "thuyết phục, làm cho tin", pos: "verb", en: `${word} definition` } });
+    const card = (noteId, over) => ({ id: `${noteId}.recall`, noteId, deckId: "d1", template: "recall", state: 0, due: T, stability: 0, difficulty: 0, scheduledDays: 0, learningSteps: 0, reps: 0, lapses: 0, createdAt: T, updatedAt: T, ...over });
+    const file = join(tmpdir(), `lexi-synonyms-${process.pid}.json`);
+    writeFileSync(file, JSON.stringify({
+      app: "vhub-lexi", version: 1, exportedAt: T, decks: [{ id: "d1", name: "TOEIC", createdAt: T, updatedAt: T }],
+      notes: [vocab("n1", "convince"), vocab("n2", "persuade")],
+      cards: [card("n1", { state: 2, stability: 10, difficulty: 5, scheduledDays: 10, reps: 3, lastReview: T - 10 * 86_400_000 }), card("n2", {})],
+    }));
+    await page.setInputFiles('[data-testid=import-file]', file);
+    await page.click('[data-testid=confirm-ok]');
     await page.goto(`${base}/#/study`);
     await page.waitForSelector('[data-testid=type-input]');
     assert.match(await page.textContent('[data-testid=card-mode]'), /Gõ từ tiếng Anh/);
