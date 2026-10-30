@@ -145,8 +145,9 @@ private fun Main(app: LexiApp) {
                         }
                     }
                 }
-                // Here rather than in Scaffold.snackbarHost, so a toast stays above the keyboard too.
-                SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+                // At the top, over the title row, like the web on phones: a toast at the bottom covered the study
+                // rating buttons and the typing field.
+                SnackbarHost(snackbar, Modifier.align(Alignment.TopCenter))
             }
         }
     }

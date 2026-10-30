@@ -61,6 +61,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -232,17 +233,20 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
     val letters = letterCount(answer)
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Deck picker on its own line: next to the three count chips it was squeezed to one letter on a 320dp phone.
+        Box {
+            OutlinedButton(onClick = { deckMenu = true }, Modifier.testTag("deck-pick")) {
+                Text(decks.firstOrNull { it.id == deckId }?.name ?: "Tất cả bộ thẻ", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            DropdownMenu(expanded = deckMenu, onDismissRequest = { deckMenu = false }) {
+                DropdownMenuItem(text = { Text("Tất cả bộ thẻ") }, onClick = { deckId = null; holder[0] = null; deckMenu = false })
+                for (d in decks) DropdownMenuItem(text = { Text(d.name) }, onClick = { deckId = d.id; holder[0] = null; deckMenu = false })
+            }
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             CountChip("Mới ${queue.counts.new}", c.easy, kind == "new")
             CountChip("Đang học ${queue.counts.learning}", c.again, kind == "learn")
             CountChip("Ôn ${queue.counts.review}", c.good, kind == "review")
-            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                OutlinedButton(onClick = { deckMenu = true }) { Text(decks.firstOrNull { it.id == deckId }?.name ?: "Tất cả bộ thẻ", fontSize = 13.sp, maxLines = 1) }
-                DropdownMenu(expanded = deckMenu, onDismissRequest = { deckMenu = false }) {
-                    DropdownMenuItem(text = { Text("Tất cả bộ thẻ") }, onClick = { deckId = null; holder[0] = null; deckMenu = false })
-                    for (d in decks) DropdownMenuItem(text = { Text(d.name) }, onClick = { deckId = d.id; holder[0] = null; deckMenu = false })
-                }
-            }
         }
         LinearProgressIndicator(progress = { doneFrac }, Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = c.accent, trackColor = c.surface2, gapSize = 0.dp, drawStopIndicator = {})
 
