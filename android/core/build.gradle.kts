@@ -19,6 +19,8 @@ sourceSets.test {
 }
 
 dependencies {
+    // The AI batch (AiBatch.kt) runs a few calls at a time; the app already ships this version.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     // Android ships org.json in the platform; plain JVM (unit tests) needs the artifact.
     compileOnly("org.json:json:20240303")
     testImplementation("org.json:json:20240303")
