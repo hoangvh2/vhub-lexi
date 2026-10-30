@@ -96,7 +96,8 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
           working-directory: android
-          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest; status=$?; adb pull /data/local/tmp/lexi-shots screenshots || true; exit $status
+          # A hung test would otherwise run into the job timeout, which also skips the screenshot pull that shows where.
+          script: timeout 1500 ./gradlew --no-daemon :app:connectedDebugAndroidTest; status=$?; adb pull /data/local/tmp/lexi-shots screenshots || true; exit $status
       - name: Publish screenshots for review (also on failure)
         if: always() && github.event_name == 'push'
         run: |
