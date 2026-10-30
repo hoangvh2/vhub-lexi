@@ -50,6 +50,8 @@ import com.vh.lexi.core.FieldValue
 import com.vh.lexi.core.Lookup
 import com.vh.lexi.core.Note
 import com.vh.lexi.core.POS_NAMES
+import com.vh.lexi.core.items
+import com.vh.lexi.core.mergeEnrich
 import com.vh.lexi.core.normalizeWord
 import com.vh.lexi.core.str
 import com.vh.lexi.core.template
@@ -66,7 +68,7 @@ private fun senseList(e: DictEntry?): List<SenseRef> =
     e?.pos?.flatMap { p -> p.senses.map { SenseRef(POS_NAMES[p.pos] ?: p.pos, it.def, it.examples) } } ?: emptyList()
 
 private class Draft(
-    word: String = "", ipa: String = "", pos: String = "", en: String = "", vi: String = "", examples: String = "", mnemonic: String = "", ai: Set<String> = emptySet(),
+    word: String = "", ipa: String = "", pos: String = "", en: String = "", vi: String = "", examples: String = "", examplesVi: String = "", mnemonic: String = "", ai: Set<String> = emptySet(),
 ) {
     var word by mutableStateOf(word)
     var ipa by mutableStateOf(ipa)
@@ -74,6 +76,7 @@ private class Draft(
     var en by mutableStateOf(en)
     var vi by mutableStateOf(vi)
     var examples by mutableStateOf(examples)
+    var examplesVi by mutableStateOf(examplesVi)
     var mnemonic by mutableStateOf(mnemonic)
     var ai by mutableStateOf(ai)
 
@@ -87,10 +90,11 @@ private class Draft(
         if (followPos) vi = e.viFor(pos)
         en = picked.joinToString("; ") { it.def }
         examples = picked.flatMap { it.ex }.distinct().take(3).joinToString("\n")
+        examplesVi = ""
         if (!keepUser) { mnemonic = ""; ai = emptySet() }
     }
 
-    fun clear() { word = ""; ipa = ""; pos = ""; en = ""; vi = ""; examples = ""; mnemonic = ""; ai = emptySet() }
+    fun clear() { word = ""; ipa = ""; pos = ""; en = ""; vi = ""; examples = ""; examplesVi = ""; mnemonic = ""; ai = emptySet() }
 }
 
 @Composable
@@ -142,7 +146,8 @@ fun AddScreen(app: LexiApp) {
     val word = if (hit != null) draft.word.trim() else if (manual) normalizeWord(q) else ""
     val fields = mapOf<String, FieldValue>(
         "word" to FieldValue.Text(word), "ipa" to FieldValue.Text(draft.ipa), "pos" to FieldValue.Text(draft.pos), "en" to FieldValue.Text(draft.en),
-        "vi" to FieldValue.Text(draft.vi), "examples" to FieldValue.Items(draft.examples.split("\n")), "mnemonic" to FieldValue.Text(draft.mnemonic),
+        "vi" to FieldValue.Text(draft.vi), "examples" to FieldValue.Items(draft.examples.split("\n")),
+        "examplesVi" to FieldValue.Items(draft.examplesVi.split("\n")), "mnemonic" to FieldValue.Text(draft.mnemonic),
     )
     val previewNote = Note("preview", "vocab", "", fields, createdAt = 0, updatedAt = 0)
     val cardCount = if (word.isNotEmpty()) wantedTemplates(previewNote, prefs.templates).size else 0
@@ -182,15 +187,12 @@ fun AddScreen(app: LexiApp) {
         scope.launch {
             try {
                 val r = app.cloud.enrich(word, draft.pos.ifBlank { null }, draft.en.ifBlank { null }, draft.examples.split("\n").filter { it.isNotBlank() })
-                val ai = draft.ai.toMutableSet()
-                if (r.vi.isNotBlank()) { draft.vi = r.vi; ai += "vi" }
-                if (draft.en.isBlank() && !r.en.isNullOrBlank()) { draft.en = r.en; ai += "en" }
-                if (r.examples.isNotEmpty()) {
-                    draft.examples = (draft.examples.split("\n").filter { it.isNotBlank() } + r.examples).distinct().take(5).joinToString("\n")
-                    ai += "examples"
-                }
-                if (draft.mnemonic.isBlank() && !r.mnemonic.isNullOrBlank()) { draft.mnemonic = r.mnemonic; ai += "mnemonic" }
-                draft.ai = ai
+                // A meaning prefilled from the offline dictionary is replaced; one the learner typed is kept.
+                val m = mergeEnrich(fields, draft.ai, r, overwriteVi = draft.viFromDict(hit?.entry))
+                draft.vi = m.fields["vi"].str(); draft.en = m.fields["en"].str(); draft.mnemonic = m.fields["mnemonic"].str()
+                draft.examples = m.fields["examples"].items().joinToString("\n")
+                draft.examplesVi = m.fields["examplesVi"].items().joinToString("\n")
+                draft.ai = m.aiFields
             } catch (e: Exception) {
                 toast(e.message ?: "Không gọi được AI.")
             } finally {
@@ -280,7 +282,9 @@ fun AddScreen(app: LexiApp) {
                     value = draft.examples, onValueChange = { draft.examples = it; edited("examples") }, minLines = 2, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping(),
                     label = { Text("Ví dụ (mỗi dòng một câu)" + if ("examples" in draft.ai) " · AI" else "") },
                 )
-                OutlinedTextField(value = draft.mnemonic, onValueChange = { draft.mnemonic = it; edited("mnemonic") }, label = { Text("Mẹo nhớ" + if ("mnemonic" in draft.ai) " · AI" else "") }, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping().testTag("mnemonic-input"))
+                // No field for the example translations here: AI fills them, and the note editor edits them. An extra field
+                // between the meaning and the mnemonic hung the keyboard step of the emulator smoke test (CI, 4 runs).
+                OutlinedTextField(value = draft.mnemonic, onValueChange = { draft.mnemonic = it; edited("mnemonic") }, label = { Text("Mẹo nhớ / truyện chêm" + if ("mnemonic" in draft.ai) " · AI" else "") }, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping().testTag("mnemonic-input"))
 
                 val deckName = decks.firstOrNull { it.id == (deckId ?: prefs.defaultDeckId) }?.name ?: decks.firstOrNull()?.name ?: "Mặc định"
                 if (newDeck == null) {

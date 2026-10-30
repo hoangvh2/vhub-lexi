@@ -181,6 +181,11 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .b-ipa { font-family: var(--f-ipa); color: var(--muted); font-size: 19px; }
 .b-badge { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 2px 10px; border-radius: 7px; }
 .b-strong { font-size: 24px; font-weight: 650; line-height: 1.4; text-wrap: balance; }
+.b-senses { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; justify-items: center; }
+.b-senses li { text-align: center; font-size: 20px; font-weight: 650; line-height: 1.4; text-wrap: balance; }
+.b-senses li:first-child { font-size: 24px; }
+/* Inline, so a long meaning wraps under its label and the line stays centred. */
+.b-ctx { display: inline-block; margin-right: 8px; vertical-align: .2em; font-size: 12px; font-weight: 650; letter-spacing: .02em; line-height: 1.6; color: var(--mode, var(--accent)); background: var(--surface-2); border-radius: 999px; padding: 0 8px; }
 .b-plain { font-size: 17px; line-height: 1.6; text-wrap: pretty; }
 .b-muted { color: var(--muted); line-height: 1.6; }
 .b-quote { border-left: 3px solid var(--accent); padding: 2px 0 2px 14px; text-align: left; align-self: stretch; font-size: 18px; line-height: 1.6; }
@@ -322,6 +327,17 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .li:hover { background: var(--surface-2); }
 .li .t { font-weight: 650; }
 .li .s { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Selection mode: a round tick in front of each word, the selected ones tinted. */
+.li.pick { grid-template-columns: auto minmax(0, 1fr) auto; }
+.li .tick { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; color: var(--accent-ink, #fff); transition: background .15s, border-color .15s; }
+.li[aria-pressed="true"] { background: var(--accent-soft); }
+.li[aria-pressed="true"] .tick { background: var(--accent); border-color: var(--accent); }
+.li .tick .i { stroke: currentColor; }
+.bulk { position: sticky; top: 8px; z-index: 5; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.batch { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; background: var(--accent-soft); border: 1px solid var(--line); }
+.batch .bar { height: 6px; border-radius: 3px; background: var(--surface); overflow: hidden; }
+.batch .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width .4s ease; }
+@media (prefers-reduced-motion: reduce) { .batch .bar i, .li .tick { transition: none; } }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 
 /* ---------- modal / toast ---------- */

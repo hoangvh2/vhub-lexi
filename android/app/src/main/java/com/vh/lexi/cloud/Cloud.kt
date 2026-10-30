@@ -20,6 +20,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
 import com.vh.lexi.BuildConfig
 import com.vh.lexi.data.LexiData
+import com.vh.lexi.core.Enriched
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +35,6 @@ sealed interface Account {
 }
 
 /** What the AI step returns for one word. */
-data class Enriched(val vi: String, val en: String?, val examples: List<String>, val mnemonic: String?)
 
 /**
  * The optional cloud side: Google sign-in, the two-way sync with the web app (same account) and the `enrich`
@@ -125,7 +125,7 @@ class Cloud(private val context: Context, private val data: LexiData, private va
         scope.launch { signOut() }
     }
 
-    /** Vietnamese meaning, examples and a memory tip from the `enrich` Cloud Function. Throws with a readable message. */
+    /** Meanings by context, translated examples and a truyện chêm from the `enrich` Cloud Function. Throws with a readable message. */
     suspend fun enrich(word: String, pos: String?, en: String?, examples: List<String>): Enriched {
         val fn = functions ?: error("Chưa kết nối tài khoản")
         try {
@@ -135,6 +135,8 @@ class Cloud(private val context: Context, private val data: LexiData, private va
                 vi = res["vi"] as? String ?: "",
                 en = res["en"] as? String,
                 examples = (res["examples"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                examplesVi = (res["examplesVi"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                existingVi = (res["existingVi"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                 mnemonic = res["mnemonic"] as? String,
             )
         } catch (e: com.google.firebase.functions.FirebaseFunctionsException) {

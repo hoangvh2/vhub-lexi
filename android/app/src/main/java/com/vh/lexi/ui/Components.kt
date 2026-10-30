@@ -172,7 +172,15 @@ fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifie
                 }
             }
             is Block.Text -> when (b.tone) {
-                "strong" -> Text(b.text, fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold, color = c.ink, textAlign = TextAlign.Center)
+                "strong" -> senses(b.text)?.let { list ->
+                    // "(công việc) trình diễn; (chung) chứng minh": one line per setting, the setting as a small label.
+                    Column(Modifier.testTag("senses"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for ((i, s) in list.withIndex()) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(s.first, Modifier.background(c.surface2, CircleShape).padding(horizontal = 8.dp, vertical = 2.dp), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = mode)
+                            Text(s.second, fontSize = if (i == 0) 22.sp else 19.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
+                        }
+                    }
+                } ?: Text(b.text, fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold, color = c.ink, textAlign = TextAlign.Center)
                 "muted" -> Text(b.text, fontSize = 15.sp, lineHeight = 23.sp, color = c.muted, textAlign = TextAlign.Center)
                 else -> Text(b.text, fontSize = 17.sp, lineHeight = 26.sp, color = c.ink, textAlign = TextAlign.Center)
             }
@@ -247,3 +255,11 @@ fun ScreenHeader(title: String, trailing: @Composable () -> Unit = {}) {
 }
 
 val ScreenPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+
+/** Same split as web/src/ui/Blocks.tsx `senses`: (setting, meaning) pairs, or null when the text is not in that form. */
+fun senses(vi: String): List<Pair<String, String>>? {
+    if (!vi.startsWith("(")) return null
+    val re = Regex("""^\(([^)]{1,24})\)\s*(.+)$""")
+    val out = vi.split(Regex(""";\s*(?=\()""")).map { part -> re.find(part.trim())?.let { it.groupValues[1] to it.groupValues[2] } }
+    return if (out.isNotEmpty() && out.all { it != null }) out.filterNotNull() else null
+}
