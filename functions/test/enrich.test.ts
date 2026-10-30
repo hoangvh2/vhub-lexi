@@ -55,8 +55,27 @@ describe("senses and truyện chêm", () => {
     expect(joinSenses(long).length).toBeLessThanOrEqual(300);
     expect(joinSenses(long).split("; ")).toHaveLength(2);
   });
-  it("prompt asks for senses, translations and a story", () => {
-    for (const k of ['"senses"', '"existingVi"', '"story"', "truyện chêm"]) expect(SYSTEM_PROMPT).toContain(k);
+  it("prompt asks for senses, a core meaning, translations and a story", () => {
+    for (const k of ['"senses"', '"core"', '"existingVi"', '"story"', "truyện chêm"]) expect(SYSTEM_PROMPT).toContain(k);
+  });
+  it("leads vi with the core meaning when there are several senses", () => {
+    const r = parseEnrichResult(JSON.stringify({ ...answer, core: "cho người khác thấy rõ" }), demo);
+    expect(r.vi).toBe("(cốt lõi) cho người khác thấy rõ; (công việc) trình diễn, hướng dẫn cách dùng; (chung) chứng minh; (xã hội) biểu tình");
+    expect(r.core).toBe("cho người khác thấy rõ");
+    expect(r.senses).toHaveLength(3);
+  });
+  it("skips a core meaning that repeats a sense, or next to a single sense", () => {
+    const repeat = parseEnrichResult(JSON.stringify({ ...answer, core: "Chứng minh." }), demo);
+    expect(repeat.vi.startsWith("(công việc)")).toBe(true);
+    expect(repeat).not.toHaveProperty("core");
+    const single = parseEnrichResult(JSON.stringify({ ...answer, senses: answer.senses.slice(0, 1), core: "cho người khác thấy rõ" }), demo);
+    expect(single.vi).toBe("(công việc) trình diễn, hướng dẫn cách dùng");
+  });
+  it("the core meaning counts towards the vi limit: trailing senses are dropped first", () => {
+    const long = Array.from({ length: 3 }, (_, i) => ({ context: "c", vi: `${i}`.repeat(110), example: "", exampleVi: "" }));
+    const r = parseEnrichResult(JSON.stringify({ senses: long, core: "ý chính" }), demo);
+    expect(r.vi.startsWith("(cốt lõi) ý chính; ")).toBe(true);
+    expect(r.vi.length).toBeLessThanOrEqual(300);
   });
 });
 

@@ -8,9 +8,13 @@ import java.time.ZoneId
  *   review    review cards due before the next study-day boundary, most overdue first
  *   new       never-seen cards, oldest first, capped by the daily limit
  * Siblings (cards of one note) are buried for the rest of the session once one is answered.
+ * Near-synonyms interfere when learned together, so a new word waits while another word sharing a
+ * Vietnamese meaning phrase is new in this queue or reviewed but not yet on a SETTLE_DAYS interval.
  */
 const val LEARN_AHEAD_MS = 20 * 60_000L
 const val LEECH_LAPSES = 8
+/** A card on an interval this long (days) is settled enough for a near-synonym to start. */
+const val SETTLE_DAYS = 3
 
 data class QueueInput(
     val cards: List<Card>,
@@ -23,6 +27,8 @@ data class QueueInput(
     val buried: Set<Id> = emptySet(),
     val learnAheadMs: Long = 0,
     val zone: ZoneId = ZoneId.systemDefault(),
+    /** Vietnamese meaning phrases per note ([meaningsByNote]); when given, near-synonyms are introduced apart. */
+    val meanings: Map<Id, List<String>>? = null,
 )
 
 data class Counts(val new: Int, val learning: Int, val review: Int)
@@ -52,11 +58,26 @@ fun buildQueue(i: QueueInput): Queue {
     val newLimit = maxOf(0, i.prefs.newPerDay - (i.today?.newCards ?: 0L).toInt())
     val reviewLimit = maxOf(0, i.prefs.maxReviewsPerDay - (i.today?.reviews ?: 0L).toInt())
 
+    // Meaning phrase -> notes still settling with it (any deck: interference does not care about decks).
+    val settling = HashMap<String, MutableSet<Id>>()
+    fun hold(noteId: Id) {
+        for (p in i.meanings?.get(noteId).orEmpty()) settling.getOrPut(p) { HashSet() } += noteId
+    }
+    fun blocked(noteId: Id) = i.meanings?.get(noteId).orEmpty().any { p ->
+        val owners = settling[p]
+        owners != null && (owners.size > 1 || noteId !in owners)
+    }
+    if (i.meanings != null) {
+        for (c in i.cards) if (!c.suspended && c.state != CardState.NEW && c.scheduledDays < SETTLE_DAYS) hold(c.noteId)
+    }
+
     val seen = HashSet<Id>()
     val newCards = ArrayList<Card>()
     for (c in fresh) {
         if (newCards.size >= newLimit) break
-        if (!seen.add(c.noteId)) continue
+        if (c.noteId in seen || blocked(c.noteId)) continue
+        seen += c.noteId
+        hold(c.noteId)
         newCards += c
     }
     val reviewCapped = review.take(reviewLimit)

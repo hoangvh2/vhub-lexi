@@ -19,8 +19,11 @@ export interface Sense {
   vi: string;
 }
 
+/** Label of the core-meaning entry that leads the `vi` field of a word with several senses. */
+export const CORE_LABEL = "cốt lõi";
+
 export interface EnrichResult {
-  /** The senses joined for the note's `vi` field: "(công việc) trình diễn; (chung) chứng minh". */
+  /** The senses joined for the note's `vi` field: "(cốt lõi) cho thấy rõ; (công việc) trình diễn; (chung) chứng minh". */
   vi: string;
   en?: string;
   /** New example sentences, one per sense, each using the word. */
@@ -30,6 +33,8 @@ export interface EnrichResult {
   /** Translations aligned with the input's examples ("" where the model gave none). */
   existingVi: string[];
   senses: Sense[];
+  /** The one idea behind every sense, when the word has several ("cho thấy rõ"). */
+  core?: string;
   /** Truyện chêm: a Vietnamese sentence with the English word in it. Kept under the old key for older clients. */
   mnemonic?: string;
 }
@@ -63,6 +68,8 @@ export const SYSTEM_PROMPT = [
   '    "vi": the Vietnamese meaning in that setting, 2-8 words, natural, no English.',
   '    "example": one natural English sentence (8-18 words) in that setting that uses the headword (an inflected form is fine).',
   '    "exampleVi": its natural Vietnamese translation.',
+  '  "core": the one basic idea shared by all the senses, 2-8 plain Vietnamese words, so the learner can guess a new sense from it',
+  '    (e.g. "demonstrate" -> "cho người khác thấy rõ"). Not a copy of one sense; empty string if the word has only one sense.',
   '  "en": one short English definition (max 25 words), in plain words. Empty string if the context already has one.',
   '  "existingVi": array with a natural Vietnamese translation of each sentence in existingExamples, same order and length.',
   '  "story": a "truyện chêm" memory sentence in the style of the Vietnamese book Hack Não 1500: 1-2 short, vivid Vietnamese sentences (max 200 characters)',
@@ -121,8 +128,12 @@ export function parseEnrichResult(text: string, input: EnrichInput): EnrichResul
       examplesVi.push(str(s.exampleVi, 300));
     }
   }
+  // A core idea helps only next to two or more senses, and only when it is not just one of them again.
+  const coreText = str(o.core, 120);
+  const same = (a: string, b: string) => a.toLowerCase().replace(/[.,;]/g, "").trim() === b.toLowerCase().replace(/[.,;]/g, "").trim();
+  const core = senses.length >= 2 && coreText && !senses.some((s) => same(s.vi, coreText)) ? coreText : undefined;
   // An older-style answer (a plain "vi" string) still works.
-  const vi = joinSenses(senses) || str(o.vi, VI_MAX);
+  const vi = joinSenses(core ? [{ context: CORE_LABEL, vi: core }, ...senses] : senses) || str(o.vi, VI_MAX);
   if (!vi) throw new EnrichError("unavailable", "AI chưa có nghĩa cho từ này. Hãy nhập tay.");
   const given = Array.isArray(o.existingVi) ? o.existingVi : [];
   const existingVi = input.examples.map((_, i) => str(given[i], 300));
@@ -130,5 +141,5 @@ export function parseEnrichResult(text: string, input: EnrichInput): EnrichResul
   // A story that never mentions the word teaches nothing about it.
   const story = str(o.story, 300) || str(o.mnemonic, 300);
   const mnemonic = story && usesWord(story, input.word) ? story : undefined;
-  return { vi, ...(en ? { en } : {}), examples, examplesVi, existingVi, senses, ...(mnemonic ? { mnemonic } : {}) };
+  return { vi, ...(en ? { en } : {}), examples, examplesVi, existingVi, senses, ...(core ? { core } : {}), ...(mnemonic ? { mnemonic } : {}) };
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { Note } from "@shared/model.ts";
-import { answerHint, confusables, letterCount, matchConfusable, meaningPhrases, suggestedRatingWith } from "@shared/confusables.ts";
+import { CardState, DEFAULT_PREFS, type Card, type Note } from "@shared/model.ts";
+import { answerHint, confusables, letterCount, matchConfusable, meaningPhrases, meaningsByNote, suggestedRatingWith } from "@shared/confusables.ts";
+import { SETTLE_DAYS, buildQueue } from "../src/lib/queue.ts";
+import { newCard } from "../src/lib/scheduler.ts";
 
 const T0 = Date.UTC(2026, 9, 29);
 const vocab = (id: string, word: string, vi: string, over: Partial<Note> = {}): Note => ({
@@ -64,5 +66,25 @@ describe("confusable words", () => {
     expect(suggestedRatingWith("correct", { extraHints: 0, retried: true })).toBe(2);
     expect(suggestedRatingWith("close", { extraHints: 2, retried: true })).toBe(2);
     expect(suggestedRatingWith("wrong", { extraHints: 0, retried: true })).toBe(1);
+  });
+});
+
+describe("near-synonyms are introduced apart", () => {
+  const mk = (noteId: string, at: number, over: Partial<Card> = {}): Card => ({ ...newCard(noteId, "d1", "recognize", T0), id: `${noteId}.recognize`, createdAt: T0 + at, ...over });
+  const base = { eligible: () => true, today: undefined, prefs: DEFAULT_PREFS, now: T0, deckId: null, buried: new Set<string>(), meanings: meaningsByNote(notes) };
+
+  it("convince, persuade and persuasion share 'thuyết phục': only the first starts today", () => {
+    const cards = [mk("n1", 1), mk("n2", 2), mk("n3", 3), mk("n4", 4)];
+    expect(buildQueue({ ...base, cards }).newCards.map((c) => c.noteId)).toEqual(["n1", "n4"]);
+    // Without meanings the old behaviour stays: every new word is queued.
+    expect(buildQueue({ ...base, cards, meanings: undefined }).newCards).toHaveLength(4);
+  });
+  it("the next one starts once the first is on an interval of SETTLE_DAYS days", () => {
+    const learning = mk("n1", 1, { state: CardState.Learning, due: T0 + 600_000 });
+    const short = mk("n1", 1, { state: CardState.Review, due: T0 + 86_400_000, scheduledDays: SETTLE_DAYS - 1 });
+    const settled = mk("n1", 1, { state: CardState.Review, due: T0 + 9 * 86_400_000, scheduledDays: SETTLE_DAYS });
+    expect(buildQueue({ ...base, cards: [learning, mk("n2", 2)] }).newCards).toHaveLength(0);
+    expect(buildQueue({ ...base, cards: [short, mk("n2", 2)] }).newCards).toHaveLength(0);
+    expect(buildQueue({ ...base, cards: [settled, mk("n2", 2)] }).newCards.map((c) => c.noteId)).toEqual(["n2"]);
   });
 });
