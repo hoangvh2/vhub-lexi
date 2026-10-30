@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CardState, dayId, nextDayStart, normalizePrefs, DEFAULT_PREFS, type Card, type Note } from "@shared/model.ts";
-import { type Block, checkTyped, clozeSentence, suggestedRating, template, wantedTemplates } from "@shared/notetypes.ts";
+import { type Block, checkTyped, clozeSentence, str, suggestedRating, template, wantedTemplates } from "@shared/notetypes.ts";
 import { answer, formatInterval, makeScheduler, newCard, preview } from "../src/lib/scheduler.ts";
 import { buildQueue, pickNext } from "../src/lib/queue.ts";
 import { cardCounts, forecast, heatmap, level, retention, streak } from "../src/lib/stats.ts";
@@ -126,7 +126,28 @@ describe("note types", () => {
     expect(wantedTemplates(note(), { vocab: ["recognize", "recall", "cloze"] })).toEqual(["recognize", "recall", "cloze"]);
     expect(wantedTemplates(note({ examples: [] }), { vocab: ["recognize", "cloze"] })).toEqual(["recognize"]);
     expect(wantedTemplates(note({ vi: "", en: "", examples: [] }), undefined)).toEqual([]);
-    expect(wantedTemplates(note({ vi: "", en: "" }), undefined)).toEqual(["cloze"]); // a sentence is enough for a cloze
+    expect(wantedTemplates(note({ vi: "", en: "" }), undefined)).toEqual(["cloze", "listen"]); // a sentence is enough for a cloze or a listening card
+  });
+  it("answer side: Vietnamese first, examples with the word highlighted and translated, English folded away", () => {
+    const n = note({ examples: ["Children are often more resilient than adults."], examplesVi: ["Trẻ em thường kiên cường hơn người lớn."], mnemonic: "re-silient" });
+    const back = template("vocab", "recognize")!.back(n, DEFAULT_PREFS.layout);
+    expect(back.map((b) => b.k)).toEqual(["badge", "text", "example", "memo", "fold"]);
+    expect(back[2]).toEqual({ k: "example", text: "Children are often more resilient than adults.", at: [24, 33], vi: "Trẻ em thường kiên cường hơn người lớn." });
+  });
+  it("cloze hints with the sentence's translation when there is one, and then shows the meaning after the answer", () => {
+    const n = note({ examples: ["Children are often more resilient than adults."], examplesVi: ["Trẻ em thường kiên cường hơn người lớn."] });
+    const t = template("vocab", "cloze")!;
+    expect(t.front(n, DEFAULT_PREFS.layout)).toContainEqual({ k: "text", text: "Trẻ em thường kiên cường hơn người lớn." });
+    expect(t.back(n, DEFAULT_PREFS.layout)).toContainEqual({ k: "text", text: str(n.fields.vi), tone: "strong" });
+  });
+  it("listening card plays the example and blanks the word; the answer accepts the inflected form", () => {
+    const n = note({ word: "run", examples: ["She is running fast."] });
+    const t = template("vocab", "listen")!;
+    expect(t.mode).toBe("type");
+    expect(t.front(n, DEFAULT_PREFS.layout)).toEqual([{ k: "listen", text: "She is running fast." }, { k: "quote", text: "She is _____ fast." }]);
+    expect(t.expected!(n)).toEqual(["running", "run"]);
+    expect(t.speak?.front?.(n)).toBe("She is running fast.");
+    expect(t.applies(note({ examples: [] }))).toBe(false);
   });
   it("cloze finds inflected forms and phrases", () => {
     expect(clozeSentence("She is running fast.", "run")).toEqual({ text: "She is _____ fast.", answer: "running" });

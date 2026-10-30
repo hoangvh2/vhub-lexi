@@ -96,6 +96,8 @@ describe("shape checks reject bad data", () => {
     await assertFails(put("notes", n.id, { ...n, fields: { ...n.fields, word: "x".repeat(81) } }));
     await assertFails(put("notes", n.id, { ...n, fields: { ...n.fields, vi: "x".repeat(301) } }));
     await assertFails(put("notes", n.id, { ...n, fields: { ...n.fields, examples: Array(9).fill("a") } }));
+    await assertFails(put("notes", n.id, { ...n, fields: { ...n.fields, examplesVi: Array(9).fill("a") } }));
+    await assertFails(put("notes", n.id, { ...n, fields: { ...n.fields, examplesVi: "not a list" } }));
     await assertFails(put("notes", "other", n));
     const { deckId, ...noDeck } = n;
     await assertFails(put("notes", n.id, noDeck));

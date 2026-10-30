@@ -69,6 +69,7 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
                         value = texts[f.key].orEmpty(),
                         onValueChange = { v -> texts = texts + (f.key to v) },
                         label = { Text(f.label + if (note.aiFields.contains(f.key)) " · AI" else "") },
+                        placeholder = f.placeholder?.let { p -> { Text(p) } },
                         singleLine = f.kind == "text",
                         minLines = if (f.kind == "list") 2 else 1,
                         modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping(),

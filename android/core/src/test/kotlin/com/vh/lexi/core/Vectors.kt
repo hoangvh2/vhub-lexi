@@ -43,6 +43,13 @@ fun Block.toJson(): JSONObject = when (this) {
     is Block.Badge -> JSONObject().put("k", "badge").put("text", text)
     is Block.Text -> JSONObject().put("k", "text").put("text", text).also { if (tone != null) it.put("tone", tone) }
     is Block.Quote -> JSONObject().put("k", "quote").put("text", text)
+    is Block.Example -> JSONObject().put("k", "example").put("text", text).also { o ->
+        at?.let { o.put("at", JSONArray(listOf(it.first, it.second))) }
+        vi?.let { o.put("vi", it) }
+    }
+    is Block.Memo -> JSONObject().put("k", "memo").put("text", text)
+    is Block.Fold -> JSONObject().put("k", "fold").put("label", label).put("text", text)
+    is Block.Listen -> JSONObject().put("k", "listen").put("text", text)
 }
 
 /** Order-insensitive JSON comparison without relying on org.json's similar() number quirks. */

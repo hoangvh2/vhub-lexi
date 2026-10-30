@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
+import { writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { addWord, chromium, open, serve } from "./harness.mjs";
 
 let server, base, browser;
@@ -147,6 +150,45 @@ describe("core flow (local-only mode)", () => {
     await page.waitForSelector('[data-testid=verdict]');
     assert.match(await page.textContent('[data-testid=verdict]'), /Chưa đúng/);
     assert.match(await page.getAttribute('[data-testid=rate-1]', 'class'), /suggest/);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("listening card plays the sentence, takes the typed word, then shows the example highlighted and translated", async () => {
+    const { ctx, page, errors } = await open(browser, base);
+    // Count what the page asks the browser to read aloud (headless Chromium has no voices).
+    await page.addInitScript(() => {
+      window.__spoken = [];
+      const orig = speechSynthesis.speak.bind(speechSynthesis);
+      speechSynthesis.speak = (u) => (window.__spoken.push([u.text, u.rate]), orig(u));
+    });
+    const T = Date.UTC(2026, 9, 29);
+    const note = {
+      id: "n1", type: "vocab", deckId: "d1", createdAt: T, updatedAt: T,
+      fields: { word: "desire", vi: "mong muốn", en: "to want strongly", examples: ["We desire to have our own home."], examplesVi: ["Chúng tôi ao ước có nhà riêng."], mnemonic: "đì-zai-ơ" },
+    };
+    const card = { id: "n1.listen", noteId: "n1", deckId: "d1", template: "listen", state: 0, due: T, stability: 0, difficulty: 0, scheduledDays: 0, learningSteps: 0, reps: 0, lapses: 0, createdAt: T, updatedAt: T };
+    const file = join(tmpdir(), `lexi-listen-${process.pid}.json`);
+    writeFileSync(file, JSON.stringify({ app: "vhub-lexi", version: 1, exportedAt: T, decks: [{ id: "d1", name: "TOEIC", createdAt: T, updatedAt: T }], notes: [note], cards: [card] }));
+    await page.goto(`${base}/#/settings`);
+    await page.setInputFiles('[data-testid=import-file]', file);
+    await page.click('[data-testid=confirm-ok]');
+    await page.goto(`${base}/#/study`);
+    await page.waitForSelector('[data-testid=listen-play]');
+    assert.equal(await page.getAttribute('[data-testid=study-card]', 'data-template'), "listen");
+    assert.match(await page.textContent('[data-testid=card-mode]'), /Nghe và gõ từ/);
+    // The sentence plays on its own when the card appears; the blanked sentence is on screen, the word is not.
+    await page.waitForFunction(() => window.__spoken.some(([t]) => t === "We desire to have our own home."));
+    assert.match(await page.textContent('[data-testid=study-card]'), /We _____ to have our own home\./);
+    await page.click('[data-testid=listen-slow]');
+    assert.ok(await page.evaluate(() => window.__spoken.some(([t, r]) => t.startsWith("We desire") && r < 0.8)));
+    await page.fill('[data-testid=type-input]', "desire");
+    await page.click('[data-testid=type-check]');
+    await page.waitForSelector('[data-testid=verdict]');
+    assert.match(await page.textContent('[data-testid=verdict]'), /Chính xác/);
+    assert.equal(await page.textContent('[data-testid=example] mark'), "desire");
+    assert.match(await page.textContent('[data-testid=example]'), /Chúng tôi ao ước có nhà riêng\./);
+    assert.match(await page.textContent('[data-testid=memo]'), /đì-zai-ơ/);
     assert.deepEqual(errors, []);
     await ctx.close();
   });

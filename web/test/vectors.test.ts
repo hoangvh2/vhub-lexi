@@ -10,7 +10,7 @@ import { expect, it } from "vitest";
 import { CardState, DEFAULT_PREFS, normalizePrefs, type Card, type Note, type Rating } from "@shared/model.ts";
 import { IRREGULAR } from "@shared/irregular.ts";
 import { baseForms } from "@shared/morphy.ts";
-import { checkTyped, clozeSentence, normalizeAnswer, template, wantedTemplates } from "@shared/notetypes.ts";
+import { checkTyped, clozeSentence, findWord, normalizeAnswer, template, wantedTemplates } from "@shared/notetypes.ts";
 import { answerHint, confusables, letterCount, matchConfusable, meaningPhrases, suggestedRatingWith } from "@shared/confusables.ts";
 import { buildQueue, pickNext } from "../src/lib/queue.ts";
 import { answer, makeScheduler, newCard } from "../src/lib/scheduler.ts";
@@ -62,25 +62,29 @@ function templateVectors() {
     sampleNote({ vi: "", examples: ["She is running fast."], word: "run", pos: "verb" }),
     sampleNote({ vi: "", en: "", examples: ["Please look after the kids."], word: "look after", pos: "" }),
     sampleNote({ vi: "", en: "", examples: [] }),
+    // Translated examples: the cloze hint becomes the sentence's translation; the second example has none.
+    sampleNote({ examplesVi: ["Trẻ em thường kiên cường hơn người lớn."], examples: ["Kids are tough.", "Children are often more resilient than adults."] }),
+    sampleNote({ examplesVi: ["Cô ấy chạy nhanh.", "Họ chạy mỗi sáng."], vi: "chạy", en: "", word: "run", pos: "verb", examples: ["She is running fast.", "They run every morning."], mnemonic: "" }),
+    sampleNote({ vi: "", examplesVi: ["Nhóm vẫn kiên cường."] }),
   ];
   const cases = [];
   for (const n of notes) {
     for (const [li, layout] of layouts.entries()) {
       const per: Record<string, unknown> = {};
-      for (const id of ["recognize", "recall", "cloze"]) {
+      for (const id of ["recognize", "recall", "cloze", "listen"]) {
         const t = template("vocab", id)!;
         per[id] = t.applies(n)
           ? { applies: true, mode: t.mode, front: t.front(n, layout), back: t.back(n, layout), expected: t.expected ? t.expected(n) : null, speakFront: t.speak?.front?.(n) ?? null, speakBack: t.speak?.back?.(n) ?? null }
           : { applies: false };
       }
-      cases.push({ note: n, layoutIndex: li, templates: per, wanted: wantedTemplates(n, { vocab: ["recognize", "recall", "cloze"] }), wantedDefault: wantedTemplates(n, DEFAULT_PREFS.templates) });
+      cases.push({ note: n, layoutIndex: li, templates: per, wanted: wantedTemplates(n, { vocab: ["recognize", "recall", "cloze", "listen"] }), wantedDefault: wantedTemplates(n, DEFAULT_PREFS.templates) });
     }
   }
   const clozes = [
     ["She is running fast.", "run"], ["They studied hard.", "study"], ["Please look after the kids.", "look after"], ["Nothing here.", "resilient"],
     ["Children are often more resilient than adults.", "resilient"], ["He put it away, putting it back later.", "put"], ["Cats are cute.", "cat"], ["The bigger one.", "big"],
     ["Prices keep rising.", "rise"], ["An apple a day.", "apple"], ["It is what it is.", "is"],
-  ].map(([s, w]) => ({ sentence: s, word: w, result: clozeSentence(s, w) }));
+  ].map(([s, w]) => ({ sentence: s, word: w, result: clozeSentence(s, w), at: findWord(s, w) }));
   const typed = [
     ["Resilient", ["resilient"]], ["  resilient ", ["resilient"]], ["resiliant", ["resilient"]], ["cat", ["cut"]], ["", ["x"]], ["look  after", ["look after"]],
     ["Café", ["cafe"]], ["it's", ["its"]], ["resilient!", ["resilient"]], ["procrastinatee", ["procrastinate"]], ["abc", ["abd"]],

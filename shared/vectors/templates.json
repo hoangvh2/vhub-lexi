@@ -68,22 +68,29 @@
        "tone": "strong"
       },
       {
-       "k": "text",
-       "text": "able to recover quickly",
-       "tone": "muted"
+       "k": "example",
+       "text": "Children are often more resilient than adults.",
+       "at": [
+        24,
+        33
+       ]
       },
       {
-       "k": "quote",
-       "text": "Children are often more resilient than adults."
+       "k": "example",
+       "text": "The team stayed resilient.",
+       "at": [
+        16,
+        25
+       ]
       },
       {
-       "k": "quote",
-       "text": "The team stayed resilient."
+       "k": "memo",
+       "text": "re-silient: springs back"
       },
       {
-       "k": "text",
-       "text": "re-silient: springs back",
-       "tone": "muted"
+       "k": "fold",
+       "label": "Định nghĩa Anh-Anh",
+       "text": "able to recover quickly"
       }
      ],
      "expected": null,
@@ -104,9 +111,9 @@
        "tone": "strong"
       },
       {
-       "k": "text",
-       "text": "able to recover quickly",
-       "tone": "muted"
+       "k": "fold",
+       "label": "Định nghĩa Anh-Anh",
+       "text": "able to recover quickly"
       }
      ],
      "back": [
@@ -123,12 +130,20 @@
        "text": "resilient"
       },
       {
-       "k": "quote",
-       "text": "Children are often more resilient than adults."
+       "k": "example",
+       "text": "Children are often more resilient than adults.",
+       "at": [
+        24,
+        33
+       ]
       },
       {
-       "k": "quote",
-       "text": "The team stayed resilient."
+       "k": "example",
+       "text": "The team stayed resilient.",
+       "at": [
+        16,
+        25
+       ]
       }
      ],
      "expected": [
@@ -169,14 +184,13 @@
        "text": "resilient"
       },
       {
-       "k": "text",
-       "text": "able to recover quickly",
-       "tone": "muted"
+       "k": "memo",
+       "text": "re-silient: springs back"
       },
       {
-       "k": "text",
-       "text": "re-silient: springs back",
-       "tone": "muted"
+       "k": "fold",
+       "label": "Định nghĩa Anh-Anh",
+       "text": "able to recover quickly"
       }
      ],
      "expected": [
@@ -185,12 +199,73 @@
      ],
      "speakFront": null,
      "speakBack": "Children are often more resilient than adults."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "Children are often more resilient than adults."
+      },
+      {
+       "k": "quote",
+       "text": "Children are often more _____ than adults."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "example",
+       "text": "Children are often more resilient than adults.",
+       "at": [
+        24,
+        33
+       ]
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      },
+      {
+       "k": "fold",
+       "label": "Định nghĩa Anh-Anh",
+       "text": "able to recover quickly"
+      }
+     ],
+     "expected": [
+      "resilient",
+      "resilient"
+     ],
+     "speakFront": "Children are often more resilient than adults.",
+     "speakBack": "resilient"
     }
    },
    "wanted": [
     "recognize",
     "recall",
-    "cloze"
+    "cloze",
+    "listen"
    ],
    "wantedDefault": [
     "recognize",
@@ -243,9 +318,8 @@
        "tone": "strong"
       },
       {
-       "k": "text",
-       "text": "re-silient: springs back",
-       "tone": "muted"
+       "k": "memo",
+       "text": "re-silient: springs back"
       }
      ],
      "expected": null,
@@ -310,9 +384,8 @@
        "text": "resilient"
       },
       {
-       "k": "text",
-       "text": "re-silient: springs back",
-       "tone": "muted"
+       "k": "memo",
+       "text": "re-silient: springs back"
       }
      ],
      "expected": [
@@ -321,12 +394,64 @@
      ],
      "speakFront": null,
      "speakBack": "Children are often more resilient than adults."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "Children are often more resilient than adults."
+      },
+      {
+       "k": "quote",
+       "text": "Children are often more _____ than adults."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "example",
+       "text": "Children are often more resilient than adults.",
+       "at": [
+        24,
+        33
+       ]
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      }
+     ],
+     "expected": [
+      "resilient",
+      "resilient"
+     ],
+     "speakFront": "Children are often more resilient than adults.",
+     "speakBack": "resilient"
     }
    },
    "wanted": [
     "recognize",
     "recall",
-    "cloze"
+    "cloze",
+    "listen"
    ],
    "wantedDefault": [
     "recognize",
@@ -380,9 +505,9 @@
        "tone": "strong"
       },
       {
-       "k": "text",
-       "text": "able to recover quickly",
-       "tone": "muted"
+       "k": "fold",
+       "label": "Định nghĩa Anh-Anh",
+       "text": "able to recover quickly"
       }
      ],
      "expected": null,
@@ -403,9 +528,9 @@
        "tone": "strong"
       },
       {
-       "k": "text",
-       "text": "able to recover quickly",
-       "tone": "muted"
+       "k": "fold",
+       "label": "Định nghĩa Anh-Anh",
+       "text": "able to recover quickly"
       }
      ],
      "back": [
@@ -429,6 +554,9 @@
      "speakBack": "resilient"
     },
     "cloze": {
+     "applies": false
+    },
+    "listen": {
      "applies": false
     }
    },
@@ -519,6 +647,9 @@
     },
     "cloze": {
      "applies": false
+    },
+    "listen": {
+     "applies": false
     }
    },
    "wanted": [
@@ -573,18 +704,21 @@
        "text": "verb"
       },
       {
+       "k": "example",
+       "text": "She is running fast.",
+       "at": [
+        7,
+        14
+       ]
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      },
+      {
        "k": "text",
        "text": "able to recover quickly",
-       "tone": "muted"
-      },
-      {
-       "k": "quote",
-       "text": "She is running fast."
-      },
-      {
-       "k": "text",
-       "text": "re-silient: springs back",
-       "tone": "muted"
+       "tone": "strong"
       }
      ],
      "expected": null,
@@ -619,8 +753,12 @@
        "text": "run"
       },
       {
-       "k": "quote",
-       "text": "She is running fast."
+       "k": "example",
+       "text": "She is running fast.",
+       "at": [
+        7,
+        14
+       ]
       }
      ],
      "expected": [
@@ -661,9 +799,8 @@
        "text": "run"
       },
       {
-       "k": "text",
-       "text": "re-silient: springs back",
-       "tone": "muted"
+       "k": "memo",
+       "text": "re-silient: springs back"
       }
      ],
      "expected": [
@@ -672,12 +809,68 @@
      ],
      "speakFront": null,
      "speakBack": "She is running fast."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "She is running fast."
+      },
+      {
+       "k": "quote",
+       "text": "She is _____ fast."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      },
+      {
+       "k": "example",
+       "text": "She is running fast.",
+       "at": [
+        7,
+        14
+       ]
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "strong"
+      }
+     ],
+     "expected": [
+      "running",
+      "run"
+     ],
+     "speakFront": "She is running fast.",
+     "speakBack": "run"
     }
    },
    "wanted": [
     "recognize",
     "recall",
-    "cloze"
+    "cloze",
+    "listen"
    ],
    "wantedDefault": [
     "recognize",
@@ -724,9 +917,8 @@
        "text": "verb"
       },
       {
-       "k": "text",
-       "text": "re-silient: springs back",
-       "tone": "muted"
+       "k": "memo",
+       "text": "re-silient: springs back"
       }
      ],
      "expected": null,
@@ -791,9 +983,8 @@
        "text": "run"
       },
       {
-       "k": "text",
-       "text": "re-silient: springs back",
-       "tone": "muted"
+       "k": "memo",
+       "text": "re-silient: springs back"
       }
      ],
      "expected": [
@@ -802,12 +993,59 @@
      ],
      "speakFront": null,
      "speakBack": "She is running fast."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "She is running fast."
+      },
+      {
+       "k": "quote",
+       "text": "She is _____ fast."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      },
+      {
+       "k": "example",
+       "text": "She is running fast.",
+       "at": [
+        7,
+        14
+       ]
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      }
+     ],
+     "expected": [
+      "running",
+      "run"
+     ],
+     "speakFront": "She is running fast.",
+     "speakBack": "run"
     }
    },
    "wanted": [
     "recognize",
     "recall",
-    "cloze"
+    "cloze",
+    "listen"
    ],
    "wantedDefault": [
     "recognize",
@@ -864,9 +1102,8 @@
        "text": "look after"
       },
       {
-       "k": "text",
-       "text": "re-silient: springs back",
-       "tone": "muted"
+       "k": "memo",
+       "text": "re-silient: springs back"
       }
      ],
      "expected": [
@@ -875,10 +1112,57 @@
      ],
      "speakFront": null,
      "speakBack": "Please look after the kids."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "Please look after the kids."
+      },
+      {
+       "k": "quote",
+       "text": "Please _____ the kids."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "look after"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "look after"
+      },
+      {
+       "k": "example",
+       "text": "Please look after the kids.",
+       "at": [
+        7,
+        17
+       ]
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      }
+     ],
+     "expected": [
+      "look after",
+      "look after"
+     ],
+     "speakFront": "Please look after the kids.",
+     "speakBack": "look after"
     }
    },
    "wanted": [
-    "cloze"
+    "cloze",
+    "listen"
    ],
    "wantedDefault": [
     "cloze"
@@ -930,9 +1214,8 @@
        "text": "look after"
       },
       {
-       "k": "text",
-       "text": "re-silient: springs back",
-       "tone": "muted"
+       "k": "memo",
+       "text": "re-silient: springs back"
       }
      ],
      "expected": [
@@ -941,10 +1224,53 @@
      ],
      "speakFront": null,
      "speakBack": "Please look after the kids."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "Please look after the kids."
+      },
+      {
+       "k": "quote",
+       "text": "Please _____ the kids."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "look after"
+      },
+      {
+       "k": "speak",
+       "text": "look after"
+      },
+      {
+       "k": "example",
+       "text": "Please look after the kids.",
+       "at": [
+        7,
+        17
+       ]
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      }
+     ],
+     "expected": [
+      "look after",
+      "look after"
+     ],
+     "speakFront": "Please look after the kids.",
+     "speakBack": "look after"
     }
    },
    "wanted": [
-    "cloze"
+    "cloze",
+    "listen"
    ],
    "wantedDefault": [
     "cloze"
@@ -976,6 +1302,9 @@
      "applies": false
     },
     "cloze": {
+     "applies": false
+    },
+    "listen": {
      "applies": false
     }
    },
@@ -1009,10 +1338,1294 @@
     },
     "cloze": {
      "applies": false
+    },
+    "listen": {
+     "applies": false
     }
    },
    "wanted": [],
    "wantedDefault": []
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Kids are tough.",
+      "Children are often more resilient than adults."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Trẻ em thường kiên cường hơn người lớn."
+     ]
+    }
+   },
+   "layoutIndex": 0,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "example",
+       "text": "Kids are tough.",
+       "vi": "Trẻ em thường kiên cường hơn người lớn."
+      },
+      {
+       "k": "example",
+       "text": "Children are often more resilient than adults.",
+       "at": [
+        24,
+        33
+       ]
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      },
+      {
+       "k": "fold",
+       "label": "Định nghĩa Anh-Anh",
+       "text": "able to recover quickly"
+      }
+     ],
+     "expected": null,
+     "speakFront": "resilient",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "fold",
+       "label": "Định nghĩa Anh-Anh",
+       "text": "able to recover quickly"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "example",
+       "text": "Kids are tough.",
+       "vi": "Trẻ em thường kiên cường hơn người lớn."
+      },
+      {
+       "k": "example",
+       "text": "Children are often more resilient than adults.",
+       "at": [
+        24,
+        33
+       ]
+      }
+     ],
+     "expected": [
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "resilient"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "Children are often more _____ than adults."
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "muted"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      },
+      {
+       "k": "fold",
+       "label": "Định nghĩa Anh-Anh",
+       "text": "able to recover quickly"
+      }
+     ],
+     "expected": [
+      "resilient",
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "Children are often more resilient than adults."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "Children are often more resilient than adults."
+      },
+      {
+       "k": "quote",
+       "text": "Children are often more _____ than adults."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "example",
+       "text": "Children are often more resilient than adults.",
+       "at": [
+        24,
+        33
+       ]
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      },
+      {
+       "k": "fold",
+       "label": "Định nghĩa Anh-Anh",
+       "text": "able to recover quickly"
+      }
+     ],
+     "expected": [
+      "resilient",
+      "resilient"
+     ],
+     "speakFront": "Children are often more resilient than adults.",
+     "speakBack": "resilient"
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze",
+    "listen"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Kids are tough.",
+      "Children are often more resilient than adults."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Trẻ em thường kiên cường hơn người lớn."
+     ]
+    }
+   },
+   "layoutIndex": 1,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      }
+     ],
+     "expected": null,
+     "speakFront": "resilient",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      }
+     ],
+     "expected": [
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "resilient"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "Children are often more _____ than adults."
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "muted"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      }
+     ],
+     "expected": [
+      "resilient",
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "Children are often more resilient than adults."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "Children are often more resilient than adults."
+      },
+      {
+       "k": "quote",
+       "text": "Children are often more _____ than adults."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "example",
+       "text": "Children are often more resilient than adults.",
+       "at": [
+        24,
+        33
+       ]
+      },
+      {
+       "k": "text",
+       "text": "kiên cường",
+       "tone": "strong"
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      }
+     ],
+     "expected": [
+      "resilient",
+      "resilient"
+     ],
+     "speakFront": "Children are often more resilient than adults.",
+     "speakBack": "resilient"
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze",
+    "listen"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "chạy",
+     "en": "",
+     "examples": [
+      "She is running fast.",
+      "They run every morning."
+     ],
+     "mnemonic": "",
+     "examplesVi": [
+      "Cô ấy chạy nhanh.",
+      "Họ chạy mỗi sáng."
+     ]
+    }
+   },
+   "layoutIndex": 0,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "chạy",
+       "tone": "strong"
+      },
+      {
+       "k": "example",
+       "text": "She is running fast.",
+       "at": [
+        7,
+        14
+       ],
+       "vi": "Cô ấy chạy nhanh."
+      },
+      {
+       "k": "example",
+       "text": "They run every morning.",
+       "at": [
+        5,
+        8
+       ],
+       "vi": "Họ chạy mỗi sáng."
+      }
+     ],
+     "expected": null,
+     "speakFront": "run",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "chạy",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      },
+      {
+       "k": "example",
+       "text": "She is running fast.",
+       "at": [
+        7,
+        14
+       ],
+       "vi": "Cô ấy chạy nhanh."
+      },
+      {
+       "k": "example",
+       "text": "They run every morning.",
+       "at": [
+        5,
+        8
+       ],
+       "vi": "Họ chạy mỗi sáng."
+      }
+     ],
+     "expected": [
+      "run"
+     ],
+     "speakFront": null,
+     "speakBack": "run"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "She is _____ fast."
+      },
+      {
+       "k": "text",
+       "text": "Cô ấy chạy nhanh."
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      },
+      {
+       "k": "text",
+       "text": "chạy",
+       "tone": "strong"
+      }
+     ],
+     "expected": [
+      "running",
+      "run"
+     ],
+     "speakFront": null,
+     "speakBack": "She is running fast."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "She is running fast."
+      },
+      {
+       "k": "quote",
+       "text": "She is _____ fast."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      },
+      {
+       "k": "example",
+       "text": "She is running fast.",
+       "at": [
+        7,
+        14
+       ],
+       "vi": "Cô ấy chạy nhanh."
+      },
+      {
+       "k": "text",
+       "text": "chạy",
+       "tone": "strong"
+      }
+     ],
+     "expected": [
+      "running",
+      "run"
+     ],
+     "speakFront": "She is running fast.",
+     "speakBack": "run"
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze",
+    "listen"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "chạy",
+     "en": "",
+     "examples": [
+      "She is running fast.",
+      "They run every morning."
+     ],
+     "mnemonic": "",
+     "examplesVi": [
+      "Cô ấy chạy nhanh.",
+      "Họ chạy mỗi sáng."
+     ]
+    }
+   },
+   "layoutIndex": 1,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "chạy",
+       "tone": "strong"
+      }
+     ],
+     "expected": null,
+     "speakFront": "run",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "chạy",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      }
+     ],
+     "expected": [
+      "run"
+     ],
+     "speakFront": null,
+     "speakBack": "run"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "She is _____ fast."
+      },
+      {
+       "k": "text",
+       "text": "Cô ấy chạy nhanh."
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      },
+      {
+       "k": "text",
+       "text": "chạy",
+       "tone": "strong"
+      }
+     ],
+     "expected": [
+      "running",
+      "run"
+     ],
+     "speakFront": null,
+     "speakBack": "She is running fast."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "She is running fast."
+      },
+      {
+       "k": "quote",
+       "text": "She is _____ fast."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "run"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "speak",
+       "text": "run"
+      },
+      {
+       "k": "example",
+       "text": "She is running fast.",
+       "at": [
+        7,
+        14
+       ],
+       "vi": "Cô ấy chạy nhanh."
+      },
+      {
+       "k": "text",
+       "text": "chạy",
+       "tone": "strong"
+      }
+     ],
+     "expected": [
+      "running",
+      "run"
+     ],
+     "speakFront": "She is running fast.",
+     "speakBack": "run"
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze",
+    "listen"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Nhóm vẫn kiên cường."
+     ]
+    }
+   },
+   "layoutIndex": 0,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "example",
+       "text": "Children are often more resilient than adults.",
+       "at": [
+        24,
+        33
+       ],
+       "vi": "Nhóm vẫn kiên cường."
+      },
+      {
+       "k": "example",
+       "text": "The team stayed resilient.",
+       "at": [
+        16,
+        25
+       ]
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "strong"
+      }
+     ],
+     "expected": null,
+     "speakFront": "resilient",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "example",
+       "text": "Children are often more resilient than adults.",
+       "at": [
+        24,
+        33
+       ],
+       "vi": "Nhóm vẫn kiên cường."
+      },
+      {
+       "k": "example",
+       "text": "The team stayed resilient.",
+       "at": [
+        16,
+        25
+       ]
+      }
+     ],
+     "expected": [
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "resilient"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "Children are often more _____ than adults."
+      },
+      {
+       "k": "text",
+       "text": "Nhóm vẫn kiên cường."
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "strong"
+      }
+     ],
+     "expected": [
+      "resilient",
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "Children are often more resilient than adults."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "Children are often more resilient than adults."
+      },
+      {
+       "k": "quote",
+       "text": "Children are often more _____ than adults."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "ipa",
+       "text": "rɪˈzɪljənt"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "example",
+       "text": "Children are often more resilient than adults.",
+       "at": [
+        24,
+        33
+       ],
+       "vi": "Nhóm vẫn kiên cường."
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "strong"
+      }
+     ],
+     "expected": [
+      "resilient",
+      "resilient"
+     ],
+     "speakFront": "Children are often more resilient than adults.",
+     "speakBack": "resilient"
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze",
+    "listen"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Nhóm vẫn kiên cường."
+     ]
+    }
+   },
+   "layoutIndex": 1,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      }
+     ],
+     "expected": null,
+     "speakFront": "resilient",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "text",
+       "text": "able to recover quickly",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      }
+     ],
+     "expected": [
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "resilient"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "Children are often more _____ than adults."
+      },
+      {
+       "k": "text",
+       "text": "Nhóm vẫn kiên cường."
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      }
+     ],
+     "expected": [
+      "resilient",
+      "resilient"
+     ],
+     "speakFront": null,
+     "speakBack": "Children are often more resilient than adults."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "Children are often more resilient than adults."
+      },
+      {
+       "k": "quote",
+       "text": "Children are often more _____ than adults."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "resilient"
+      },
+      {
+       "k": "badge",
+       "text": "adjective"
+      },
+      {
+       "k": "speak",
+       "text": "resilient"
+      },
+      {
+       "k": "example",
+       "text": "Children are often more resilient than adults.",
+       "at": [
+        24,
+        33
+       ],
+       "vi": "Nhóm vẫn kiên cường."
+      },
+      {
+       "k": "memo",
+       "text": "re-silient: springs back"
+      }
+     ],
+     "expected": [
+      "resilient",
+      "resilient"
+     ],
+     "speakFront": "Children are often more resilient than adults.",
+     "speakBack": "resilient"
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze",
+    "listen"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
   }
  ],
  "clozes": [
@@ -1022,7 +2635,11 @@
    "result": {
     "text": "She is _____ fast.",
     "answer": "running"
-   }
+   },
+   "at": [
+    7,
+    14
+   ]
   },
   {
    "sentence": "They studied hard.",
@@ -1030,7 +2647,11 @@
    "result": {
     "text": "They _____ hard.",
     "answer": "studied"
-   }
+   },
+   "at": [
+    5,
+    12
+   ]
   },
   {
    "sentence": "Please look after the kids.",
@@ -1038,12 +2659,17 @@
    "result": {
     "text": "Please _____ the kids.",
     "answer": "look after"
-   }
+   },
+   "at": [
+    7,
+    17
+   ]
   },
   {
    "sentence": "Nothing here.",
    "word": "resilient",
-   "result": null
+   "result": null,
+   "at": null
   },
   {
    "sentence": "Children are often more resilient than adults.",
@@ -1051,7 +2677,11 @@
    "result": {
     "text": "Children are often more _____ than adults.",
     "answer": "resilient"
-   }
+   },
+   "at": [
+    24,
+    33
+   ]
   },
   {
    "sentence": "He put it away, putting it back later.",
@@ -1059,7 +2689,11 @@
    "result": {
     "text": "He _____ it away, putting it back later.",
     "answer": "put"
-   }
+   },
+   "at": [
+    3,
+    6
+   ]
   },
   {
    "sentence": "Cats are cute.",
@@ -1067,12 +2701,17 @@
    "result": {
     "text": "_____ are cute.",
     "answer": "Cats"
-   }
+   },
+   "at": [
+    0,
+    4
+   ]
   },
   {
    "sentence": "The bigger one.",
    "word": "big",
-   "result": null
+   "result": null,
+   "at": null
   },
   {
    "sentence": "Prices keep rising.",
@@ -1080,7 +2719,11 @@
    "result": {
     "text": "Prices keep _____.",
     "answer": "rising"
-   }
+   },
+   "at": [
+    12,
+    18
+   ]
   },
   {
    "sentence": "An apple a day.",
@@ -1088,7 +2731,11 @@
    "result": {
     "text": "An _____ a day.",
     "answer": "apple"
-   }
+   },
+   "at": [
+    3,
+    8
+   ]
   },
   {
    "sentence": "It is what it is.",
@@ -1096,7 +2743,11 @@
    "result": {
     "text": "It _____ what it is.",
     "answer": "is"
-   }
+   },
+   "at": [
+    3,
+    5
+   ]
   }
  ],
  "typed": [
