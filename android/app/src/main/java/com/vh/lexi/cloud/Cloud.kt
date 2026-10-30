@@ -150,7 +150,6 @@ class Cloud(private val context: Context, private val data: LexiData, private va
                 else -> AiError(AiError.Kind.TEMPORARY, e.message ?: "Không gọi được AI.")
             }
         }
-        }
     }
 
     companion object {
