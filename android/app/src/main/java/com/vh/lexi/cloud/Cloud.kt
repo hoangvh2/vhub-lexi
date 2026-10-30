@@ -20,6 +20,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
 import com.vh.lexi.BuildConfig
 import com.vh.lexi.data.LexiData
+import com.vh.lexi.core.AiError
 import com.vh.lexi.core.Enriched
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -127,10 +128,10 @@ class Cloud(private val context: Context, private val data: LexiData, private va
 
     /** Meanings by context, translated examples and a truyện chêm from the `enrich` Cloud Function. Throws with a readable message. */
     suspend fun enrich(word: String, pos: String?, en: String?, examples: List<String>): Enriched {
-        val fn = functions ?: error("Chưa kết nối tài khoản")
+        val fn = functions ?: throw AiError(AiError.Kind.AUTH, "Chưa kết nối tài khoản")
         try {
             val payload = hashMapOf<String, Any?>("word" to word, "pos" to pos, "en" to en, "examples" to examples)
-            val res = fn.getHttpsCallable("enrich").call(payload).await().getData() as? Map<*, *> ?: error("Phản hồi không hợp lệ")
+            val res = fn.getHttpsCallable("enrich").call(payload).await().getData() as? Map<*, *> ?: throw AiError(AiError.Kind.TEMPORARY, "Phản hồi không hợp lệ")
             return Enriched(
                 vi = res["vi"] as? String ?: "",
                 en = res["en"] as? String,
@@ -140,13 +141,15 @@ class Cloud(private val context: Context, private val data: LexiData, private va
                 mnemonic = res["mnemonic"] as? String,
             )
         } catch (e: com.google.firebase.functions.FirebaseFunctionsException) {
-            throw IllegalStateException(
-                when (e.code) {
-                    com.google.firebase.functions.FirebaseFunctionsException.Code.RESOURCE_EXHAUSTED -> "Hết lượt AI hôm nay. Bạn vẫn có thể nhập tay."
-                    com.google.firebase.functions.FirebaseFunctionsException.Code.UNAUTHENTICATED -> "Cần đăng nhập để dùng AI."
-                    else -> e.message ?: "Không gọi được AI."
-                },
-            )
+            // Sorted by what a batch does next (AiBatch): stop, skip the word, or retry once.
+            throw when (e.code) {
+                com.google.firebase.functions.FirebaseFunctionsException.Code.RESOURCE_EXHAUSTED -> AiError(AiError.Kind.QUOTA, "Hết lượt AI hôm nay. Bạn vẫn có thể nhập tay.")
+                com.google.firebase.functions.FirebaseFunctionsException.Code.UNAUTHENTICATED,
+                com.google.firebase.functions.FirebaseFunctionsException.Code.PERMISSION_DENIED -> AiError(AiError.Kind.AUTH, "Cần đăng nhập bằng tài khoản được cấp quyền để dùng AI.")
+                com.google.firebase.functions.FirebaseFunctionsException.Code.INVALID_ARGUMENT -> AiError(AiError.Kind.INVALID, e.message ?: "Từ không hợp lệ")
+                else -> AiError(AiError.Kind.TEMPORARY, e.message ?: "Không gọi được AI.")
+            }
+        }
         }
     }
 

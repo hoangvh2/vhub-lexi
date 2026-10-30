@@ -2,6 +2,7 @@ package com.vh.lexi
 
 import android.app.Application
 import com.vh.lexi.cloud.Cloud
+import com.vh.lexi.core.AiBatch
 import com.vh.lexi.core.Dictionary
 import com.vh.lexi.core.ShardSource
 import com.vh.lexi.data.LexiData
@@ -21,6 +22,15 @@ class LexiApp : Application() {
         private set
     lateinit var speech: Speech
         private set
+
+    /** AI fill for a list of words. Lives here, not in a screen, so it keeps running while the learner switches tabs. */
+    val aiBatch: AiBatch by lazy {
+        AiBatch(
+            call = { w, pos, en, ex -> cloud.enrich(w, pos, en, ex) },
+            getNote = { id -> data.notes.value.firstOrNull { it.id == id } },
+            save = { n, fields, ai -> data.updateNote(n, fields = fields, aiFields = ai.toList()) },
+        )
+    }
 
     /** False when the APK was built without the dictionary pack (node tools/dict/build.ts --copy-android). */
     var hasDictionary: Boolean = false
