@@ -12,8 +12,8 @@ import { dictionary } from "../lib/dict.ts";
 import { useStore } from "../lib/store.ts";
 import { Icon, confirmDialog, syncLabel, toast } from "./common.tsx";
 
-/** Stored keys are historical; the colours are the ones styles.css draws (teal is the default lavender). */
-const ACCENTS: Array<[Prefs["accent"], string, string]> = [["teal", "#7b5cff", "Oải hương"], ["blue", "#4f8cf2", "Biển"], ["orange", "#f07a52", "Đào"], ["violet", "#e0559a", "Hồng"]];
+/** Stored keys are kept; the colours are the ones styles.css draws (teal is the default jade, violet the earlier lavender). */
+const ACCENTS: Array<[Prefs["accent"], string, string]> = [["teal", "#0f766e", "Ngọc đá"], ["blue", "#2563eb", "Biển"], ["orange", "#c2502a", "Đào"], ["violet", "#6a4cf0", "Oải hương"]];
 
 export function Settings({ email }: { email: string | null }) {
   const p = useStore(prefs);

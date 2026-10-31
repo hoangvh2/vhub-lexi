@@ -1,20 +1,22 @@
-/* VH Lexi, "Bong bóng mềm": soft clay surfaces on a lavender mist, one lavender accent, four pastels that each mean one
-   thing (peach = due, mint = new/progress, butter = streak/highlight, rose = forgotten). Tokens first; components below
+/* VH Lexi, "Bong bóng mềm": soft clay surfaces on a cool stone background, one jade (ngọc đá) accent that also fills
+   progress, and four pastels that each mean one thing (peach = due, pistachio = new/known, butter = streak/highlight,
+   rose = forgotten). Tokens first; components below
    only use tokens. Light/dark follow the system unless the user picks one. */
 :root {
-  --bg: #f3efff;
-  --surface: #fdfcff;
-  --surface-2: #f0ebfe;
-  --ink: #2b1f4f;
-  --muted: #6f6496;
-  --line: #e2dbf8;
-  --accent: #6a4cf0;
-  --accent-2: #a58bff;
+  --bg: #f1f5f4;
+  --surface: #ffffff;
+  --surface-2: #eaf1ef;
+  --ink: #18302c;
+  --muted: #566b67;
+  --line: #dce6e3;
+  --accent: #0f766e;
+  --accent-2: #2bb3a3;
   --accent-ink: #ffffff;
-  --accent-soft: #ebe5ff;
+  --accent-soft: #dcf1ee;
   /* Pastels: a soft fill and a deep tone for text and icons on it. */
   --peach: #ffb59a; --peach-soft: #ffe6dc; --peach-deep: #b24d2a;
-  --mint: #5fd8b0; --mint-soft: #d8f6eb; --mint-deep: #17805f;
+  /* "mint" is pistachio here, so it never reads as the jade accent. */
+  --mint: #9ed36a; --mint-soft: #e9f6dc; --mint-deep: #3f7a17;
   --butter: #ffd56b; --butter-soft: #fff1c7; --butter-deep: #8a5f00;
   --rose: #ff8aa3; --rose-soft: #ffe2e8; --rose-deep: #bf3358;
   --sun: var(--butter-deep); --sun-soft: var(--butter-soft);
@@ -23,13 +25,14 @@
   --again: var(--rose-deep); --again-soft: var(--rose-soft);
   --hard: var(--butter-deep); --hard-soft: var(--butter-soft);
   --good: var(--mint-deep); --good-soft: var(--mint-soft);
-  --easy: #5a3fe0; --easy-soft: #e7e1ff;
+  --easy: #2f6fe4; --easy-soft: #e2edff;
   --listen: #7b5cff; --listen-soft: #ece6ff;
   --mark: #ffe08f;
   --memo: var(--mint-soft);
   /* Clay: a light rim on top, a soft tinted shadow below. */
   --hi: rgba(255, 255, 255, 0.95);
-  --sh: rgba(92, 64, 196, 0.2);
+  --shade: 10, 60, 55;
+  --sh: rgba(var(--shade), 0.18);
   --clay: inset 0 2px 0 var(--hi), 0 12px 26px -14px var(--sh), 0 2px 5px -2px var(--sh);
   --clay-sm: inset 0 1.5px 0 var(--hi), 0 6px 14px -8px var(--sh);
   --shadow: var(--clay);
@@ -42,43 +45,43 @@
   --f-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color-scheme: light;
 }
-/* Accent keys are historical names kept for stored settings: teal is the default lavender. */
-:root[data-accent="blue"] { --accent: #2f6fe4; --accent-2: #7fb0ff; --accent-soft: #e2edff; --easy: #2f6fe4; --easy-soft: #e2edff; }
-:root[data-accent="orange"] { --accent: #d4532c; --accent-2: #ffa587; --accent-soft: #ffe8de; }
-:root[data-accent="violet"] { --accent: #c23a78; --accent-2: #ff8fbf; --accent-soft: #ffe3ef; }
+/* Accent keys kept for stored settings: teal is the default jade; violet is the earlier lavender. */
+:root[data-accent="blue"] { --accent: #2563eb; --accent-2: #60a5fa; --accent-soft: #e0ebff; --easy: #0f766e; --easy-soft: #dcf1ee; }
+:root[data-accent="orange"] { --accent: #c2502a; --accent-2: #f59a76; --accent-soft: #fde6dc; }
+:root[data-accent="violet"] { --accent: #6a4cf0; --accent-2: #a58bff; --accent-soft: #ebe5ff; }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #17132e; --surface: #221c42; --surface-2: #2b2451; --ink: #f1edff; --muted: #b2a8da; --line: #372f68;
-    --accent: #a892ff; --accent-2: #8467ff; --accent-ink: #160f33; --accent-soft: #332a66;
+    --bg: #0e1716; --surface: #172321; --surface-2: #1f2e2b; --ink: #e6f1ef; --muted: #9bb3ae; --line: #253532;
+    --accent: #5eead4; --accent-2: #14b8a6; --accent-ink: #06201d; --accent-soft: #173b37;
     --peach: #ffb59a; --peach-soft: #46302d; --peach-deep: #ffbfa7;
-    --mint: #6ee3bd; --mint-soft: #1e3d38; --mint-deep: #7fe8c6;
+    --mint: #a8dc78; --mint-soft: #26361c; --mint-deep: #b7e68c;
     --butter: #ffd56b; --butter-soft: #413722; --butter-deep: #ffd77a;
     --rose: #ff9db2; --rose-soft: #4a2939; --rose-deep: #ffa9bc;
-    --easy: #b6a4ff; --easy-soft: #30285f; --listen: #b39dfa; --listen-soft: #2e2557; --mark: #6b5418;
-    --hi: rgba(255, 255, 255, 0.07); --sh: rgba(0, 0, 0, 0.55);
+    --easy: #8ab4ff; --easy-soft: #1d2d55; --listen: #b39dfa; --listen-soft: #2e2557; --mark: #6b5418;
+    --hi: rgba(255, 255, 255, 0.06); --shade: 0, 0, 0; --sh: rgba(0, 0, 0, 0.55);
     --blob-a: color-mix(in srgb, var(--accent-2) 22%, transparent); --blob-b: color-mix(in srgb, var(--peach) 10%, transparent);
     color-scheme: dark;
   }
-  :root:not([data-theme="light"])[data-accent="blue"] { --accent: #8ab4ff; --accent-2: #4f84f0; --accent-soft: #1d2d55; --easy: #8ab4ff; --easy-soft: #1d2d55; }
+  :root:not([data-theme="light"])[data-accent="blue"] { --accent: #7cb2ff; --accent-2: #3b82f6; --accent-soft: #1b2c4f; --easy: #5eead4; --easy-soft: #173b37; }
   :root:not([data-theme="light"])[data-accent="orange"] { --accent: #ffa587; --accent-2: #e2673f; --accent-soft: #46271d; }
-  :root:not([data-theme="light"])[data-accent="violet"] { --accent: #ff9fca; --accent-2: #d64b8a; --accent-soft: #48223a; }
+  :root:not([data-theme="light"])[data-accent="violet"] { --accent: #a892ff; --accent-2: #8467ff; --accent-soft: #332a66; }
 }
 :root[data-theme="dark"] {
-  --bg: #17132e; --surface: #221c42; --surface-2: #2b2451; --ink: #f1edff; --muted: #b2a8da; --line: #372f68;
-  --accent: #a892ff; --accent-2: #8467ff; --accent-ink: #160f33; --accent-soft: #332a66;
+  --bg: #0e1716; --surface: #172321; --surface-2: #1f2e2b; --ink: #e6f1ef; --muted: #9bb3ae; --line: #253532;
+  --accent: #5eead4; --accent-2: #14b8a6; --accent-ink: #06201d; --accent-soft: #173b37;
   --peach: #ffb59a; --peach-soft: #46302d; --peach-deep: #ffbfa7;
-  --mint: #6ee3bd; --mint-soft: #1e3d38; --mint-deep: #7fe8c6;
+  --mint: #a8dc78; --mint-soft: #26361c; --mint-deep: #b7e68c;
   --butter: #ffd56b; --butter-soft: #413722; --butter-deep: #ffd77a;
   --rose: #ff9db2; --rose-soft: #4a2939; --rose-deep: #ffa9bc;
-  --easy: #b6a4ff; --easy-soft: #30285f; --listen: #b39dfa; --listen-soft: #2e2557; --mark: #6b5418;
-  --hi: rgba(255, 255, 255, 0.07); --sh: rgba(0, 0, 0, 0.55);
+  --easy: #8ab4ff; --easy-soft: #1d2d55; --listen: #b39dfa; --listen-soft: #2e2557; --mark: #6b5418;
+  --hi: rgba(255, 255, 255, 0.06); --shade: 0, 0, 0; --sh: rgba(0, 0, 0, 0.55);
   --blob-a: color-mix(in srgb, var(--accent-2) 22%, transparent); --blob-b: color-mix(in srgb, var(--peach) 10%, transparent);
   color-scheme: dark;
 }
-:root[data-theme="dark"][data-accent="blue"] { --accent: #8ab4ff; --accent-2: #4f84f0; --accent-soft: #1d2d55; --easy: #8ab4ff; --easy-soft: #1d2d55; }
+:root[data-theme="dark"][data-accent="blue"] { --accent: #7cb2ff; --accent-2: #3b82f6; --accent-soft: #1b2c4f; --easy: #5eead4; --easy-soft: #173b37; }
 :root[data-theme="dark"][data-accent="orange"] { --accent: #ffa587; --accent-2: #e2673f; --accent-soft: #46271d; }
-:root[data-theme="dark"][data-accent="violet"] { --accent: #ff9fca; --accent-2: #d64b8a; --accent-soft: #48223a; }
+:root[data-theme="dark"][data-accent="violet"] { --accent: #a892ff; --accent-2: #8467ff; --accent-soft: #332a66; }
 
 * { box-sizing: border-box; }
 html, body, #app { height: 100%; }
@@ -223,7 +226,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 }
 .switch input[type="checkbox"]::before {
   content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff;
-  box-shadow: 0 2px 5px rgba(40, 20, 90, 0.25); transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.22); transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .switch input[type="checkbox"]:checked { background: linear-gradient(180deg, var(--accent-2), var(--accent)); }
 .switch input[type="checkbox"]:checked::before { transform: translateX(18px); }
@@ -294,7 +297,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .c-new { color: var(--easy); } .c-learn { color: var(--again); } .c-rev { color: var(--good); }
 .counts .on { box-shadow: inset 0 0 0 2px currentColor; }
 .progress { height: 10px; background: var(--line); border-radius: 99px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06); }
-.progress i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--mint), color-mix(in srgb, var(--mint) 70%, var(--accent-2))); transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.progress i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent-2), var(--accent)); transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .scard {
   --mode: var(--accent);
   position: relative; overflow: hidden;
@@ -365,7 +368,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
   position: relative; z-index: 1;
   width: 128px; height: 128px; border-radius: 50%; display: grid; place-items: center; color: #fff; margin: 4px 0;
   background: radial-gradient(circle at 33% 28%, rgba(255, 255, 255, 0.95) 0 7%, transparent 8%), radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.35), transparent 45%), linear-gradient(160deg, var(--accent-2), var(--accent));
-  box-shadow: inset 0 -6px 14px rgba(40, 10, 120, 0.25), 0 20px 34px -16px var(--accent);
+  box-shadow: inset 0 -6px 14px rgba(var(--shade), 0.25), 0 20px 34px -16px var(--accent);
 }
 .bubble b { font-family: var(--f-display); font-weight: 700; font-size: 40px; line-height: 0.9; text-align: center; }
 .bubble b small { display: block; font-family: var(--f-body); font-size: 12px; font-weight: 800; margin-top: 4px; opacity: 0.92; }
@@ -421,8 +424,8 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 
 /* ---------- modal / toast ---------- */
-.scrim { position: fixed; inset: 0; background: rgba(30, 18, 70, 0.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: grid; place-items: center; padding: 16px; z-index: 50; overflow-y: auto; }
-.modal { animation: card-in 0.3s ease-out; background: var(--surface); border-radius: 28px; box-shadow: var(--clay), 0 30px 60px -30px rgba(30, 18, 70, 0.5); width: min(560px, 100%); max-height: calc(100% - 16px); overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.scrim { position: fixed; inset: 0; background: rgba(var(--shade), 0.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: grid; place-items: center; padding: 16px; z-index: 50; overflow-y: auto; }
+.modal { animation: card-in 0.3s ease-out; background: var(--surface); border-radius: 28px; box-shadow: var(--clay), 0 30px 60px -30px rgba(var(--shade), 0.5); width: min(560px, 100%); max-height: calc(100% - 16px); overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
 .modal.wide { width: min(720px, 100%); }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .modal-actions.split { justify-content: space-between; }
@@ -507,7 +510,7 @@ input[type="range"] { width: 100%; }
 .orb {
   --fill: 0; width: 176px; height: 176px; flex: none; border-radius: 50%; position: relative; overflow: hidden; display: grid; place-items: center;
   background: var(--surface-2); isolation: isolate;
-  box-shadow: inset 0 6px 16px rgba(40, 20, 90, 0.12), inset 0 -3px 0 var(--hi), 0 0 0 8px color-mix(in srgb, var(--accent-soft) 70%, transparent);
+  box-shadow: inset 0 6px 16px rgba(var(--shade), 0.12), inset 0 -3px 0 var(--hi), 0 0 0 8px color-mix(in srgb, var(--accent-soft) 70%, transparent);
 }
 /* Water: a large rounded square whose top edge reads as a wave when it turns (motion.ts); its top sits at the fill level. */
 .orb-water, .orb-water2 {
@@ -519,7 +522,7 @@ input[type="range"] { width: 100%; }
 .orb-num { display: flex; flex-direction: column; align-items: center; line-height: 1; transition: color 0.3s; }
 .orb-num b { font-family: var(--f-display); font-weight: 700; font-size: 38px; letter-spacing: -0.02em; }
 .orb-num small { font-size: 12px; font-weight: 800; color: var(--muted); margin-top: 6px; padding: 1px 8px; border-radius: 99px; background: color-mix(in srgb, var(--surface) 72%, transparent); }
-.orb.deep .orb-num { color: #fff; text-shadow: 0 1px 6px rgba(40, 10, 120, 0.3); }
+.orb.deep .orb-num { color: #fff; text-shadow: 0 1px 6px rgba(var(--shade), 0.3); }
 .orb.deep .orb-num small { color: #fff; background: rgba(255, 255, 255, 0.18); }
 .mini { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .mini li { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; column-gap: 12px; }
@@ -536,7 +539,7 @@ input[type="range"] { width: 100%; }
 .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
 .week .day { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .week .day small { font-size: 11px; font-weight: 800; color: var(--muted); }
-.week .day i { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--butter-deep); box-shadow: inset 0 2px 4px rgba(40, 20, 90, 0.08); }
+.week .day i { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--butter-deep); box-shadow: inset 0 2px 4px rgba(var(--shade), 0.08); }
 .week .day i svg.i { width: 16px; height: 16px; stroke-width: 3; }
 .week .day.on i { background: var(--butter); color: #5b3d00; box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.5), 0 6px 12px -6px #c99200; }
 .week .day.today small { color: var(--ink); }
@@ -545,7 +548,7 @@ input[type="range"] { width: 100%; }
 .hero-cta { display: flex; flex-direction: column; gap: 8px; }
 .start-btn { min-height: 56px; padding: 12px 26px; font-size: 18px; font-family: var(--f-display); font-weight: 700; width: 100%; }
 .hero .btn.ghost { background: var(--surface-2); color: var(--ink); font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
-.hero.finished .orb { box-shadow: inset 0 6px 16px rgba(40, 20, 90, 0.12), 0 0 0 8px color-mix(in srgb, var(--mint) 35%, transparent); }
+.hero.finished .orb { box-shadow: inset 0 6px 16px rgba(var(--shade), 0.12), 0 0 0 8px color-mix(in srgb, var(--mint) 35%, transparent); }
 
 .today-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 18px; align-items: start; }
 .today-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
@@ -572,7 +575,7 @@ input[type="range"] { width: 100%; }
 .lesson-title { font-family: var(--f-display); font-weight: 700; font-size: 14.5px; line-height: 1.25; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lesson small { color: var(--muted); font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .lesson-meter { width: 100%; height: 7px; border-radius: 99px; background: var(--line); overflow: hidden; }
-.lesson-meter i { display: block; height: 100%; background: var(--mint); border-radius: 99px; }
+.lesson-meter i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); border-radius: 99px; }
 .lesson.full .num-badge { background: var(--mint-soft); color: var(--mint-deep); }
 .lesson.full .num-badge svg.i { stroke-width: 3; }
 .lesson.part .num-badge { background: var(--accent-soft); color: var(--accent); }
@@ -596,7 +599,7 @@ input[type="range"] { width: 100%; }
   .today { gap: 16px; }
   .today .hello { font-size: 27px; }
   .hero { padding: 16px; gap: 16px 14px; border-radius: 28px; }
-  .orb { width: 118px; height: 118px; box-shadow: inset 0 5px 12px rgba(40, 20, 90, 0.12), inset 0 -2px 0 var(--hi), 0 0 0 5px color-mix(in srgb, var(--accent-soft) 70%, transparent); }
+  .orb { width: 118px; height: 118px; box-shadow: inset 0 5px 12px rgba(var(--shade), 0.12), inset 0 -2px 0 var(--hi), 0 0 0 5px color-mix(in srgb, var(--accent-soft) 70%, transparent); }
   .orb-num b { font-size: 27px; }
   .orb-num small { font-size: 10.5px; margin-top: 4px; }
   .mini { gap: 9px; }
