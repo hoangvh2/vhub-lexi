@@ -95,6 +95,8 @@ import com.vh.lexi.core.dueWithin
 import com.vh.lexi.core.streak
 import com.vh.lexi.core.tagCounts
 import com.vh.lexi.core.isLeech
+import com.vh.lexi.core.isLesson
+import com.vh.lexi.core.lessonTitle
 import com.vh.lexi.core.pickNext
 import com.vh.lexi.core.template
 import com.vh.lexi.data.Reviewed
@@ -107,9 +109,7 @@ private data class Answered(val noteId: String, val word: String, val vi: String
 private data class Session(val answered: Int = 0, val again: Int = 0, val ms: Long = 0, val shown: Int = 0, val shownNew: Int = 0, val log: List<Answered> = emptyList())
 private const val DAY_MS = 86_400_000L
 
-/** Lesson-like tags (sub-decks of an Anki deck such as "01-contract", "lesson-02"), as opposed to topic tags (Today.tsx isLesson). */
-fun isLesson(t: String) = Regex("^(\\d|lesson|bai|unit|chapter)", RegexOption.IGNORE_CASE).containsMatchIn(t)
-private fun lessonLabel(t: String, started: Int, total: Int) = "$t · $started/$total" + if (started >= total) " ✓" else ""
+private fun lessonLabel(t: String, started: Int, total: Int) = "${lessonTitle(t)} · $started/$total" + if (started >= total) " ✓" else ""
 
 @Composable
 fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
@@ -262,8 +262,8 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
 
     if (!started) {
         TodayPanel(
-            cards = cards, queue = queue, daily = daily, dayStartHour = prefs.dayStartHour, now = now,
-            lessons = tags.filter { isLesson(it.first) }.map { Triple(it.first, startedByTag[it.first] ?: 0, it.second) },
+            cards = cards, notesById = notesById, queue = queue, daily = daily, dayStartHour = prefs.dayStartHour, newPerDay = prefs.newPerDay, now = now,
+            lessons = tags.filter { isLesson(it.first) }.map { LessonProgress(it.first, startedByTag[it.first] ?: 0, it.second) },
             onStart = { started = true; holder[0] = null },
             onLesson = { t -> tag = t; aheadDays = 0; started = true; holder[0] = null },
         )
@@ -294,7 +294,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                 }
                 if (tags.isNotEmpty()) Box(Modifier.weight(1f, fill = false)) {
                     OutlinedButton(onClick = { tagMenu = true }, Modifier.testTag("tag-pick")) {
-                        Text(tag ?: "Tất cả bài", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(tag?.let(::lessonTitle) ?: "Tất cả bài", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     DropdownMenu(expanded = tagMenu, onDismissRequest = { tagMenu = false }) {
                         DropdownMenuItem(text = { Text("Tất cả bài") }, onClick = { tag = null; aheadDays = 0; holder[0] = null; tagMenu = false })
@@ -591,7 +591,7 @@ private fun DoneCard(
             }
             if (waitingMs != null) Text("Còn thẻ đang học, thẻ kế tiếp quay lại sau ${Fsrs.formatInterval(waitingMs)}.", color = c.muted, textAlign = TextAlign.Center)
             else if (session.answered > 0) Text(if (dueTomorrow > 0) "Ngày mai có $dueTomorrow thẻ cần ôn." else "Ngày mai chưa có thẻ nào đến hạn.", color = c.muted, textAlign = TextAlign.Center)
-            if (nextLesson != null) Button(onClick = { onLesson(nextLesson) }, Modifier.testTag("next-lesson")) { Text("Sang bài tiếp: $nextLesson") }
+            if (nextLesson != null) Button(onClick = { onLesson(nextLesson) }, Modifier.testTag("next-lesson")) { Text("Sang bài tiếp: ${lessonTitle(nextLesson)}") }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (waitingMs != null) Button(onClick = onContinue) { Text("Học tiếp ngay") }
                 if (hasMoreNew) OutlinedButton(onClick = onMore) { Text("Thêm 5 từ mới") }
@@ -610,119 +610,5 @@ private fun Stat(value: String, label: String) {
     Column(Modifier.background(Lexi.colors.surface2, RoundedCornerShape(12.dp)).padding(horizontal = 14.dp, vertical = 10.dp)) {
         Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Text(label, fontSize = 12.sp, color = Lexi.colors.muted)
-    }
-}
-
-private val WEEKDAYS = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
-
-private fun greeting(hour: Int) = when {
-    hour < 11 -> "Chào buổi sáng"
-    hour < 14 -> "Chào buổi trưa"
-    hour < 18 -> "Chào buổi chiều"
-    else -> "Chào buổi tối"
-}
-
-/** Home of the study tab (Today.tsx): what today asks for, one button to start, the streak and the lesson path. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun TodayPanel(
-    cards: List<Card>, queue: com.vh.lexi.core.Queue, daily: List<com.vh.lexi.core.Daily>, dayStartHour: Int, now: Long,
-    lessons: List<Triple<String, Int, Int>>, onStart: () -> Unit, onLesson: (String) -> Unit,
-) {
-    val c = Lexi.colors
-    // Cards, not answers: a card answered today and not waiting again is done; one in the queue is left.
-    val waiting = (queue.learning + queue.review + queue.newCards).map { it.id }.toSet()
-    val dayStart = com.vh.lexi.core.nextDayStart(now, dayStartHour) - DAY_MS
-    val done = cards.count { (it.lastReview ?: 0L) >= dayStart && it.id !in waiting }
-    val left = waiting.size
-    val frac = if (done + left == 0) 0f else done.toFloat() / (done + left)
-    val answers = daily.sumOf { it.newCards + it.reviews }
-    val perCardMs = if (answers > 0) daily.sumOf { it.ms } / answers else 10_000L
-    val minutes = maxOf(1L, (left * perCardMs + 30_000) / 60_000)
-    val active = daily.filter { it.newCards + it.reviews > 0 }.map { it.id }.toSet()
-    val todayId = dayId(now, dayStartHour)
-    val todayStart = now - dayStartHour * 3_600_000L
-    val dow = java.time.Instant.ofEpochMilli(todayStart).atZone(java.time.ZoneId.systemDefault()).dayOfWeek.value - 1 // Monday = 0
-    val monday = todayStart - dow * DAY_MS
-    val current = lessons.firstOrNull { it.second < it.third }
-    var allLessons by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp).testTag("today"), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Column {
-            Text(greeting(java.time.LocalTime.now().hour), fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text(if (left > 0) "Hôm nay còn $left thẻ, khoảng $minutes phút." else if (done > 0) "Bạn đã học xong phần hôm nay." else "Hôm nay không có thẻ đến hạn.", color = c.muted)
-        }
-        Panel {
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Box(Modifier.size(168.dp).testTag("today-ring"), contentAlignment = Alignment.Center) {
-                    androidx.compose.material3.CircularProgressIndicator(
-                        progress = { frac }, modifier = Modifier.fillMaxSize(), color = c.accent, trackColor = c.surface2, strokeWidth = 11.dp,
-                        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round, gapSize = 0.dp,
-                    )
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("$done/${done + left}", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                        Text("thẻ hôm nay", fontSize = 12.sp, color = c.muted)
-                    }
-                }
-                Button(onClick = onStart, Modifier.fillMaxWidth().heightIn(min = 54.dp).testTag("start-study"), shape = RoundedCornerShape(16.dp)) {
-                    Text(if (left == 0) "Xem buổi học" else if (done == 0) "Bắt đầu học" else "Học tiếp", fontSize = 17.sp)
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Column(Modifier.weight(1f).background(c.accentSoft, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 12.dp)) {
-                        Text("Đến hạn", fontSize = 13.sp, color = c.accent)
-                        Text("${queue.counts.review + queue.counts.learning}", fontSize = 26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("today-due"))
-                    }
-                    Column(Modifier.weight(1f).background(c.memo, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 12.dp)) {
-                        Text("Từ mới", fontSize = 13.sp, color = c.hard)
-                        Text("${queue.counts.new}", fontSize = 26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("today-new"))
-                    }
-                }
-            }
-        }
-        Panel(Modifier.testTag("today-streak")) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("🔥 Chuỗi học", fontWeight = FontWeight.Bold)
-                    Text("${streak(daily, now, dayStartHour)} ngày", fontWeight = FontWeight.Bold)
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    WEEKDAYS.forEachIndexed { i, label ->
-                        val t = monday + i * DAY_MS + dayStartHour * 3_600_000L
-                        val id = dayId(t, dayStartHour)
-                        val on = id in active
-                        val isToday = id == todayId
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(label, fontSize = 11.sp, color = if (isToday) c.accent else c.muted, fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal)
-                            Box(
-                                Modifier.size(28.dp).background(if (on) c.accent else Color.Transparent, CircleShape).border(2.dp, if (on) c.accent else c.line, CircleShape),
-                                contentAlignment = Alignment.Center,
-                            ) { if (on) Text("✓", color = c.onAccent, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
-                        }
-                    }
-                }
-            }
-        }
-        if (current != null) {
-            Panel(Modifier.testTag("today-lesson")) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Bài đang học", color = c.muted)
-                        Text("${current.second}/${current.third} từ", color = c.muted)
-                    }
-                    Text(current.first, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    LinearProgressIndicator(progress = { current.second.toFloat() / current.third }, Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = c.accent, trackColor = c.surface2, gapSize = 0.dp, drawStopIndicator = {})
-                    OutlinedButton(onClick = { onLesson(current.first) }, Modifier.fillMaxWidth().testTag("study-lesson")) { Text("Học bài này") }
-                    TextButton(onClick = { allLessons = !allLessons }) { Text((if (allLessons) "▾ " else "▸ ") + "Tất cả ${lessons.size} bài") }
-                    if (allLessons) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        for ((t, started, total) in lessons) {
-                            val full = started >= total
-                            Surface(
-                                onClick = { onLesson(t) }, shape = RoundedCornerShape(10.dp), color = if (full) c.accentSoft else c.surface,
-                                border = BorderStroke(1.dp, if (full) Color.Transparent else if (started > 0) c.accent else c.line),
-                            ) { Text("$t  $started/$total", Modifier.padding(horizontal = 10.dp, vertical = 8.dp), fontSize = 13.sp) }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
