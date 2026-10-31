@@ -35,8 +35,9 @@ describe("core flow (local-only mode)", () => {
     assert.equal(await page.locator('[data-testid=vi-source]').count(), 0);
     await page.click('[data-testid=save-word]');
 
-    // The study tab opens on Today: what is left, one button to start.
-    await page.goto(`${base}/`);
+    // The study tab opens on Today: what is left, one button to start. Same-document navigation: a full reload
+    // right after saving could race the IndexedDB write.
+    await page.click('.tabbar a[href="#/today"], [data-testid=nav-today]');
     await page.waitForSelector('[data-testid=today]');
     assert.match(await page.textContent('[data-testid=today-ring]'), /0\/1/);
     assert.equal(await page.textContent('[data-testid=today-new]'), "1");
