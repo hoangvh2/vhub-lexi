@@ -4,6 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.SystemBarStyle
+import android.graphics.Color as AndroidColor
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +37,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
@@ -78,6 +82,15 @@ class MainActivity : ComponentActivity() {
         val app = application as LexiApp
         setContent {
             val prefs by app.data.prefs.collectAsState()
+            // The status bar icons follow the app's theme, not the system one: with "Tối" chosen on a phone in light
+            // mode they were dark on the dark background.
+            val dark = when (prefs.theme) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
+            DisposableEffect(dark) {
+                val bars = if (dark) SystemBarStyle.dark(AndroidColor.TRANSPARENT)
+                else SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT)
+                enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
+                onDispose {}
+            }
             LexiTheme(prefs.theme, prefs.accent) { Main(app) }
         }
     }
@@ -136,7 +149,9 @@ private fun Main(app: LexiApp) {
           },
       ) {
         Scaffold(
+            // A transparent container has no matching content colour, so Material falls back to black: say it here.
             containerColor = Color.Transparent,
+            contentColor = c.ink,
             bottomBar = {
                 // Floating tab bar: a soft clay pill above the bottom edge.
                 Box(Modifier.navigationBarsPadding().padding(start = 12.dp, end = 12.dp, bottom = 10.dp)) {
