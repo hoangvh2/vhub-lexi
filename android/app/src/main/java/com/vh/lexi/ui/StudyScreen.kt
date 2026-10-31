@@ -8,6 +8,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.SpanStyle
@@ -89,6 +92,7 @@ import com.vh.lexi.core.meaningsByNote
 import com.vh.lexi.core.checkTyped
 import com.vh.lexi.core.dayId
 import com.vh.lexi.core.dueWithin
+import com.vh.lexi.core.streak
 import com.vh.lexi.core.tagCounts
 import com.vh.lexi.core.isLeech
 import com.vh.lexi.core.pickNext
@@ -98,7 +102,14 @@ import com.vh.lexi.ui.theme.Lexi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private data class Session(val answered: Int = 0, val again: Int = 0, val ms: Long = 0, val shown: Int = 0, val shownNew: Int = 0)
+/** One answer of this session, for the summary at the end. */
+private data class Answered(val noteId: String, val word: String, val vi: String, val rating: Int)
+private data class Session(val answered: Int = 0, val again: Int = 0, val ms: Long = 0, val shown: Int = 0, val shownNew: Int = 0, val log: List<Answered> = emptyList())
+private const val DAY_MS = 86_400_000L
+
+/** Lesson-like tags (sub-decks of an Anki deck such as "01-contract", "lesson-02"), as opposed to topic tags (Today.tsx isLesson). */
+fun isLesson(t: String) = Regex("^(\\d|lesson|bai|unit|chapter)", RegexOption.IGNORE_CASE).containsMatchIn(t)
+private fun lessonLabel(t: String, started: Int, total: Int) = "$t · $started/$total" + if (started >= total) " ✓" else ""
 
 @Composable
 fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
@@ -116,7 +127,10 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
     var buried by remember { mutableStateOf(emptySet<String>()) }
     var session by remember { mutableStateOf(Session()) }
     var extraNew by remember { mutableStateOf(0) }
-    var ahead by remember { mutableLongStateOf(0L) }
+    // Like Anki's "learn ahead limit": when nothing else is left, a learning card due within 20 minutes is shown now.
+    var ahead by remember { mutableLongStateOf(LEARN_AHEAD_MS) }
+    // The tab opens on Today; the session starts from its button (or a lesson picked there).
+    var started by remember { mutableStateOf(false) }
     // Custom study: one lesson/topic tag, and review cards due in the next N days.
     var tag by remember { mutableStateOf<String?>(null) }
     var aheadDays by remember { mutableStateOf(0) }
@@ -145,6 +159,13 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
     val notesById = remember(notes) { notes.associateBy { it.id } }
     val meanings = remember(notes) { meaningsByNote(notes) }
     val tags = remember(notes) { tagCounts(notes.map { it.tags }) }
+    // Per tag: notes started (any card past "new"), for "01-contract · 8/12".
+    val startedByTag = remember(cards, notes) {
+        val studied = cards.filter { it.state != CardState.NEW }.map { it.noteId }.toSet()
+        val m = HashMap<String, Int>()
+        for (n in notes) if (n.id in studied) for (t in n.tags) m[t] = (m[t] ?: 0) + 1
+        m
+    }
     val tagNotes = remember(notes, tag) { tag?.let { t -> notes.filter { t in it.tags }.map { it.id }.toSet() } }
     val eligible: (Card) -> Boolean = { c -> notesById[c.noteId]?.let { n -> template(n.type, c.template)?.applies(n) == true } == true }
     val queue = remember(cards, notesById, meanings, daily, prefs, now, deckId, buried, extraNew, ahead, tagNotes, aheadDays) {
@@ -167,7 +188,8 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
     val tpl = if (card != null && note != null) template(note.type, card.template) else null
     val similar = remember(note, notes) { note?.let { confusables(it, notes) } ?: emptyList() }
 
-    LaunchedEffect(card?.id) {
+    // Keyed by card and turn: a learning card can come straight back (learn-ahead) and must start unanswered again.
+    LaunchedEffect(card?.id, session.shown) {
         revealed = false; typed = ""; verdict = null; extraHints = 0; mixedUp = null; shownAt = System.currentTimeMillis()
         // Listening cards always play the sentence; others read the front aloud if the learner chose that.
         if (tpl != null && note != null && (prefs.autoSpeak == "front" || tpl.id == "listen")) tpl.speakFront(note)?.let { app.speech.speak(it) }
@@ -199,11 +221,12 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
         busy = true
         val dur = System.currentTimeMillis() - shownAt
         val wasNew = c.state == CardState.NEW
+        val answered = note?.let { Answered(it.id, it.fields["word"].str(), it.fields["vi"].str(), r) }
         scope.launch {
             val res = data.review(c, r, dur)
             history.add(res); if (history.size > 10) history.removeAt(0)
             buried = buried + c.noteId
-            session = Session(session.answered + 1, session.again + if (r == 1) 1 else 0, session.ms + minOf(dur, 120_000), session.shown + 1, session.shownNew + if (wasNew) 1 else 0)
+            session = Session(session.answered + 1, session.again + if (r == 1) 1 else 0, session.ms + minOf(dur, 120_000), session.shown + 1, session.shownNew + if (wasNew) 1 else 0, if (answered != null) session.log + answered else session.log)
             holder[0] = null
             now = System.currentTimeMillis()
             busy = false
@@ -218,7 +241,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
         scope.launch {
             data.undo(last)
             buried = buried - last.prev.noteId
-            session = session.copy(answered = maxOf(0, session.answered - 1), again = maxOf(0, session.again - if (last.delta.rating == 1) 1 else 0), shown = maxOf(0, session.shown - 1), shownNew = maxOf(0, session.shownNew - last.delta.newCards))
+            session = session.copy(answered = maxOf(0, session.answered - 1), again = maxOf(0, session.again - if (last.delta.rating == 1) 1 else 0), shown = maxOf(0, session.shown - 1), shownNew = maxOf(0, session.shownNew - last.delta.newCards), log = session.log.dropLast(1))
             holder[0] = last.prev.id
             now = System.currentTimeMillis()
             busy = false
@@ -237,6 +260,16 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
         return
     }
 
+    if (!started) {
+        TodayPanel(
+            cards = cards, queue = queue, daily = daily, dayStartHour = prefs.dayStartHour, now = now,
+            lessons = tags.filter { isLesson(it.first) }.map { Triple(it.first, startedByTag[it.first] ?: 0, it.second) },
+            onStart = { started = true; holder[0] = null },
+            onLesson = { t -> tag = t; aheadDays = 0; started = true; holder[0] = null },
+        )
+        return
+    }
+
     val c = Lexi.colors
     val total = queue.counts.new + queue.counts.learning + queue.counts.review
     val doneFrac = if (session.answered + total == 0) 1f else session.answered.toFloat() / (session.answered + total)
@@ -244,141 +277,157 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
     val answer = if (note != null && tpl != null) tpl.expected(note).firstOrNull() ?: "" else ""
     val letters = letterCount(answer)
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // Deck picker on its own line: next to the three count chips it was squeezed to one letter on a 320dp phone.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.weight(1f, fill = false)) {
-                OutlinedButton(onClick = { deckMenu = true }, Modifier.testTag("deck-pick")) {
-                    Text(decks.firstOrNull { it.id == deckId }?.name ?: "Tất cả bộ thẻ", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    val fsrs = remember(prefs.desiredRetention) { Fsrs(prefs.desiredRetention) }
+    val suggested = verdict?.let { suggestedRatingWith(it, extraHints, mixedUp != null) }
+    Column(Modifier.fillMaxSize()) {
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Deck picker on its own line: next to the three count chips it was squeezed to one letter on a 320dp phone.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.weight(1f, fill = false)) {
+                    OutlinedButton(onClick = { deckMenu = true }, Modifier.testTag("deck-pick")) {
+                        Text(decks.firstOrNull { it.id == deckId }?.name ?: "Tất cả bộ thẻ", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    DropdownMenu(expanded = deckMenu, onDismissRequest = { deckMenu = false }) {
+                        DropdownMenuItem(text = { Text("Tất cả bộ thẻ") }, onClick = { deckId = null; holder[0] = null; deckMenu = false })
+                        for (d in decks) DropdownMenuItem(text = { Text(d.name) }, onClick = { deckId = d.id; holder[0] = null; deckMenu = false })
+                    }
                 }
-                DropdownMenu(expanded = deckMenu, onDismissRequest = { deckMenu = false }) {
-                    DropdownMenuItem(text = { Text("Tất cả bộ thẻ") }, onClick = { deckId = null; holder[0] = null; deckMenu = false })
-                    for (d in decks) DropdownMenuItem(text = { Text(d.name) }, onClick = { deckId = d.id; holder[0] = null; deckMenu = false })
+                if (tags.isNotEmpty()) Box(Modifier.weight(1f, fill = false)) {
+                    OutlinedButton(onClick = { tagMenu = true }, Modifier.testTag("tag-pick")) {
+                        Text(tag ?: "Tất cả bài", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    DropdownMenu(expanded = tagMenu, onDismissRequest = { tagMenu = false }) {
+                        DropdownMenuItem(text = { Text("Tất cả bài") }, onClick = { tag = null; aheadDays = 0; holder[0] = null; tagMenu = false })
+                        for ((t, n) in tags) DropdownMenuItem(text = { Text(lessonLabel(t, startedByTag[t] ?: 0, n)) }, onClick = { tag = t; aheadDays = 0; holder[0] = null; tagMenu = false })
+                    }
                 }
             }
-            if (tags.isNotEmpty()) Box(Modifier.weight(1f, fill = false)) {
-                OutlinedButton(onClick = { tagMenu = true }, Modifier.testTag("tag-pick")) {
-                    Text(tag ?: "Tất cả bài", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                DropdownMenu(expanded = tagMenu, onDismissRequest = { tagMenu = false }) {
-                    DropdownMenuItem(text = { Text("Tất cả bài") }, onClick = { tag = null; aheadDays = 0; holder[0] = null; tagMenu = false })
-                    for ((t, n) in tags) DropdownMenuItem(text = { Text("$t ($n)") }, onClick = { tag = t; aheadDays = 0; holder[0] = null; tagMenu = false })
-                }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                CountChip("Mới ${queue.counts.new}", c.easy, kind == "new")
+                CountChip("Đang học ${queue.counts.learning}", c.again, kind == "learn")
+                CountChip("Ôn ${queue.counts.review}", c.good, kind == "review")
             }
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            CountChip("Mới ${queue.counts.new}", c.easy, kind == "new")
-            CountChip("Đang học ${queue.counts.learning}", c.again, kind == "learn")
-            CountChip("Ôn ${queue.counts.review}", c.good, kind == "review")
-        }
-        LinearProgressIndicator(progress = { doneFrac }, Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = c.accent, trackColor = c.surface2, gapSize = 0.dp, drawStopIndicator = {})
+            LinearProgressIndicator(progress = { doneFrac }, Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = c.accent, trackColor = c.surface2, gapSize = 0.dp, drawStopIndicator = {})
 
-        if (card == null || note == null || tpl == null) {
-            DoneCard(
-                session = session, waitingMs = cards.filter { (it.state == CardState.LEARNING || it.state == CardState.RELEARNING) && !it.suspended && it.due > now && (deckId == null || it.deckId == deckId) }.minOfOrNull { it.due }?.let { it - now },
-                hasMoreNew = cards.any { it.state == CardState.NEW && !it.suspended && eligible(it) && (deckId == null || it.deckId == deckId) && (tagNotes == null || it.noteId in tagNotes) }, canUndo = history.isNotEmpty(),
-                aheadCount = dueWithin(cards, eligible, now, prefs.dayStartHour, aheadDays + 1, deckId, tagNotes) - dueWithin(cards, eligible, now, prefs.dayStartHour, aheadDays, deckId, tagNotes),
-                onContinue = { ahead = LEARN_AHEAD_MS; holder[0] = null }, onMore = { extraNew += 5; holder[0] = null }, onAhead = { aheadDays += 1; holder[0] = null }, onUndo = ::undo, onAdd = onAdd,
-            )
-        } else {
-            val mode = modeColor(tpl.id)
-            // Each new card eases in (fade + small rise) instead of popping, so a long session feels calmer.
-            val appear = remember(card.id) { Animatable(0f) }
-            LaunchedEffect(card.id) { appear.animateTo(1f, tween(280)) }
-            Surface(
-                shape = RoundedCornerShape(26.dp), color = c.surface, border = BorderStroke(1.dp, c.line), shadowElevation = 3.dp,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp)
-                    .graphicsLayer { alpha = appear.value; translationY = (1f - appear.value) * 24f }
-                    .then(if (!revealed && tpl.mode == AnswerMode.FLIP) Modifier.clickable { reveal() } else Modifier),
-            ) {
-              Column {
-                // The mode's colour along the top edge says which kind of card this is before any word is read.
-                Box(Modifier.fillMaxWidth().height(5.dp).background(mode))
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 24.dp).animateContentSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
-                    // What the card asks for; once answered, the space goes to the answer so the rating row stays in view.
-                    if (!revealed) ModeHeader(tpl.id, tpl.label, mode)
-                    BlocksView(tpl.front(note, prefs.layout), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
-                    if (tpl.mode == AnswerMode.TYPE && !revealed && answer.isNotEmpty()) {
-                        AnswerHint(answerHint(answer, 1 + extraHints), letters, answer.trim().split(Regex("\\s+")).size, mode)
-                        if (similar.isNotEmpty()) NotThese(similar.take(3))
-                    }
-                    if (tpl.mode == AnswerMode.TYPE && !revealed) {
-                        OutlinedTextField(
-                            value = typed, onValueChange = { typed = it }, singleLine = true, placeholder = { Text("Gõ đáp án…") },
-                            // Part of the field, so keepVisibleWhileTyping keeps it above the keyboard together with the input.
-                            supportingText = mixedUp?.let { o -> { MixedUp(o) } },
-                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 20.sp, textAlign = TextAlign.Center),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, autoCorrectEnabled = false),
-                            keyboardActions = KeyboardActions(onDone = { submitTyped() }),
-                            modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping(),
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { submitTyped() }, Modifier.testTag("type-check")) { Text("Kiểm tra") }
-                            TextButton(onClick = { reveal(Verdict.WRONG) }) { Text("Không nhớ") }
+            if (card == null || note == null || tpl == null) {
+                val nextLesson = tag?.let { t ->
+                    val i = tags.indexOfFirst { it.first == t }
+                    if ((startedByTag[t] ?: 0) < (tags.getOrNull(i)?.second ?: 0)) null
+                    else tags.drop(i + 1).firstOrNull { isLesson(it.first) && (startedByTag[it.first] ?: 0) < it.second }?.first
+                }
+                DoneCard(
+                    streak = streak(daily, now, prefs.dayStartHour), dueTomorrow = dueWithin(cards, eligible, now, prefs.dayStartHour, 1, deckId, tagNotes),
+                    nextLesson = nextLesson, onLesson = { t -> tag = t; aheadDays = 0; holder[0] = null },
+                    session = session, waitingMs = cards.filter { (it.state == CardState.LEARNING || it.state == CardState.RELEARNING) && !it.suspended && it.due > now && (deckId == null || it.deckId == deckId) }.minOfOrNull { it.due }?.let { it - now },
+                    hasMoreNew = cards.any { it.state == CardState.NEW && !it.suspended && eligible(it) && (deckId == null || it.deckId == deckId) && (tagNotes == null || it.noteId in tagNotes) }, canUndo = history.isNotEmpty(),
+                    aheadCount = dueWithin(cards, eligible, now, prefs.dayStartHour, aheadDays + 1, deckId, tagNotes) - dueWithin(cards, eligible, now, prefs.dayStartHour, aheadDays, deckId, tagNotes),
+                    onContinue = { ahead = DAY_MS; holder[0] = null }, onMore = { extraNew += 5; holder[0] = null }, onAhead = { aheadDays += 1; holder[0] = null }, onUndo = ::undo, onAdd = onAdd,
+                )
+            } else {
+                val mode = modeColor(tpl.id)
+                // Each new card eases in (fade + small rise) instead of popping, so a long session feels calmer.
+                val appear = remember(card.id, session.shown) { Animatable(0f) }
+                LaunchedEffect(card.id, session.shown) { appear.animateTo(1f, tween(280)) }
+                Surface(
+                    shape = RoundedCornerShape(26.dp), color = c.surface, border = BorderStroke(1.dp, c.line), shadowElevation = 3.dp,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp)
+                        .graphicsLayer { alpha = appear.value; translationY = (1f - appear.value) * 24f }
+                        .then(if (!revealed && tpl.mode == AnswerMode.FLIP) Modifier.clickable { reveal() } else Modifier),
+                ) {
+                  Column {
+                    // The mode's colour along the top edge says which kind of card this is before any word is read.
+                    Box(Modifier.fillMaxWidth().height(5.dp).background(mode))
+                    Column(Modifier.padding(horizontal = 20.dp, vertical = 24.dp).animateContentSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
+                        // What the card asks for; once answered, the space goes to the answer so the rating row stays in view.
+                        if (!revealed) ModeHeader(tpl.id, tpl.label, mode)
+                        BlocksView(tpl.front(note, prefs.layout), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
+                        if (tpl.mode == AnswerMode.TYPE && !revealed && answer.isNotEmpty()) {
+                            AnswerHint(answerHint(answer, 1 + extraHints), letters, answer.trim().split(Regex("\\s+")).size, mode)
+                            if (similar.isNotEmpty()) NotThese(similar.take(3))
                         }
-                        if (letters - 1 - extraHints > 1) {
-                            OutlinedButton(onClick = { extraHints++ }, Modifier.testTag("more-hint")) { Text("Gợi ý thêm chữ") }
-                        }
-                    }
-                    if (revealed) {
-                        androidx.compose.material3.HorizontalDivider(color = c.line)
-                        verdict?.let { v ->
-                            Pill(
-                                (when (v) { Verdict.CORRECT -> "✓ Chính xác"; Verdict.CLOSE -> "✓ Gần đúng"; Verdict.WRONG -> "✕ Chưa đúng" }) +
-                                    (if (typed.isNotBlank() && v != Verdict.CORRECT) " · bạn gõ “$typed”" else "") +
-                                    (mixedUp?.let { " · lần đầu gõ “${it.word}”" } ?: if (extraHints > 0) " · có dùng gợi ý" else ""),
-                                when (v) { Verdict.CORRECT -> PillKind.OK; Verdict.CLOSE -> PillKind.WARN; Verdict.WRONG -> PillKind.BAD },
-                                Modifier.testTag("verdict"),
-                                wrap = true,
+                        if (tpl.mode == AnswerMode.TYPE && !revealed) {
+                            OutlinedTextField(
+                                value = typed, onValueChange = { typed = it }, singleLine = true, placeholder = { Text("Gõ đáp án…") },
+                                // Part of the field, so keepVisibleWhileTyping keeps it above the keyboard together with the input.
+                                supportingText = mixedUp?.let { o -> { MixedUp(o) } },
+                                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 20.sp, textAlign = TextAlign.Center),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, autoCorrectEnabled = false),
+                                keyboardActions = KeyboardActions(onDone = { submitTyped() }),
+                                modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping(),
                             )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { submitTyped() }, Modifier.testTag("type-check")) { Text("Kiểm tra") }
+                                TextButton(onClick = { reveal(Verdict.WRONG) }) { Text("Không nhớ") }
+                            }
+                            if (letters - 1 - extraHints > 1) {
+                                OutlinedButton(onClick = { extraHints++ }, Modifier.testTag("more-hint")) { Text("Gợi ý thêm chữ") }
+                            }
                         }
-                        BlocksView(tpl.back(note, prefs.layout), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
-                    } else if (tpl.mode == AnswerMode.FLIP) {
-                        Text("Chạm thẻ để xem đáp án", color = c.muted, fontSize = 13.sp)
+                        if (revealed) {
+                            androidx.compose.material3.HorizontalDivider(color = c.line)
+                            verdict?.let { v ->
+                                Pill(
+                                    (when (v) { Verdict.CORRECT -> "✓ Chính xác"; Verdict.CLOSE -> "✓ Gần đúng"; Verdict.WRONG -> "✕ Chưa đúng" }) +
+                                        (if (typed.isNotBlank() && v != Verdict.CORRECT) " · bạn gõ “$typed”" else "") +
+                                        (mixedUp?.let { " · lần đầu gõ “${it.word}”" } ?: if (extraHints > 0) " · có dùng gợi ý" else ""),
+                                    when (v) { Verdict.CORRECT -> PillKind.OK; Verdict.CLOSE -> PillKind.WARN; Verdict.WRONG -> PillKind.BAD },
+                                    Modifier.testTag("verdict"),
+                                    wrap = true,
+                                )
+                            }
+                            BlocksView(tpl.back(note, prefs.layout), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
+                        } else if (tpl.mode == AnswerMode.FLIP) {
+                            Text("Chạm thẻ để xem đáp án", color = c.muted, fontSize = 13.sp)
+                        }
+                    }
+                  }
+                }
+
+                if (revealed) {
+                    if (similar.isNotEmpty()) Compare(note.fields["word"].str(), note.fields["pos"].str(), note.fields["en"].str(), similar.take(3))
+                }
+
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row {
+                        TextButton(onClick = ::undo, enabled = history.isNotEmpty()) { Icon(Icons.AutoMirrored.Filled.Undo, null, Modifier.size(16.dp)); Text(" Hoàn tác", fontSize = 13.sp) }
+                        TextButton(onClick = { editing = note.id }) { Icon(Icons.Filled.Edit, null, Modifier.size(16.dp)); Text(" Sửa", fontSize = 13.sp) }
+                        TextButton(onClick = {
+                            val hidden = card
+                            scope.launch {
+                                data.setSuspended(hidden, true)
+                                holder[0] = null
+                                toast("Đã ẩn thẻ này")
+                            }
+                        }) { Icon(Icons.Filled.VisibilityOff, null, Modifier.size(16.dp)); Text(" Ẩn", fontSize = 13.sp) }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (isLeech(card)) Pill("Khó · quên ${card.lapses}", PillKind.BAD)
                     }
                 }
-              }
             }
+        }
 
-            if (!revealed && tpl.mode == AnswerMode.FLIP) {
-                Button(onClick = { reveal() }, Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("show-answer"), shape = RoundedCornerShape(16.dp)) { Text("Hiện đáp án", fontSize = 16.sp) }
-            } else if (revealed) {
-                val fsrs = remember(prefs.desiredRetention) { Fsrs(prefs.desiredRetention) }
-                val suggested = verdict?.let { suggestedRatingWith(it, extraHints, mixedUp != null) }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for ((r, label) in listOf(1 to "Quên", 2 to "Khó", 3 to "Tốt", 4 to "Dễ")) {
-                        val (fg, soft) = when (r) { 1 -> c.again to c.againSoft; 2 -> c.hard to c.hardSoft; 3 -> c.good to c.goodSoft; else -> c.easy to c.easySoft }
-                        val next = fsrs.next(card, now, r)
-                        Surface(
-                            onClick = { rate(r) }, modifier = Modifier.weight(1f).heightIn(min = 64.dp).testTag("rate-$r"), shape = RoundedCornerShape(16.dp),
-                            color = if (suggested == r) soft else soft.copy(alpha = 0.55f), border = BorderStroke(1.5.dp, if (suggested == r) fg else Color.Transparent),
-                        ) {
-                            Column(Modifier.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                                Text(label, color = fg, fontWeight = FontWeight.Bold)
-                                Text(Fsrs.formatInterval(next.due - now), color = c.muted, fontSize = 12.sp)
+        // Pinned under the scrolling card: two examples with translations must not push the buttons off the screen.
+        if (card != null && note != null && tpl != null && (revealed || tpl.mode == AnswerMode.FLIP)) {
+            Box(Modifier.fillMaxWidth().background(c.bg).padding(horizontal = 16.dp, vertical = 10.dp)) {
+                if (!revealed && tpl.mode == AnswerMode.FLIP) {
+                    Button(onClick = { reveal() }, Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("show-answer"), shape = RoundedCornerShape(16.dp)) { Text("Hiện đáp án", fontSize = 16.sp) }
+                } else if (revealed) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for ((r, label) in listOf(1 to "Quên", 2 to "Khó", 3 to "Tốt", 4 to "Dễ")) {
+                            val (fg, soft) = when (r) { 1 -> c.again to c.againSoft; 2 -> c.hard to c.hardSoft; 3 -> c.good to c.goodSoft; else -> c.easy to c.easySoft }
+                            val next = fsrs.next(card, now, r)
+                            Surface(
+                                onClick = { rate(r) }, modifier = Modifier.weight(1f).heightIn(min = 64.dp).testTag("rate-$r"), shape = RoundedCornerShape(16.dp),
+                                color = if (suggested == r) soft else soft.copy(alpha = 0.55f).compositeOver(c.surface), border = BorderStroke(1.5.dp, if (suggested == r) fg else Color.Transparent),
+                            ) {
+                                Column(Modifier.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                    Text(label, color = fg, fontWeight = FontWeight.Bold)
+                                    Text(Fsrs.formatInterval(next.due - now), color = c.muted, fontSize = 12.sp)
+                                }
                             }
                         }
                     }
-                }
-                // Below the rating row, which must stay reachable without scrolling on a small phone.
-                if (similar.isNotEmpty()) Compare(note.fields["word"].str(), note.fields["pos"].str(), note.fields["en"].str(), similar.take(3))
-            }
-
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Row {
-                    TextButton(onClick = ::undo, enabled = history.isNotEmpty()) { Icon(Icons.AutoMirrored.Filled.Undo, null, Modifier.size(16.dp)); Text(" Hoàn tác", fontSize = 13.sp) }
-                    TextButton(onClick = { editing = note.id }) { Icon(Icons.Filled.Edit, null, Modifier.size(16.dp)); Text(" Sửa", fontSize = 13.sp) }
-                    TextButton(onClick = {
-                        val hidden = card
-                        scope.launch {
-                            data.setSuspended(hidden, true)
-                            holder[0] = null
-                            toast("Đã ẩn thẻ này")
-                        }
-                    }) { Icon(Icons.Filled.VisibilityOff, null, Modifier.size(16.dp)); Text(" Ẩn", fontSize = 13.sp) }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (isLeech(card)) Pill("Khó · quên ${card.lapses}", PillKind.BAD)
                 }
             }
         }
@@ -497,23 +546,52 @@ private fun Compare(word: String, pos: String, en: String, others: List<Confusab
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DoneCard(session: Session, waitingMs: Long?, hasMoreNew: Boolean, canUndo: Boolean, aheadCount: Int, onContinue: () -> Unit, onMore: () -> Unit, onAhead: () -> Unit, onUndo: () -> Unit, onAdd: () -> Unit) {
+private fun DoneCard(
+    session: Session, waitingMs: Long?, streak: Int, dueTomorrow: Int, nextLesson: String?, onLesson: (String) -> Unit,
+    hasMoreNew: Boolean, canUndo: Boolean, aheadCount: Int, onContinue: () -> Unit, onMore: () -> Unit, onAhead: () -> Unit, onUndo: () -> Unit, onAdd: () -> Unit,
+) {
     val c = Lexi.colors
+    // Last answer per word, keeping the worst: a word forgotten then got right in its learning step counts as forgotten.
+    val words = LinkedHashMap<String, Answered>()
+    for (a in session.log) { val prev = words[a.noteId]; words[a.noteId] = if (prev != null && prev.rating < a.rating) prev else a }
+    val list = words.values.sortedBy { it.rating }
+    val forgot = list.filter { it.rating == 1 }
     Panel(Modifier.testTag("session-done")) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(if (session.answered > 0) "Xong!" else "Hết thẻ hôm nay", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = c.accent)
             if (session.answered > 0) {
                 val acc = ((session.answered - session.again) * 100) / session.answered
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Stat("${session.answered}", "thẻ đã trả lời")
+                    Stat("${words.size}", "từ đã ôn")
                     Stat("$acc%", "nhớ đúng")
                     Stat("${maxOf(1, (session.ms / 60_000).toInt())}p", "thời gian")
                 }
+                if (streak > 0) Text("🔥 $streak ngày liên tiếp", fontWeight = FontWeight.SemiBold)
             } else {
                 Text("Không có thẻ đến hạn. Quay lại sau, hoặc thêm từ mới.", color = c.muted, textAlign = TextAlign.Center)
             }
+            if (forgot.isNotEmpty()) {
+                Column(Modifier.fillMaxWidth().background(c.againSoft, RoundedCornerShape(12.dp)).padding(horizontal = 14.dp, vertical = 10.dp).testTag("recap-forgot"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("CẦN CHÚ Ý", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.7.sp, color = c.again)
+                    for (a in forgot.take(6)) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(a.word, fontWeight = FontWeight.Bold)
+                        Text(a.vi, color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+            if (list.isNotEmpty()) {
+                FlowRow(Modifier.fillMaxWidth().testTag("recap"), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (a in list) {
+                        val (fg, soft) = when (a.rating) { 1 -> c.again to c.againSoft; 2 -> c.hard to c.hardSoft; 3 -> c.good to c.goodSoft; else -> c.easy to c.easySoft }
+                        Text(a.word, Modifier.background(soft, CircleShape).padding(horizontal = 10.dp, vertical = 3.dp), color = fg, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    }
+                }
+            }
             if (waitingMs != null) Text("Còn thẻ đang học, thẻ kế tiếp quay lại sau ${Fsrs.formatInterval(waitingMs)}.", color = c.muted, textAlign = TextAlign.Center)
+            else if (session.answered > 0) Text(if (dueTomorrow > 0) "Ngày mai có $dueTomorrow thẻ cần ôn." else "Ngày mai chưa có thẻ nào đến hạn.", color = c.muted, textAlign = TextAlign.Center)
+            if (nextLesson != null) Button(onClick = { onLesson(nextLesson) }, Modifier.testTag("next-lesson")) { Text("Sang bài tiếp: $nextLesson") }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (waitingMs != null) Button(onClick = onContinue) { Text("Học tiếp ngay") }
                 if (hasMoreNew) OutlinedButton(onClick = onMore) { Text("Thêm 5 từ mới") }
@@ -532,5 +610,119 @@ private fun Stat(value: String, label: String) {
     Column(Modifier.background(Lexi.colors.surface2, RoundedCornerShape(12.dp)).padding(horizontal = 14.dp, vertical = 10.dp)) {
         Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Text(label, fontSize = 12.sp, color = Lexi.colors.muted)
+    }
+}
+
+private val WEEKDAYS = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
+
+private fun greeting(hour: Int) = when {
+    hour < 11 -> "Chào buổi sáng"
+    hour < 14 -> "Chào buổi trưa"
+    hour < 18 -> "Chào buổi chiều"
+    else -> "Chào buổi tối"
+}
+
+/** Home of the study tab (Today.tsx): what today asks for, one button to start, the streak and the lesson path. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TodayPanel(
+    cards: List<Card>, queue: com.vh.lexi.core.Queue, daily: List<com.vh.lexi.core.Daily>, dayStartHour: Int, now: Long,
+    lessons: List<Triple<String, Int, Int>>, onStart: () -> Unit, onLesson: (String) -> Unit,
+) {
+    val c = Lexi.colors
+    // Cards, not answers: a card answered today and not waiting again is done; one in the queue is left.
+    val waiting = (queue.learning + queue.review + queue.newCards).map { it.id }.toSet()
+    val dayStart = com.vh.lexi.core.nextDayStart(now, dayStartHour) - DAY_MS
+    val done = cards.count { (it.lastReview ?: 0L) >= dayStart && it.id !in waiting }
+    val left = waiting.size
+    val frac = if (done + left == 0) 0f else done.toFloat() / (done + left)
+    val answers = daily.sumOf { it.newCards + it.reviews }
+    val perCardMs = if (answers > 0) daily.sumOf { it.ms } / answers else 10_000L
+    val minutes = maxOf(1L, (left * perCardMs + 30_000) / 60_000)
+    val active = daily.filter { it.newCards + it.reviews > 0 }.map { it.id }.toSet()
+    val todayId = dayId(now, dayStartHour)
+    val todayStart = now - dayStartHour * 3_600_000L
+    val dow = java.time.Instant.ofEpochMilli(todayStart).atZone(java.time.ZoneId.systemDefault()).dayOfWeek.value - 1 // Monday = 0
+    val monday = todayStart - dow * DAY_MS
+    val current = lessons.firstOrNull { it.second < it.third }
+    var allLessons by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp).testTag("today"), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column {
+            Text(greeting(java.time.LocalTime.now().hour), fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text(if (left > 0) "Hôm nay còn $left thẻ, khoảng $minutes phút." else if (done > 0) "Bạn đã học xong phần hôm nay." else "Hôm nay không có thẻ đến hạn.", color = c.muted)
+        }
+        Panel {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Box(Modifier.size(168.dp).testTag("today-ring"), contentAlignment = Alignment.Center) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        progress = { frac }, modifier = Modifier.fillMaxSize(), color = c.accent, trackColor = c.surface2, strokeWidth = 11.dp,
+                        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round, gapSize = 0.dp,
+                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("$done/${done + left}", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                        Text("thẻ hôm nay", fontSize = 12.sp, color = c.muted)
+                    }
+                }
+                Button(onClick = onStart, Modifier.fillMaxWidth().heightIn(min = 54.dp).testTag("start-study"), shape = RoundedCornerShape(16.dp)) {
+                    Text(if (left == 0) "Xem buổi học" else if (done == 0) "Bắt đầu học" else "Học tiếp", fontSize = 17.sp)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.weight(1f).background(c.accentSoft, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 12.dp)) {
+                        Text("Đến hạn", fontSize = 13.sp, color = c.accent)
+                        Text("${queue.counts.review + queue.counts.learning}", fontSize = 26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("today-due"))
+                    }
+                    Column(Modifier.weight(1f).background(c.memo, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 12.dp)) {
+                        Text("Từ mới", fontSize = 13.sp, color = c.hard)
+                        Text("${queue.counts.new}", fontSize = 26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("today-new"))
+                    }
+                }
+            }
+        }
+        Panel(Modifier.testTag("today-streak")) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("🔥 Chuỗi học", fontWeight = FontWeight.Bold)
+                    Text("${streak(daily, now, dayStartHour)} ngày", fontWeight = FontWeight.Bold)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    WEEKDAYS.forEachIndexed { i, label ->
+                        val t = monday + i * DAY_MS + dayStartHour * 3_600_000L
+                        val id = dayId(t, dayStartHour)
+                        val on = id in active
+                        val isToday = id == todayId
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(label, fontSize = 11.sp, color = if (isToday) c.accent else c.muted, fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal)
+                            Box(
+                                Modifier.size(28.dp).background(if (on) c.accent else Color.Transparent, CircleShape).border(2.dp, if (on) c.accent else c.line, CircleShape),
+                                contentAlignment = Alignment.Center,
+                            ) { if (on) Text("✓", color = c.onAccent, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+                        }
+                    }
+                }
+            }
+        }
+        if (current != null) {
+            Panel(Modifier.testTag("today-lesson")) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Bài đang học", color = c.muted)
+                        Text("${current.second}/${current.third} từ", color = c.muted)
+                    }
+                    Text(current.first, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    LinearProgressIndicator(progress = { current.second.toFloat() / current.third }, Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = c.accent, trackColor = c.surface2, gapSize = 0.dp, drawStopIndicator = {})
+                    OutlinedButton(onClick = { onLesson(current.first) }, Modifier.fillMaxWidth().testTag("study-lesson")) { Text("Học bài này") }
+                    TextButton(onClick = { allLessons = !allLessons }) { Text((if (allLessons) "▾ " else "▸ ") + "Tất cả ${lessons.size} bài") }
+                    if (allLessons) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for ((t, started, total) in lessons) {
+                            val full = started >= total
+                            Surface(
+                                onClick = { onLesson(t) }, shape = RoundedCornerShape(10.dp), color = if (full) c.accentSoft else c.surface,
+                                border = BorderStroke(1.dp, if (full) Color.Transparent else if (started > 0) c.accent else c.line),
+                            ) { Text("$t  $started/$total", Modifier.padding(horizontal = 10.dp, vertical = 8.dp), fontSize = 13.sp) }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

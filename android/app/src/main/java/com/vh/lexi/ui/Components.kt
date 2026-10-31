@@ -210,15 +210,21 @@ fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifie
                 }
                 b.vi?.let { Text(it, fontSize = 15.sp, lineHeight = 23.sp, color = c.muted) }
             }
-            is Block.Memo -> Column(
-                Modifier.fillMaxWidth().background(c.memo, RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 12.dp).testTag("memo"),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Filled.AutoAwesome, null, tint = c.hard, modifier = Modifier.size(14.dp))
-                    Text("MẸO NHỚ", fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = c.hard)
+            // Folded behind a chip so the answer stays short; one tap opens it when the word does not come back.
+            is Block.Memo -> {
+                var open by remember(b) { mutableStateOf(false) }
+                Column(
+                    Modifier.then(if (open) Modifier.fillMaxWidth() else Modifier).background(c.memo, RoundedCornerShape(if (open) 16.dp else 50.dp))
+                        .clickable { open = !open }.padding(horizontal = 14.dp, vertical = if (open) 12.dp else 8.dp).testTag("memo"),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Filled.AutoAwesome, null, tint = c.hard, modifier = Modifier.size(14.dp))
+                        Text("MẸO NHỚ", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = c.hard)
+                        Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = c.hard, modifier = Modifier.size(16.dp))
+                    }
+                    if (open) Text(b.text, fontSize = 16.sp, lineHeight = 25.sp, color = c.ink)
                 }
-                Text(b.text, fontSize = 16.sp, lineHeight = 25.sp, color = c.ink)
             }
             is Block.Fold -> {
                 var open by remember(b) { mutableStateOf(false) }

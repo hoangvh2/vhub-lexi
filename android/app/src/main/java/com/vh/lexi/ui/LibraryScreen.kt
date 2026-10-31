@@ -40,6 +40,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -185,7 +190,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
                         Modifier.fillMaxWidth().clickable { if (selecting) { selected = if (picked) selected - n.id else selected + n.id } else editing = n.id }.padding(vertical = 10.dp),
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        if (selecting) Checkbox(checked = picked, onCheckedChange = null)
+                        if (selecting) Checkbox(checked = picked, onCheckedChange = null) else WordStatus(cs)
                         Column(Modifier.weight(1f)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(def.title(n), fontWeight = FontWeight.Bold)
@@ -301,4 +306,27 @@ private fun BatchCard(b: BatchProgress, onStop: () -> Unit, onClose: () -> Unit)
             Modifier.fillMaxWidth().height(6.dp), color = c.accent, trackColor = c.surface, gapSize = 0.dp, drawStopIndicator = {},
         )
     }
+}
+
+/** How far along a word is (Library.tsx WordStatus): not started, being learnt, or known (every card at a 21-day interval or more). */
+@Composable
+private fun WordStatus(cs: List<Card>) {
+    val c = Lexi.colors
+    val live = cs.filter { !it.suspended }
+    val st = when {
+        live.isEmpty() || live.all { it.state == CardState.NEW } -> "Chưa học"
+        live.all { it.state == CardState.REVIEW && it.scheduledDays >= 21 } -> "Đã thuộc"
+        else -> "Đang học"
+    }
+    val color = when (st) { "Đã thuộc" -> c.good; "Đang học" -> c.hard; else -> c.line }
+    androidx.compose.foundation.layout.Box(
+        Modifier.size(20.dp).border(2.dp, color, androidx.compose.foundation.shape.CircleShape)
+            .drawBehind {
+                when (st) {
+                    "Đã thuộc" -> drawCircle(color)
+                    "Đang học" -> drawArc(color, -90f, 180f, useCenter = true)
+                }
+            }
+            .semantics { contentDescription = st }.testTag("word-status"),
+    )
 }
