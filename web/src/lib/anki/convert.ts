@@ -57,6 +57,8 @@ export interface ImportReport {
   skippedExisting: number;
   /** Words already in Lexi (another note with the same word). */
   skippedDuplicates: string[];
+  /** Words the deck lists twice (in two lessons), folded into the first note. */
+  merged: string[];
   skippedEmpty: number;
   /** Anki cards whose template was mapped to nothing. */
   droppedCards: number;
@@ -140,18 +142,52 @@ export function htmlLines(html: string): string[] {
   return text.split("\n").map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean);
 }
 const htmlText = (html: string) => htmlLines(html).join(" ");
-/** "a. The two parties…" -> "The two parties…" (list markers of the 600 Essential deck). */
-const unmark = (l: string) => l.replace(/^(?:[a-h]|\d{1,2})[.)]\s+/i, "");
+/** "a. The two parties…" / "a.The two parties…" -> "The two parties…" (list markers of the 600 Essential deck). */
+const unmark = (l: string) => l.replace(/^(?:[a-h]|\d{1,2})[.)](?:\s+|(?=[\p{Lu}"“‘']))/iu, "");
+
+const VIETNAMESE = /[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i;
+/**
+ * A line of an example field that is not an example sentence: a glossary entry ("withstand : chống lại",
+ * "serve /sə:v/: cú giao bóng"), a bullet or arrow note, a bracketed aside, a bare word or a lowercase fragment.
+ */
+export function isGloss(line: string): boolean {
+  if (/^(?:[•*·>(\[-]|–|-->)/.test(line)) return true;
+  const head = line.slice(0, Math.max(0, line.indexOf(":")));
+  if (head && !/[.!?]/.test(head) && (head.includes("/") || head.trim().split(/\s+/).length <= 3)) return true;
+  if (line.split(/\s+/).length < 3) return true;
+  return /^\p{Ll}/u.test(line);
+}
+
+/**
+ * Example sentences and their translations, kept index-aligned (Lexi pairs examples[i] with examplesVi[i]).
+ * Glossary notes found among them come back separately; Vietnamese sentences typed into the example field
+ * become the translations when the translation field is empty.
+ */
+export function splitExamples(exLines: string[], viLines: string[]): { examples: string[]; examplesVi: string[]; notes: string[] } {
+  const notes: string[] = [];
+  const examples: string[] = [];
+  const strayVi: string[] = [];
+  for (const l of exLines.map(unmark)) {
+    if (isGloss(l)) notes.push(l);
+    else if (VIETNAMESE.test(l)) strayVi.push(l);
+    else examples.push(l);
+  }
+  const examplesVi: string[] = [];
+  for (const l of viLines.map(unmark)) (isGloss(l) ? notes : examplesVi).push(l);
+  if (!examplesVi.length) examplesVi.push(...strayVi);
+  else notes.push(...strayVi);
+  return { examples, examplesVi: examplesVi.slice(0, examples.length), notes };
+}
 
 const POS: Record<string, string> = {
   n: "noun", noun: "noun", v: "verb", verb: "verb", adj: "adjective", a: "adjective", adjective: "adjective",
   adv: "adverb", r: "adverb", adverb: "adverb", prep: "preposition", preposition: "preposition",
   conj: "conjunction", conjunction: "conjunction", pron: "pronoun", pronoun: "pronoun", phr: "phrase", phrase: "phrase",
 };
-/** "(v)" -> "verb", "(n, v)" -> "noun, verb"; anything unknown kept as written. */
+/** "(v)" -> "verb", "(n, v)" and "/n-v/" -> "noun, verb"; anything unknown kept as written. */
 export function normalizePos(s: string): string {
   const t = s.replace(/[()[\]]/g, "").trim();
-  const parts = t.split(/\s*[,/;&]\s*|\s+or\s+/i).filter(Boolean);
+  const parts = t.split(/\s*[,/;&+-]\s*|\s+or\s+|\s+/i).filter(Boolean);
   const mapped = parts.map((p) => POS[p.toLowerCase().replace(/\.$/, "")]);
   return mapped.every(Boolean) && mapped.length ? [...new Set(mapped)].join(", ") : t;
 }
@@ -218,7 +254,7 @@ export function convertAnki(col: AnkiCollection, plan: ImportPlan, ex: ImportExi
   const nt = col.notetypes.get(plan.notetypeId);
   const report: ImportReport = {
     notes: 0, cards: 0, reviews: 0, studied: 0, suspended: 0, dueToday: 0, skippedExisting: 0, skippedDuplicates: [],
-    skippedEmpty: 0, droppedCards: 0, truncated: 0, lessons: [], writes: 0,
+    skippedEmpty: 0, droppedCards: 0, truncated: 0, lessons: [], writes: 0, merged: [],
   };
   const file: ExportFile = { app: "vhub-lexi", version: 1, exportedAt: now, decks: [], notes: [], cards: [], reviews: [], daily: [], prefs: null };
   if (!nt) return { file, report };
@@ -227,6 +263,20 @@ export function convertAnki(col: AnkiCollection, plan: ImportPlan, ex: ImportExi
   const at = (fields: string[], key: VocabKey) => {
     const i = fieldIndex.get(plan.fields[key]);
     return i === undefined ? "" : fields[i] ?? "";
+  };
+  const mergeInto = (note: Note, tag: string | null, vi: string, examples: string[], examplesVi: string[]) => {
+    const f = note.fields;
+    if (tag) note.tags = [...new Set([...(note.tags ?? []), tag])].slice(0, 10);
+    const had = String(f.vi ?? "");
+    const norm = (s: string) => s.toLowerCase().replace(/[;,.\s]+$/, "");
+    if (vi && !norm(had).includes(norm(vi))) f.vi = limit("vi", had ? `${had.replace(/[;\s]+$/, "")}; ${vi}` : vi);
+    const ex = (f.examples as string[] | undefined) ?? [];
+    const exVi = (f.examplesVi as string[] | undefined) ?? [];
+    const room = 8 - ex.length;
+    if (room <= 0 || !examples.length) return;
+    // Translations pair by index, so the twin's translations only follow when every earlier example has one.
+    if (exVi.length === ex.length && examplesVi.length) f.examplesVi = [...exVi, ...examplesVi.slice(0, room)];
+    f.examples = [...ex, ...examples.slice(0, room)];
   };
   const limit = (key: string, s: string) => {
     const max = def.fields.find((f) => f.key === key)?.maxLength ?? 300;
@@ -253,6 +303,9 @@ export function convertAnki(col: AnkiCollection, plan: ImportPlan, ex: ImportExi
 
   const existingIds = new Set(ex.notes.map((n) => n.id));
   const existingWords = new Set(ex.notes.map((n) => String(n.fields.word ?? "").trim().toLowerCase()));
+  // A word the deck lists in two lessons (600 Essential has "express" in Correspondence and Museums) stays one
+  // Lexi note: the later one adds its lesson tag, meaning and examples to it.
+  const importedWords = new Map<string, Note>();
   const cardsByNote = new Map<string, AnkiCard[]>();
   for (const c of col.cards) {
     const l = cardsByNote.get(c.nid) ?? [];
@@ -288,22 +341,30 @@ export function convertAnki(col: AnkiCollection, plan: ImportPlan, ex: ImportExi
     const word = limit("word", htmlText(at(an.fields, "word")));
     if (!word) return void report.skippedEmpty++;
     if (existingIds.has(id)) return void report.skippedExisting++;
-    if (existingWords.has(word.toLowerCase())) return void report.skippedDuplicates.push(word);
-    existingWords.add(word.toLowerCase());
+    const twin = importedWords.get(word.toLowerCase());
+    if (!twin && existingWords.has(word.toLowerCase())) return void report.skippedDuplicates.push(word);
 
     const ankiCards = (cardsByNote.get(an.id) ?? []).sort((a, b) => a.ord - b.ord);
     const home = ankiCards[0] ? (ankiCards[0].odid !== "0" ? ankiCards[0].odid : ankiCards[0].did) : "";
     const { deck, tag } = deckFor(home);
     if (tag && !lessonSeen.has(tag)) (lessonSeen.add(tag), report.lessons.push(tag));
 
-    const examples = htmlLines(at(an.fields, "examples")).map(unmark).map((s) => limit("examples", s)).slice(0, 8);
-    const examplesVi = htmlLines(at(an.fields, "examplesVi")).map(unmark).map((s) => limit("examplesVi", s)).slice(0, 8);
+    const split = splitExamples(htmlLines(at(an.fields, "examples")), htmlLines(at(an.fields, "examplesVi")));
+    const examples = split.examples.map((s) => limit("examples", s)).slice(0, 8);
+    const examplesVi = split.examplesVi.map((s) => limit("examplesVi", s)).slice(0, 8);
+    const vi = htmlText(at(an.fields, "vi"));
+    if (twin) {
+      mergeInto(twin, tag, vi, examples, examplesVi);
+      report.merged.push(word);
+      return;
+    }
+    existingWords.add(word.toLowerCase());
     const fields: Note["fields"] = {
       word,
       ipa: limit("ipa", htmlText(at(an.fields, "ipa"))),
       pos: limit("pos", normalizePos(htmlText(at(an.fields, "pos")))),
-      vi: limit("vi", htmlText(at(an.fields, "vi"))),
-      en: limit("en", htmlLines(at(an.fields, "en")).join("\n")),
+      vi: limit("vi", vi),
+      en: limit("en", [...htmlLines(at(an.fields, "en")), ...split.notes].join("\n")),
       mnemonic: limit("mnemonic", htmlLines(at(an.fields, "mnemonic")).join("\n")),
       ...(examples.length ? { examples } : {}),
       ...(examplesVi.length && examples.length ? { examplesVi: examplesVi.slice(0, examples.length) } : {}),
@@ -313,6 +374,7 @@ export function convertAnki(col: AnkiCollection, plan: ImportPlan, ex: ImportExi
     const created = now + order; // keeps Anki's order among new notes and cards
     const note: Note = { id, type: "vocab", deckId: deck.id, fields, tags, createdAt: created, updatedAt: now };
     file.notes.push(note);
+    importedWords.set(word.toLowerCase(), note);
     report.notes++;
 
     const made = new Set<string>();

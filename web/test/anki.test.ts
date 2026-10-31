@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { CardState, DEFAULT_PREFS, dayId, type Deck, type Note } from "@shared/model.ts";
 import { LocalRepo } from "../src/data/local.ts";
-import { convertAnki, defaultPlan, guessFields, htmlLines, memoryFromSm2, normalizePos, tagOf, type ImportExisting } from "../src/lib/anki/convert.ts";
+import { convertAnki, defaultPlan, guessFields, htmlLines, isGloss, memoryFromSm2, normalizePos, splitExamples, tagOf, type ImportExisting } from "../src/lib/anki/convert.ts";
 import { AnkiFormatError, readApkg, type AnkiCollection } from "../src/lib/anki/read.ts";
 
 // Built by tools/anki/make-fixture.py with Anki's own Python library (anki 26.9.3).
@@ -58,8 +58,41 @@ describe("field text and mapping", () => {
     expect(normalizePos("(n, v)")).toBe("noun, verb");
     expect(normalizePos("(adj)")).toBe("adjective");
     expect(normalizePos("idiom")).toBe("idiom");
+    // Combined word types of the real 600 Essential deck.
+    expect(normalizePos("/v-n/")).toBe("verb, noun");
+    expect(normalizePos("/noun + verb/")).toBe("noun, verb");
+    expect(normalizePos("/v n/")).toBe("verb, noun");
     expect(tagOf("Lesson 01")).toBe("lesson-01");
     expect(tagOf("Bài 3: Hợp đồng")).toBe("bai-3-hop-dong");
+  });
+
+  // Lines copied from the real "600 essential English words for the TOEIC - Vietnamese" deck.
+  it("separates example sentences from glossary notes and keeps translations aligned", () => {
+    expect(isGloss("withstand : chống lại, chống cự, chịu đựng")).toBe(true);
+    expect(isGloss("serve /sə:v/: cú giao bóng")).toBe(true);
+    expect(isGloss("• (+ with) so, đối chiếu")).toBe(true);
+    expect(isGloss("--> so nguyên bản với bản sao")).toBe(true);
+    expect(isGloss("(nhà sưu tầm) (đồ cổ) (món hời)")).toBe(true);
+    expect(isGloss("Compare")).toBe(true);
+    expect(isGloss("thank you beforehand.")).toBe(true);
+    expect(isGloss("There are two options for the event: lunch or dinner.")).toBe(false);
+    expect(isGloss("18 is a multiple of 3, because 18 = 3 x 6.")).toBe(false);
+
+    const select = splitExamples(
+      ["select fruit/school : best fruit/school (kiểu như hàng tuyển)", "The winners were a select group.", "You can select from among the offerings shown on this screen."],
+      ["Những người chiến thắng là một nhóm “hàng tuyển”.", "Bạn có thể lựa chọn trong số những đề xuất hiện ra trên màn hình."],
+    );
+    expect(select.examples).toEqual(["The winners were a select group.", "You can select from among the offerings shown on this screen."]);
+    expect(select.examplesVi[0]).toMatch(/^Những người chiến thắng/);
+    expect(select.notes).toEqual(["select fruit/school : best fruit/school (kiểu như hàng tuyển)"]);
+
+    // "a.The …" markers without a space; Vietnamese sentences typed into the example field.
+    const inspect = splitExamples(
+      ["a.A quality control agent who does not inspect every product carefully can ruin his reputation.", "Một nhân viên kiểm tra chất lượng sản phẩm mà không kiểm tra kỹ lưỡng mọi sản phẩm."],
+      [],
+    );
+    expect(inspect.examples).toEqual(["A quality control agent who does not inspect every product carefully can ruin his reputation."]);
+    expect(inspect.examplesVi).toEqual(["Một nhân viên kiểm tra chất lượng sản phẩm mà không kiểm tra kỹ lưỡng mọi sản phẩm."]);
   });
 
   it("guesses the TOEIC2 field mapping by name", () => {
@@ -158,6 +191,34 @@ describe("converting to Lexi", () => {
     expect(file.notes.every((n) => n.deckId === "x1")).toBe(true);
     // Reviews of skipped notes are not imported again; counters of a day add to Lexi's own.
     expect(file.reviews.some((r) => r.noteId === first.notes[0].id)).toBe(false);
+  });
+
+  it("folds a word listed in two lessons into one note with both lessons", () => {
+    const col = structuredClone(modern);
+    const abide = col.notes.find((x) => x.fields.some((f) => f === "abide by"))!;
+    const lesson2 = [...col.decks.values()].find((d) => /::.*0?2/.test(d.name))!;
+    const nt = col.notetypes.get(abide.mid)!;
+    const at = (name: string) => nt.fields.findIndex((f) => f.name === name);
+    const fields = abide.fields.map(() => "");
+    fields[at("Target word")] = "abide by";
+    fields[at("Vietnamese")] = "chịu đựng";
+    fields[at("Example")] = "<div>a.She could not abide by the noise.</div>";
+    fields[at("Translation")] = "<div>Cô ấy không chịu nổi tiếng ồn.</div>";
+    col.notes.push({ ...abide, id: "999", guid: "twin", fields });
+    const card = col.cards.find((c) => c.nid === abide.id)!;
+    col.cards.push({ ...card, id: "9999", nid: "999", did: lesson2.id, odid: "0", type: 0, queue: 0, due: 99 });
+
+    const { file, report } = convertAnki(col, defaultPlan(col)!, none, NOW);
+    expect(report.merged).toEqual(["abide by"]);
+    expect(report.skippedDuplicates).toEqual([]);
+    expect(report.notes).toBe(6);
+    const note = file.notes.find((x) => x.fields.word === "abide by")!;
+    expect(note.tags).toEqual(expect.arrayContaining(["lesson-01", "lesson-02", "anki"]));
+    expect(note.fields.vi).toBe("tôn trọng, tuân theo; chịu đựng");
+    expect(note.fields.examples).toContain("She could not abide by the noise.");
+    const ex = note.fields.examples as string[];
+    expect((note.fields.examplesVi as string[])[ex.indexOf("She could not abide by the noise.")]).toBe("Cô ấy không chịu nổi tiếng ồn.");
+    expect(file.cards.some((c) => c.noteId === "anki-999")).toBe(false);
   });
 
   it("drops cards whose template is mapped to nothing", () => {
