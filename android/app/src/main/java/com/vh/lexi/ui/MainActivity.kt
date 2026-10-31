@@ -4,14 +4,19 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Add
@@ -23,6 +28,7 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -39,6 +45,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +65,9 @@ import com.vh.lexi.core.template
 import com.vh.lexi.data.SyncState
 import com.vh.lexi.ui.theme.Lexi
 import com.vh.lexi.ui.theme.LexiTheme
+import com.vh.lexi.ui.theme.Quicksand
+import com.vh.lexi.ui.theme.clay
+import com.vh.lexi.ui.theme.gradientPill
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
@@ -112,17 +126,35 @@ private fun Main(app: LexiApp) {
         q.counts.new + q.counts.learning + q.counts.review
     }
 
+    val c = Lexi.colors
     CompositionLocalProvider(LocalToaster provides toaster) {
+      // Two soft light blobs behind everything, as on the web.
+      Box(
+          Modifier.fillMaxSize().background(c.bg).drawBehind {
+              drawCircle(Brush.radialGradient(listOf(c.accent2.copy(alpha = 0.24f), Color.Transparent), Offset(size.width, 0f), size.width * 0.8f), size.width * 0.8f, Offset(size.width, 0f))
+              drawCircle(Brush.radialGradient(listOf(c.peach.copy(alpha = if (c.dark) 0.08f else 0.22f), Color.Transparent), Offset(0f, size.height), size.width * 0.8f), size.width * 0.8f, Offset(0f, size.height))
+          },
+      ) {
         Scaffold(
-            containerColor = Lexi.colors.bg,
+            containerColor = Color.Transparent,
             bottomBar = {
-                NavigationBar(containerColor = Lexi.colors.surface) {
-                    for (t in Tab.entries) NavigationBarItem(
-                        selected = tab == t, onClick = { tab = t }, modifier = Modifier.testTag("nav-${t.name.lowercase()}"), label = { Text(t.label, fontSize = 11.sp, maxLines = 1) },
-                        icon = {
-                            if (t == Tab.STUDY && due > 0) BadgedBox(badge = { Badge { Text("$due") } }) { Icon(t.icon, t.label) } else Icon(t.icon, t.label)
-                        },
-                    )
+                // Floating tab bar: a soft clay pill above the bottom edge.
+                Box(Modifier.navigationBarsPadding().padding(start = 12.dp, end = 12.dp, bottom = 10.dp)) {
+                    NavigationBar(
+                        Modifier.clay(c, RoundedCornerShape(24.dp), color = c.surface.copy(alpha = 0.94f)).clip(RoundedCornerShape(24.dp)),
+                        containerColor = Color.Transparent, tonalElevation = 0.dp, windowInsets = WindowInsets(0, 0, 0, 0),
+                    ) {
+                        for (t in Tab.entries) NavigationBarItem(
+                            selected = tab == t, onClick = { tab = t }, modifier = Modifier.testTag("nav-${t.name.lowercase()}"),
+                            label = { Text(t.label, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = c.accent, selectedTextColor = c.accent, indicatorColor = c.accentSoft, unselectedIconColor = c.muted, unselectedTextColor = c.muted,
+                            ),
+                            icon = {
+                                if (t == Tab.STUDY && due > 0) BadgedBox(badge = { Badge(containerColor = c.accent, contentColor = c.onAccent) { Text("$due") } }) { Icon(t.icon, t.label) } else Icon(t.icon, t.label)
+                            },
+                        )
+                    }
                 }
             },
         ) { padding ->
@@ -133,7 +165,10 @@ private fun Main(app: LexiApp) {
             Box(Modifier.padding(padding).consumeWindowInsets(padding).imePadding().fillMaxSize()) {
                 androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("VH Lexi", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Lexi.colors.ink, modifier = Modifier.weight(1f))
+                        Box(Modifier.size(28.dp).gradientPill(c, RoundedCornerShape(topStartPercent = 42, topEndPercent = 58, bottomEndPercent = 54, bottomStartPercent = 46)), contentAlignment = Alignment.Center) {
+                            Text("L", fontFamily = Quicksand, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
+                        }
+                        Text("VH Lexi", fontFamily = Quicksand, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = c.ink, modifier = Modifier.weight(1f))
                         if (account is Account.SignedIn) Pill(syncLabel(sync), when (sync) { SyncState.SYNCED -> PillKind.OK; SyncState.DENIED, SyncState.ERROR -> PillKind.BAD; else -> PillKind.WARN })
                         else Pill(syncLabel(SyncState.OFF))
                     }
@@ -152,5 +187,6 @@ private fun Main(app: LexiApp) {
                 SnackbarHost(snackbar, Modifier.align(Alignment.TopCenter))
             }
         }
+      }
     }
 }
