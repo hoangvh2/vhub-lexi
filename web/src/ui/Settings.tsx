@@ -12,7 +12,7 @@ import { dictionary } from "../lib/dict.ts";
 import { useStore } from "../lib/store.ts";
 import { Icon, confirmDialog, syncLabel, toast } from "./common.tsx";
 
-const ACCENTS: Array<[Prefs["accent"], string]> = [["teal", "#0e7c66"], ["blue", "#2457c5"], ["orange", "#c2410c"], ["violet", "#7c3aed"]];
+const ACCENTS: Array<[Prefs["accent"], string]> = [["teal", "#157a55"], ["blue", "#2457c5"], ["orange", "#c2410c"], ["violet", "#7c3aed"]];
 
 export function Settings({ email }: { email: string | null }) {
   const p = useStore(prefs);
