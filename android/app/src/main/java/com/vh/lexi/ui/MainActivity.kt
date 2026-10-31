@@ -136,7 +136,9 @@ private fun Main(app: LexiApp) {
           },
       ) {
         Scaffold(
+            // A transparent container has no matching content colour, so Material falls back to black: say it here.
             containerColor = Color.Transparent,
+            contentColor = c.ink,
             bottomBar = {
                 // Floating tab bar: a soft clay pill above the bottom edge.
                 Box(Modifier.navigationBarsPadding().padding(start = 12.dp, end = 12.dp, bottom = 10.dp)) {

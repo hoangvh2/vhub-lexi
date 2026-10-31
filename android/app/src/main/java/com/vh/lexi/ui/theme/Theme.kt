@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -175,6 +176,10 @@ fun LexiTheme(themePref: String, accent: String, content: @Composable () -> Unit
     val dark = when (themePref) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
     val c = lexiColors(accent, dark)
     CompositionLocalProvider(LocalLexi provides c) {
-        MaterialTheme(colorScheme = scheme(c, dark), typography = typography, shapes = shapes, content = content)
+        MaterialTheme(colorScheme = scheme(c, dark), typography = typography, shapes = shapes) {
+            // Text outside a Surface (clay panels, the transparent Scaffold) inherits LocalContentColor, whose default
+            // is black; that left headings unreadable in dark mode. Default every screen to the theme's ink.
+            CompositionLocalProvider(LocalContentColor provides c.ink, content = content)
+        }
     }
 }
