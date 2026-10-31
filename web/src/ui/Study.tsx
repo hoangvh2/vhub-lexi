@@ -6,6 +6,7 @@ import { reviewCard, setSuspended, undoReview, type Reviewed } from "../data/act
 import { cards, daily, decks, loaded, notes, prefs } from "../data/state.ts";
 import { LEARN_AHEAD_MS, buildQueue, dueWithin, isLeech, pickNext, tagCounts, type Queue } from "../lib/queue.ts";
 import { streak } from "../lib/stats.ts";
+import { isLesson, lessonTitle } from "../lib/lessons.ts";
 import { formatInterval, makeScheduler, preview } from "../lib/scheduler.ts";
 import { eligibility, notesById } from "../lib/select.ts";
 import { speak, stopSpeaking } from "../lib/speech.ts";
@@ -493,8 +494,7 @@ function Compare({ word, pos, en, others }: { word: string; pos: string; en: str
 const aheadLabel = (n: number) => `Ôn trước ${n} thẻ sắp đến hạn`;
 
 /** Lesson-like tags (sub-decks of an Anki deck such as "01-contract", "lesson-02", "bai-3"), as opposed to topic tags. */
-export const isLesson = (t: string) => /^(\d|lesson|bai|unit|chapter)/i.test(t);
-export const lessonLabel = (t: string, started: number, total: number) => `${t} · ${started}/${total}${started >= total ? " ✓" : ""}`;
+export const lessonLabel = (t: string, started: number, total: number) => `${lessonTitle(t)} · ${started}/${total}${started >= total ? " ✓" : ""}`;
 
 const RATING_NAME = ["", "Quên", "Khó", "Tốt", "Dễ"];
 
@@ -555,7 +555,7 @@ function Done({ session, waitingMs, streak, dueTomorrow, nextLesson, onLesson, o
       )}
       {session.answered > 0 && waitingMs === null && <p class="muted" data-testid="due-tomorrow">{dueTomorrow > 0 ? `Ngày mai có ${dueTomorrow} thẻ cần ôn.` : "Ngày mai chưa có thẻ nào đến hạn."}</p>}
       <div class="row" style={{ justifyContent: "center" }}>
-        {nextLesson && <button type="button" class="btn primary" onClick={() => onLesson(nextLesson)} data-testid="next-lesson">Sang bài tiếp: {nextLesson}</button>}
+        {nextLesson && <button type="button" class="btn primary" onClick={() => onLesson(nextLesson)} data-testid="next-lesson">Sang bài tiếp: {lessonTitle(nextLesson)}</button>}
         {waitingMs !== null && <button type="button" class={`btn${nextLesson ? "" : " primary"}`} onClick={onContinue} data-testid="continue-early">Học tiếp ngay</button>}
         {hasMoreNew && <button type="button" class="btn" onClick={onMore} data-testid="more-new">Học thêm 5 từ mới</button>}
         {tomorrow > 0 && <button type="button" class="btn" onClick={onAhead} data-testid="review-ahead">{aheadLabel(tomorrow)}</button>}
