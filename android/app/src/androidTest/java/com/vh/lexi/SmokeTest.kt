@@ -21,6 +21,10 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.captureToImage
 import com.vh.lexi.core.FieldValue
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
@@ -216,6 +220,71 @@ class SmokeTest {
 
         typingCardNamesTheTargetWord()
         todayWithLessonsAndHistory()
+        everyTextReadableInBothThemes()
+    }
+
+    /**
+     * Every text on the main screens must stand out from what is drawn behind it, in light and dark mode and with the
+     * accent VH uses. Regression: text outside a Surface inherited Material's default black content colour, which
+     * passed in light mode and was near invisible in dark mode. Checked on the rendered pixels, not on colour values,
+     * so a hard-coded or inherited colour anywhere is caught. Dark screenshots are kept for review.
+     */
+    private fun everyTextReadableInBothThemes() {
+        val app = rule.activity.application as LexiApp
+        val failures = mutableListOf<String>()
+        for ((theme, accent) in listOf("light" to "teal", "dark" to "teal", "dark" to "blue")) {
+            runBlocking { app.data.savePrefs(app.data.prefs.value.copy(theme = theme, accent = accent)) }
+            waitFor("theme-$theme-$accent") { app.data.prefs.value.theme == theme && app.data.prefs.value.accent == accent }
+            for (tab in listOf("library", "stats", "settings", "study")) {
+                rule.onNodeWithTag("nav-$tab").performClick()
+                rule.waitForIdle()
+                val bad = unreadableTexts()
+                if (bad.isNotEmpty()) {
+                    shot("fail-contrast-$theme-$accent-$tab")
+                    failures += "$theme/$accent/$tab: " + bad.joinToString("; ")
+                }
+                if (theme == "dark" && accent == "teal") shot("16-dark-$tab")
+            }
+        }
+        runBlocking { app.data.savePrefs(app.data.prefs.value.copy(theme = "system", accent = "teal")) }
+        if (failures.isNotEmpty()) throw AssertionError("Text too close to its background:\n" + failures.joinToString("\n"))
+    }
+
+    /**
+     * Text nodes whose glyphs do not reach 3:1 contrast against their background. The background is the most common
+     * colour in the node's visible box; the glyph colour is the pixel that differs most from it.
+     */
+    private fun unreadableTexts(): List<String> {
+        val pixels = rule.onRoot().captureToImage().toPixelMap()
+        val nodes = rule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true).fetchSemanticsNodes()
+        return nodes.mapNotNull { n ->
+            if (SemanticsProperties.Disabled in n.config) return@mapNotNull null
+            val text = n.config[SemanticsProperties.Text].joinToString(" ") { it.text }.trim()
+            val b = n.boundsInRoot
+            val l = b.left.toInt().coerceAtLeast(0); val t = b.top.toInt().coerceAtLeast(0)
+            val r = b.right.toInt().coerceAtMost(pixels.width); val bo = b.bottom.toInt().coerceAtMost(pixels.height)
+            if (text.isEmpty() || r - l < 8 || bo - t < 8) return@mapNotNull null
+            val counts = HashMap<Int, Int>()
+            for (y in t until bo) for (x in l until r) {
+                val c = pixels[x, y]
+                val key = ((c.red * 31).toInt() shl 10) or ((c.green * 31).toInt() shl 5) or (c.blue * 31).toInt()
+                counts[key] = (counts[key] ?: 0) + 1
+            }
+            val bgKey = counts.maxBy { it.value }.key
+            var bg = pixels[l, t]
+            outer@ for (y in t until bo) for (x in l until r) {
+                val c = pixels[x, y]
+                if ((((c.red * 31).toInt() shl 10) or ((c.green * 31).toInt() shl 5) or (c.blue * 31).toInt()) == bgKey) { bg = c; break@outer }
+            }
+            var best = 1.0
+            for (y in t until bo) for (x in l until r) best = maxOf(best, contrast(bg, pixels[x, y]))
+            if (best < 3.0) "“${text.take(30)}” ${"%.1f".format(best)}:1" else null
+        }
+    }
+
+    private fun contrast(a: androidx.compose.ui.graphics.Color, b: androidx.compose.ui.graphics.Color): Double {
+        val la = a.luminance() + 0.05; val lb = b.luminance() + 0.05
+        return if (la > lb) la / lb else lb / la
     }
 
     /**
