@@ -6,14 +6,16 @@
  * we never await `commit()`: offline it would not resolve until the server acknowledges.
  */
 import {
-  collection, deleteDoc, doc, getDocs, increment, limit, onSnapshot, orderBy, query, setDoc, where, writeBatch,
+  collection, deleteDoc, doc, documentId, getDocs, increment, limit, onSnapshot, orderBy, query, setDoc, startAfter, where, writeBatch,
   type DocumentData, type Firestore, type Query, type QuerySnapshot, type WriteBatch,
 } from "firebase/firestore";
 import { RATING_FIELD, type Card, type Daily, type DailyDelta, type Deck, type Note, type Prefs, type ReviewLog } from "@shared/model.ts";
 import { firebase } from "./fbimpl.ts";
 import type { ExportFile, Repo, RepoEvents, SyncState } from "./repo.ts";
 
-export const LIMITS = { decks: 200, notes: 5000, cards: 10000, daily: 800, reviews: 20000 } as const;
+export const LIMITS = { decks: 200, notes: 5000, cards: 10000, daily: 800 } as const;
+/** Firestore answers at most 10,000 documents per query; the review history is read in pages of this size. */
+export const REVIEW_PAGE = 5000;
 
 export class CloudRepo implements Repo {
   readonly kind = "cloud" as const;
@@ -179,8 +181,22 @@ export class CloudRepo implements Repo {
     return snap.docs.map((d) => d.data() as ReviewLog).sort((a, b) => a.reviewedAt - b.reviewedAt);
   }
 
+  /**
+   * Every review log, in pages by document id. One query may not ask for more than 10,000 documents (an Anki
+   * import alone can bring more), so the single 20,000-document query was rejected by Firestore.
+   */
   async allReviews() {
-    return (await getDocs(query(this.col("reviews"), limit(LIMITS.reviews)))).docs.map((d) => d.data() as ReviewLog);
+    const out: ReviewLog[] = [];
+    let after: string | null = null;
+    for (;;) {
+      const q: Query<DocumentData> = after === null
+        ? query(this.col("reviews"), orderBy(documentId()), limit(REVIEW_PAGE))
+        : query(this.col("reviews"), orderBy(documentId()), startAfter(after), limit(REVIEW_PAGE));
+      const snap = await getDocs(q);
+      for (const d of snap.docs) out.push(d.data() as ReviewLog);
+      if (snap.docs.length < REVIEW_PAGE) return out;
+      after = snap.docs[snap.docs.length - 1].id;
+    }
   }
 
   async exportAll(): Promise<ExportFile> {
@@ -189,7 +205,7 @@ export class CloudRepo implements Repo {
       get<Deck>("decks", LIMITS.decks),
       get<Note>("notes", LIMITS.notes),
       get<Card>("cards", LIMITS.cards),
-      get<ReviewLog>("reviews", LIMITS.reviews),
+      this.allReviews(),
       get<Daily>("daily", LIMITS.daily),
       getDocs(query(this.col("settings"), limit(5))).then((s) => (s.docs.find((d) => d.id === "prefs")?.data() as Prefs | undefined) ?? null),
     ]);
