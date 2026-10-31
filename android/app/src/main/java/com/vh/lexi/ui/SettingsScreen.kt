@@ -109,6 +109,18 @@ fun SettingsScreen(app: LexiApp) {
             Segments(listOf("off" to "Tắt", "front" to "Khi hiện thẻ", "back" to "Khi lật thẻ"), p.autoSpeak) { set(p.copy(autoSpeak = it)) }
         }
 
+        // Fitted on the web (Settings → "Tối ưu theo lịch sử ôn"); this phone schedules with them once they sync.
+        Panel(Modifier.testTag("fsrs")) {
+            Text("Thuật toán ôn tập (FSRS)", style = MaterialTheme.typography.titleMedium)
+            val on = p.fsrsWeights != null
+            Text(
+                if (on) "Đang dùng tham số tối ưu ngày ${java.time.Instant.ofEpochMilli(p.fsrsOptimizedAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))} trên ${"%,d".format(p.fsrsOptimizedReviews).replace(',', '.')} lượt ôn."
+                else "Đang dùng tham số mặc định của FSRS.",
+                Modifier.testTag("fsrs-status"),
+            )
+            Text("Tối ưu tham số theo lịch sử ôn của bạn trong Cài đặt của bản web; điện thoại dùng kết quả sau khi đồng bộ.", color = c.muted, fontSize = 13.sp)
+        }
+
         Panel {
             Text("Loại thẻ tạo cho mỗi từ", style = MaterialTheme.typography.titleMedium)
             val vocab = NOTE_TYPES.getValue("vocab")

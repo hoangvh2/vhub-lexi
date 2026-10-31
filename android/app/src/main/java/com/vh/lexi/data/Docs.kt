@@ -4,6 +4,7 @@ import com.vh.lexi.core.Card
 import com.vh.lexi.core.CardLayout
 import com.vh.lexi.core.Daily
 import com.vh.lexi.core.Deck
+import com.vh.lexi.core.fsrsWeightsOrNull
 import com.vh.lexi.core.FieldValue
 import com.vh.lexi.core.Note
 import com.vh.lexi.core.Prefs
@@ -114,6 +115,7 @@ fun Prefs.toDoc(): Doc = buildMap {
     put("layout", mapOf("showIpa" to layout.showIpa, "showPos" to layout.showPos, "showEn" to layout.showEn, "showVi" to layout.showVi, "showExamples" to layout.showExamples, "showMnemonic" to layout.showMnemonic))
     put("autoSpeak", autoSpeak); put("theme", theme); put("accent", accent); put("aiEnabled", aiEnabled); put("dayStartHour", dayStartHour.toLong())
     defaultDeckId?.let { put("defaultDeckId", it) }
+    fsrsWeights?.let { put("fsrsWeights", it); put("fsrsOptimizedAt", fsrsOptimizedAt); put("fsrsOptimizedReviews", fsrsOptimizedReviews) }
     put("updatedAt", updatedAt)
 }
 
@@ -126,6 +128,7 @@ fun prefsFromDoc(d: Doc?): Prefs {
     val templates = (d["templates"] as? Map<*, *>)?.entries?.mapNotNull { (k, v) ->
         (k as? String)?.let { key -> key to ((v as? List<*>)?.filterIsInstance<String>() ?: return@mapNotNull null) }
     }?.toMap()
+    val weights = fsrsWeightsOrNull(d["fsrsWeights"])
     return Prefs(
         desiredRetention = (d.d("desiredRetention") ?: base.desiredRetention).coerceIn(0.7, 0.99),
         newPerDay = (d.l("newPerDay")?.toInt() ?: base.newPerDay).coerceIn(0, 200),
@@ -140,6 +143,9 @@ fun prefsFromDoc(d: Doc?): Prefs {
         aiEnabled = d.b("aiEnabled") ?: true,
         dayStartHour = (d.l("dayStartHour")?.toInt() ?: base.dayStartHour).coerceIn(0, 23),
         defaultDeckId = d.s("defaultDeckId"),
+        fsrsWeights = weights,
+        fsrsOptimizedAt = if (weights != null) d.l("fsrsOptimizedAt") ?: 0 else 0,
+        fsrsOptimizedReviews = if (weights != null) d.l("fsrsOptimizedReviews") ?: 0 else 0,
         updatedAt = d.l("updatedAt") ?: 0,
     )
 }

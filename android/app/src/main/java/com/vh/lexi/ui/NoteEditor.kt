@@ -28,6 +28,7 @@ import com.vh.lexi.core.CardState
 import com.vh.lexi.core.FieldValue
 import com.vh.lexi.core.Fsrs
 import com.vh.lexi.core.Note
+import com.vh.lexi.core.Prefs
 import com.vh.lexi.core.isLeech
 import com.vh.lexi.core.noteType
 import com.vh.lexi.core.template
@@ -102,7 +103,7 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
                             if (isLeech(c)) Pill("Khó · quên ${c.lapses}", PillKind.BAD)
                             TextButton(onClick = { scope.launch { data.setSuspended(c, !c.suspended) } }) { Text(if (c.suspended) "Hiện lại" else "Ẩn") }
                         }
-                        Text(cardStats(c, prefs.desiredRetention), Modifier.testTag("card-info"), style = MaterialTheme.typography.bodySmall, color = Lexi.colors.muted)
+                        Text(cardStats(c, prefs), Modifier.testTag("card-info"), style = MaterialTheme.typography.bodySmall, color = Lexi.colors.muted)
                     }
                 }
             }
@@ -144,10 +145,10 @@ private val STATE_LABEL = mapOf(CardState.NEW to "Mới", CardState.LEARNING to 
 private val DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
 /** Anki's "card info" in one line: state, interval, recall probability now, difficulty, reps and lapses, due date. */
-private fun cardStats(c: Card, retention: Double, now: Long = System.currentTimeMillis()): String {
+private fun cardStats(c: Card, prefs: Prefs, now: Long = System.currentTimeMillis()): String {
     if (c.state == CardState.NEW) return "Chưa học lần nào."
     val elapsed = c.lastReview?.let { maxOf(0.0, (now - it) / Fsrs.DAY_MS.toDouble()) } ?: 0.0
-    val recall = if (c.stability > 0) Fsrs(retention).forgettingCurve(elapsed, c.stability) else 1.0
+    val recall = if (c.stability > 0) prefs.fsrs().forgettingCurve(elapsed, c.stability) else 1.0
     val interval = if (c.scheduledDays >= 1) "${c.scheduledDays.toInt()} ngày" else "trong ngày"
     val due = Instant.ofEpochMilli(c.due).atZone(ZoneId.systemDefault()).format(DATE)
     return "${STATE_LABEL[c.state]} · khoảng $interval · nhớ ${(recall * 100).toInt()}% · độ khó ${"%.1f".format(c.difficulty)}/10 · ${c.reps} lượt, quên ${c.lapses} · đến hạn $due"

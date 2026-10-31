@@ -2,11 +2,12 @@ import type { ComponentType } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { CardLayout, Prefs } from "@shared/model.ts";
 import { NOTE_TYPES } from "@shared/notetypes.ts";
-import { savePrefs } from "../data/actions.ts";
+import { applyFsrs, optimizeFsrs, savePrefs } from "../data/actions.ts";
 import { firebaseConfigured, signOutUser } from "../data/firebase.ts";
 import { validateExport } from "../data/repo.ts";
-import { currentRepo, prefs, sync } from "../data/state.ts";
+import { currentRepo, daily, prefs, sync } from "../data/state.ts";
 import type { AnkiCollection } from "../lib/anki/read.ts";
+import type { FitResult } from "../lib/optimizer.ts";
 import { dictionary } from "../lib/dict.ts";
 import { useStore } from "../lib/store.ts";
 import { Icon, confirmDialog, syncLabel, toast } from "./common.tsx";
@@ -124,6 +125,8 @@ export function Settings({ email }: { email: string | null }) {
         </div>
       </section>
 
+      <FsrsOptimizer />
+
       <section class="panel col">
         <h2>Loại thẻ tạo cho mỗi từ</h2>
         {vocab.templates.map((t) => (
@@ -210,5 +213,75 @@ export function Settings({ email }: { email: string | null }) {
         </p>
       </section>
     </div>
+  );
+}
+
+const pct = (x: number) => `${(x * 100).toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%`;
+
+/** Anki's "Optimize": fits FSRS to this learner's answers, shows how much closer it predicts them, applies on request. */
+function FsrsOptimizer() {
+  const p = useStore(prefs);
+  const days = useStore(daily);
+  const [state, setState] = useState<{ busy: number } | { result: FitResult } | { error: string } | null>(null);
+  const answers = days.reduce((n, d) => n + d.newCards + d.reviews, 0);
+  const stale = !!p.fsrsWeights && !!p.fsrsOptimizedReviews && answers >= 2 * p.fsrsOptimizedReviews;
+  const busy = !!state && "busy" in state;
+
+  async function run() {
+    setState({ busy: 0 });
+    try {
+      setState({ result: await optimizeFsrs((f) => setState({ busy: f })) });
+    } catch (e) {
+      setState({ error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  async function apply(r: Extract<FitResult, { status: "fitted" }>) {
+    await applyFsrs(r);
+    setState(null);
+    toast("Đã áp dụng tham số mới, có hiệu lực từ lần ôn tiếp theo");
+  }
+
+  return (
+    <section class="panel col" data-testid="fsrs">
+      <h2>Thuật toán ôn tập (FSRS)</h2>
+      <p data-testid="fsrs-status">
+        {p.fsrsWeights
+          ? `Đang dùng tham số tối ưu ngày ${new Date(p.fsrsOptimizedAt ?? 0).toLocaleDateString("vi-VN")} trên ${(p.fsrsOptimizedReviews ?? 0).toLocaleString("vi-VN")} lượt ôn.`
+          : "Đang dùng tham số mặc định của FSRS."}
+        {stale && <span class="pill warn" style={{ marginLeft: "8px" }}>Lịch sử đã gấp đôi, nên tối ưu lại</span>}
+      </p>
+      <p class="muted" style={{ fontSize: "13px" }}>
+        Tối ưu là tính lại 21 tham số của FSRS theo lịch sử ôn của chính bạn (như nút Optimize của Anki), để lịch ôn khớp với trí nhớ của bạn hơn.
+        Chạy ngay trên thiết bị này, không gửi dữ liệu đi. Nên chạy lại khi số lượt ôn tăng gấp đôi, hoặc khoảng mỗi tháng.
+      </p>
+      <div class="row">
+        <button type="button" class="btn" disabled={busy} onClick={() => void run()} data-testid="fsrs-optimize">
+          <Icon n="chart" /> {busy ? `Đang tối ưu… ${Math.round(state.busy * 100)}%` : "Tối ưu theo lịch sử ôn"}
+        </button>
+      </div>
+      {state && "error" in state && <p class="pill bad" data-testid="fsrs-result">Lỗi: {state.error}</p>}
+      {state && "result" in state && (
+        <div class="col" data-testid="fsrs-result">
+          {state.result.status === "not-enough" && <p>Chưa đủ lịch sử để tối ưu: mới có {state.result.reviews.toLocaleString("vi-VN")} lượt ôn. Học thêm vài tuần rồi thử lại.</p>}
+          {state.result.status === "optimal" && <p>Tham số đang dùng đã khớp nhất với {state.result.reviews.toLocaleString("vi-VN")} lượt ôn của bạn, không cần đổi.</p>}
+          {state.result.status === "fitted" && (() => {
+            const r = state.result;
+            return (
+              <>
+                <p>
+                  Trên {r.reviews.toLocaleString("vi-VN")} lượt ôn, độ lệch giữa khả năng nhớ dự đoán và thực tế giảm từ <b>{pct(r.before.rmse)}</b> xuống <b>{pct(r.after.rmse)}</b> (càng thấp càng sát).
+                </p>
+                <p class="muted" style={{ fontSize: "13px" }}>Áp dụng cho các lần ôn từ nay về sau, trên cả web và Android. Lịch đã xếp của các thẻ giữ nguyên.</p>
+                <div class="row">
+                  <button type="button" class="btn" onClick={() => setState(null)} data-testid="fsrs-cancel">Bỏ qua</button>
+                  <button type="button" class="btn primary" onClick={() => void apply(r)} data-testid="fsrs-apply">Áp dụng</button>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
+    </section>
   );
 }

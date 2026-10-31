@@ -277,7 +277,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
     val answer = if (note != null && tpl != null) tpl.expected(note).firstOrNull() ?: "" else ""
     val letters = letterCount(answer)
 
-    val fsrs = remember(prefs.desiredRetention) { Fsrs(prefs.desiredRetention) }
+    val fsrs = remember(prefs.desiredRetention, prefs.fsrsWeights) { prefs.fsrs() }
     val suggested = verdict?.let { suggestedRatingWith(it, extraHints, mixedUp != null) }
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -35,13 +35,22 @@ Thời gian là epoch ms (số), không dùng Timestamp, để cùng một docum
 
 ## Lập lịch
 
-FSRS-6 (thư viện `ts-fsrs` ở web, bản port Kotlin ở Android), `enable_short_term = true`, bước học 1p, 10p; học lại 10p; **fuzz tắt** để hai bản khớp từng byte. `shared/vectors/fsrs.json` ghi lại 10 kịch bản trả lời (lapse, trả lời muộn, cùng ngày, các mức retention 0.85/0.9/0.95).
+FSRS-6 (thư viện `ts-fsrs` ở web, bản port Kotlin ở Android), `enable_short_term = true`, bước học 1p, 10p; học lại 10p; **fuzz tắt** để hai bản khớp từng byte. `shared/vectors/fsrs.json` ghi lại các kịch bản trả lời (lapse, trả lời muộn, cùng ngày, các mức retention 0.85/0.9/0.95).
 
 Hàng đợi: thẻ đang học đến hạn → thẻ ôn đến hạn trước mốc đầu ngày học kế tiếp (mặc định 04:00) → thẻ mới (giới hạn mỗi ngày, rải đều giữa thẻ ôn); thẻ cùng ghi chú bị ẩn trong phiên sau khi trả lời một thẻ.
 
 - **Thứ tự giới thiệu từ mới**: các thẻ mới tạo cùng lúc (mọi lần nhập Anki, mọi từ thêm khi bật nhiều mẫu thẻ) xếp theo `INTRO_ORDER` = recognize, recall, cloze, listen, nên từ mới luôn gặp ở thẻ "nhớ nghĩa" trước, thẻ gõ để phiên sau (một thẻ mới mỗi ghi chú mỗi phiên). Vector `intro-order`.
 - **Học trước 20 phút** (như "learn ahead limit" của Anki): khi hết thẻ khác, thẻ đang học đến hạn trong 20 phút được hiện luôn thay vì kết thúc phiên với "quay lại sau 3 phút". Nút "Học tiếp ngay" chỉ còn cho thẻ xa hơn.
 - **Thẻ mới không có trí nhớ**: ts-fsrs chỉ coi (stability 0, difficulty 0) là "chưa học"; cả hai bộ lập lịch bỏ qua giá trị lưu trên thẻ ở trạng thái New (trình nhập Anki đầu tiên từng lưu difficulty 1 làm "Hiện đáp án" lỗi). Vector `new-with-stale-memory`.
+
+### Tối ưu tham số FSRS (nút "Optimize" của Anki)
+
+- Cài đặt (web) → "Tối ưu theo lịch sử ôn": chạy **optimizer chính thức của FSRS** (fsrs-rs, gói `@open-spaced-repetition/binding-wasm32-wasip1`, cùng mã Anki dùng) ngay trong trình duyệt, trong một Worker (`web/src/lib/optimizer.worker.ts`). Bản WASI này không dùng thread nên không cần `SharedArrayBuffer` / cross-origin isolation; COOP vẫn là `same-origin-allow-popups` để đăng nhập Google bằng popup. Không có server, không gửi dữ liệu đi, $0.
+- Dữ liệu: mọi `reviews` (Firestore tối đa `LIMITS.reviews`, mỗi lần tối ưu là bấy nhiêu lượt đọc) → CSV theo định dạng benchmark FSRS (số thẻ, thời điểm, đánh giá, trạng thái lúc trả lời; không có từ vựng) → `convertCsvToFsrsItems` với mốc đầu ngày học và múi giờ của máy → `computeParameters` (FSRS-6, short-term bật, 1 bước học lại).
+- Chỉ giữ khi tốt hơn: so RMSE (độ lệch giữa khả năng nhớ dự đoán và thực tế, theo nhóm) của tham số đang dùng và tham số mới trên cùng lịch sử. Không tốt hơn thì báo "không cần đổi"; quá ít dữ liệu thì fsrs-rs trả `NotEnoughData` và màn hình báo chưa đủ lịch sử. Người học bấm "Áp dụng" mới lưu.
+- Lưu ở `Prefs.fsrsWeights` (21 số, **đã clip** bằng `clipParameters` của ts-fsrs nên bản Kotlin, vốn không clip, cho cùng lịch), `fsrsOptimizedAt`, `fsrsOptimizedReviews`. Rules kiểm tra đúng 21 số. Cả hai bộ lập lịch đọc từ lượt ôn kế tiếp (`makeScheduler(retention, w)`, `Prefs.fsrs()`); Android chỉ hiển thị trạng thái. Vector `optimized-weights*` chốt việc mọi công thức đọc `w`.
+- Chưa làm (giống Anki khi không bật "Reschedule cards on change"): trí nhớ và ngày đến hạn đã lưu trên các thẻ giữ nguyên, không tính lại từ nhật ký. Màn Cài đặt nhắc tối ưu lại khi số lượt ôn đã gấp đôi lần trước.
+- Test: `web/test/optimizer.test.ts` (bản Node của cùng module WASI, lịch sử mô phỏng một người quên nhanh), e2e "FSRS optimizer" chạy thật trong Chromium với CSP production.
 
 ## Màn Hôm nay và phiên học
 

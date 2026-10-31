@@ -204,6 +204,16 @@ describe("prefs", () => {
     expect(p.theme).toBe("system");
     expect(p.templates.vocab).toEqual(["recognize", "cloze"]);
   });
+  it("keeps optimized FSRS parameters only when there are exactly 21 finite numbers", () => {
+    const w = [0.04, 0.23, 0.41, 1.47, 6.52, 0.72, 2.9, 0.001, 1.76, 0.26, 0.68, 1.41, 0.07, 0.18, 1.55, 0.6, 1.87, 0.55, 0.001, 0.05, 0.11];
+    expect(normalizePrefs({ fsrsWeights: w, fsrsOptimizedAt: 5, fsrsOptimizedReviews: 1200 })).toMatchObject({ fsrsWeights: w, fsrsOptimizedAt: 5, fsrsOptimizedReviews: 1200 });
+    for (const bad of [w.slice(1), [...w.slice(1), Number.NaN], [...w.slice(1), "0.1"]]) {
+      const p = normalizePrefs({ fsrsWeights: bad as number[], fsrsOptimizedAt: 5 });
+      expect(p.fsrsWeights).toBeUndefined();
+      expect(p.fsrsOptimizedAt).toBeUndefined();
+    }
+    expect("fsrsWeights" in normalizePrefs(DEFAULT_PREFS)).toBe(false); // nothing undefined reaches Firestore
+  });
 });
 
 describe("stats", () => {

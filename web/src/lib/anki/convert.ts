@@ -227,8 +227,8 @@ export function memoryFromSm2(ivlDays: number, factor: number): { stability: num
 const graded = (r: AnkiRevlog) => r.ease >= 1 && r.ease <= 4 && r.type <= 3;
 
 /** Replays a card's Anki answers through Lexi's FSRS: memory after each answer (same order as `log`). */
-function replay(log: readonly AnkiRevlog[], desiredRetention: number): Array<{ stability: number; difficulty: number; scheduledDays: number }> {
-  const s = makeScheduler(desiredRetention);
+function replay(log: readonly AnkiRevlog[], desiredRetention: number, w?: readonly number[]): Array<{ stability: number; difficulty: number; scheduledDays: number }> {
+  const s = makeScheduler(desiredRetention, w);
   let fc = createEmptyCard(new Date(log[0]?.id ?? 0));
   return log.map((r) => {
     fc = s.next(fc, new Date(r.id), r.ease as Grade).card;
@@ -389,7 +389,7 @@ export function convertAnki(col: AnkiCollection, plan: ImportPlan, ex: ImportExi
       const cid = cardId(id, template);
       const state = lexiState(ac);
       const log = logByCard.get(ac.id) ?? [];
-      const memory = log.length ? replay(log, ex.prefs.desiredRetention) : [];
+      const memory = log.length ? replay(log, ex.prefs.desiredRetention, ex.prefs.fsrsWeights) : [];
       let stability: number;
       let difficulty: number;
       if (ac.data.s !== undefined && ac.data.d !== undefined) {

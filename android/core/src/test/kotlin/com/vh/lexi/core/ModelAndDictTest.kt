@@ -10,6 +10,24 @@ import kotlin.test.assertTrue
 class ModelTest {
     private val utc = ZoneOffset.UTC
     @Test
+    fun `optimized FSRS parameters are read only as 21 finite numbers and drive the scheduler`() {
+        // Firestore hands whole numbers back as Long.
+        val stored: List<Any> = listOf<Any>(0L) + Fsrs.DEFAULT_W.drop(1).toList()
+        assertEquals(Fsrs.DEFAULT_W.drop(1), fsrsWeightsOrNull(stored)!!.drop(1))
+        assertEquals(0.0, fsrsWeightsOrNull(stored)!![0])
+        assertNull(fsrsWeightsOrNull(stored.drop(1)))
+        assertNull(fsrsWeightsOrNull(stored.drop(1) + "0.1"))
+        assertNull(fsrsWeightsOrNull(stored.drop(1) + Double.NaN))
+        assertNull(fsrsWeightsOrNull(null))
+        // A learner whose fitted first-"Easy" stability is 1.5 days gets a much shorter first interval than the default 8.
+        val fast = Fsrs.DEFAULT_W.copyOf().also { it[3] = 1.5 }.toList()
+        val card = Card(id = "n.recognize", noteId = "n", deckId = "d", template = "recognize", due = 0, createdAt = 0, updatedAt = 0)
+        val default = Prefs().fsrs().next(card, 0, 4).scheduledDays
+        val fitted = Prefs(fsrsWeights = fast).fsrs().next(card, 0, 4).scheduledDays
+        assertTrue(fitted < default / 3, "fitted $fitted, default $default")
+    }
+
+    @Test
     fun `study day rolls over at the configured hour`() {
         val t = { y: Int, mo: Int, d: Int, h: Int -> java.time.LocalDateTime.of(y, mo, d, h, 0).toInstant(utc).toEpochMilli() }
         assertEquals("2026-01-14", dayId(t(2026, 1, 15, 2), 4, utc))

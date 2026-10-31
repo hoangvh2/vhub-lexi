@@ -6,6 +6,8 @@ import {
   type Card, type DailyDelta, type Deck, type FieldValue, type Id, type Note, type Prefs, type Rating, type ReviewLog,
 } from "@shared/model.ts";
 import { NOTE_TYPES, noteType, wantedTemplates } from "@shared/notetypes.ts";
+import type { Answer, FitResult } from "../lib/optimizer.ts";
+import type { WorkerReply, WorkerRequest } from "../lib/optimizer.worker.ts";
 import { answer, makeScheduler, newCard } from "../lib/scheduler.ts";
 import { cards, currentRepo, decks, notes, prefs } from "./state.ts";
 
@@ -131,6 +133,40 @@ export async function setSuspended(card: Card, suspended: boolean) {
 }
 
 /** Applies new preferences and creates/removes cards when the chosen templates changed. */
+/**
+ * Fits FSRS to the learner's answer history in a Worker (Anki's "Optimize"); nothing is saved until applyFsrs.
+ * Loads the optimizer (~1.4 MB WebAssembly) on first use.
+ */
+export async function optimizeFsrs(onProgress?: (fraction: number) => void): Promise<FitResult> {
+  const p = prefs.get();
+  const logs = await currentRepo().allReviews();
+  const answers: Answer[] = logs.map((r) => ({ cardId: r.cardId, reviewedAt: r.reviewedAt, rating: r.rating, state: r.state }));
+  const worker = new Worker(new URL("../lib/optimizer.worker.ts", import.meta.url), { type: "module" });
+  try {
+    return await new Promise<FitResult>((resolve, reject) => {
+      worker.onmessage = (e: MessageEvent<WorkerReply>) => {
+        const m = e.data;
+        if ("progress" in m) onProgress?.(m.progress[1] ? m.progress[0] / m.progress[1] : 0);
+        else if ("result" in m) resolve(m.result);
+        else reject(new Error(m.error));
+      };
+      worker.onerror = (e) => reject(new Error(e.message || "Không chạy được bộ tối ưu"));
+      const req: WorkerRequest = {
+        answers,
+        options: { dayStartHour: p.dayStartHour, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", current: p.fsrsWeights },
+      };
+      worker.postMessage(req);
+    });
+  } finally {
+    worker.terminate();
+  }
+}
+
+/** Keeps fitted parameters; both schedulers use them from the next answer on. Memory states already stored stay. */
+export async function applyFsrs(r: Extract<FitResult, { status: "fitted" }>) {
+  await savePrefs({ ...prefs.get(), fsrsWeights: r.w, fsrsOptimizedAt: Date.now(), fsrsOptimizedReviews: r.reviews });
+}
+
 export async function savePrefs(p: Prefs) {
   const now = Date.now();
   const repo = currentRepo();
@@ -159,7 +195,7 @@ export interface Reviewed {
 
 export async function reviewCard(card: Card, rating: Rating, durationMs: number, now = Date.now()): Promise<Reviewed> {
   const p = prefs.get();
-  const sched = makeScheduler(p.desiredRetention);
+  const sched = makeScheduler(p.desiredRetention, p.fsrsWeights);
   const next = answer(sched, card, rating, now);
   const log: ReviewLog = {
     id: reviewId(card.id, now),

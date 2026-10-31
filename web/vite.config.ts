@@ -24,8 +24,9 @@ function precache(): Plugin {
           if (statSync(p).isDirectory()) {
             if (r === "dict") continue; // fetched on demand, cached by version
             walk(p, r);
-          } else if (!/\.(map|woff)$/.test(n) && n !== "sw.js" && !n.startsWith("sql-wasm")) files.push("/" + r);
-          // sql-wasm*: the Anki reader (~1 MB), downloaded only when the learner imports a package.
+          } else if (!/\.(map|woff)$/.test(n) && n !== "sw.js" && !/^(sql-wasm|fsrs-binding|optimizer\.worker)/.test(n)) files.push("/" + r);
+          // sql-wasm*: the Anki reader (~1 MB), downloaded only when the learner imports a package. fsrs-binding*,
+          // optimizer.worker*: the FSRS optimizer (~1.6 MB), only when they press "Tối ưu". Both cached on first use.
         }
       };
       walk(outDir);
@@ -43,5 +44,7 @@ export default defineConfig({
   resolve: { alias: { "@shared": fileURLToPath(new URL("../shared", import.meta.url)) } },
   server: { fs: { allow: [".."] }, port: 5173 },
   build: { target: "es2022", sourcemap: false, chunkSizeWarningLimit: 1000 },
+  // Module workers: the FSRS optimizer worker loads its WebAssembly with top-level await.
+  worker: { format: "es" },
   test: { environment: "jsdom", include: ["test/**/*.test.ts"], setupFiles: ["test/setup.ts"] },
 });

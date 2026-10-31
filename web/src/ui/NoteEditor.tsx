@@ -112,7 +112,7 @@ export function NoteEditor({ note, onClose }: { note: Note; onClose: () => void 
                     <button type="button" class="btn sm" onClick={() => void setSuspended(c, !c.suspended)}>{c.suspended ? "Hiện lại" : "Ẩn"}</button>
                   </span>
                 </div>
-                <CardStats card={c} retention={p.desiredRetention} history={history?.filter((r) => r.cardId === c.id) ?? null} />
+                <CardStats card={c} retention={p.desiredRetention} weights={p.fsrsWeights} history={history?.filter((r) => r.cardId === c.id) ?? null} />
               </div>
             ))}
           </div>
@@ -133,10 +133,10 @@ const RATING_LABEL: Record<number, string> = { 1: "Quên", 2: "Khó", 3: "Tốt"
 const SOURCE: Record<string, string> = { web: "web", android: "Android", anki: "Anki" };
 
 /** Anki's "card info": memory state and answer history of one card. */
-function CardStats({ card, retention, history }: { card: Card; retention: number; history: ReviewLog[] | null }) {
+function CardStats({ card, retention, weights, history }: { card: Card; retention: number; weights?: number[]; history: ReviewLog[] | null }) {
   const now = Date.now();
   if (card.state === CardState.New && !history?.length) return <p class="muted card-stats">Chưa học lần nào.</p>;
-  const r = retrievability(makeScheduler(retention), card, now);
+  const r = retrievability(makeScheduler(retention, weights), card, now);
   return (
     <div class="card-stats">
       <dl>
