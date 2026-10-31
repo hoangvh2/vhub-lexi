@@ -17,6 +17,7 @@ class FsrsVectorsTest {
             val fsrs = Fsrs(retention = s.getDouble("retention"))
             val start = s.getLong("start")
             var card = Card(id = "n1.recognize", noteId = "n1", deckId = "d1", template = "recognize", due = start, createdAt = start, updatedAt = start)
+            s.optJSONObject("startMemory")?.let { card = card.copy(stability = it.getDouble("stability"), difficulty = it.getDouble("difficulty")) }
             for ((i, step) in s.getJSONArray("steps").objects().withIndex()) {
                 card = fsrs.next(card, step.getLong("at"), step.getInt("rating"))
                 val e = step.getJSONObject("expect")

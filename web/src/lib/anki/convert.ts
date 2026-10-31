@@ -411,8 +411,9 @@ export function convertAnki(col: AnkiCollection, plan: ImportPlan, ex: ImportExi
       const lastReview = ac.data.lrt !== undefined ? ac.data.lrt * 1000 : lastLog?.id ?? (state === CardState.Review ? due - ac.ivl * DAY_MS : undefined);
       const card: Card = {
         id: cid, noteId: id, deckId: deck.id, template, state, due,
-        stability: clamp(stability, 0, 100000),
-        difficulty: clamp(difficulty, 1, 10),
+        // New cards keep the empty memory state (0, 0) that the scheduler expects.
+        stability: state === CardState.New ? 0 : clamp(stability, 0, 100000),
+        difficulty: state === CardState.New ? 0 : clamp(difficulty, 1, 10),
         scheduledDays: state === CardState.Review ? Math.max(0, ac.ivl) : 0,
         learningSteps: 0,
         reps: Math.max(0, ac.reps),
