@@ -73,7 +73,12 @@ export function AnkiImport({ col, name, onClose }: { col: AnkiCollection; name: 
 
       <ul class="anki-report" data-testid="anki-report">
         <li><b>{n(report.notes)}</b> từ mới vào {file.decks.length ? `bộ thẻ mới “${file.decks.map((d) => d.name).join(", ")}”` : "bộ thẻ đã có cùng tên"}{report.lessons.length > 1 ? `, chia theo ${n(report.lessons.length)} bài (nhãn ${report.lessons[0]} …)` : ""}</li>
-        <li><b>{n(report.studied)}</b> thẻ giữ tiến độ ôn từ Anki, <b>{n(report.dueToday)}</b> đến hạn hôm nay, {n(report.reviews)} lượt ôn vào thống kê</li>
+        {report.studied > 0 || report.cards === 0 ? (
+          <li><b>{n(report.studied)}</b> thẻ giữ tiến độ ôn từ Anki, <b>{n(report.dueToday)}</b> đến hạn hôm nay, {n(report.reviews)} lượt ôn vào thống kê</li>
+        ) : (
+          <li class="warn" data-testid="anki-no-progress">Gói này không có tiến độ học, mọi thẻ sẽ là thẻ mới. Muốn giữ tiến độ, hãy xuất từ Anki với tuỳ chọn “Include scheduling information”.</li>
+        )}
+        {report.merged.length > 0 && <li>{n(report.merged.length)} từ có ở hai bài ({report.merged.slice(0, 5).join(", ")}{report.merged.length > 5 ? "…" : ""}) được gộp thành một, giữ nhãn và nghĩa của cả hai bài</li>}
         {report.suspended > 0 && <li>{n(report.suspended)} thẻ vẫn tạm dừng như trong Anki</li>}
         {skipped > 0 && <li>Bỏ qua {n(skipped)} từ đã có trong Lexi{report.skippedDuplicates.length ? ` (${report.skippedDuplicates.slice(0, 5).join(", ")}${report.skippedDuplicates.length > 5 ? "…" : ""})` : ""}, tiến độ của chúng giữ nguyên</li>}
         {report.droppedCards > 0 && <li>{n(report.droppedCards)} thẻ Anki không có mẫu thẻ tương ứng, bị bỏ</li>}
