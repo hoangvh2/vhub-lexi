@@ -2,7 +2,10 @@ package com.vh.lexi.ui
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
@@ -30,6 +33,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -56,10 +60,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -101,8 +109,14 @@ import com.vh.lexi.core.pickNext
 import com.vh.lexi.core.template
 import com.vh.lexi.data.Reviewed
 import com.vh.lexi.ui.theme.Lexi
+import com.vh.lexi.ui.theme.Quicksand
+import com.vh.lexi.ui.theme.clay
+import com.vh.lexi.ui.theme.gradientPill
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 /** One answer of this session, for the summary at the end. */
 private data class Answered(val noteId: String, val word: String, val vi: String, val rating: Int)
@@ -307,7 +321,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                 CountChip("Đang học ${queue.counts.learning}", c.again, kind == "learn")
                 CountChip("Ôn ${queue.counts.review}", c.good, kind == "review")
             }
-            LinearProgressIndicator(progress = { doneFrac }, Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = c.accent, trackColor = c.surface2, gapSize = 0.dp, drawStopIndicator = {})
+            LinearProgressIndicator(progress = { doneFrac }, Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)), color = c.accent, trackColor = c.line, gapSize = 0.dp, drawStopIndicator = {})
 
             if (card == null || note == null || tpl == null) {
                 val nextLesson = tag?.let { t ->
@@ -328,15 +342,13 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                 // Each new card eases in (fade + small rise) instead of popping, so a long session feels calmer.
                 val appear = remember(card.id, session.shown) { Animatable(0f) }
                 LaunchedEffect(card.id, session.shown) { appear.animateTo(1f, tween(280)) }
-                Surface(
-                    shape = RoundedCornerShape(26.dp), color = c.surface, border = BorderStroke(1.dp, c.line), shadowElevation = 3.dp,
+                Box(
                     modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp)
-                        .graphicsLayer { alpha = appear.value; translationY = (1f - appear.value) * 24f }
+                        .graphicsLayer { alpha = appear.value; translationY = (1f - appear.value) * 28f; val s = 0.97f + 0.03f * appear.value; scaleX = s; scaleY = s }
+                        .clay(c, RoundedCornerShape(32.dp)).clip(RoundedCornerShape(32.dp))
                         .then(if (!revealed && tpl.mode == AnswerMode.FLIP) Modifier.clickable { reveal() } else Modifier),
                 ) {
                   Column {
-                    // The mode's colour along the top edge says which kind of card this is before any word is read.
-                    Box(Modifier.fillMaxWidth().height(5.dp).background(mode))
                     Column(Modifier.padding(horizontal = 20.dp, vertical = 24.dp).animateContentSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
                         // What the card asks for; once answered, the space goes to the answer so the rating row stays in view.
                         if (!revealed) ModeHeader(tpl.id, tpl.label, mode)
@@ -411,19 +423,22 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
         if (card != null && note != null && tpl != null && (revealed || tpl.mode == AnswerMode.FLIP)) {
             Box(Modifier.fillMaxWidth().background(c.bg).padding(horizontal = 16.dp, vertical = 10.dp)) {
                 if (!revealed && tpl.mode == AnswerMode.FLIP) {
-                    Button(onClick = { reveal() }, Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("show-answer"), shape = RoundedCornerShape(16.dp)) { Text("Hiện đáp án", fontSize = 16.sp) }
+                    PrimaryPill("Hiện đáp án", { reveal() }, Modifier.fillMaxWidth().testTag("show-answer"), big = false)
                 } else if (revealed) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Pastel buttons with ink labels; the one suggested by the typed answer gets a ring in its own deep tone.
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                         for ((r, label) in listOf(1 to "Quên", 2 to "Khó", 3 to "Tốt", 4 to "Dễ")) {
                             val (fg, soft) = when (r) { 1 -> c.again to c.againSoft; 2 -> c.hard to c.hardSoft; 3 -> c.good to c.goodSoft; else -> c.easy to c.easySoft }
                             val next = fsrs.next(card, now, r)
+                            val shape = RoundedCornerShape(24.dp)
                             Surface(
-                                onClick = { rate(r) }, modifier = Modifier.weight(1f).heightIn(min = 64.dp).testTag("rate-$r"), shape = RoundedCornerShape(16.dp),
-                                color = if (suggested == r) soft else soft.copy(alpha = 0.55f).compositeOver(c.surface), border = BorderStroke(1.5.dp, if (suggested == r) fg else Color.Transparent),
+                                onClick = { rate(r) }, modifier = Modifier.weight(1f).heightIn(min = 66.dp).testTag("rate-$r"), shape = shape,
+                                color = soft, border = if (suggested == r) BorderStroke(2.5.dp, fg) else BorderStroke(1.5.dp, Brush.verticalGradient(0f to c.hi, 0.4f to Color.Transparent)),
+                                shadowElevation = 3.dp,
                             ) {
                                 Column(Modifier.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                                    Text(label, color = fg, fontWeight = FontWeight.Bold)
-                                    Text(Fsrs.formatInterval(next.due - now), color = c.muted, fontSize = 12.sp)
+                                    Text(label, color = c.ink, fontFamily = Quicksand, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                    Text(Fsrs.formatInterval(next.due - now), color = c.muted, fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold)
                                 }
                             }
                         }
@@ -452,12 +467,15 @@ private fun modeColor(templateId: String): Color {
 @Composable
 private fun ModeHeader(templateId: String, label: String, mode: Color) {
     val c = Lexi.colors
-    Column(Modifier.fillMaxWidth().testTag("card-mode"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth().testTag("card-mode"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            Modifier.background(mode.copy(alpha = 0.14f).compositeOver(c.surface), CircleShape).padding(start = 10.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Box(Modifier.size(8.dp).background(mode, CircleShape))
-            Text((MODE_TITLE[templateId] ?: label).uppercase(), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.7.sp, color = mode)
+            Text((MODE_TITLE[templateId] ?: label).uppercase(), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp, color = mode)
         }
-        MODE_Q[templateId]?.let { Text(it, fontSize = 14.sp, lineHeight = 20.sp, color = c.muted) }
+        MODE_Q[templateId]?.let { Text(it, fontSize = 14.sp, lineHeight = 20.sp, color = c.muted, textAlign = TextAlign.Center) }
     }
 }
 
@@ -466,8 +484,8 @@ private fun ModeHeader(templateId: String, label: String, mode: Color) {
 private fun CountChip(text: String, color: Color, on: Boolean) {
     val c = Lexi.colors
     Text(
-        text, Modifier.border(if (on) 1.5.dp else 1.dp, if (on) color else c.line, CircleShape).background(c.surface, CircleShape).padding(horizontal = 9.dp, vertical = 3.dp),
-        color = color, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1,
+        text, Modifier.clay(c, CircleShape, elevation = 3.dp).then(if (on) Modifier.border(2.dp, color, CircleShape) else Modifier).padding(horizontal = 12.dp, vertical = 5.dp),
+        color = color, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, maxLines = 1,
     )
 }
 
@@ -504,7 +522,7 @@ private fun NotThese(others: List<Confusable>) {
             withStyle(SpanStyle(color = c.ink, textDecoration = TextDecoration.LineThrough)) { append(o.word) }
         }
     }
-    Text(text, Modifier.fillMaxWidth().background(c.surface2, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 6.dp).testTag("not-these"), fontSize = 13.sp, color = c.muted, textAlign = TextAlign.Center)
+    Text(text, Modifier.fillMaxWidth().background(c.surface2, RoundedCornerShape(14.dp)).padding(horizontal = 12.dp, vertical = 6.dp).testTag("not-these"), fontSize = 13.sp, color = c.muted, textAlign = TextAlign.Center)
 }
 
 /** First try was another of the learner's words with this meaning: name it, show its definition, allow a retry. */
@@ -520,7 +538,7 @@ private fun MixedUp(other: Confusable) {
                     withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(other.word) }
                     append((if (other.pos.isNotEmpty()) " (${other.pos})" else "") + ": " + other.en)
                 },
-                Modifier.background(c.surface2, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 6.dp), fontSize = 13.sp, color = c.ink, textAlign = TextAlign.Center,
+                Modifier.background(c.surface2, RoundedCornerShape(14.dp)).padding(horizontal = 12.dp, vertical = 6.dp), fontSize = 13.sp, color = c.ink, textAlign = TextAlign.Center,
             )
         }
     }
@@ -532,7 +550,7 @@ private fun Compare(word: String, pos: String, en: String, others: List<Confusab
     val c = Lexi.colors
     @Composable
     fun Item(w: String, p: String, vi: String, def: String, mine: Boolean) {
-        Column(Modifier.fillMaxWidth().background(if (mine) c.accentSoft else c.surface2, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.fillMaxWidth().background(if (mine) c.accentSoft else c.surface2, RoundedCornerShape(18.dp)).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(w, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = c.ink)
             if (p.isNotEmpty()) Text(p, fontSize = 12.sp, color = c.muted)
             if (vi.isNotEmpty()) Text(vi, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
@@ -560,20 +578,20 @@ private fun DoneCard(
     val forgot = list.filter { it.rating == 1 }
     Panel(Modifier.testTag("session-done")) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(if (session.answered > 0) "Xong!" else "Hết thẻ hôm nay", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = c.accent)
+            if (session.answered > 0) StreakBubble(streak)
+            Text(if (session.answered > 0) "Xong phần này!" else "Hết thẻ hôm nay", fontFamily = Quicksand, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = c.ink)
             if (session.answered > 0) {
                 val acc = ((session.answered - session.again) * 100) / session.answered
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Stat("${words.size}", "từ đã ôn")
-                    Stat("$acc%", "nhớ đúng")
-                    Stat("${maxOf(1, (session.ms / 60_000).toInt())}p", "thời gian")
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Stat("${words.size}", "từ đã ôn", Modifier.weight(1f))
+                    Stat("$acc%", "nhớ đúng", Modifier.weight(1f))
+                    Stat("${maxOf(1, (session.ms / 60_000).toInt())}p", "thời gian", Modifier.weight(1f))
                 }
-                if (streak > 0) Text("🔥 $streak ngày liên tiếp", fontWeight = FontWeight.SemiBold)
             } else {
                 Text("Không có thẻ đến hạn. Quay lại sau, hoặc thêm từ mới.", color = c.muted, textAlign = TextAlign.Center)
             }
             if (forgot.isNotEmpty()) {
-                Column(Modifier.fillMaxWidth().background(c.againSoft, RoundedCornerShape(12.dp)).padding(horizontal = 14.dp, vertical = 10.dp).testTag("recap-forgot"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(Modifier.fillMaxWidth().background(c.againSoft, RoundedCornerShape(20.dp)).padding(horizontal = 14.dp, vertical = 10.dp).testTag("recap-forgot"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("CẦN CHÚ Ý", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.7.sp, color = c.again)
                     for (a in forgot.take(6)) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(a.word, fontWeight = FontWeight.Bold)
@@ -585,13 +603,13 @@ private fun DoneCard(
                 FlowRow(Modifier.fillMaxWidth().testTag("recap"), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     for (a in list) {
                         val (fg, soft) = when (a.rating) { 1 -> c.again to c.againSoft; 2 -> c.hard to c.hardSoft; 3 -> c.good to c.goodSoft; else -> c.easy to c.easySoft }
-                        Text(a.word, Modifier.background(soft, CircleShape).padding(horizontal = 10.dp, vertical = 3.dp), color = fg, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Text(a.word, Modifier.background(soft, CircleShape).padding(horizontal = 12.dp, vertical = 4.dp), color = fg, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
                     }
                 }
             }
             if (waitingMs != null) Text("Còn thẻ đang học, thẻ kế tiếp quay lại sau ${Fsrs.formatInterval(waitingMs)}.", color = c.muted, textAlign = TextAlign.Center)
             else if (session.answered > 0) Text(if (dueTomorrow > 0) "Ngày mai có $dueTomorrow thẻ cần ôn." else "Ngày mai chưa có thẻ nào đến hạn.", color = c.muted, textAlign = TextAlign.Center)
-            if (nextLesson != null) Button(onClick = { onLesson(nextLesson) }, Modifier.testTag("next-lesson")) { Text("Sang bài tiếp: ${lessonTitle(nextLesson)}") }
+            if (nextLesson != null) PrimaryPill("Sang bài tiếp: ${lessonTitle(nextLesson)}", { onLesson(nextLesson) }, Modifier.testTag("next-lesson"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (waitingMs != null) Button(onClick = onContinue) { Text("Học tiếp ngay") }
                 if (hasMoreNew) OutlinedButton(onClick = onMore) { Text("Thêm 5 từ mới") }
@@ -606,9 +624,49 @@ private fun DoneCard(
 }
 
 @Composable
-private fun Stat(value: String, label: String) {
-    Column(Modifier.background(Lexi.colors.surface2, RoundedCornerShape(12.dp)).padding(horizontal = 14.dp, vertical = 10.dp)) {
-        Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text(label, fontSize = 12.sp, color = Lexi.colors.muted)
+private fun Stat(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier.background(Lexi.colors.surface2, RoundedCornerShape(22.dp)).padding(horizontal = 6.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, fontFamily = Quicksand, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Lexi.colors.muted, maxLines = 1, softWrap = false)
+    }
+}
+
+/**
+ * The finish screen's reward: a glossy accent bubble with the streak (or a tick) that pops in with a bounce, and a few
+ * small bubbles drifting up from behind it (Study.tsx: motion.ts celebrate()).
+ */
+@Composable
+private fun StreakBubble(streak: Int) {
+    val c = Lexi.colors
+    val pop = remember { Animatable(0f) }
+    val drift = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        launch { pop.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 260f)) }
+        drift.animateTo(1f, tween(1800, delayMillis = 150, easing = FastOutSlowInEasing))
+    }
+    val fizz = listOf(c.accent2, c.peach, c.mint, c.butter, c.rose)
+    Box(Modifier.size(170.dp, 150.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val t = drift.value
+            if (t <= 0f || t >= 1f) return@Canvas
+            for (i in 0 until 12) {
+                val angle = (-90f + (i - 5.5f) * 13f) * (PI.toFloat() / 180f)
+                val dist = (60f + (i * 37 % 50)) * density * t
+                val r = (4f + (i * 7 % 6)) * density * (1f - 0.4f * t)
+                drawCircle(fizz[i % fizz.size], r, Offset(center.x + cos(angle) * dist, center.y + sin(angle) * dist), alpha = (1f - t) * 0.9f)
+            }
+        }
+        Box(
+            Modifier.size(124.dp).graphicsLayer { scaleX = 0.3f + 0.7f * pop.value; scaleY = 0.3f + 0.7f * pop.value; alpha = pop.value.coerceIn(0f, 1f) }
+                .gradientPill(c, CircleShape)
+                .background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.45f), Color.Transparent), center = Offset(110f, 95f), radius = 150f), CircleShape)
+                .semantics(mergeDescendants = true) { contentDescription = if (streak > 0) "$streak ngày học liên tiếp" else "Đã xong" },
+            contentAlignment = Alignment.Center,
+        ) {
+            if (streak > 0) Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("$streak", fontFamily = Quicksand, fontSize = 40.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold, color = c.onAccent)
+                Text("ngày liền", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = c.onAccent.copy(alpha = 0.92f))
+            } else Icon(Icons.Filled.Check, null, Modifier.size(54.dp), tint = c.onAccent)
+        }
     }
 }

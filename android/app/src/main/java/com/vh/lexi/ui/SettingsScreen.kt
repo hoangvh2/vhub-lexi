@@ -37,6 +37,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -153,12 +155,13 @@ fun SettingsScreen(app: LexiApp) {
             Text("Giao diện", fontWeight = FontWeight.SemiBold)
             Segments(listOf("system" to "Theo hệ thống", "light" to "Sáng", "dark" to "Tối"), p.theme) { set(p.copy(theme = it)) }
             Text("Màu nhấn", fontWeight = FontWeight.SemiBold)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                for ((k, col) in listOf("teal" to 0xFF157A55, "blue" to 0xFF2457C5, "orange" to 0xFFC2410C, "violet" to 0xFF7C3AED)) {
+            // Stored keys are kept; the colours are the ones Theme.kt draws (teal is the default jade, violet the earlier lavender).
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                for ((k, col, name) in listOf(Triple("teal", 0xFF0F766E, "Ngọc đá"), Triple("blue", 0xFF2563EB, "Biển"), Triple("orange", 0xFFC2502A, "Đào"), Triple("violet", 0xFF6A4CF0, "Oải hương"))) {
                     androidx.compose.foundation.layout.Box(
-                        Modifier.size(34.dp).background(Color(col), CircleShape)
-                            .border(if (p.accent == k) 3.dp else 1.dp, if (p.accent == k) c.ink else c.line, CircleShape)
-                            .clickable { set(p.copy(accent = k)) },
+                        Modifier.size(44.dp).border(if (p.accent == k) 2.5.dp else 0.dp, if (p.accent == k) c.ink else Color.Transparent, CircleShape).padding(4.dp)
+                            .background(Color(col), CircleShape)
+                            .clickable(onClickLabel = name) { set(p.copy(accent = k)) }.semantics { contentDescription = name },
                     )
                 }
             }

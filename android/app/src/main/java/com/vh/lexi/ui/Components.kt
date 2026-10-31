@@ -6,7 +6,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
@@ -62,6 +62,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogWindowProvider
 import com.vh.lexi.core.Block
 import com.vh.lexi.ui.theme.Lexi
+import com.vh.lexi.ui.theme.Quicksand
+import com.vh.lexi.ui.theme.clay
 import kotlinx.coroutines.launch
 
 /**
@@ -107,14 +109,10 @@ val LocalToaster = compositionLocalOf { Toaster { _, _, _ -> } }
 
 @Composable
 fun Panel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = Lexi.colors.surface,
-        border = BorderStroke(1.dp, Lexi.colors.line),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
-    }
+    Column(
+        modifier.fillMaxWidth().clay(Lexi.colors, RoundedCornerShape(26.dp)).padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp), content = content,
+    )
 }
 
 enum class PillKind { PLAIN, OK, WARN, BAD, AI }
@@ -125,13 +123,13 @@ fun Pill(text: String, kind: PillKind = PillKind.PLAIN, modifier: Modifier = Mod
     val c = Lexi.colors
     val (bg, fg) = when (kind) {
         PillKind.PLAIN -> c.surface2 to c.muted
-        PillKind.OK -> c.accentSoft to c.accent
+        PillKind.OK -> c.mintSoft to c.mintDeep
         PillKind.WARN -> c.hardSoft to c.hard
         PillKind.BAD -> c.againSoft to c.again
         PillKind.AI -> c.easySoft to c.easy
     }
-    Box(modifier.background(bg, if (wrap) RoundedCornerShape(12.dp) else CircleShape).padding(horizontal = 10.dp, vertical = 3.dp)) {
-        Text(text, color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = if (wrap) Int.MAX_VALUE else 1, textAlign = if (wrap) TextAlign.Center else null)
+    Box(modifier.background(bg, if (wrap) RoundedCornerShape(16.dp) else CircleShape).padding(horizontal = 11.dp, vertical = 4.dp)) {
+        Text(text, color = fg, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = if (wrap) Int.MAX_VALUE else 1, textAlign = if (wrap) TextAlign.Center else null)
     }
 }
 
@@ -160,27 +158,34 @@ fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifie
     val c = Lexi.colors
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         for (b in blocks) when (b) {
-            is Block.Title -> Text(b.text, fontSize = 38.sp, lineHeight = 42.sp, fontWeight = FontWeight.Bold, color = c.ink, textAlign = TextAlign.Center)
+            is Block.Title -> Text(b.text, fontSize = 38.sp, lineHeight = 42.sp, fontFamily = Quicksand, fontWeight = FontWeight.Bold, color = c.ink, textAlign = TextAlign.Center)
             is Block.Ipa -> Text("/" + b.text.trim('/') + "/", fontSize = 18.sp, color = c.muted)
             is Block.Badge -> Pill(b.text, PillKind.OK)
             is Block.Speak -> Surface(
-                onClick = { onSpeak(b.text) }, shape = CircleShape, color = c.surface2, border = BorderStroke(1.dp, c.line),
+                onClick = { onSpeak(b.text) }, shape = CircleShape, color = c.accentSoft,
             ) {
-                Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Filled.VolumeUp, contentDescription = "Nghe phát âm ${b.text}", tint = c.ink, modifier = Modifier.size(18.dp))
-                    Text("Nghe", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
+                Row(Modifier.heightIn(min = 40.dp).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Filled.VolumeUp, contentDescription = "Nghe phát âm ${b.text}", tint = c.accent, modifier = Modifier.size(18.dp))
+                    Text("Nghe", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = c.accent)
                 }
             }
             is Block.Text -> when (b.tone) {
                 "strong" -> senses(b.text)?.let { list ->
                     // "(công việc) trình diễn; (chung) chứng minh": one line per setting, the setting as a small label.
+                    // The first sense sits in a soft butter bubble: the one thing the eye should land on after the word.
                     Column(Modifier.testTag("senses"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        for ((i, s) in list.withIndex()) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(s.first, Modifier.background(c.surface2, CircleShape).padding(horizontal = 8.dp, vertical = 2.dp), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = mode)
-                            Text(s.second, fontSize = if (i == 0) 22.sp else 19.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
+                        for ((i, s) in list.withIndex()) Row(
+                            (if (i == 0) Modifier.background(c.butterSoft, RoundedCornerShape(24.dp)).padding(horizontal = 16.dp, vertical = 6.dp) else Modifier),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(s.first, Modifier.background(c.surface.copy(alpha = 0.7f), CircleShape).padding(horizontal = 8.dp, vertical = 2.dp), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = mode)
+                            Text(s.second, fontSize = if (i == 0) 22.sp else 19.sp, lineHeight = 28.sp, fontWeight = if (i == 0) FontWeight.ExtraBold else FontWeight.Bold, color = c.ink)
                         }
                     }
-                } ?: Text(b.text, fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold, color = c.ink, textAlign = TextAlign.Center)
+                } ?: Text(
+                    b.text, Modifier.background(c.butterSoft, RoundedCornerShape(24.dp)).padding(horizontal = 20.dp, vertical = 8.dp),
+                    fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.ExtraBold, color = c.ink, textAlign = TextAlign.Center,
+                )
                 "muted" -> Text(b.text, fontSize = 15.sp, lineHeight = 23.sp, color = c.muted, textAlign = TextAlign.Center)
                 else -> Text(b.text, fontSize = 17.sp, lineHeight = 26.sp, color = c.ink, textAlign = TextAlign.Center)
             }
@@ -190,7 +195,7 @@ fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifie
             }
             // The sentence with the studied word highlighted like a marker pen, its translation underneath.
             is Block.Example -> Column(
-                Modifier.fillMaxWidth().background(c.surface2, RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 12.dp).testTag("example"),
+                Modifier.fillMaxWidth().background(c.surface2, RoundedCornerShape(20.dp)).padding(horizontal = 16.dp, vertical = 13.dp).testTag("example"),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -219,9 +224,9 @@ fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifie
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(Icons.Filled.AutoAwesome, null, tint = c.hard, modifier = Modifier.size(14.dp))
-                        Text("MẸO NHỚ", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = c.hard)
-                        Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = c.hard, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Filled.AutoAwesome, null, tint = c.mintDeep, modifier = Modifier.size(14.dp))
+                        Text("MẸO NHỚ", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp, color = c.mintDeep)
+                        Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = c.mintDeep, modifier = Modifier.size(16.dp))
                     }
                     if (open) Text(b.text, fontSize = 16.sp, lineHeight = 25.sp, color = c.ink)
                 }
