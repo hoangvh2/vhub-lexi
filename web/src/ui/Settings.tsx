@@ -1,3 +1,4 @@
+import type { ComponentType } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { CardLayout, Prefs } from "@shared/model.ts";
 import { NOTE_TYPES } from "@shared/notetypes.ts";
@@ -5,6 +6,7 @@ import { savePrefs } from "../data/actions.ts";
 import { firebaseConfigured, signOutUser } from "../data/firebase.ts";
 import { validateExport } from "../data/repo.ts";
 import { currentRepo, prefs, sync } from "../data/state.ts";
+import type { AnkiCollection } from "../lib/anki/read.ts";
 import { dictionary } from "../lib/dict.ts";
 import { useStore } from "../lib/store.ts";
 import { Icon, confirmDialog, syncLabel, toast } from "./common.tsx";
@@ -16,6 +18,9 @@ export function Settings({ email }: { email: string | null }) {
   const s = useStore(sync);
   const [meta, setMeta] = useState<{ words: number; withIpa: number; withVi?: number; version: string } | null>(null);
   const file = useRef<HTMLInputElement>(null);
+  const apkg = useRef<HTMLInputElement>(null);
+  const [anki, setAnki] = useState<{ col: AnkiCollection; name: string; View: ComponentType<{ col: AnkiCollection; name: string; onClose: () => void }> } | null>(null);
+  const [ankiBusy, setAnkiBusy] = useState(false);
   const [prefetch, setPrefetch] = useState<string | null>(null);
 
   useEffect(() => {
@@ -67,6 +72,21 @@ export function Settings({ email }: { email: string | null }) {
       toast(`Đã nhập ${r.notes} từ, ${r.cards} thẻ`);
     } catch {
       toast("Không đọc được file");
+    }
+  }
+
+  /** The Anki reader (SQLite in WebAssembly, ~1 MB) is only downloaded when a package is picked. */
+  async function openApkg(f: File) {
+    setAnkiBusy(true);
+    try {
+      const m = await import("./AnkiImport.tsx");
+      const col = await m.loadApkg(f);
+      if (col) setAnki({ col, name: f.name, View: m.AnkiImport });
+    } catch (e) {
+      console.error("[anki]", e);
+      toast("Không tải được bộ đọc Anki, kiểm tra kết nối rồi thử lại");
+    } finally {
+      setAnkiBusy(false);
     }
   }
 
@@ -148,6 +168,8 @@ export function Settings({ email }: { email: string | null }) {
           <button type="button" class="btn" onClick={() => void exportJson()} data-testid="export"><Icon n="download" /> Xuất JSON</button>
           <button type="button" class="btn" onClick={() => file.current?.click()}><Icon n="upload" /> Nhập JSON</button>
           <input ref={file} type="file" accept="application/json,.json" hidden onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f) void importJson(f); e.currentTarget.value = ""; }} data-testid="import-file" />
+          <button type="button" class="btn" disabled={ankiBusy} onClick={() => apkg.current?.click()} data-testid="import-anki"><Icon n="upload" /> {ankiBusy ? "Đang đọc gói Anki…" : "Nhập từ Anki (.apkg)"}</button>
+          <input ref={apkg} type="file" accept=".apkg,.colpkg" hidden onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f) void openApkg(f); e.currentTarget.value = ""; }} data-testid="import-anki-file" />
           {email && <button type="button" class="btn danger" onClick={() => void signOut()}><Icon n="logout" /> Đăng xuất</button>}
         </div>
       </section>
@@ -176,6 +198,8 @@ export function Settings({ email }: { email: string | null }) {
           {prefetch && <span class="pill">{prefetch}</span>}
         </div>
       </section>
+
+      {anki && <anki.View col={anki.col} name={anki.name} onClose={() => setAnki(null)} />}
 
       <section class="panel col">
         <h2>Về VH Lexi</h2>

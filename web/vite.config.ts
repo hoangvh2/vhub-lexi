@@ -24,7 +24,8 @@ function precache(): Plugin {
           if (statSync(p).isDirectory()) {
             if (r === "dict") continue; // fetched on demand, cached by version
             walk(p, r);
-          } else if (!/\.(map|woff)$/.test(n) && n !== "sw.js") files.push("/" + r);
+          } else if (!/\.(map|woff)$/.test(n) && n !== "sw.js" && !n.startsWith("sql-wasm")) files.push("/" + r);
+          // sql-wasm*: the Anki reader (~1 MB), downloaded only when the learner imports a package.
         }
       };
       walk(outDir);
@@ -41,6 +42,6 @@ export default defineConfig({
   plugins: [preact(), precache()],
   resolve: { alias: { "@shared": fileURLToPath(new URL("../shared", import.meta.url)) } },
   server: { fs: { allow: [".."] }, port: 5173 },
-  build: { target: "es2022", sourcemap: false, chunkSizeWarningLimit: 700 },
+  build: { target: "es2022", sourcemap: false, chunkSizeWarningLimit: 1000 },
   test: { environment: "jsdom", include: ["test/**/*.test.ts"], setupFiles: ["test/setup.ts"] },
 });

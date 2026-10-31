@@ -117,7 +117,7 @@ service cloud.firestore {
         && intIn(d.rating, 1, 4)
         && intIn(d.state, 0, 3)
         && d.reviewedAt is int
-        && d.device in ['web', 'android']
+        && d.device in ['web', 'android', 'anki']
         && (!('durationMs' in d) || intIn(d.durationMs, 0, 3600000))
         && (!('stability' in d) || d.stability is number)
         && (!('difficulty' in d) || d.difficulty is number)

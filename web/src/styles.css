@@ -381,3 +381,16 @@ input[type="range"] { width: 100%; }
 .card-history li { display: grid; grid-template-columns: 84px 40px 1fr; gap: 8px; align-items: baseline; }
 .card-history .rate { font-weight: 600; min-width: 36px; }
 .card-history .r1 { color: var(--again); } .card-history .r2 { color: var(--hard); } .card-history .r3 { color: var(--good); } .card-history .r4 { color: var(--easy); }
+
+/* ---------- Anki import ---------- */
+.anki-map { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+.anki-row { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); min-width: 0; }
+.anki-row .select { width: 100%; min-width: 0; }
+.anki-sample { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; background: var(--surface-2); }
+.anki-sample b { font-size: 18px; }
+.anki-report { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.anki-report .warn { color: var(--hard); }
+@media (max-width: 520px) { .anki-map { grid-template-columns: 1fr; } }
+.anki-details { display: flex; flex-direction: column; gap: 10px; }
+.anki-details > summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--accent); padding: 4px 0; }
+.anki-details[open] > summary { margin-bottom: 10px; }
