@@ -73,7 +73,7 @@ export function buildQueue(i: QueueInput): Queue {
   }
   learning.sort((a, b) => a.due - b.due);
   review.sort((a, b) => a.due - b.due);
-  fresh.sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : 1));
+  fresh.sort((a, b) => a.createdAt - b.createdAt || introRank(a.template) - introRank(b.template) || (a.id < b.id ? -1 : 1));
 
   const newLimit = Math.max(0, i.prefs.newPerDay - (i.today?.newCards ?? 0));
   const reviewLimit = Math.max(0, i.prefs.maxReviewsPerDay - (i.today?.reviews ?? 0));
@@ -114,6 +114,17 @@ export function buildQueue(i: QueueInput): Queue {
     counts: { new: newCards.length, learning: learning.length, review: reviewCapped.length },
   };
 }
+
+/**
+ * Order in which a new note's cards are introduced: see the word and its meaning first, type it later. Without
+ * this, cards made at the same moment sorted by id and a brand-new word opened with "cloze" (typing a word the
+ * learner had never seen).
+ */
+export const INTRO_ORDER = ["recognize", "recall", "cloze", "listen"];
+const introRank = (template: string) => {
+  const i = INTRO_ORDER.indexOf(template);
+  return i < 0 ? INTRO_ORDER.length : i;
+};
 
 export interface SessionState {
   shown: number;

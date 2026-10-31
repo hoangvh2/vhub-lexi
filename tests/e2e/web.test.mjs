@@ -296,6 +296,19 @@ describe("core flow (local-only mode)", () => {
     await page.waitForFunction(() => !document.querySelector('[data-testid=anki-report]'));
     await page.goto(`${base}/#/library`);
     await page.waitForFunction(() => document.querySelectorAll('[data-testid=lib-item]').length === 6);
+    // An Anki new card can be answered (the first importer stored a memory state that made "show answer" throw).
+    await page.goto(`${base}/#/study`);
+    let answeredNew = false;
+    for (let i = 0; i < 12 && !answeredNew; i++) {
+      const ask = await page.waitForSelector('[data-testid=show-answer], [data-testid=type-input]');
+      answeredNew = (await page.locator('[data-testid=counts] .c-new.on').count()) > 0
+        && (await page.getAttribute('[data-testid=study-card]', "data-template")) === "recognize";
+      if ((await ask.getAttribute("data-testid")) === "show-answer") await ask.click();
+      else await page.click('text=Không nhớ');
+      await page.click('[data-testid=rate-3]', { timeout: 5000 });
+      await page.waitForSelector('[data-testid=rate-3]', { state: "detached" });
+    }
+    assert.equal(answeredNew, true);
     // Importing the same file again adds nothing and keeps the progress.
     await page.goto(`${base}/#/settings`);
     await page.setInputFiles('[data-testid=import-anki-file]', fileURLToPath(new URL("../../web/test/fixtures/anki-fsrs.apkg", import.meta.url)));

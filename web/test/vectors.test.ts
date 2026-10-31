@@ -26,7 +26,7 @@ function cardOut(c: Card) {
 
 function fsrsVectors() {
   // Each scenario: a retention, then a list of [minutes after the start, rating]. Cards start New at T0.
-  const scenarios: Array<{ name: string; retention: number; steps: Array<[number, Rating]> }> = [
+  const scenarios: Array<{ name: string; retention: number; steps: Array<[number, Rating]>; startMemory?: { stability: number; difficulty: number } }> = [
     { name: "new-good-good-then-reviews", retention: 0.9, steps: [[0, 3], [10, 3], [25 * 60, 3], [4 * 1440, 3], [12 * 1440, 3], [30 * 1440, 3], [80 * 1440, 3]] },
     { name: "new-easy", retention: 0.9, steps: [[0, 4], [5 * 1440, 4], [30 * 1440, 4]] },
     { name: "new-again-hard-good", retention: 0.9, steps: [[0, 1], [1, 2], [8, 3], [20, 3], [2 * 1440, 3]] },
@@ -37,15 +37,17 @@ function fsrsVectors() {
     { name: "retention-0.85", retention: 0.85, steps: [[0, 3], [10, 3], [2 * 1440, 3], [8 * 1440, 3], [25 * 1440, 3]] },
     { name: "retention-0.95", retention: 0.95, steps: [[0, 3], [10, 3], [2 * 1440, 3], [8 * 1440, 3], [25 * 1440, 3]] },
     { name: "dst-like-gaps", retention: 0.9, steps: [[0, 3], [10, 3], [23 * 60 + 50, 3], [48 * 60 + 5, 3], [97 * 60, 3]] },
+    // A new card that carries a stale memory state (what the first Anki importer stored) schedules like a clean one.
+    { name: "new-with-stale-memory", retention: 0.9, startMemory: { stability: 0, difficulty: 1 }, steps: [[0, 3], [10, 3], [2 * 1440, 3]] },
   ];
   return scenarios.map((s) => {
     const sched = makeScheduler(s.retention);
-    let c = newCard("n1", "d1", "recognize", T0);
+    let c = { ...newCard("n1", "d1", "recognize", T0), ...s.startMemory };
     const out = s.steps.map(([min, rating]) => {
       c = answer(sched, c, rating, T0 + min * MIN);
       return { at: T0 + min * MIN, rating, expect: cardOut(c) };
     });
-    return { name: s.name, retention: s.retention, start: T0, steps: out };
+    return { name: s.name, retention: s.retention, start: T0, ...(s.startMemory ? { startMemory: s.startMemory } : {}), steps: out };
   });
 }
 
@@ -171,6 +173,15 @@ function queueVectors() {
       s1: ["thuyết phục"], s2: ["thuyết phục", "làm cho tin"], s3: ["làm cho tin", "bảo đảm"], s4: ["giao hàng"],
       s5: ["hoãn lại"], s6: ["hoãn lại"], s7: ["hủy bỏ"], s8: ["hủy bỏ"], s9: ["trì hoãn"], s10: ["đàm phán"], s11: ["đàm phán", "thương lượng"],
     },
+  });
+  // A new note's cards made at the same moment: the word is introduced with "recognize", never with a typing card.
+  scenarios.push({
+    name: "intro-order", prefs: { ...DEFAULT_PREFS, newPerDay: 10, dayStartHour: 4 }, today: undefined, deckId: null, buried: [], learnAheadMs: 0,
+    extra: [
+      mk("o1.cloze", "o1", { template: "cloze", createdAt: T0 + 20 }), mk("o1.recognize", "o1", { createdAt: T0 + 20 }),
+      mk("o2.listen", "o2", { template: "listen", createdAt: T0 + 21 }), mk("o2.recall", "o2", { template: "recall", createdAt: T0 + 21 }),
+      mk("o3.cloze", "o3", { template: "cloze", createdAt: T0 + 22 }), mk("o3.custom", "o3", { template: "custom", createdAt: T0 + 22 }),
+    ],
   });
   return scenarios.map((s) => {
     const all = [...cards, ...(s.extra ?? [])];

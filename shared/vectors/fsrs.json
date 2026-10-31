@@ -878,5 +878,61 @@
     }
    }
   ]
+ },
+ {
+  "name": "new-with-stale-memory",
+  "retention": 0.9,
+  "start": 1768465800000,
+  "startMemory": {
+   "stability": 0,
+   "difficulty": 1
+  },
+  "steps": [
+   {
+    "at": 1768465800000,
+    "rating": 3,
+    "expect": {
+     "state": 1,
+     "due": 1768466400000,
+     "stability": 2.3065,
+     "difficulty": 2.11810397,
+     "scheduledDays": 0,
+     "learningSteps": 1,
+     "reps": 1,
+     "lapses": 0,
+     "lastReview": 1768465800000
+    }
+   },
+   {
+    "at": 1768466400000,
+    "rating": 3,
+    "expect": {
+     "state": 2,
+     "due": 1768639200000,
+     "stability": 2.3065,
+     "difficulty": 2.11121424,
+     "scheduledDays": 2,
+     "learningSteps": 0,
+     "reps": 2,
+     "lapses": 0,
+     "lastReview": 1768466400000
+    }
+   },
+   {
+    "at": 1768638600000,
+    "rating": 3,
+    "expect": {
+     "state": 2,
+     "due": 1769589000000,
+     "stability": 10.97104786,
+     "difficulty": 2.1043314,
+     "scheduledDays": 11,
+     "learningSteps": 0,
+     "reps": 3,
+     "lapses": 0,
+     "lastReview": 1768638600000
+    }
+   }
+  ]
  }
 ]

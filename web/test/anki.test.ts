@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { CardState, DEFAULT_PREFS, dayId, type Deck, type Note } from "@shared/model.ts";
 import { LocalRepo } from "../src/data/local.ts";
 import { convertAnki, defaultPlan, guessFields, htmlLines, isGloss, memoryFromSm2, normalizePos, splitExamples, tagOf, type ImportExisting } from "../src/lib/anki/convert.ts";
+import { answer, makeScheduler, preview } from "../src/lib/scheduler.ts";
 import { AnkiFormatError, readApkg, type AnkiCollection } from "../src/lib/anki/read.ts";
 
 // Built by tools/anki/make-fixture.py with Anki's own Python library (anki 26.9.3).
@@ -219,6 +220,20 @@ describe("converting to Lexi", () => {
     const ex = note.fields.examples as string[];
     expect((note.fields.examplesVi as string[])[ex.indexOf("She could not abide by the noise.")]).toBe("Cô ấy không chịu nổi tiếng ồn.");
     expect(file.cards.some((c) => c.noteId === "anki-999")).toBe(false);
+  });
+
+  it("new cards can be answered right after the import (empty memory state)", () => {
+    const { file } = convertAnki(modern, defaultPlan(modern)!, none, NOW);
+    const fresh = file.cards.filter((c) => c.state === CardState.New);
+    expect(fresh.length).toBeGreaterThan(0);
+    const s = makeScheduler(0.9);
+    for (const c of fresh) {
+      expect([c.stability, c.difficulty]).toEqual([0, 0]);
+      expect(() => preview(s, c, NOW)).not.toThrow();
+    }
+    // Cards stored by the first importer (difficulty 1 on a new card) still work.
+    expect(() => preview(s, { ...fresh[0], difficulty: 1 }, NOW)).not.toThrow();
+    expect(answer(s, { ...fresh[0], difficulty: 1 }, 3, NOW)).toEqual(answer(s, fresh[0], 3, NOW));
   });
 
   it("drops cards whose template is mapped to nothing", () => {

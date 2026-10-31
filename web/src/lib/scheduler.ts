@@ -41,10 +41,13 @@ export function newCard(noteId: Id, deckId: Id, template: string, now: number): 
 }
 
 export function toFsrs(c: Card): FCard {
+  // A new card has no memory yet. ts-fsrs recognises that only as stability = difficulty = 0 and throws on
+  // anything else (Anki imports before this fix stored difficulty 1 on new cards, which broke "show answer").
+  const fresh = c.state === CardState.New;
   return {
     due: new Date(c.due),
-    stability: c.stability,
-    difficulty: c.difficulty,
+    stability: fresh ? 0 : c.stability,
+    difficulty: fresh ? 0 : c.difficulty,
     elapsed_days: 0,
     scheduled_days: c.scheduledDays,
     learning_steps: c.learningSteps,

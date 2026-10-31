@@ -119,7 +119,12 @@ class Fsrs(
     fun next(card: Card, now: Long, rating: Int): Card {
         require(rating in 1..4) { "rating must be 1..4" }
         val elapsed = if (card.state != CardState.NEW && card.lastReview != null) dateDiffInDays(card.lastReview, now) else 0
-        val current = card.copy(lastReview = now, reps = card.reps + 1)
+        // A new card has no memory yet, whatever was stored (Anki imports once wrote difficulty 1): see scheduler.ts toFsrs.
+        val fresh = card.state == CardState.NEW
+        val current = card.copy(
+            lastReview = now, reps = card.reps + 1,
+            stability = if (fresh) 0.0 else card.stability, difficulty = if (fresh) 0.0 else card.difficulty,
+        )
         fun memory(g: Int, r: Double? = null): Card {
             val m = nextMemory(current.difficulty, current.stability, elapsed, g, r)
             return current.copy(difficulty = m.difficulty, stability = m.stability, updatedAt = now)

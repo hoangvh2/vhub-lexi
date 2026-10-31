@@ -18,6 +18,10 @@ const val LEECH_LAPSES = 8
 /** A card on an interval this long (days) is settled enough for a near-synonym to start. */
 const val SETTLE_DAYS = 3
 
+/** Order in which a new note's cards are introduced: see the word first, type it later (queue.ts INTRO_ORDER). */
+val INTRO_ORDER = listOf("recognize", "recall", "cloze", "listen")
+private fun introRank(template: String) = INTRO_ORDER.indexOf(template).let { if (it < 0) INTRO_ORDER.size else it }
+
 data class QueueInput(
     val cards: List<Card>,
     /** False for cards whose note is gone or whose template no longer applies. */
@@ -60,7 +64,7 @@ fun buildQueue(i: QueueInput): Queue {
     }
     learning.sortBy { it.due }
     review.sortBy { it.due }
-    fresh.sortWith(compareBy<Card> { it.createdAt }.thenBy { it.id })
+    fresh.sortWith(compareBy<Card> { it.createdAt }.thenBy { introRank(it.template) }.thenBy { it.id })
 
     val newLimit = maxOf(0, i.prefs.newPerDay - (i.today?.newCards ?: 0L).toInt())
     val reviewLimit = maxOf(0, i.prefs.maxReviewsPerDay - (i.today?.reviews ?: 0L).toInt())
