@@ -154,7 +154,7 @@ fun SettingsScreen(app: LexiApp) {
             Segments(listOf("system" to "Theo hệ thống", "light" to "Sáng", "dark" to "Tối"), p.theme) { set(p.copy(theme = it)) }
             Text("Màu nhấn", fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                for ((k, col) in listOf("teal" to 0xFF0E7C66, "blue" to 0xFF2457C5, "orange" to 0xFFC2410C, "violet" to 0xFF7C3AED)) {
+                for ((k, col) in listOf("teal" to 0xFF157A55, "blue" to 0xFF2457C5, "orange" to 0xFFC2410C, "violet" to 0xFF7C3AED)) {
                     androidx.compose.foundation.layout.Box(
                         Modifier.size(34.dp).background(Color(col), CircleShape)
                             .border(if (p.accent == k) 3.dp else 1.dp, if (p.accent == k) c.ink else c.line, CircleShape)

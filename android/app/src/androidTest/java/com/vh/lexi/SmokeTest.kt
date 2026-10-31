@@ -23,6 +23,8 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.semantics.SemanticsProperties
 import com.vh.lexi.core.FieldValue
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
+import org.json.JSONObject
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.core.view.WindowCompat
@@ -213,6 +215,59 @@ class SmokeTest {
         hideKeyboard()
 
         typingCardNamesTheTargetWord()
+        todayWithLessonsAndHistory()
+    }
+
+    /**
+     * Today with an imported Anki-like collection (lessons, history, forgotten words): readable lesson names, the
+     * lesson path and the words-to-watch list, with screenshots for review.
+     */
+    private fun todayWithLessonsAndHistory() {
+        val app = rule.activity.application as LexiApp
+        val now = System.currentTimeMillis()
+        val day = 86_400_000L
+        val notes = JSONArray()
+        val cards = JSONArray()
+        val lessons = listOf("01-contract", "02-marketing", "03-warranties", "04-business-planning", "05-conferences", "06-computers", "07-doctor-s-office")
+        lessons.forEachIndexed { li, tag ->
+            for (j in 0 until 4) {
+                val id = "imp-$li-$j"
+                val started = li < 4 || (li == 4 && j < 2)
+                notes.put(JSONObject().put("id", id).put("type", "vocab").put("deckId", "imp").put("tags", JSONArray().put(tag)).put("createdAt", now).put("updatedAt", now)
+                    .put("fields", JSONObject().put("word", "word$li$j").put("vi", "nghĩa $li$j")))
+                val card = JSONObject().put("id", "$id.recognize").put("noteId", id).put("deckId", "imp").put("template", "recognize")
+                    .put("state", if (started) 2 else 0).put("due", if (started) now + (2 + j) * day else now).put("stability", if (started) 5.5 else 0.0)
+                    .put("difficulty", if (started) 5.5 else 0.0).put("scheduledDays", if (started) 5.5 else 0.0).put("learningSteps", 0)
+                    .put("reps", if (started) 4 else 0).put("lapses", if (started && j == 0) li + 1 else 0).put("createdAt", now).put("updatedAt", now)
+                if (started) card.put("lastReview", now - 3 * day)
+                cards.put(card)
+            }
+        }
+        val daily = JSONArray()
+        for (d in 1 until 40) if (d % 6 != 0) {
+            val n = 8 + (d * 7) % 30
+            daily.put(JSONObject().put("id", com.vh.lexi.core.dayId(now - d * day, app.data.prefs.value.dayStartHour)).put("newCards", 4).put("reviews", n)
+                .put("again", 1).put("hard", 2).put("good", n - 3).put("easy", 0).put("ms", n * 9000L).put("updatedAt", now))
+        }
+        val backup = JSONObject().put("app", "vhub-lexi").put("version", 1).put("exportedAt", now)
+            .put("decks", JSONArray().put(JSONObject().put("id", "imp").put("name", "TOEIC 600").put("createdAt", now).put("updatedAt", now)))
+            .put("notes", notes).put("cards", cards).put("reviews", JSONArray()).put("daily", daily).put("prefs", JSONObject.NULL)
+        runBlocking { app.data.importJson(backup.toString()) }
+        waitFor("imported") { app.data.notes.value.size >= 28 }
+
+        // Leave and come back so the study tab opens on Today again.
+        rule.onNodeWithTag("nav-library").performClick()
+        rule.onNodeWithTag("nav-study").performClick()
+        waitFor("today-path") { rule.onAllNodesWithTagCount("today-lesson") > 0 }
+        shot("13-today-hero")
+        rule.onNodeWithTag("today-lesson").performScrollTo()
+        assertTrue(rule.textOf("today-lesson"), rule.textOf("today-lesson").contains("Conferences"))
+        assertTrue(rule.textOf("today-lesson"), rule.textOf("today-lesson").contains("Doctor's office"))
+        assertTrue(rule.textOf("today-lesson"), rule.textOf("today-lesson").contains("4/7 bài xong"))
+        shot("14-today-lessons")
+        rule.onNodeWithTag("today-watch").performScrollTo()
+        assertTrue(rule.textOf("today-watch"), rule.textOf("today-watch").contains("quên 4"))
+        shot("15-today-watch")
     }
 
     /**
