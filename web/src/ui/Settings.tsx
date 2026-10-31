@@ -12,7 +12,8 @@ import { dictionary } from "../lib/dict.ts";
 import { useStore } from "../lib/store.ts";
 import { Icon, confirmDialog, syncLabel, toast } from "./common.tsx";
 
-const ACCENTS: Array<[Prefs["accent"], string]> = [["teal", "#157a55"], ["blue", "#2457c5"], ["orange", "#c2410c"], ["violet", "#7c3aed"]];
+/** Stored keys are kept; the colours are the ones styles.css draws (teal is the default jade, violet the earlier lavender). */
+const ACCENTS: Array<[Prefs["accent"], string, string]> = [["teal", "#0f766e", "Ngọc đá"], ["blue", "#2563eb", "Biển"], ["orange", "#c2502a", "Đào"], ["violet", "#6a4cf0", "Oải hương"]];
 
 export function Settings({ email }: { email: string | null }) {
   const p = useStore(prefs);
@@ -152,7 +153,7 @@ export function Settings({ email }: { email: string | null }) {
         <div class="field">
           <span class="lbl">Màu nhấn</span>
           <div class="sw" role="group" aria-label="Màu nhấn">
-            {ACCENTS.map(([k, c]) => <button type="button" key={k} style={{ background: c }} aria-label={k} aria-pressed={p.accent === k} onClick={() => set({ accent: k })} />)}
+            {ACCENTS.map(([k, c, name]) => <button type="button" key={k} style={{ background: c }} aria-label={name} title={name} aria-pressed={p.accent === k} onClick={() => set({ accent: k })} />)}
           </div>
         </div>
       </section>

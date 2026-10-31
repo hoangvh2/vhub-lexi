@@ -5,6 +5,7 @@ import { checkTyped, str, template, type AnswerVerdict } from "@shared/notetypes
 import { reviewCard, setSuspended, undoReview, type Reviewed } from "../data/actions.ts";
 import { cards, daily, decks, loaded, notes, prefs } from "../data/state.ts";
 import { LEARN_AHEAD_MS, buildQueue, dueWithin, isLeech, pickNext, tagCounts, type Queue } from "../lib/queue.ts";
+import { celebrate } from "../lib/motion.ts";
 import { streak } from "../lib/stats.ts";
 import { isLesson, lessonTitle } from "../lib/lessons.ts";
 import { formatInterval, makeScheduler, preview } from "../lib/scheduler.ts";
@@ -524,15 +525,21 @@ function Done({ session, waitingMs, streak, dueTomorrow, nextLesson, onLesson, o
   }
   const list = [...words.values()].sort((a, b) => a.rating - b.rating);
   const forgot = list.filter((a) => a.rating === 1);
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => (session.answered > 0 ? celebrate(root.current) : undefined), []);
   return (
-    <div class="panel done" data-testid="session-done">
-      <div class="big">{session.answered ? "Xong!" : "Hết thẻ hôm nay"}</div>
+    <div class="panel done" data-testid="session-done" ref={root}>
+      {session.answered > 0 && (
+        <div class="bubble" role="img" aria-label={streak > 0 ? `${streak} ngày học liên tiếp` : "Đã xong"}>
+          {streak > 0 ? <b>{streak}<small>ngày liền</small></b> : <Icon n="check" />}
+        </div>
+      )}
+      <div class="big">{session.answered ? "Xong phần này!" : "Hết thẻ hôm nay"}</div>
       {session.answered > 0 ? (
         <div class="stat-grid">
           <div class="stat"><b>{words.size}</b><span>từ đã ôn</span></div>
           <div class="stat"><b>{acc}%</b><span>nhớ đúng</span></div>
           <div class="stat"><b>{mins}p</b><span>thời gian</span></div>
-          {streak > 0 && <div class="stat"><b>{streak}🔥</b><span>ngày liên tiếp</span></div>}
         </div>
       ) : (
         <p class="muted">Không có thẻ đến hạn. Quay lại sau, hoặc thêm từ mới.</p>

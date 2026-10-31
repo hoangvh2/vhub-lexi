@@ -1,4 +1,4 @@
-import { useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { meaningsByNote } from "@shared/confusables.ts";
 import { CardState, dayId, nextDayStart } from "@shared/model.ts";
 import { str } from "@shared/notetypes.ts";
@@ -6,6 +6,7 @@ import { cards, daily, loaded, notes, prefs } from "../data/state.ts";
 import { isLesson, lessonName } from "../lib/lessons.ts";
 import { buildQueue, tagCounts } from "../lib/queue.ts";
 import { eligibility } from "../lib/select.ts";
+import { enter, orb } from "../lib/motion.ts";
 import { forecast, heatmap, level, streak } from "../lib/stats.ts";
 import { useStore } from "../lib/store.ts";
 import { Icon, go } from "./common.tsx";
@@ -31,7 +32,13 @@ export function Today() {
   const p = useStore(prefs);
   const ready = useStore(loaded);
   const [allLessons, setAllLessons] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
   const now = Date.now();
+  const hasNotes = allNotes.length > 0;
+  useEffect(() => {
+    const stops = [enter(root.current), orb(root.current?.querySelector(".orb") ?? null)];
+    return () => stops.forEach((s) => s());
+  }, [ready, hasNotes]);
 
   const queue = useMemo(
     () => buildQueue({ cards: allCards, eligible: eligibility(allNotes), today: dailies.find((d) => d.id === dayId(now, p.dayStartHour)), prefs: p, now, deckId: null, buried: new Set(), meanings: meaningsByNote(allNotes) }),
@@ -107,27 +114,61 @@ export function Today() {
   const perCardMs = answers ? dailies.reduce((n, d) => n + d.ms, 0) / answers : 10_000;
   const minutes = Math.max(1, Math.round((left * perCardMs) / 60_000));
   const heatMax = Math.max(1, ...heat.map((c) => c.count));
-  const R = 52;
-  const C = 2 * Math.PI * R;
   const date = new Date(now);
   const curName = current ? lessonName(current.tag) : null;
+  // Water level in the orb; a sliver stays visible once anything is done.
+  const fill = finished ? 1 : frac > 0 ? Math.max(0.06, frac) : 0;
+  const dueNow = queue.counts.review + queue.counts.learning;
 
   return (
-    <div class="page wide today" data-testid="today">
-      <section class={`hero${finished ? " finished" : ""}`}>
-        <div class="hero-text">
-          <p class="eyebrow">{WEEKDAY_LONG[date.getDay()]}, {date.toLocaleDateString("vi-VN", { day: "numeric", month: "numeric" })}</p>
-          <h1 class="hello">{finished ? "Xong phần hôm nay 🎉" : greeting(date.getHours())}</h1>
-          <p class="hero-sub">
-            {left > 0
-              ? `Hôm nay còn ${left} thẻ, khoảng ${minutes} phút.`
-              : finished
-                ? tomorrow > 0 ? `Bạn đã ôn ${done} thẻ. Ngày mai có ${tomorrow} thẻ đang chờ.` : `Bạn đã ôn ${done} thẻ. Ngày mai chưa có thẻ nào đến hạn.`
-                : "Hôm nay không có thẻ đến hạn."}
-          </p>
+    <div class="page wide today" data-testid="today" ref={root}>
+      <header class="today-head" data-in>
+        <p class="eyebrow">{WEEKDAY_LONG[date.getDay()]}, {date.toLocaleDateString("vi-VN", { day: "numeric", month: "numeric" })}</p>
+        <h1 class="hello">{finished ? "Xong phần hôm nay" : greeting(date.getHours())}</h1>
+        <p class="hero-sub">
+          {left > 0
+            ? `Hôm nay còn ${left} thẻ, khoảng ${minutes} phút.`
+            : finished
+              ? tomorrow > 0 ? `Bạn đã ôn ${done} thẻ. Ngày mai có ${tomorrow} thẻ đang chờ.` : `Bạn đã ôn ${done} thẻ. Ngày mai chưa có thẻ nào đến hạn.`
+              : "Hôm nay không có thẻ đến hạn."}
+        </p>
+      </header>
+
+      <section class={`hero${finished ? " finished" : ""}`} data-in>
+        <div class={`orb${fill === 0 ? " empty" : ""}${fill >= 0.55 ? " deep" : ""}`} style={{ "--fill": fill }} role="img" aria-label={`Đã học ${done} trên ${total} thẻ hôm nay`} data-testid="today-ring">
+          <span class="orb-water2" />
+          <span class="orb-water" />
+          <span class="orb-num"><b>{done}/{total}</b><small>thẻ hôm nay</small></span>
+        </div>
+        <ul class="mini">
+          <li class="m-due">
+            <span class="blob"><Icon n="calendar" /></span>
+            <b data-testid="today-due">{dueNow}</b>
+            <span class="lbl2">Đến hạn<small>{queue.counts.learning > 0 ? `${queue.counts.learning} thẻ đang học` : queue.counts.review > 0 ? "Cần ôn hôm nay" : tomorrow > 0 ? `Ngày mai ${tomorrow}` : "Đã ôn hết"}</small></span>
+          </li>
+          <li class="m-new">
+            <span class="blob"><Icon n="star" /></span>
+            <b data-testid="today-new">{queue.counts.new}</b>
+            <span class="lbl2">Từ mới<small>{queue.counts.new === 0 && newToday >= p.newPerDay ? `Đủ ${p.newPerDay} từ hôm nay` : `Đã học ${newToday}/${p.newPerDay} hôm nay`}</small></span>
+          </li>
+          <li class="m-fire" data-testid="today-streak">
+            <span class="blob"><Icon n="flame" /></span>
+            <b>{st}</b>
+            <span class="lbl2">ngày liên tiếp<small>Chuỗi học của bạn</small></span>
+          </li>
+        </ul>
+        <div class="hero-side">
+          <div class="week" aria-label="Tuần này">
+            {week.map((d) => (
+              <span key={d.label} class={`day${d.on ? " on" : ""}${d.future ? " future" : ""}${d.today ? " today" : ""}`} title={d.label}>
+                <i>{d.on && <Icon n="check" />}</i>
+                <small>{d.label}</small>
+              </span>
+            ))}
+          </div>
           <div class="hero-cta">
             <button type="button" class={`btn ${left > 0 ? "primary" : "soft"} start-btn`} onClick={() => go("/study")} data-testid="start-study">
-              {left === 0 ? "Học thêm hoặc ôn trước" : done === 0 ? "Bắt đầu học" : "Học tiếp"} <Icon n="arrow" size={18} />
+              {left === 0 ? "Học thêm hoặc ôn trước" : done === 0 ? "Bắt đầu học" : "Học tiếp"} <Icon n="arrow" size={20} />
             </button>
             {current && curName && (
               <button type="button" class="btn ghost" onClick={() => go(`/study?tag=${encodeURIComponent(current.tag)}`)}>
@@ -136,46 +177,11 @@ export function Today() {
             )}
           </div>
         </div>
-        <svg class="ring" viewBox="0 0 120 120" role="img" aria-label={`Đã học ${done} trên ${total} thẻ hôm nay`} data-testid="today-ring">
-          <circle cx="60" cy="60" r={R} class="ring-track" />
-          {frac > 0 && <circle cx="60" cy="60" r={R} class="ring-fill" stroke-dasharray={`${C * frac} ${C}`} transform="rotate(-90 60 60)" />}
-          <text x="60" y="58" text-anchor="middle" class="ring-num">{done}/{total}</text>
-          <text x="60" y="78" text-anchor="middle" class="ring-sub">thẻ hôm nay</text>
-        </svg>
-        <HeroArt />
       </section>
-
-      <div class="stat-row">
-        <div class="stat-tile due">
-          <span class="stat-ic"><Icon n="calendar" /></span>
-          <span class="stat-lbl">Đến hạn</span>
-          <b data-testid="today-due">{queue.counts.review + queue.counts.learning}</b>
-          <small>{queue.counts.learning > 0 ? `${queue.counts.learning} thẻ đang học` : queue.counts.review > 0 ? "Cần ôn hôm nay" : tomorrow > 0 ? `Ngày mai ${tomorrow}` : "Đã ôn hết"}</small>
-        </div>
-        <div class="stat-tile fresh">
-          <span class="stat-ic"><Icon n="star" /></span>
-          <span class="stat-lbl">Từ mới</span>
-          <b data-testid="today-new">{queue.counts.new}</b>
-          <small>{queue.counts.new === 0 && newToday >= p.newPerDay ? `Đủ ${p.newPerDay} từ hôm nay` : `Đã học ${newToday}/${p.newPerDay} hôm nay`}</small>
-        </div>
-        <div class="stat-tile fire" data-testid="today-streak">
-          <span class="stat-ic"><Icon n="flame" /></span>
-          <span class="stat-lbl">Chuỗi học</span>
-          <b>{st} ngày</b>
-          <div class="week" aria-label="Tuần này">
-            {week.map((d) => (
-              <span key={d.label} class={`day${d.on ? " on" : ""}${d.future ? " future" : ""}${d.today ? " today" : ""}`} title={d.label}>
-                <i>{d.on ? "✓" : ""}</i>
-                <small>{d.label}</small>
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
 
       <div class="today-grid">
         {lessons.length > 0 && (
-          <section class="panel path" data-testid="today-lesson">
+          <section class="panel path" data-testid="today-lesson" data-in>
             <div class="panel-head">
               <h2>Lộ trình bài học</h2>
               <span class="muted">{lessonsDone}/{lessons.length} bài xong</span>
@@ -198,10 +204,10 @@ export function Today() {
                 const state = l.started >= l.count ? "full" : l.started > 0 ? "part" : "";
                 return (
                   <button type="button" key={l.tag} class={`lesson ${state}${l === current ? " current" : ""}`} onClick={() => go(`/study?tag=${encodeURIComponent(l.tag)}`)} title={l.tag}>
-                    <span class="num-badge">{state === "full" ? <Icon n="check" size={14} /> : (n.num ?? "•")}</span>
+                    <span class="num-badge">{state === "full" ? <Icon n="check" size={15} /> : (n.num ?? "•")}</span>
                     <span class="lesson-title">{n.title}</span>
                     <span class="lesson-meter"><i style={{ width: `${(l.started / l.count) * 100}%` }} /></span>
-                    <small>{l.started}/{l.count}</small>
+                    <small>{l.started}/{l.count} từ</small>
                   </button>
                 );
               })}
@@ -215,21 +221,21 @@ export function Today() {
         )}
 
         <div class="today-side">
-          <section class="panel">
+          <section class="panel" data-in>
             <div class="panel-head">
               <h2>Hoạt động</h2>
               <span class="muted">{answers.toLocaleString("vi-VN")} lượt ôn</span>
             </div>
             <svg class="heat" viewBox={`0 0 ${18 * 15} 100`} role="img" aria-label="Số thẻ học mỗi ngày trong 18 tuần qua">
               {heat.map((c) => (
-                <rect key={c.id} x={c.week * 15} y={c.dow * 14} width="12" height="12" rx="3" class={`l${level(c.count, heatMax)}`}>
+                <rect key={c.id} x={c.week * 15} y={c.dow * 14} width="12" height="12" rx="4" class={`l${level(c.count, heatMax)}`}>
                   <title>{`${c.id}: ${c.count} thẻ`}</title>
                 </rect>
               ))}
             </svg>
           </section>
           {watch.length > 0 && (
-            <section class="panel" data-testid="today-watch">
+            <section class="panel" data-testid="today-watch" data-in>
               <div class="panel-head">
                 <h2>Từ hay quên</h2>
                 <button type="button" class="btn ghost sm" onClick={() => go("/library")}>Thư viện</button>
@@ -248,21 +254,5 @@ export function Today() {
         </div>
       </div>
     </div>
-  );
-}
-
-/** Open book with a sprout: decoration only, drawn with the theme's colours. */
-function HeroArt() {
-  return (
-    <svg class="hero-art" viewBox="0 0 220 160" aria-hidden="true">
-      <circle cx="168" cy="38" r="22" class="sun" />
-      <path class="hill" d="M0 160 C24 128 70 114 116 122 S192 132 220 160z" />
-      <path class="book-l" d="M38 120 L104 112 L104 64 C84 58 60 60 38 70z" />
-      <path class="book-r" d="M170 120 L104 112 L104 64 C124 58 148 60 170 70z" />
-      <path class="book-line" d="M50 80 Q74 72 96 76 M50 92 Q74 84 96 88 M112 76 Q134 72 158 80 M112 88 Q134 84 158 92" />
-      <path class="stem" d="M104 64 C104 50 104 42 104 30" />
-      <path class="leaf" d="M104 44 C92 42 84 34 84 24 C96 24 104 32 104 44z" />
-      <path class="leaf" d="M104 36 C114 34 122 26 124 16 C112 16 104 24 104 36z" />
-    </svg>
   );
 }
