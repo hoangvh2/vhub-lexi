@@ -155,9 +155,9 @@ fun SettingsScreen(app: LexiApp) {
             Text("Giao diện", fontWeight = FontWeight.SemiBold)
             Segments(listOf("system" to "Theo hệ thống", "light" to "Sáng", "dark" to "Tối"), p.theme) { set(p.copy(theme = it)) }
             Text("Màu nhấn", fontWeight = FontWeight.SemiBold)
-            // Stored keys are historical; the colours are the ones Theme.kt draws (teal is the default lavender).
+            // Stored keys are kept; the colours are the ones Theme.kt draws (teal is the default jade, violet the earlier lavender).
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                for ((k, col, name) in listOf(Triple("teal", 0xFF7B5CFF, "Oải hương"), Triple("blue", 0xFF4F8CF2, "Biển"), Triple("orange", 0xFFF07A52, "Đào"), Triple("violet", 0xFFE0559A, "Hồng"))) {
+                for ((k, col, name) in listOf(Triple("teal", 0xFF0F766E, "Ngọc đá"), Triple("blue", 0xFF2563EB, "Biển"), Triple("orange", 0xFFC2502A, "Đào"), Triple("violet", 0xFF6A4CF0, "Oải hương"))) {
                     androidx.compose.foundation.layout.Box(
                         Modifier.size(44.dp).border(if (p.accent == k) 2.5.dp else 0.dp, if (p.accent == k) c.ink else Color.Transparent, CircleShape).padding(4.dp)
                             .background(Color(col), CircleShape)

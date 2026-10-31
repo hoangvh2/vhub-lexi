@@ -203,7 +203,7 @@ internal fun TodayPanel(
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text("Bài đang học", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = c.muted)
                                 Text(n.title, fontFamily = Quicksand, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = c.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                Meter(current.started.toFloat() / current.count, c.mint, c.accent.copy(alpha = 0.14f).compositeOver(c.surface), 10.dp)
+                                Meter(current.started.toFloat() / current.count, c.accent, c.accent.copy(alpha = 0.14f).compositeOver(c.surface), 10.dp)
                                 Text("${current.started}/${current.count} từ đã bắt đầu", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = c.muted)
                             }
                         }
@@ -277,7 +277,7 @@ private fun Orb(fill: Float, text: String, finished: Boolean) {
         0f, (2 * PI).toFloat(), infiniteRepeatable(tween(4200, easing = LinearEasing)), label = "phase",
     )
     val deep = fill >= 0.55f
-    val ring = if (finished) c.mint.copy(alpha = 0.4f) else c.accentSoft.copy(alpha = 0.8f)
+    val ring = if (finished) c.accent2.copy(alpha = 0.35f) else c.accentSoft.copy(alpha = 0.8f)
     Box(
         Modifier.size(118.dp).border(5.dp, ring, CircleShape).padding(5.dp).clip(CircleShape).background(c.surface2).testTag("today-ring"),
         contentAlignment = Alignment.Center,
@@ -432,7 +432,7 @@ private fun LessonTile(l: LessonProgress, current: Boolean, modifier: Modifier, 
             else Text(n.num ?: "•", fontFamily = Quicksand, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = if (current) Color.White else if (part) c.accent else c.muted)
         }
         Text(n.title, fontFamily = Quicksand, fontSize = 14.5.sp, fontWeight = FontWeight.Bold, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Meter(l.started.toFloat() / l.count, c.mint, c.line, 7.dp)
+        Meter(l.started.toFloat() / l.count, c.accent, c.line, 7.dp)
         Text("${l.started}/${l.count} từ", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = c.muted)
     }
 }

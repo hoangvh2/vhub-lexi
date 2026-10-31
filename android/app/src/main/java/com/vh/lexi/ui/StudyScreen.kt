@@ -321,7 +321,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
                 CountChip("Đang học ${queue.counts.learning}", c.again, kind == "learn")
                 CountChip("Ôn ${queue.counts.review}", c.good, kind == "review")
             }
-            LinearProgressIndicator(progress = { doneFrac }, Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)), color = c.mint, trackColor = c.line, gapSize = 0.dp, drawStopIndicator = {})
+            LinearProgressIndicator(progress = { doneFrac }, Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)), color = c.accent, trackColor = c.line, gapSize = 0.dp, drawStopIndicator = {})
 
             if (card == null || note == null || tpl == null) {
                 val nextLesson = tag?.let { t ->
