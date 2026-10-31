@@ -126,4 +126,24 @@ describe("CloudRepo on the emulator", () => {
     expect(r).toEqual({ notes: 450, cards: 450 });
     await until(() => a.state.notes.length === 450 && a.state.cards.length === 450, "import to land", 20000);
   });
+
+  it("reads a review history larger than one Firestore query allows (10,000 documents)", async () => {
+    const a = await device("owner@example.com", "user-history");
+    // An Anki import with its review log easily passes 10,000 answers. Production Firestore refused the one
+    // limit(20000) query ("Limit value in the structured query is over the maximum value of 10000"); the emulator
+    // does not enforce that cap, so this checks the paging and core.test.ts checks every limit stays under it.
+    const reviews: ReviewLog[] = Array.from({ length: 10_250 }, (_, i) => ({
+      id: `c${i % 900}.recognize@${T + i}`, cardId: `c${i % 900}.recognize`, noteId: `c${i % 900}`, deckId: "d1", rating: 3, state: CardState.Review,
+      stability: 3, difficulty: 5, scheduledDays: 3, reviewedAt: T + i, durationMs: 4000, device: "anki",
+    }));
+    const before = (await a.repo.allReviews()).length;
+    await a.repo.importAll({ app: "vhub-lexi", version: 1, exportedAt: T, decks: [], notes: [], cards: [], reviews, daily: [], prefs: null });
+    const all = await a.repo.allReviews();
+    // The allowlisted test account is shared with the earlier tests, which left a few reviews of their own.
+    const ids = new Set(all.map((r) => r.id));
+    expect(ids.size).toBe(all.length); // no page read twice
+    expect(reviews.every((r) => ids.has(r.id))).toBe(true);
+    expect(all.length).toBe(before + 10_250);
+    expect((await a.repo.exportAll()).reviews).toHaveLength(all.length);
+  }, 120_000);
 });
