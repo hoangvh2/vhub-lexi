@@ -51,10 +51,11 @@ export function Blocks({ blocks, cloze }: { blocks: Block[]; cloze?: boolean }) 
             );
           case "memo":
             return (
-              <div class="b-memo" key={i} data-testid="memo">
-                <span class="b-memo-lbl"><Icon n="sparkle" size={14} /> Mẹo nhớ</span>
-                {b.text}
-              </div>
+              // Folded behind a chip so the answer stays short; one tap opens it when the word does not come back.
+              <details class="b-memo" key={i} data-testid="memo" onClick={(e) => e.stopPropagation()}>
+                <summary class="b-memo-lbl"><Icon n="sparkle" size={14} /> Mẹo nhớ</summary>
+                <p>{b.text}</p>
+              </details>
             );
           case "fold":
             return (

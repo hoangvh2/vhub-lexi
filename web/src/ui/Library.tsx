@@ -203,6 +203,7 @@ export function Library() {
                 data-testid="lib-item"
               >
                 {selecting && <span class="tick" aria-hidden="true">{selected.has(n.id) && <Icon n="check" size={14} />}</span>}
+                {!selecting && <WordStatus cards={cs} />}
                 <span class="grow" style={{ minWidth: "0px" }}>
                   <span class="t">{def.title(n)}</span> <span class="muted" style={{ fontSize: "12px" }}>{deckName(n.deckId)}</span>
                   <span class="s" style={{ display: "block" }}>{def.subtitle(n)}</span>
@@ -284,4 +285,12 @@ function BatchCard({ b }: { b: BatchProgress }) {
       <div class="bar"><i style={{ width: `${pct}%` }} /></div>
     </div>
   );
+}
+
+/** How far along a word is: not started, being learnt, or known (every card reviewed at a 21-day interval or more). */
+function WordStatus({ cards: cs }: { cards: readonly Card[] }) {
+  const live = cs.filter((c) => !c.suspended);
+  const st = !live.length || live.every((c) => c.state === CardState.New) ? "new" : live.every((c) => c.state === CardState.Review && c.scheduledDays >= 21) ? "known" : "learning";
+  const label = st === "new" ? "Chưa học" : st === "known" ? "Đã thuộc" : "Đang học";
+  return <span class={`wstat ${st}`} title={label} aria-label={label} data-testid="word-status">{st === "known" && <Icon n="check" size={12} />}</span>;
 }

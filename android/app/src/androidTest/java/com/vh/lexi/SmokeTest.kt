@@ -158,13 +158,19 @@ class SmokeTest {
         hideKeyboard()
 
         rule.onNodeWithTag("nav-study").performClick()
+        // The study tab opens on Today; its button starts the session.
+        waitFor("today") { rule.onAllNodesWithTagCount("start-study") > 0 }
+        assertTrue(rule.textOf("today-ring"), rule.textOf("today-ring").contains("0/1"))
+        shot("04a-today")
+        rule.onNodeWithTag("start-study").performClick()
         waitFor("study-card") { rule.onAllNodesWithTextCount("serendipity") > 0 }
         shot("04-study-front")
         rule.onNodeWithTag("show-answer").performSemanticsAction(SemanticsActions.OnClick) // the toast overlaps it
-        // The mnemonic typed above makes the back taller than the 640dp CI screen, so the buttons may need a scroll.
-        rule.onNodeWithTag("rate-3").performScrollTo().assertIsDisplayed()
+        // The mnemonic typed above makes the back taller than the 640dp CI screen; the buttons are pinned below it.
+        rule.onNodeWithTag("rate-3").assertIsDisplayed()
         shot("05-study-back")
-        rule.onNodeWithTag("rate-3").performSemanticsAction(SemanticsActions.OnClick)
+        // Easy goes straight to review (Good would bring the card back within the learn-ahead limit).
+        rule.onNodeWithTag("rate-4").performSemanticsAction(SemanticsActions.OnClick)
         waitFor("session-done") { rule.onAllNodesWithTagCount("session-done") > 0 }
         shot("06-session-done")
 
@@ -224,6 +230,8 @@ class SmokeTest {
             }
         }
         rule.onNodeWithTag("nav-study").performClick()
+        waitFor("today") { rule.onAllNodesWithTagCount("start-study") > 0 }
+        rule.onNodeWithTag("start-study").performClick()
         waitFor("deck-picker") { rule.onAllNodesWithTextCount("Tất cả bộ thẻ") > 0 }
         rule.onNodeWithText("Tất cả bộ thẻ").performClick()
         waitFor("deck-menu") { rule.onAllNodesWithTextCount("Thuyết phục") > 0 }

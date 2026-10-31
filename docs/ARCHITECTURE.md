@@ -39,6 +39,14 @@ FSRS-6 (thư viện `ts-fsrs` ở web, bản port Kotlin ở Android), `enable_s
 
 Hàng đợi: thẻ đang học đến hạn → thẻ ôn đến hạn trước mốc đầu ngày học kế tiếp (mặc định 04:00) → thẻ mới (giới hạn mỗi ngày, rải đều giữa thẻ ôn); thẻ cùng ghi chú bị ẩn trong phiên sau khi trả lời một thẻ.
 
+- **Thứ tự giới thiệu từ mới**: các thẻ mới tạo cùng lúc (mọi lần nhập Anki, mọi từ thêm khi bật nhiều mẫu thẻ) xếp theo `INTRO_ORDER` = recognize, recall, cloze, listen, nên từ mới luôn gặp ở thẻ "nhớ nghĩa" trước, thẻ gõ để phiên sau (một thẻ mới mỗi ghi chú mỗi phiên). Vector `intro-order`.
+- **Học trước 20 phút** (như "learn ahead limit" của Anki): khi hết thẻ khác, thẻ đang học đến hạn trong 20 phút được hiện luôn thay vì kết thúc phiên với "quay lại sau 3 phút". Nút "Học tiếp ngay" chỉ còn cho thẻ xa hơn.
+- **Thẻ mới không có trí nhớ**: ts-fsrs chỉ coi (stability 0, difficulty 0) là "chưa học"; cả hai bộ lập lịch bỏ qua giá trị lưu trên thẻ ở trạng thái New (trình nhập Anki đầu tiên từng lưu difficulty 1 làm "Hiện đáp án" lỗi). Vector `new-with-stale-memory`.
+
+## Màn Hôm nay và phiên học
+
+Tab Ôn tập mở màn **Hôm nay** (`web/src/ui/Today.tsx`, Android `TodayPanel`): vòng tiến độ tính theo thẻ (thẻ đã trả lời hôm nay và không còn chờ / tổng), nút Bắt đầu học, ô Đến hạn và Từ mới, chuỗi ngày với 7 ngày của tuần, bài đang học và lưới tất cả các bài (nhãn dạng bài: `01-…`, `lesson…`, `bai…`). Ước lượng phút lấy theo tốc độ trả lời thật của người học (`daily.ms`). Trong phiên, nút "Hiện đáp án" và hàng chấm điểm ghim ở đáy màn hình; mẹo nhớ thu gọn sau một chip. Cuối phiên: các từ vừa ôn tô màu theo điểm, danh sách "Cần chú ý" (từ chấm Quên), số thẻ ngày mai, nút sang bài tiếp. Thư viện có vòng trạng thái mỗi từ (chưa học / đang học / đã thuộc = mọi thẻ có khoảng ôn từ 21 ngày).
+
 ## Học tuỳ chọn và thông tin thẻ (kiểu Anki)
 
 - **Chọn bài**: màn Ôn tập có ô "Tất cả bài" liệt kê các nhãn (vd. `lesson-25` khi nhập từ Anki), xếp tự nhiên. Chọn một nhãn thì hàng đợi chỉ lấy các ghi chú có nhãn đó (`QueueInput.noteIds`); giới hạn thẻ mới/ôn mỗi ngày vẫn áp dụng.

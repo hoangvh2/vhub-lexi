@@ -11,9 +11,10 @@ import { Library } from "./Library.tsx";
 import { Settings } from "./Settings.tsx";
 import { Stats } from "./Stats.tsx";
 import { Study } from "./Study.tsx";
+import { Today } from "./Today.tsx";
 
 const NAV = [
-  { path: "/study", label: "Ôn tập", icon: "study" },
+  { path: "/today", label: "Ôn tập", icon: "study" },
   { path: "/add", label: "Thêm từ", icon: "plus" },
   { path: "/library", label: "Thư viện", icon: "library" },
   { path: "/stats", label: "Thống kê", icon: "chart" },
@@ -52,14 +53,17 @@ export function App({ email }: { email: string | null }) {
     return q.counts.new + q.counts.learning + q.counts.review;
   }, [allCards, allNotes, dailies, p]);
 
-  const [, section, arg] = r.split("/");
-  const current = "/" + (section || "study");
+  const [path, query = ""] = r.split("?");
+  const [, section, arg] = path.split("/");
+  // The study session belongs to the "Ôn tập" tab, whose home is the Today screen.
+  const current = "/" + (!section || section === "study" ? "today" : section);
   const page =
     section === "add" ? <Add /> :
     section === "library" ? <Library /> :
     section === "stats" ? <Stats /> :
     section === "settings" ? <Settings email={email} /> :
-    <Study deckId={arg || null} key={arg || "all"} />;
+    section === "study" ? <Study deckId={arg || null} initialTag={new URLSearchParams(query).get("tag") ?? ""} key={r} /> :
+    <Today />;
 
   const pillClass = s === "synced" || s === "local" ? "ok" : s === "denied" || s === "error" ? "bad" : "warn";
 
@@ -70,7 +74,7 @@ export function App({ email }: { email: string | null }) {
         {NAV.map((n) => (
           <a key={n.path} class="nav-item" href={`#${n.path}`} aria-current={current === n.path ? "page" : undefined} data-testid={`nav-${n.path.slice(1)}`}>
             <Icon n={n.icon} /> {n.label}
-            {n.path === "/study" && due > 0 && <span class="badge" data-testid="due-badge">{due}</span>}
+            {n.path === "/today" && due > 0 && <span class="badge" data-testid="due-badge">{due}</span>}
           </a>
         ))}
         <span class="spacer" />
@@ -89,7 +93,7 @@ export function App({ email }: { email: string | null }) {
           <a key={n.path} class="tab" href={`#${n.path}`} aria-current={current === n.path ? "page" : undefined}>
             <Icon n={n.icon} />
             {n.label}
-            {n.path === "/study" && due > 0 && <span class="badge">{due}</span>}
+            {n.path === "/today" && due > 0 && <span class="badge">{due}</span>}
           </a>
         ))}
       </nav>

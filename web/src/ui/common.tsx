@@ -155,8 +155,8 @@ export function ConfirmHost() {
 }
 
 // ------------------------------------------------------------------ routing
-export const route = createStore<string>(location.hash.replace(/^#/, "") || "/study");
-addEventListener("hashchange", () => route.set(location.hash.replace(/^#/, "") || "/study"));
+export const route = createStore<string>(location.hash.replace(/^#/, "") || "/today");
+addEventListener("hashchange", () => route.set(location.hash.replace(/^#/, "") || "/today"));
 export const go = (path: string) => {
   location.hash = path;
 };
