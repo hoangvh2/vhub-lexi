@@ -140,8 +140,15 @@ export interface Prefs {
   dayStartHour: number;
   /** Deck new notes go to by default. */
   defaultDeckId?: Id;
+  /** FSRS-6 parameters fitted to this learner's own history (21 numbers, already clipped); absent = defaults. */
+  fsrsWeights?: number[];
+  /** When fsrsWeights were fitted, and on how many answers (Anki's advice: optimize again once that doubles). */
+  fsrsOptimizedAt?: number;
+  fsrsOptimizedReviews?: number;
   updatedAt: number;
 }
+
+export const FSRS_PARAMS = 21;
 
 export const DEFAULT_PREFS: Prefs = {
   desiredRetention: 0.9,
@@ -156,6 +163,10 @@ export const DEFAULT_PREFS: Prefs = {
   dayStartHour: 4,
   updatedAt: 0,
 };
+
+function validWeights(w: unknown): w is number[] {
+  return Array.isArray(w) && w.length === FSRS_PARAMS && w.every((v) => typeof v === "number" && Number.isFinite(v));
+}
 
 export function normalizePrefs(p: Partial<Prefs> | null | undefined): Prefs {
   const d = DEFAULT_PREFS;
@@ -174,6 +185,9 @@ export function normalizePrefs(p: Partial<Prefs> | null | undefined): Prefs {
     aiEnabled: x.aiEnabled !== false,
     dayStartHour: Math.round(num(x.dayStartHour, 0, 23, d.dayStartHour)),
     defaultDeckId: typeof x.defaultDeckId === "string" ? x.defaultDeckId : undefined,
+    ...(validWeights(x.fsrsWeights)
+      ? { fsrsWeights: [...x.fsrsWeights], fsrsOptimizedAt: typeof x.fsrsOptimizedAt === "number" ? x.fsrsOptimizedAt : 0, fsrsOptimizedReviews: typeof x.fsrsOptimizedReviews === "number" ? x.fsrsOptimizedReviews : 0 }
+      : {}),
     updatedAt: typeof x.updatedAt === "number" ? x.updatedAt : 0,
   };
 }

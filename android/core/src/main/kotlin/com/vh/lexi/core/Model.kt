@@ -124,8 +124,23 @@ data class Prefs(
     val aiEnabled: Boolean = true,
     val dayStartHour: Int = 4,
     val defaultDeckId: Id? = null,
+    /** FSRS-6 parameters fitted on the web (Settings → optimize), 21 numbers already clipped; null = defaults. */
+    val fsrsWeights: List<Double>? = null,
+    val fsrsOptimizedAt: Long = 0,
+    val fsrsOptimizedReviews: Long = 0,
     val updatedAt: Long = 0,
-)
+) {
+    /** The scheduler for these settings. */
+    fun fsrs(): Fsrs = Fsrs(desiredRetention, fsrsWeights?.toDoubleArray() ?: Fsrs.DEFAULT_W)
+}
+
+/** Length of an FSRS-6 parameter vector. */
+const val FSRS_PARAMS = 21
+
+/** Prefs.fsrsWeights as stored: exactly 21 finite numbers, or null (normalizePrefs in shared/model.ts). */
+fun fsrsWeightsOrNull(raw: Any?): List<Double>? =
+    (raw as? List<*>)?.map { (it as? Number)?.toDouble() }
+        ?.takeIf { w -> w.size == FSRS_PARAMS && w.all { it != null && it.isFinite() } }?.map { it!! }
 
 fun cardId(noteId: Id, template: String) = "$noteId.$template"
 fun reviewId(cardId: Id, at: Long) = "$cardId@$at"

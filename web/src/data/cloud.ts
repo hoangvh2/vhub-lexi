@@ -179,6 +179,10 @@ export class CloudRepo implements Repo {
     return snap.docs.map((d) => d.data() as ReviewLog).sort((a, b) => a.reviewedAt - b.reviewedAt);
   }
 
+  async allReviews() {
+    return (await getDocs(query(this.col("reviews"), limit(LIMITS.reviews)))).docs.map((d) => d.data() as ReviewLog);
+  }
+
   async exportAll(): Promise<ExportFile> {
     const get = async <T>(name: string, n: number) => (await getDocs(query(this.col(name), limit(n)))).docs.map((d) => d.data() as T);
     const [decks, notes, cards, reviews, daily, prefs] = await Promise.all([

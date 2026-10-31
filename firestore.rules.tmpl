@@ -141,9 +141,16 @@ service cloud.firestore {
         && optBool(l, 'showVi') && optBool(l, 'showExamples') && optBool(l, 'showMnemonic');
     }
 
+    // The 21 FSRS-6 parameters an optimizer run fitted (Prefs.fsrsWeights).
+    function fsrsWeights(w) {
+      return w is list && w.size() == 21
+        && w[0] is number && w[1] is number && w[2] is number && w[3] is number && w[4] is number && w[5] is number && w[6] is number && w[7] is number && w[8] is number && w[9] is number && w[10] is number && w[11] is number && w[12] is number && w[13] is number && w[14] is number && w[15] is number && w[16] is number && w[17] is number && w[18] is number && w[19] is number && w[20] is number;
+    }
+
     function validPrefs(d) {
       return d.keys().hasOnly(['desiredRetention', 'newPerDay', 'maxReviewsPerDay', 'templates', 'layout', 'autoSpeak',
-                               'theme', 'accent', 'aiEnabled', 'dayStartHour', 'defaultDeckId', 'updatedAt'])
+                               'theme', 'accent', 'aiEnabled', 'dayStartHour', 'defaultDeckId', 'fsrsWeights',
+                               'fsrsOptimizedAt', 'fsrsOptimizedReviews', 'updatedAt'])
         && (!('desiredRetention' in d) || (d.desiredRetention is number && d.desiredRetention >= 0.7 && d.desiredRetention <= 0.99))
         && (!('newPerDay' in d) || intIn(d.newPerDay, 0, 200))
         && (!('maxReviewsPerDay' in d) || intIn(d.maxReviewsPerDay, 0, 9999))
@@ -155,6 +162,8 @@ service cloud.firestore {
         && optBool(d, 'aiEnabled')
         && (!('dayStartHour' in d) || intIn(d.dayStartHour, 0, 23))
         && optStr(d, 'defaultDeckId', 90)
+        && (!('fsrsWeights' in d) || fsrsWeights(d.fsrsWeights))
+        && optInt(d, 'fsrsOptimizedAt') && optInt(d, 'fsrsOptimizedReviews')
         && optInt(d, 'updatedAt');
     }
 

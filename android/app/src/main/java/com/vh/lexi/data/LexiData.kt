@@ -8,7 +8,6 @@ import com.vh.lexi.core.Daily
 import com.vh.lexi.core.DailyDelta
 import com.vh.lexi.core.Deck
 import com.vh.lexi.core.FieldValue
-import com.vh.lexi.core.Fsrs
 import com.vh.lexi.core.Id
 import com.vh.lexi.core.Note
 import com.vh.lexi.core.Prefs
@@ -201,7 +200,7 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
 
     suspend fun review(card: Card, rating: Int, durationMs: Long, now: Long = System.currentTimeMillis()): Reviewed {
         val p = prefs.value
-        val next = Fsrs(p.desiredRetention).next(card, now, rating)
+        val next = p.fsrs().next(card, now, rating)
         val dur = durationMs.coerceIn(0, 10 * 60_000L)
         val log = ReviewLog(
             id = reviewId(card.id, now), cardId = card.id, noteId = card.noteId, deckId = card.deckId, rating = rating, state = card.state,

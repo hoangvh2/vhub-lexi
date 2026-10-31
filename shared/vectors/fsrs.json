@@ -934,5 +934,260 @@
     }
    }
   ]
+ },
+ {
+  "name": "optimized-weights",
+  "retention": 0.9,
+  "start": 1768465800000,
+  "w": [
+   0.0376,
+   0.2291,
+   0.4086,
+   1.4697,
+   6.5213,
+   0.722,
+   2.9,
+   0.001,
+   1.7588,
+   0.2643,
+   0.6813,
+   1.411,
+   0.0748,
+   0.1829,
+   1.5497,
+   0.6014,
+   1.8729,
+   0.5472,
+   0.0013,
+   0.0476,
+   0.1058
+  ],
+  "steps": [
+   {
+    "at": 1768465800000,
+    "rating": 1,
+    "expect": {
+     "state": 1,
+     "due": 1768465860000,
+     "stability": 0.1,
+     "difficulty": 6.5213,
+     "scheduledDays": 0,
+     "learningSteps": 0,
+     "reps": 1,
+     "lapses": 0,
+     "lastReview": 1768465800000
+    }
+   },
+   {
+    "at": 1768465980000,
+    "rating": 3,
+    "expect": {
+     "state": 1,
+     "due": 1768466580000,
+     "stability": 0.11166291,
+     "difficulty": 6.51357668,
+     "scheduledDays": 0,
+     "learningSteps": 1,
+     "reps": 2,
+     "lapses": 0,
+     "lastReview": 1768465980000
+    }
+   },
+   {
+    "at": 1768466700000,
+    "rating": 3,
+    "expect": {
+     "state": 2,
+     "due": 1768553100000,
+     "stability": 0.12403305,
+     "difficulty": 6.50586108,
+     "scheduledDays": 1,
+     "learningSteps": 0,
+     "reps": 3,
+     "lapses": 0,
+     "lastReview": 1768466700000
+    }
+   },
+   {
+    "at": 1768638600000,
+    "rating": 2,
+    "expect": {
+     "state": 2,
+     "due": 1768725000000,
+     "stability": 0.88598972,
+     "difficulty": 7.62291652,
+     "scheduledDays": 1,
+     "learningSteps": 0,
+     "reps": 4,
+     "lapses": 0,
+     "lastReview": 1768638600000
+    }
+   },
+   {
+    "at": 1768984200000,
+    "rating": 3,
+    "expect": {
+     "state": 2,
+     "due": 1769329800000,
+     "stability": 3.569225,
+     "difficulty": 7.61409158,
+     "scheduledDays": 4,
+     "learningSteps": 0,
+     "reps": 5,
+     "lapses": 0,
+     "lastReview": 1768984200000
+    }
+   },
+   {
+    "at": 1770193800000,
+    "rating": 1,
+    "expect": {
+     "state": 3,
+     "due": 1770194400000,
+     "stability": 0.52466524,
+     "difficulty": 9.14132331,
+     "scheduledDays": 0,
+     "learningSteps": 0,
+     "reps": 6,
+     "lapses": 1,
+     "lastReview": 1770193800000
+    }
+   },
+   {
+    "at": 1770194520000,
+    "rating": 3,
+    "expect": {
+     "state": 2,
+     "due": 1770280920000,
+     "stability": 0.54140821,
+     "difficulty": 9.13097997,
+     "scheduledDays": 1,
+     "learningSteps": 0,
+     "reps": 7,
+     "lapses": 1,
+     "lastReview": 1770194520000
+    }
+   },
+   {
+    "at": 1770712200000,
+    "rating": 4,
+    "expect": {
+     "state": 2,
+     "due": 1770971400000,
+     "stability": 3.16856392,
+     "difficulty": 8.84090942,
+     "scheduledDays": 3,
+     "learningSteps": 0,
+     "reps": 8,
+     "lapses": 1,
+     "lastReview": 1770712200000
+    }
+   },
+   {
+    "at": 1774513800000,
+    "rating": 3,
+    "expect": {
+     "state": 2,
+     "due": 1775377800000,
+     "stability": 9.50986945,
+     "difficulty": 8.83086649,
+     "scheduledDays": 10,
+     "learningSteps": 0,
+     "reps": 9,
+     "lapses": 1,
+     "lastReview": 1774513800000
+    }
+   }
+  ]
+ },
+ {
+  "name": "optimized-weights-easy",
+  "retention": 0.85,
+  "start": 1768465800000,
+  "w": [
+   0.0376,
+   0.2291,
+   0.4086,
+   1.4697,
+   6.5213,
+   0.722,
+   2.9,
+   0.001,
+   1.7588,
+   0.2643,
+   0.6813,
+   1.411,
+   0.0748,
+   0.1829,
+   1.5497,
+   0.6014,
+   1.8729,
+   0.5472,
+   0.0013,
+   0.0476,
+   0.1058
+  ],
+  "steps": [
+   {
+    "at": 1768465800000,
+    "rating": 4,
+    "expect": {
+     "state": 2,
+     "due": 1768725000000,
+     "stability": 1.4697,
+     "difficulty": 1,
+     "scheduledDays": 3,
+     "learningSteps": 0,
+     "reps": 1,
+     "lapses": 0,
+     "lastReview": 1768465800000
+    }
+   },
+   {
+    "at": 1768811400000,
+    "rating": 3,
+    "expect": {
+     "state": 2,
+     "due": 1770798600000,
+     "stability": 10.77653997,
+     "difficulty": 1,
+     "scheduledDays": 23,
+     "learningSteps": 0,
+     "reps": 2,
+     "lapses": 0,
+     "lastReview": 1768811400000
+    }
+   },
+   {
+    "at": 1768813200000,
+    "rating": 3,
+    "expect": {
+     "state": 2,
+     "due": 1770886800000,
+     "stability": 10.77653997,
+     "difficulty": 1,
+     "scheduledDays": 24,
+     "learningSteps": 0,
+     "reps": 3,
+     "lapses": 0,
+     "lastReview": 1768813200000
+    }
+   },
+   {
+    "at": 1771921800000,
+    "rating": 4,
+    "expect": {
+     "state": 2,
+     "due": 1789201800000,
+     "stability": 93.44990776,
+     "difficulty": 1,
+     "scheduledDays": 200,
+     "learningSteps": 0,
+     "reps": 4,
+     "lapses": 0,
+     "lastReview": 1771921800000
+    }
+   }
+  ]
  }
 ]

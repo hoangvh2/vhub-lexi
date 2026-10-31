@@ -70,7 +70,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
   const eligible = useMemo(() => eligibility(allNotes), [allNotes]);
   const byId = useMemo(() => notesById(allNotes), [allNotes]);
   const meanings = useMemo(() => meaningsByNote(allNotes), [allNotes]);
-  const sched = useMemo(() => makeScheduler(p.desiredRetention), [p.desiredRetention]);
+  const sched = useMemo(() => makeScheduler(p.desiredRetention, p.fsrsWeights), [p.desiredRetention, p.fsrsWeights]);
   const tags = useMemo(() => tagCounts(allNotes), [allNotes]);
   const tagDone = (t: string) => (started.get(t) ?? 0) >= (tags.find((x) => x.tag === t)?.count ?? 0);
   const nextTag = (t: string) => {

@@ -12,7 +12,7 @@ export const { chromium } = require("playwright");
 const csp = JSON.parse(readFileSync(fileURLToPath(new URL("../../firebase.json", import.meta.url)), "utf8")).hosting.headers
   .find((h) => h.source === "/").headers.find((h) => h.key === "Content-Security-Policy").value;
 const dist = join(fileURLToPath(new URL("../../web/dist", import.meta.url)));
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2", ".woff": "font/woff", ".txt": "text/plain" };
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2", ".woff": "font/woff", ".txt": "text/plain", ".wasm": "application/wasm" };
 
 /** Serves web/dist like Firebase Hosting would (static files, no SPA rewrite needed for hash routing). */
 export function serve() {

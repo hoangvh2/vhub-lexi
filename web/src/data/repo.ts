@@ -53,6 +53,8 @@ export interface Repo {
   savePrefs(p: Prefs): Promise<void>;
   /** Answer history of one note (all its cards), oldest first: the "card info" view. */
   reviewsOfNote(noteId: string): Promise<ReviewLog[]>;
+  /** Every answer on record (up to the review limit): the FSRS optimizer's training data. */
+  allReviews(): Promise<ReviewLog[]>;
   exportAll(): Promise<ExportFile>;
   /** Merges a previously exported file (existing ids are overwritten). */
   importAll(f: ExportFile): Promise<{ notes: number; cards: number }>;

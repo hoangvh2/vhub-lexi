@@ -346,6 +346,74 @@ describe("core flow (local-only mode)", () => {
     await ctx.close();
   });
 
+  it("FSRS optimizer: fits the learner's history in the browser, applies on request, and the schedule follows", async () => {
+    const { ctx, page, errors } = await open(browser, base);
+    // A learner who forgets fast (recall exp(-t/s), s x2.5 per success): 1200 cards, about 11k answers.
+    const DAY = 86_400_000;
+    const T0 = Date.now() - 400 * DAY;
+    let seed = 11;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const reviews = [];
+    const log = (cardId, at, rating, state) => reviews.push({ id: `${cardId}@${at}`, cardId, noteId: cardId.split(".")[0], deckId: "d1", rating, state, stability: 1, difficulty: 5, scheduledDays: 0, reviewedAt: at, durationMs: 5000, device: "web" });
+    for (let c = 0; c < 1200; c++) {
+      const id = `h${c}.recognize`;
+      let t = T0 + Math.floor(rnd() * 120) * DAY;
+      log(id, t, 3, 0);
+      log(id, (t += 600_000), 3, 1);
+      let st = 2 + rnd() * 3, ivl = 1, state = 2;
+      for (let k = 0; k < 7; k++) {
+        t += ivl * DAY;
+        const ok = rnd() < Math.exp(-ivl / st);
+        log(id, t, ok ? 3 : 1, state);
+        if (ok) (st *= 2.5), (ivl = Math.max(1, Math.round(st * 0.1))), (state = 2);
+        else (st = Math.max(1, st * 0.3)), (ivl = 1), (state = 3);
+      }
+    }
+    const file = join(tmpdir(), `lexi-history-${process.pid}.json`);
+    writeFileSync(file, JSON.stringify({ app: "vhub-lexi", version: 1, exportedAt: Date.now(), decks: [], notes: [], cards: [], reviews, daily: [], prefs: null }));
+    await page.goto(`${base}/#/settings`);
+    await page.waitForSelector('[data-testid=fsrs]');
+    assert.match(await page.textContent('[data-testid=fsrs-status]'), /tham số mặc định/);
+    await page.setInputFiles('[data-testid=import-file]', file);
+    await page.click('[data-testid=confirm-ok]');
+
+    // A new word: what "Dễ" would schedule with the default parameters.
+    await addWord(page, base, "serendipity", "sự tình cờ may mắn");
+    const easyLabel = async () => {
+      await page.goto(`${base}/#/study`);
+      await page.waitForSelector('[data-testid=show-answer]');
+      await page.click('[data-testid=show-answer]');
+      return (await page.textContent('[data-testid=rate-4]')).trim();
+    };
+    const before = await easyLabel();
+
+    await page.goto(`${base}/#/settings`);
+    await page.click('[data-testid=fsrs-optimize]');
+    await page.waitForSelector('[data-testid=fsrs-apply]', { timeout: 60_000 });
+    const result = await page.textContent('[data-testid=fsrs-result]');
+    const [, from, to] = result.match(/giảm từ ([\d,]+)% xuống ([\d,]+)%/) ?? [];
+    assert.ok(from && to, result);
+    assert.ok(Number(to.replace(",", ".")) < Number(from.replace(",", ".")), result);
+    assert.match(result, new RegExp(`Trên ${reviews.length.toLocaleString("vi-VN").replace(".", "\\.")} lượt ôn`));
+    await page.click('[data-testid=fsrs-apply]');
+    await page.waitForFunction(() => /tham số tối ưu ngày/.test(document.querySelector('[data-testid=fsrs-status]')?.textContent ?? ""));
+
+    // The study screen now schedules with them: this learner's first "Easy" interval is much shorter.
+    const after = await easyLabel();
+    assert.notEqual(after, before);
+    await page.reload();
+    await page.goto(`${base}/#/settings`);
+    // Kept across a reload (IndexedDB), once the stored settings have loaded.
+    await page.waitForFunction(() => /tham số tối ưu ngày .* trên 10\.\d{3} lượt ôn/.test(document.querySelector('[data-testid=fsrs-status]')?.textContent ?? ""));
+    // Running it again on the same history keeps what is there.
+    await page.click('[data-testid=fsrs-optimize]');
+    await page.waitForSelector('[data-testid=fsrs-result]', { timeout: 60_000 });
+    assert.match(await page.textContent('[data-testid=fsrs-result]'), /không cần đổi/);
+    console.log(`fsrs e2e: easy ${before} -> ${after}; ${result.trim()}`);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
   it("works offline after the first visit (service worker + cached dictionary shards)", async () => {
     const { ctx, page } = await open(browser, base);
     await page.goto(`${base}/#/add`);

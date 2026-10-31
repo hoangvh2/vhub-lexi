@@ -9,10 +9,12 @@ import { CardState, type Card, type Id, type Rating } from "@shared/model.ts";
 
 export type Scheduler = FSRS;
 
-export function makeScheduler(desiredRetention: number): Scheduler {
+/** `w`: the learner's optimized parameters (Prefs.fsrsWeights); the FSRS-6 defaults when absent. */
+export function makeScheduler(desiredRetention: number, w?: readonly number[]): Scheduler {
   return fsrs(
     generatorParameters({
       request_retention: desiredRetention,
+      ...(w ? { w } : {}),
       enable_fuzz: false,
       enable_short_term: true,
       maximum_interval: 36500,

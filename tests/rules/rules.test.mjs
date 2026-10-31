@@ -6,6 +6,8 @@ import { assertFails, assertSucceeds, initializeTestEnvironment } from "@firebas
 import { collection, deleteDoc, doc, getDoc, getDocs, increment, limit, query, setDoc, writeBatch } from "firebase/firestore";
 
 const fx = JSON.parse(readFileSync(new URL("./fixtures.json", import.meta.url), "utf8"));
+// FSRS-6 defaults, as an optimizer run would store them (21 numbers).
+const W = [0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.001, 1.8722, 0.1666, 0.796, 1.4835, 0.0614, 0.2629, 1.6483, 0.6014, 1.8729, 0.5425, 0.0912, 0.0658, 0.1542];
 const rules = readFileSync(new URL("../../firestore.rules", import.meta.url), "utf8");
 
 let env;
@@ -142,6 +144,9 @@ describe("shape checks reject bad data", () => {
     await assertFails(put("daily", "2026-01-15", { ...fx.daily, id: "2026-01-16" }));
     await assertFails(put("daily", fx.daily.id, { ...fx.daily, good: "many" }));
   });
+  it("prefs: optimized FSRS parameters accepted", async () => {
+    await assertSucceeds(put("settings", "prefs", { ...fx.prefs, fsrsWeights: W, fsrsOptimizedAt: 1_760_000_000_000, fsrsOptimizedReviews: 1200 }));
+  });
   it("prefs: out-of-range or unknown values rejected", async () => {
     const p = fx.prefs;
     await assertFails(put("settings", "prefs", { ...p, desiredRetention: 0.5 }));
@@ -149,6 +154,9 @@ describe("shape checks reject bad data", () => {
     await assertFails(put("settings", "prefs", { ...p, theme: "neon" }));
     await assertFails(put("settings", "prefs", { ...p, layout: { ...p.layout, showEverything: true } }));
     await assertFails(put("settings", "prefs", { ...p, dayStartHour: 24 }));
+    await assertFails(put("settings", "prefs", { ...p, fsrsWeights: W.slice(0, 20) }));
+    await assertFails(put("settings", "prefs", { ...p, fsrsWeights: [...W.slice(0, 20), "0.15"] }));
+    await assertFails(put("settings", "prefs", { ...p, fsrsWeights: W, fsrsOptimizedAt: "today" }));
     await assertFails(put("settings", "other", p));
   });
   it("decks: empty or very long names rejected", async () => {

@@ -14,7 +14,8 @@ class FsrsVectorsTest {
         val scenarios = JSONArray(vectors("fsrs.json")).objects()
         assertTrue(scenarios.size >= 8)
         for (s in scenarios) {
-            val fsrs = Fsrs(retention = s.getDouble("retention"))
+            val w = s.optJSONArray("w")?.let { a -> DoubleArray(a.length()) { a.getDouble(it) } } ?: Fsrs.DEFAULT_W
+            val fsrs = Fsrs(retention = s.getDouble("retention"), w = w)
             val start = s.getLong("start")
             var card = Card(id = "n1.recognize", noteId = "n1", deckId = "d1", template = "recognize", due = start, createdAt = start, updatedAt = start)
             s.optJSONObject("startMemory")?.let { card = card.copy(stability = it.getDouble("stability"), difficulty = it.getDouble("difficulty")) }

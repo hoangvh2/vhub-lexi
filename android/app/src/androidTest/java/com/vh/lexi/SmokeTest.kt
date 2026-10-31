@@ -6,6 +6,7 @@ import android.os.ParcelFileDescriptor
 import android.view.accessibility.AccessibilityWindowInfo
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -198,6 +199,8 @@ class SmokeTest {
         shot("08-stats")
         rule.onNodeWithTag("nav-settings").performClick()
         shot("09-settings")
+        // No optimized FSRS parameters yet: the phone says it schedules with the defaults.
+        rule.onNodeWithTag("fsrs-status").assertTextContains("tham số mặc định", substring = true)
         // A field in the middle of a long scrolling screen is brought into view above the keyboard.
         // After the dialog closed the activity window takes focus back asynchronously; a tap before that is dropped.
         // Even after hasWindowFocus() the tap was still dropped in 2 of 3 CI runs (field not focused, no keyboard), so

@@ -24,9 +24,12 @@ function cardOut(c: Card) {
   return { state: c.state, due: c.due, stability: c.stability, difficulty: c.difficulty, scheduledDays: c.scheduledDays, learningSteps: c.learningSteps, reps: c.reps, lapses: c.lapses, lastReview: c.lastReview ?? null };
 }
 
+/** Fitted by the optimizer on a simulated history (see optimizer.test.ts), already inside ts-fsrs' clip ranges. */
+const OPTIMIZED_W = [0.0376, 0.2291, 0.4086, 1.4697, 6.5213, 0.722, 2.9, 0.001, 1.7588, 0.2643, 0.6813, 1.411, 0.0748, 0.1829, 1.5497, 0.6014, 1.8729, 0.5472, 0.0013, 0.0476, 0.1058];
+
 function fsrsVectors() {
   // Each scenario: a retention, then a list of [minutes after the start, rating]. Cards start New at T0.
-  const scenarios: Array<{ name: string; retention: number; steps: Array<[number, Rating]>; startMemory?: { stability: number; difficulty: number } }> = [
+  const scenarios: Array<{ name: string; retention: number; steps: Array<[number, Rating]>; startMemory?: { stability: number; difficulty: number }; w?: number[] }> = [
     { name: "new-good-good-then-reviews", retention: 0.9, steps: [[0, 3], [10, 3], [25 * 60, 3], [4 * 1440, 3], [12 * 1440, 3], [30 * 1440, 3], [80 * 1440, 3]] },
     { name: "new-easy", retention: 0.9, steps: [[0, 4], [5 * 1440, 4], [30 * 1440, 4]] },
     { name: "new-again-hard-good", retention: 0.9, steps: [[0, 1], [1, 2], [8, 3], [20, 3], [2 * 1440, 3]] },
@@ -39,15 +42,18 @@ function fsrsVectors() {
     { name: "dst-like-gaps", retention: 0.9, steps: [[0, 3], [10, 3], [23 * 60 + 50, 3], [48 * 60 + 5, 3], [97 * 60, 3]] },
     // A new card that carries a stale memory state (what the first Anki importer stored) schedules like a clean one.
     { name: "new-with-stale-memory", retention: 0.9, startMemory: { stability: 0, difficulty: 1 }, steps: [[0, 3], [10, 3], [2 * 1440, 3]] },
+    // Parameters an optimizer run produced (Prefs.fsrsWeights): every formula must read w, not the defaults.
+    { name: "optimized-weights", retention: 0.9, w: OPTIMIZED_W, steps: [[0, 1], [3, 3], [15, 3], [2 * 1440, 2], [6 * 1440, 3], [20 * 1440, 1], [20 * 1440 + 12, 3], [26 * 1440, 4], [70 * 1440, 3]] },
+    { name: "optimized-weights-easy", retention: 0.85, w: OPTIMIZED_W, steps: [[0, 4], [4 * 1440, 3], [4 * 1440 + 30, 3], [40 * 1440, 4]] },
   ];
   return scenarios.map((s) => {
-    const sched = makeScheduler(s.retention);
+    const sched = makeScheduler(s.retention, s.w);
     let c = { ...newCard("n1", "d1", "recognize", T0), ...s.startMemory };
     const out = s.steps.map(([min, rating]) => {
       c = answer(sched, c, rating, T0 + min * MIN);
       return { at: T0 + min * MIN, rating, expect: cardOut(c) };
     });
-    return { name: s.name, retention: s.retention, start: T0, ...(s.startMemory ? { startMemory: s.startMemory } : {}), steps: out };
+    return { name: s.name, retention: s.retention, start: T0, ...(s.startMemory ? { startMemory: s.startMemory } : {}), ...(s.w ? { w: s.w } : {}), steps: out };
   });
 }
 
