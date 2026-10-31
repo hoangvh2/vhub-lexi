@@ -166,7 +166,7 @@ private fun Main(app: LexiApp) {
                 androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Box(Modifier.size(28.dp).gradientPill(c, RoundedCornerShape(topStartPercent = 42, topEndPercent = 58, bottomEndPercent = 54, bottomStartPercent = 46)), contentAlignment = Alignment.Center) {
-                            Text("L", fontFamily = Quicksand, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
+                            Text("L", fontFamily = Quicksand, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = c.onAccent)
                         }
                         Text("VH Lexi", fontFamily = Quicksand, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = c.ink, modifier = Modifier.weight(1f))
                         if (account is Account.SignedIn) Pill(syncLabel(sync), when (sync) { SyncState.SYNCED -> PillKind.OK; SyncState.DENIED, SyncState.ERROR -> PillKind.BAD; else -> PillKind.WARN })

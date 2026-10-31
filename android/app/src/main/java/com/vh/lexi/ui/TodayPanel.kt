@@ -198,7 +198,7 @@ internal fun TodayPanel(
                     Column(Modifier.fillMaxWidth().background(c.accentSoft, RoundedCornerShape(24.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             Box(Modifier.size(56.dp).gradientPill(c, BLOB_A), contentAlignment = Alignment.Center) {
-                                Text(n.num ?: "•", color = Color.White, fontFamily = Quicksand, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                                Text(n.num ?: "•", color = c.onAccent, fontFamily = Quicksand, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                             }
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text("Bài đang học", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = c.muted)
@@ -304,11 +304,11 @@ private fun Orb(fill: Float, text: String, finished: Boolean) {
             wave(4.dp.toPx(), 0f, water, 1f)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text, fontFamily = Quicksand, fontSize = 27.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold, color = if (deep) Color.White else c.ink)
+            Text(text, fontFamily = Quicksand, fontSize = 27.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold, color = if (deep) c.onAccent else c.ink)
             Text(
                 "thẻ hôm nay",
                 Modifier.background(if (deep) Color.White.copy(alpha = 0.18f) else c.surface.copy(alpha = 0.72f), CircleShape).padding(horizontal = 7.dp, vertical = 1.dp),
-                fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = if (deep) Color.White else c.muted,
+                fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = if (deep) c.onAccent else c.muted,
             )
         }
     }
@@ -429,7 +429,7 @@ private fun LessonTile(l: LessonProgress, current: Boolean, modifier: Modifier, 
             contentAlignment = Alignment.Center,
         ) {
             if (full) Icon(Icons.Filled.Check, null, Modifier.size(17.dp), tint = c.mintDeep)
-            else Text(n.num ?: "•", fontFamily = Quicksand, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = if (current) Color.White else if (part) c.accent else c.muted)
+            else Text(n.num ?: "•", fontFamily = Quicksand, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = if (current) c.onAccent else if (part) c.accent else c.muted)
         }
         Text(n.title, fontFamily = Quicksand, fontSize = 14.5.sp, fontWeight = FontWeight.Bold, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Meter(l.started.toFloat() / l.count, c.accent, c.line, 7.dp)

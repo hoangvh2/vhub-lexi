@@ -664,9 +664,9 @@ private fun StreakBubble(streak: Int) {
             contentAlignment = Alignment.Center,
         ) {
             if (streak > 0) Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("$streak", fontFamily = Quicksand, fontSize = 40.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text("ngày liền", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color.White.copy(alpha = 0.92f))
-            } else Icon(Icons.Filled.Check, null, Modifier.size(54.dp), tint = Color.White)
+                Text("$streak", fontFamily = Quicksand, fontSize = 40.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold, color = c.onAccent)
+                Text("ngày liền", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = c.onAccent.copy(alpha = 0.92f))
+            } else Icon(Icons.Filled.Check, null, Modifier.size(54.dp), tint = c.onAccent)
         }
     }
 }
