@@ -24,10 +24,10 @@ export function Stats() {
   const fcMax = Math.max(1, ...fc);
   const heatMax = Math.max(1, ...heat.map((c) => c.count));
   const seg = [
-    ["Mới", counts.new, "var(--easy)"],
-    ["Đang học", counts.learning, "var(--again)"],
-    ["Mới ôn (<21 ngày)", counts.young, "var(--hard)"],
-    ["Thuộc (≥21 ngày)", counts.mature, "var(--good)"],
+    ["Mới", counts.new, "var(--accent-2)"],
+    ["Đang học", counts.learning, "var(--rose)"],
+    ["Mới ôn (<21 ngày)", counts.young, "var(--butter)"],
+    ["Thuộc (≥21 ngày)", counts.mature, "var(--mint)"],
   ] as const;
   const segTotal = Math.max(1, seg.reduce((a, s) => a + s[1], 0));
 
@@ -51,7 +51,7 @@ export function Stats() {
               const h = (n / fcMax) * 96;
               return (
                 <g key={i}>
-                  <rect x={8 + i * 22} y={110 - h} width="16" height={Math.max(h, n ? 2 : 0)} rx="3" fill={i === 0 ? "var(--again)" : "var(--accent)"} />
+                  <rect x={8 + i * 22} y={110 - h} width="16" height={Math.max(h, n ? 2 : 0)} rx="5" fill={i === 0 ? "var(--peach)" : "var(--accent-2)"} />
                   {n > 0 && <text x={16 + i * 22} y={106 - h} text-anchor="middle">{n}</text>}
                   <text x={16 + i * 22} y="126" text-anchor="middle">{i === 0 ? "Nay" : `+${i}`}</text>
                 </g>
@@ -69,7 +69,7 @@ export function Stats() {
           <div class="col" style={{ gap: "6px" }}>
             {seg.map(([label, n, color]) => (
               <div class="row" key={label} style={{ justifyContent: "space-between" }}>
-                <span class="row" style={{ gap: "8px" }}><i style={{ width: "10px", height: "10px", borderRadius: "3px", background: color, display: "inline-block" }} />{label}</span>
+                <span class="row" style={{ gap: "8px" }}><i style={{ width: "10px", height: "10px", borderRadius: "50%", background: color, display: "inline-block" }} />{label}</span>
                 <b>{n}</b>
               </div>
             ))}
