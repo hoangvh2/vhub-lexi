@@ -35,14 +35,29 @@ describe("core flow (local-only mode)", () => {
     assert.equal(await page.locator('[data-testid=vi-source]').count(), 0);
     await page.click('[data-testid=save-word]');
 
-    await page.goto(`${base}/#/study`);
+    // The study tab opens on Today: what is left, one button to start.
+    await page.goto(`${base}/`);
+    await page.waitForSelector('[data-testid=today]');
+    assert.match(await page.textContent('[data-testid=today-ring]'), /0\/1/);
+    assert.equal(await page.textContent('[data-testid=today-new]'), "1");
+    assert.equal(await noOverflow(page), true);
+    await page.click('[data-testid=start-study]');
     await page.waitForSelector('[data-testid=study-card]');
     assert.equal(await page.getAttribute('[data-testid=study-card]', 'data-revealed'), "false");
     assert.match(await page.textContent('[data-testid=counts]'), /Mới\s*1/);
     await page.click('[data-testid=show-answer]');
     assert.match(await page.textContent('[data-testid=study-card]'), /sự tình cờ may mắn/);
     await page.click('[data-testid=rate-3]');
+    // Its next learning step is minutes away: like Anki's learn-ahead limit it comes back now, not "in 10 minutes".
+    await page.waitForSelector('[data-testid=show-answer]');
+    assert.match(await page.textContent('[data-testid=counts]'), /Đang học\s*1/);
+    await page.click('[data-testid=show-answer]');
+    await page.click('[data-testid=rate-3]');
     await page.waitForSelector('[data-testid=session-done]');
+    assert.match(await page.textContent('[data-testid=recap]'), /serendipity/);
+    await page.goto(`${base}/#/today`);
+    await page.waitForSelector('[data-testid=today-ring]');
+    assert.match(await page.textContent('[data-testid=today-ring]'), /1\/1/);
 
     await page.reload();
     await page.goto(`${base}/#/library`);
@@ -74,7 +89,7 @@ describe("core flow (local-only mode)", () => {
     await page.waitForSelector('[data-testid=study-card]');
     await page.keyboard.press("Space");
     await page.waitForSelector('[data-testid=rate-3]');
-    await page.keyboard.press("3");
+    await page.keyboard.press("4"); // Easy: straight to review, so the session ends
     await page.waitForSelector('[data-testid=session-done]');
     await page.keyboard.press("u");
     await page.waitForSelector('[data-testid=study-card]');
@@ -297,6 +312,16 @@ describe("core flow (local-only mode)", () => {
     await page.goto(`${base}/#/library`);
     await page.waitForFunction(() => document.querySelectorAll('[data-testid=lib-item]').length === 6);
     // An Anki new card can be answered (the first importer stored a memory state that made "show answer" throw).
+    // Short screen (small phone with the keyboard bar): the rating row is pinned to the bottom, never below the fold.
+    await page.setViewportSize({ width: 360, height: 480 });
+    await page.goto(`${base}/#/study`);
+    await page.waitForSelector('[data-testid=show-answer]');
+    await page.click('[data-testid=show-answer]');
+    const box = await page.locator('[data-testid=rate-3]').boundingBox();
+    const mainBottom = await page.evaluate(() => document.querySelector("#main").getBoundingClientRect().bottom);
+    assert.ok(box && box.y + box.height <= mainBottom, `rating row at ${JSON.stringify(box)}, visible area ends at ${mainBottom}`);
+    assert.equal(await noOverflow(page), true);
+    await page.goto(`${base}/#/today`);
     await page.goto(`${base}/#/study`);
     let answeredNew = false;
     for (let i = 0; i < 12 && !answeredNew; i++) {

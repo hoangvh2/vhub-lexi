@@ -202,8 +202,13 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .b-ex-say { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--surface); color: var(--muted); display: grid; place-items: center; cursor: pointer; margin-top: -2px; }
 .b-ex-say:hover { color: var(--accent); }
 .b-ex-vi { color: var(--muted); font-size: 15px; line-height: 1.55; }
-.b-memo { align-self: stretch; text-align: left; background: var(--memo); border-radius: 16px; padding: 12px 14px; font-size: 16px; line-height: 1.6; display: flex; flex-direction: column; gap: 4px; }
-.b-memo-lbl { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--hard); }
+.b-memo { align-self: center; text-align: left; background: var(--memo); border-radius: 999px; font-size: 16px; line-height: 1.6; }
+.b-memo[open] { align-self: stretch; border-radius: 16px; padding-bottom: 12px; }
+.b-memo p { margin: 0; padding: 0 14px; }
+.b-memo-lbl { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--hard); cursor: pointer; list-style: none; }
+.b-memo-lbl::-webkit-details-marker { display: none; }
+.b-memo-lbl::after { content: "›"; font-size: 16px; line-height: 1; transition: transform 0.2s; }
+.b-memo[open] .b-memo-lbl::after { transform: rotate(90deg); }
 .b-fold { align-self: stretch; text-align: left; font-size: 14px; color: var(--muted); }
 .b-fold summary { cursor: pointer; font-weight: 600; font-size: 13px; padding: 6px 2px; list-style: none; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; }
 .b-fold summary::-webkit-details-marker { display: none; }
@@ -394,3 +399,58 @@ input[type="range"] { width: 100%; }
 .anki-details { display: flex; flex-direction: column; gap: 10px; }
 .anki-details > summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--accent); padding: 4px 0; }
 .anki-details[open] > summary { margin-bottom: 10px; }
+
+/* ---------- study header, pinned actions, session recap ---------- */
+.study-head { display: flex; flex-direction: column; gap: 10px; }
+.study-head .pickers { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
+.study-head .pickers .select { min-height: 38px; padding: 4px 10px; min-width: 0; text-overflow: ellipsis; }
+/* Stays at the bottom of the scrolling page so "show answer" and the ratings never need a scroll on a phone. */
+.actbar { position: sticky; bottom: 0; z-index: 5; margin: 0 -4px; padding: 10px 4px calc(10px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to bottom, transparent, var(--bg) 18px); }
+.actbar.rate { display: grid; }
+.recap { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 560px; }
+.chip { font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; border: 1px solid transparent; }
+.chip.r1 { color: var(--again); background: var(--again-soft); }
+.chip.r2 { color: var(--hard); background: var(--hard-soft); }
+.chip.r3 { color: var(--good); background: var(--good-soft); }
+.chip.r4 { color: var(--easy); background: var(--easy-soft); }
+.recap-forgot { width: 100%; max-width: 560px; text-align: left; background: var(--again-soft); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.recap-forgot > b { color: var(--again); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+.recap-forgot div { display: flex; gap: 10px; }
+.recap-forgot div span:first-child { font-weight: 700; min-width: 30%; }
+
+/* ---------- today ---------- */
+.today .hello { font-family: var(--f-display); font-size: 28px; margin: 0 0 2px; }
+.today-main { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 22px 18px; }
+.ring { width: 168px; height: 168px; }
+.ring-track { fill: none; stroke: var(--surface-2); stroke-width: 11; }
+.ring-fill { fill: none; stroke: var(--accent); stroke-width: 11; stroke-linecap: round; transition: stroke-dasharray 0.6s ease; }
+.ring-num { font-family: var(--f-display); font-size: 26px; font-weight: 800; fill: var(--ink); }
+.ring-sub { font-size: 11px; fill: var(--muted); }
+.start-btn { width: 100%; max-width: 420px; min-height: 54px; font-size: 17px; border-radius: 16px; }
+.today-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 420px; }
+.tile { border-radius: 14px; padding: 12px 14px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; }
+.tile span { font-size: 13px; color: var(--muted); }
+.tile b { grid-column: 1 / -1; font-family: var(--f-display); font-size: 26px; }
+.tile.due { background: var(--accent-soft); color: var(--accent); }
+.tile.fresh { background: var(--memo); color: var(--hard); }
+.tile b { color: var(--ink); }
+.streak { display: flex; flex-direction: column; gap: 12px; }
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.week .day { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.week .day small { font-size: 11px; color: var(--muted); }
+.week .day i { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-style: normal; font-size: 14px; font-weight: 700; }
+.week .day.on i { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.week .day.today small { color: var(--accent); font-weight: 700; }
+.week .day.future i { border-style: dashed; opacity: 0.6; }
+.lesson-now { display: flex; flex-direction: column; gap: 10px; }
+.lesson-name { font-family: var(--f-display); font-size: 20px; }
+.lessons summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 14px; }
+.lesson-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin-top: 10px; }
+.lesson { display: flex; justify-content: space-between; gap: 6px; text-align: left; font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; min-width: 0; }
+.lesson span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lesson small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.lesson.part { border-color: var(--accent); }
+.lesson.full { background: var(--accent-soft); border-color: transparent; }
+.wstat { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; }
+.wstat.learning { border-color: var(--hard); background: conic-gradient(var(--hard) 0 50%, transparent 50% 100%); }
+.wstat.known { border-color: var(--good); background: var(--good); color: var(--accent-ink); }

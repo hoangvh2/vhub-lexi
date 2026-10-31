@@ -5,6 +5,7 @@ import { checkTyped, str, template, type AnswerVerdict } from "@shared/notetypes
 import { reviewCard, setSuspended, undoReview, type Reviewed } from "../data/actions.ts";
 import { cards, daily, decks, loaded, notes, prefs } from "../data/state.ts";
 import { LEARN_AHEAD_MS, buildQueue, dueWithin, isLeech, pickNext, tagCounts, type Queue } from "../lib/queue.ts";
+import { streak } from "../lib/stats.ts";
 import { formatInterval, makeScheduler, preview } from "../lib/scheduler.ts";
 import { eligibility, notesById } from "../lib/select.ts";
 import { speak, stopSpeaking } from "../lib/speech.ts";
@@ -13,16 +14,25 @@ import { Blocks } from "./Blocks.tsx";
 import { Icon, go, toast } from "./common.tsx";
 import { NoteEditor } from "./NoteEditor.tsx";
 
+/** One answer of this session, for the summary at the end. */
+interface Answered {
+  noteId: Id;
+  word: string;
+  vi: string;
+  rating: Rating;
+}
 interface Session {
   answered: number;
   again: number;
   ms: number;
   shown: number;
   shownNew: number;
+  log: Answered[];
 }
-const EMPTY: Session = { answered: 0, again: 0, ms: 0, shown: 0, shownNew: 0 };
+const EMPTY: Session = { answered: 0, again: 0, ms: 0, shown: 0, shownNew: 0, log: [] };
+const DAY_MS = 86_400_000;
 
-export function Study({ deckId }: { deckId: Id | null }) {
+export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialTag?: string }) {
   const allCards = useStore(cards);
   const allNotes = useStore(notes);
   const allDecks = useStore(decks);
@@ -33,9 +43,11 @@ export function Study({ deckId }: { deckId: Id | null }) {
   const [buried, setBuried] = useState<ReadonlySet<Id>>(new Set());
   const [session, setSession] = useState<Session>(EMPTY);
   const [extraNew, setExtraNew] = useState(0);
-  const [ahead, setAhead] = useState(0);
+  // Like Anki's "learn ahead limit": when nothing else is left, a learning card due within 20 minutes is shown
+  // now instead of ending the session with a "come back in 3 minutes".
+  const [ahead, setAhead] = useState(LEARN_AHEAD_MS);
   // Custom study: one lesson/topic tag, and review cards due in the next N days.
-  const [tag, setTag] = useState("");
+  const [tag, setTag] = useState(initialTag);
   const [aheadDays, setAheadDays] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [revealed, setRevealed] = useState(false);
@@ -60,6 +72,18 @@ export function Study({ deckId }: { deckId: Id | null }) {
   const meanings = useMemo(() => meaningsByNote(allNotes), [allNotes]);
   const sched = useMemo(() => makeScheduler(p.desiredRetention), [p.desiredRetention]);
   const tags = useMemo(() => tagCounts(allNotes), [allNotes]);
+  const tagDone = (t: string) => (started.get(t) ?? 0) >= (tags.find((x) => x.tag === t)?.count ?? 0);
+  const nextTag = (t: string) => {
+    const i = tags.findIndex((x) => x.tag === t);
+    return tags.slice(i + 1).find((x) => isLesson(x.tag) && (started.get(x.tag) ?? 0) < x.count)?.tag ?? null;
+  };
+  // Per lesson tag: notes started (any card past "new"), for "01-contract · 8/12" in the lesson picker.
+  const started = useMemo(() => {
+    const studied = new Set(allCards.filter((c) => c.state !== 0).map((c) => c.noteId));
+    const m = new Map<string, number>();
+    for (const n of allNotes) if (studied.has(n.id)) for (const t of n.tags ?? []) m.set(t, (m.get(t) ?? 0) + 1);
+    return m;
+  }, [allCards, allNotes]);
   const tagNotes = useMemo(() => (tag ? new Set(allNotes.filter((x) => x.tags?.includes(tag)).map((x) => x.id)) : undefined), [allNotes, tag]);
 
   const queue: Queue = useMemo(
@@ -98,18 +122,19 @@ export function Study({ deckId }: { deckId: Id | null }) {
   // New card on screen: reset the answer UI and start the timer. Effects run after paint, so the reset is keyed to
   // a real change of card (the first card is already in its initial state) and cannot wipe an answer that the
   // learner revealed before the effect ran.
-  const shownId = useRef<Id | null>(card?.id ?? null);
+  // Keyed by card and turn: a learning card can come straight back (learn-ahead) and must start unanswered again.
+  const turn = card ? `${card.id}#${session.shown}` : null;
+  const shownId = useRef<string | null>(turn);
   useEffect(() => {
-    const id = card?.id ?? null;
-    if (shownId.current === id) return;
-    shownId.current = id;
+    if (shownId.current === turn) return;
+    shownId.current = turn;
     setRevealed(false);
     setTyped("");
     setVerdict(null);
     setExtraHints(0);
     setMixedUp(null);
     shownAt.current = Date.now();
-  }, [card?.id]);
+  }, [turn]);
 
   // Read the front aloud when a card appears: always on listening cards, otherwise if the learner chose that.
   useEffect(() => {
@@ -118,7 +143,7 @@ export function Study({ deckId }: { deckId: Id | null }) {
       if (t) speak(t);
     }
     return () => stopSpeaking();
-  }, [card?.id]);
+  }, [turn]);
 
   const reveal = (v?: AnswerVerdict) => {
     if (!card || !note || !tpl || revealed) return;
@@ -149,6 +174,7 @@ export function Study({ deckId }: { deckId: Id | null }) {
     busy.current = true;
     const dur = Date.now() - shownAt.current;
     const wasNew = card.state === 0;
+    const answered: Answered | null = note ? { noteId: note.id, word: str(note.fields.word) || tpl?.label || "", vi: str(note.fields.vi), rating: r } : null;
     try {
       const res = await reviewCard(card, r, dur);
       history.current = [...history.current.slice(-9), res];
@@ -159,6 +185,7 @@ export function Study({ deckId }: { deckId: Id | null }) {
         ms: s.ms + Math.min(dur, 120_000),
         shown: s.shown + 1,
         shownNew: s.shownNew + (wasNew ? 1 : 0),
+        log: answered ? [...s.log, answered] : s.log,
       }));
       currentId.current = null;
       setNow(Date.now());
@@ -178,7 +205,7 @@ export function Study({ deckId }: { deckId: Id | null }) {
         n.delete(last.prev.noteId);
         return n;
       });
-      setSession((s) => ({ ...s, answered: Math.max(0, s.answered - 1), again: Math.max(0, s.again - (last.delta.rating === 1 ? 1 : 0)), shown: Math.max(0, s.shown - 1), shownNew: Math.max(0, s.shownNew - last.delta.newCards) }));
+      setSession((s) => ({ ...s, answered: Math.max(0, s.answered - 1), again: Math.max(0, s.again - (last.delta.rating === 1 ? 1 : 0)), shown: Math.max(0, s.shown - 1), shownNew: Math.max(0, s.shownNew - last.delta.newCards), log: s.log.slice(0, -1) }));
       currentId.current = last.prev.id;
       setNow(Date.now());
       toast("Đã hoàn tác lần trả lời trước");
@@ -231,6 +258,12 @@ export function Study({ deckId }: { deckId: Id | null }) {
     onKeyRef.current = onKey;
   }
 
+  const pickTag = (t: string) => {
+    setTag(t);
+    setAheadDays(0);
+    currentId.current = null;
+  };
+
   if (!ready) return <div class="page"><p class="muted">Đang tải dữ liệu…</p></div>;
 
   if (allNotes.length === 0) {
@@ -261,22 +294,24 @@ export function Study({ deckId }: { deckId: Id | null }) {
 
   return (
     <div class="page narrow">
-      <div class="page-head">
+      <div class="study-head">
+        <div class="pickers">
+          <select class="select" value={deckId ?? ""} aria-label="Chọn bộ thẻ" onChange={(e) => go(e.currentTarget.value ? `/study/${e.currentTarget.value}` : "/study")}>
+            <option value="">Tất cả bộ thẻ</option>
+            {allDecks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+          {tags.length > 0 && (
+            <select class="select" value={tag} aria-label="Chọn bài" data-testid="tag-pick" onChange={(e) => pickTag(e.currentTarget.value)}>
+              <option value="">Tất cả bài</option>
+              {tags.map((t) => <option key={t.tag} value={t.tag}>{lessonLabel(t.tag, started.get(t.tag) ?? 0, t.count)}</option>)}
+            </select>
+          )}
+        </div>
         <div class="counts" aria-label="Số thẻ còn lại" data-testid="counts">
           <span class={`c-new${kind === "new" ? " on" : ""}`}>Mới <b>{queue.counts.new}</b></span>
           <span class={`c-learn${kind === "learn" ? " on" : ""}`}>Đang học <b>{queue.counts.learning}</b></span>
           <span class={`c-rev${kind === "review" ? " on" : ""}`}>Ôn <b>{queue.counts.review}</b></span>
         </div>
-        <select class="select deck-pick" value={deckId ?? ""} aria-label="Chọn bộ thẻ" onChange={(e) => go(e.currentTarget.value ? `/study/${e.currentTarget.value}` : "/study")}>
-          <option value="">Tất cả bộ thẻ</option>
-          {allDecks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-        </select>
-        {tags.length > 0 && (
-          <select class="select deck-pick" value={tag} aria-label="Chọn bài" data-testid="tag-pick" onChange={(e) => { setTag(e.currentTarget.value); setAheadDays(0); }}>
-            <option value="">Tất cả bài</option>
-            {tags.map((t) => <option key={t.tag} value={t.tag}>{t.tag} ({t.count})</option>)}
-          </select>
-        )}
       </div>
       <div class="progress" role="progressbar" aria-valuenow={Math.round(doneFrac * 100)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${doneFrac * 100}%` }} /></div>
 
@@ -284,7 +319,11 @@ export function Study({ deckId }: { deckId: Id | null }) {
         <Done
           session={session}
           waitingMs={waitingMs}
-          onContinue={() => setAhead(LEARN_AHEAD_MS)}
+          streak={streak(dailies, now, p.dayStartHour)}
+          dueTomorrow={dueWithin(allCards, eligible, now, p.dayStartHour, 1, deckId, tagNotes)}
+          nextLesson={tag && tagDone(tag) ? nextTag(tag) : null}
+          onLesson={pickTag}
+          onContinue={() => setAhead(DAY_MS)}
           onMore={() => setExtraNew((n) => n + 5)}
           onUndo={history.current.length ? undo : undefined}
           hasMoreNew={allCards.some((c) => c.state === 0 && !c.suspended && eligible(c) && (!deckId || c.deckId === deckId) && (!tagNotes || tagNotes.has(c.noteId)))}
@@ -294,7 +333,7 @@ export function Study({ deckId }: { deckId: Id | null }) {
       ) : (
         <div class="study">
           <div
-            key={card.id}
+            key={turn}
             class={`scard mode-${tpl.id}${revealed ? " revealed" : ""}`}
             onClick={() => tpl.mode === "flip" && !revealed && reveal()}
             data-testid="study-card"
@@ -383,12 +422,16 @@ export function Study({ deckId }: { deckId: Id | null }) {
             {!revealed && tpl.mode === "flip" && <div class="hint">Bấm thẻ hoặc nhấn Space để xem đáp án</div>}
           </div>
 
+          {/* Pinned to the bottom of the screen: a long answer (two examples with translations) must not push the
+              rating row out of reach on a phone. */}
           {!revealed && tpl.mode === "flip" ? (
-            <button type="button" class="btn primary show-btn" onClick={() => reveal()} data-testid="show-answer">
-              Hiện đáp án
-            </button>
+            <div class="actbar">
+              <button type="button" class="btn primary show-btn" onClick={() => reveal()} data-testid="show-answer">
+                Hiện đáp án
+              </button>
+            </div>
           ) : revealed && outcomes ? (
-            <div class="rate" role="group" aria-label="Bạn nhớ thế nào?">
+            <div class="actbar rate" role="group" aria-label="Bạn nhớ thế nào?">
               {([1, 2, 3, 4] as const).map((r) => (
                 <button type="button" key={r} class={`r${r}${suggested === r ? " suggest" : ""}`} onClick={() => void rate(r)} data-testid={`rate-${r}`}>
                   {["Quên", "Khó", "Tốt", "Dễ"][r - 1]}
@@ -449,31 +492,74 @@ function Compare({ word, pos, en, others }: { word: string; pos: string; en: str
 
 const aheadLabel = (n: number) => `Ôn trước ${n} thẻ sắp đến hạn`;
 
-function Done({ session, waitingMs, onContinue, onMore, onUndo, hasMoreNew, tomorrow, onAhead }: { session: Session; waitingMs: number | null; onContinue(): void; onMore(): void; onUndo?: () => void; hasMoreNew: boolean; tomorrow: number; onAhead(): void }) {
+/** Lesson-like tags (sub-decks of an Anki deck such as "01-contract", "lesson-02", "bai-3"), as opposed to topic tags. */
+export const isLesson = (t: string) => /^(\d|lesson|bai|unit|chapter)/i.test(t);
+export const lessonLabel = (t: string, started: number, total: number) => `${t} · ${started}/${total}${started >= total ? " ✓" : ""}`;
+
+const RATING_NAME = ["", "Quên", "Khó", "Tốt", "Dễ"];
+
+interface DoneProps {
+  session: Session;
+  waitingMs: number | null;
+  streak: number;
+  dueTomorrow: number;
+  nextLesson: string | null;
+  onLesson(tag: string): void;
+  onContinue(): void;
+  onMore(): void;
+  onUndo?: () => void;
+  hasMoreNew: boolean;
+  tomorrow: number;
+  onAhead(): void;
+}
+
+function Done({ session, waitingMs, streak, dueTomorrow, nextLesson, onLesson, onContinue, onMore, onUndo, hasMoreNew, tomorrow, onAhead }: DoneProps) {
   const mins = Math.max(1, Math.round(session.ms / 60_000));
   const acc = session.answered ? Math.round(((session.answered - session.again) / session.answered) * 100) : 0;
+  // Last answer per word: a word forgotten then got right in its learning step counts as forgotten.
+  const words = new Map<Id, Answered>();
+  for (const a of session.log) {
+    const prev = words.get(a.noteId);
+    words.set(a.noteId, prev && prev.rating < a.rating ? prev : a);
+  }
+  const list = [...words.values()].sort((a, b) => a.rating - b.rating);
+  const forgot = list.filter((a) => a.rating === 1);
   return (
     <div class="panel done" data-testid="session-done">
       <div class="big">{session.answered ? "Xong!" : "Hết thẻ hôm nay"}</div>
       {session.answered > 0 ? (
         <div class="stat-grid">
-          <div class="stat"><b>{session.answered}</b><span>thẻ đã trả lời</span></div>
+          <div class="stat"><b>{words.size}</b><span>từ đã ôn</span></div>
           <div class="stat"><b>{acc}%</b><span>nhớ đúng</span></div>
           <div class="stat"><b>{mins}p</b><span>thời gian</span></div>
+          {streak > 0 && <div class="stat"><b>{streak}🔥</b><span>ngày liên tiếp</span></div>}
         </div>
       ) : (
         <p class="muted">Không có thẻ đến hạn. Quay lại sau, hoặc thêm từ mới.</p>
+      )}
+      {forgot.length > 0 && (
+        <div class="recap-forgot" data-testid="recap-forgot">
+          <b>Cần chú ý</b>
+          {forgot.slice(0, 6).map((a) => <div key={a.noteId}><span>{a.word}</span><span class="muted">{a.vi}</span></div>)}
+        </div>
+      )}
+      {list.length > 0 && (
+        <div class="recap" data-testid="recap">
+          {list.map((a) => <span key={a.noteId} class={`chip r${a.rating}`} title={RATING_NAME[a.rating]}>{a.word}</span>)}
+        </div>
       )}
       {waitingMs !== null && (
         <p class="muted" data-testid="waiting">
           Còn thẻ đang học, thẻ kế tiếp quay lại sau {formatInterval(waitingMs)}.
         </p>
       )}
+      {session.answered > 0 && waitingMs === null && <p class="muted" data-testid="due-tomorrow">{dueTomorrow > 0 ? `Ngày mai có ${dueTomorrow} thẻ cần ôn.` : "Ngày mai chưa có thẻ nào đến hạn."}</p>}
       <div class="row" style={{ justifyContent: "center" }}>
-        {waitingMs !== null && <button type="button" class="btn primary" onClick={onContinue} data-testid="continue-early">Học tiếp ngay</button>}
-        <button type="button" class={`btn${waitingMs === null ? " primary" : ""}`} onClick={() => go("/add")}><Icon n="plus" /> Thêm từ</button>
+        {nextLesson && <button type="button" class="btn primary" onClick={() => onLesson(nextLesson)} data-testid="next-lesson">Sang bài tiếp: {nextLesson}</button>}
+        {waitingMs !== null && <button type="button" class={`btn${nextLesson ? "" : " primary"}`} onClick={onContinue} data-testid="continue-early">Học tiếp ngay</button>}
         {hasMoreNew && <button type="button" class="btn" onClick={onMore} data-testid="more-new">Học thêm 5 từ mới</button>}
         {tomorrow > 0 && <button type="button" class="btn" onClick={onAhead} data-testid="review-ahead">{aheadLabel(tomorrow)}</button>}
+        <button type="button" class="btn" onClick={() => go("/add")}><Icon n="plus" /> Thêm từ</button>
         {onUndo && <button type="button" class="btn ghost" onClick={onUndo}><Icon n="undo" /> Hoàn tác</button>}
       </div>
     </div>
