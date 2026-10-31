@@ -88,6 +88,8 @@ import com.vh.lexi.core.buildQueue
 import com.vh.lexi.core.meaningsByNote
 import com.vh.lexi.core.checkTyped
 import com.vh.lexi.core.dayId
+import com.vh.lexi.core.dueWithin
+import com.vh.lexi.core.tagCounts
 import com.vh.lexi.core.isLeech
 import com.vh.lexi.core.pickNext
 import com.vh.lexi.core.template
@@ -115,6 +117,10 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
     var session by remember { mutableStateOf(Session()) }
     var extraNew by remember { mutableStateOf(0) }
     var ahead by remember { mutableLongStateOf(0L) }
+    // Custom study: one lesson/topic tag, and review cards due in the next N days.
+    var tag by remember { mutableStateOf<String?>(null) }
+    var aheadDays by remember { mutableStateOf(0) }
+    var tagMenu by remember { mutableStateOf(false) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var revealed by remember { mutableStateOf(false) }
     var typed by remember { mutableStateOf("") }
@@ -138,14 +144,18 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
 
     val notesById = remember(notes) { notes.associateBy { it.id } }
     val meanings = remember(notes) { meaningsByNote(notes) }
-    val queue = remember(cards, notesById, meanings, daily, prefs, now, deckId, buried, extraNew, ahead) {
+    val tags = remember(notes) { tagCounts(notes.map { it.tags }) }
+    val tagNotes = remember(notes, tag) { tag?.let { t -> notes.filter { t in it.tags }.map { it.id }.toSet() } }
+    val eligible: (Card) -> Boolean = { c -> notesById[c.noteId]?.let { n -> template(n.type, c.template)?.applies(n) == true } == true }
+    val queue = remember(cards, notesById, meanings, daily, prefs, now, deckId, buried, extraNew, ahead, tagNotes, aheadDays) {
         buildQueue(
             QueueInput(
                 cards = cards,
-                eligible = { c -> notesById[c.noteId]?.let { n -> template(n.type, c.template)?.applies(n) == true } == true },
+                eligible = eligible,
                 today = daily.firstOrNull { it.id == dayId(now, prefs.dayStartHour) },
                 prefs = prefs.copy(newPerDay = prefs.newPerDay + extraNew),
                 now = now, deckId = deckId, buried = buried, learnAheadMs = ahead, meanings = meanings,
+                noteIds = tagNotes, reviewAheadDays = aheadDays,
             ),
         )
     }
@@ -236,13 +246,24 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Deck picker on its own line: next to the three count chips it was squeezed to one letter on a 320dp phone.
-        Box {
-            OutlinedButton(onClick = { deckMenu = true }, Modifier.testTag("deck-pick")) {
-                Text(decks.firstOrNull { it.id == deckId }?.name ?: "Tất cả bộ thẻ", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.weight(1f, fill = false)) {
+                OutlinedButton(onClick = { deckMenu = true }, Modifier.testTag("deck-pick")) {
+                    Text(decks.firstOrNull { it.id == deckId }?.name ?: "Tất cả bộ thẻ", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                DropdownMenu(expanded = deckMenu, onDismissRequest = { deckMenu = false }) {
+                    DropdownMenuItem(text = { Text("Tất cả bộ thẻ") }, onClick = { deckId = null; holder[0] = null; deckMenu = false })
+                    for (d in decks) DropdownMenuItem(text = { Text(d.name) }, onClick = { deckId = d.id; holder[0] = null; deckMenu = false })
+                }
             }
-            DropdownMenu(expanded = deckMenu, onDismissRequest = { deckMenu = false }) {
-                DropdownMenuItem(text = { Text("Tất cả bộ thẻ") }, onClick = { deckId = null; holder[0] = null; deckMenu = false })
-                for (d in decks) DropdownMenuItem(text = { Text(d.name) }, onClick = { deckId = d.id; holder[0] = null; deckMenu = false })
+            if (tags.isNotEmpty()) Box(Modifier.weight(1f, fill = false)) {
+                OutlinedButton(onClick = { tagMenu = true }, Modifier.testTag("tag-pick")) {
+                    Text(tag ?: "Tất cả bài", fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                DropdownMenu(expanded = tagMenu, onDismissRequest = { tagMenu = false }) {
+                    DropdownMenuItem(text = { Text("Tất cả bài") }, onClick = { tag = null; aheadDays = 0; holder[0] = null; tagMenu = false })
+                    for ((t, n) in tags) DropdownMenuItem(text = { Text("$t ($n)") }, onClick = { tag = t; aheadDays = 0; holder[0] = null; tagMenu = false })
+                }
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -255,8 +276,9 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
         if (card == null || note == null || tpl == null) {
             DoneCard(
                 session = session, waitingMs = cards.filter { (it.state == CardState.LEARNING || it.state == CardState.RELEARNING) && !it.suspended && it.due > now && (deckId == null || it.deckId == deckId) }.minOfOrNull { it.due }?.let { it - now },
-                hasMoreNew = cards.any { it.state == CardState.NEW && !it.suspended }, canUndo = history.isNotEmpty(),
-                onContinue = { ahead = LEARN_AHEAD_MS; holder[0] = null }, onMore = { extraNew += 5; holder[0] = null }, onUndo = ::undo, onAdd = onAdd,
+                hasMoreNew = cards.any { it.state == CardState.NEW && !it.suspended && eligible(it) && (deckId == null || it.deckId == deckId) && (tagNotes == null || it.noteId in tagNotes) }, canUndo = history.isNotEmpty(),
+                aheadCount = dueWithin(cards, eligible, now, prefs.dayStartHour, aheadDays + 1, deckId, tagNotes) - dueWithin(cards, eligible, now, prefs.dayStartHour, aheadDays, deckId, tagNotes),
+                onContinue = { ahead = LEARN_AHEAD_MS; holder[0] = null }, onMore = { extraNew += 5; holder[0] = null }, onAhead = { aheadDays += 1; holder[0] = null }, onUndo = ::undo, onAdd = onAdd,
             )
         } else {
             val mode = modeColor(tpl.id)
@@ -476,7 +498,7 @@ private fun Compare(word: String, pos: String, en: String, others: List<Confusab
 }
 
 @Composable
-private fun DoneCard(session: Session, waitingMs: Long?, hasMoreNew: Boolean, canUndo: Boolean, onContinue: () -> Unit, onMore: () -> Unit, onUndo: () -> Unit, onAdd: () -> Unit) {
+private fun DoneCard(session: Session, waitingMs: Long?, hasMoreNew: Boolean, canUndo: Boolean, aheadCount: Int, onContinue: () -> Unit, onMore: () -> Unit, onAhead: () -> Unit, onUndo: () -> Unit, onAdd: () -> Unit) {
     val c = Lexi.colors
     Panel(Modifier.testTag("session-done")) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -496,6 +518,7 @@ private fun DoneCard(session: Session, waitingMs: Long?, hasMoreNew: Boolean, ca
                 if (waitingMs != null) Button(onClick = onContinue) { Text("Học tiếp ngay") }
                 if (hasMoreNew) OutlinedButton(onClick = onMore) { Text("Thêm 5 từ mới") }
             }
+            if (aheadCount > 0) OutlinedButton(onClick = onAhead, Modifier.testTag("review-ahead")) { Text("Ôn trước $aheadCount thẻ sắp đến hạn") }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onAdd) { Text("Thêm từ") }
                 if (canUndo) TextButton(onClick = onUndo) { Text("Hoàn tác") }

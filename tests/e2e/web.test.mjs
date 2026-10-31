@@ -232,6 +232,52 @@ describe("core flow (local-only mode)", () => {
     await ctx.close();
   });
 
+  it("custom study: one lesson only, review ahead, and card info with the answer history", async () => {
+    const { ctx, page, errors } = await open(browser, base);
+    await page.goto(`${base}/#/settings`);
+    const T = Date.now() - 60_000;
+    const D = 86_400_000;
+    const vocab = (id, word, tag) => ({ id, type: "vocab", deckId: "d1", createdAt: T, updatedAt: T, tags: [tag], fields: { word, vi: `nghĩa ${word}` } });
+    const card = (noteId, over) => ({ id: `${noteId}.recognize`, noteId, deckId: "d1", template: "recognize", state: 2, due: T, stability: 5, difficulty: 5, scheduledDays: 5, learningSteps: 0, reps: 3, lapses: 1, lastReview: T - 5 * D, createdAt: T, updatedAt: T, ...over });
+    const file = join(tmpdir(), `lexi-custom-${process.pid}.json`);
+    writeFileSync(file, JSON.stringify({
+      app: "vhub-lexi", version: 1, exportedAt: T, decks: [{ id: "d1", name: "600", createdAt: T, updatedAt: T }],
+      notes: [vocab("n1", "contract", "lesson-01"), vocab("n2", "warranty", "lesson-02"), vocab("n3", "invoice", "lesson-02")],
+      // contract and warranty are due now; invoice 24 h from now, which always falls in the next study day.
+      cards: [card("n1", {}), card("n2", {}), card("n3", { due: T + D })],
+      reviews: [1, 3].map((rating, i) => ({ id: `n1.recognize@${T - (10 - i * 5) * D}`, cardId: "n1.recognize", noteId: "n1", deckId: "d1", rating, state: 2, stability: 5, difficulty: 5, scheduledDays: 5, reviewedAt: T - (10 - i * 5) * D, durationMs: 3000, device: "anki" })),
+      daily: [],
+    }));
+    await page.setInputFiles('[data-testid=import-file]', file);
+    await page.click('[data-testid=confirm-ok]');
+    await page.goto(`${base}/#/study`);
+    await page.waitForSelector('[data-testid=study-card]');
+    assert.match(await page.textContent('[data-testid=counts]'), /Ôn\s*2/);
+    await page.selectOption('[data-testid=tag-pick]', "lesson-02");
+    await page.waitForFunction(() => /Ôn\s*1/.test(document.querySelector('[data-testid=counts]')?.textContent ?? ""));
+    assert.match(await page.textContent('[data-testid=study-card]'), /warranty/);
+    await page.click('[data-testid=show-answer]');
+    await page.click('[data-testid=rate-3]');
+    // Lesson 2 is done for today; reviewing ahead brings in invoice (due tomorrow).
+    await page.waitForSelector('[data-testid=review-ahead]');
+    assert.match(await page.textContent('[data-testid=review-ahead]'), /Ôn trước 1 thẻ/);
+    await page.click('[data-testid=review-ahead]');
+    await page.waitForFunction(() => /invoice/.test(document.querySelector('[data-testid=study-card]')?.textContent ?? ""));
+
+    // Card info: memory state and the history imported from Anki.
+    await page.goto(`${base}/#/library`);
+    await page.click('[data-testid=lib-item] >> text=contract');
+    await page.waitForSelector('[data-testid=card-info]');
+    const info = await page.textContent('[data-testid=card-info]');
+    assert.match(info, /Khả năng nhớ\s*\d+%/);
+    assert.match(info, /Lượt ôn · quên\s*3 · 1/);
+    await page.click('[data-testid=card-info] summary');
+    const hist = await page.textContent('[data-testid=card-history]');
+    assert.match(hist, /Tốt.*Anki.*Quên.*Anki/s);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
   it("works offline after the first visit (service worker + cached dictionary shards)", async () => {
     const { ctx, page } = await open(browser, base);
     await page.goto(`${base}/#/add`);

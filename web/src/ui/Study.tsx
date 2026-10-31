@@ -4,7 +4,7 @@ import { answerHint, confusables, letterCount, matchConfusable, meaningsByNote, 
 import { checkTyped, str, template, type AnswerVerdict } from "@shared/notetypes.ts";
 import { reviewCard, setSuspended, undoReview, type Reviewed } from "../data/actions.ts";
 import { cards, daily, decks, loaded, notes, prefs } from "../data/state.ts";
-import { LEARN_AHEAD_MS, buildQueue, isLeech, pickNext, type Queue } from "../lib/queue.ts";
+import { LEARN_AHEAD_MS, buildQueue, dueWithin, isLeech, pickNext, tagCounts, type Queue } from "../lib/queue.ts";
 import { formatInterval, makeScheduler, preview } from "../lib/scheduler.ts";
 import { eligibility, notesById } from "../lib/select.ts";
 import { speak, stopSpeaking } from "../lib/speech.ts";
@@ -34,6 +34,9 @@ export function Study({ deckId }: { deckId: Id | null }) {
   const [session, setSession] = useState<Session>(EMPTY);
   const [extraNew, setExtraNew] = useState(0);
   const [ahead, setAhead] = useState(0);
+  // Custom study: one lesson/topic tag, and review cards due in the next N days.
+  const [tag, setTag] = useState("");
+  const [aheadDays, setAheadDays] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [revealed, setRevealed] = useState(false);
   const [typed, setTyped] = useState("");
@@ -56,6 +59,8 @@ export function Study({ deckId }: { deckId: Id | null }) {
   const byId = useMemo(() => notesById(allNotes), [allNotes]);
   const meanings = useMemo(() => meaningsByNote(allNotes), [allNotes]);
   const sched = useMemo(() => makeScheduler(p.desiredRetention), [p.desiredRetention]);
+  const tags = useMemo(() => tagCounts(allNotes), [allNotes]);
+  const tagNotes = useMemo(() => (tag ? new Set(allNotes.filter((x) => x.tags?.includes(tag)).map((x) => x.id)) : undefined), [allNotes, tag]);
 
   const queue: Queue = useMemo(
     () =>
@@ -69,8 +74,10 @@ export function Study({ deckId }: { deckId: Id | null }) {
         buried,
         learnAheadMs: ahead,
         meanings,
+        noteIds: tagNotes,
+        reviewAheadDays: aheadDays,
       }),
-    [allCards, eligible, dailies, p, now, deckId, buried, extraNew, ahead, meanings],
+    [allCards, eligible, dailies, p, now, deckId, buried, extraNew, ahead, meanings, tagNotes, aheadDays],
   );
 
   // Keep showing the same card until it is answered, even if the queue changes underneath.
@@ -264,11 +271,26 @@ export function Study({ deckId }: { deckId: Id | null }) {
           <option value="">Tất cả bộ thẻ</option>
           {allDecks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
+        {tags.length > 0 && (
+          <select class="select deck-pick" value={tag} aria-label="Chọn bài" data-testid="tag-pick" onChange={(e) => { setTag(e.currentTarget.value); setAheadDays(0); }}>
+            <option value="">Tất cả bài</option>
+            {tags.map((t) => <option key={t.tag} value={t.tag}>{t.tag} ({t.count})</option>)}
+          </select>
+        )}
       </div>
       <div class="progress" role="progressbar" aria-valuenow={Math.round(doneFrac * 100)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${doneFrac * 100}%` }} /></div>
 
       {!card || !note || !tpl ? (
-        <Done session={session} waitingMs={waitingMs} onContinue={() => setAhead(LEARN_AHEAD_MS)} onMore={() => setExtraNew((n) => n + 5)} onUndo={history.current.length ? undo : undefined} hasMoreNew={allCards.some((c) => c.state === 0 && !c.suspended && eligible(c))} />
+        <Done
+          session={session}
+          waitingMs={waitingMs}
+          onContinue={() => setAhead(LEARN_AHEAD_MS)}
+          onMore={() => setExtraNew((n) => n + 5)}
+          onUndo={history.current.length ? undo : undefined}
+          hasMoreNew={allCards.some((c) => c.state === 0 && !c.suspended && eligible(c) && (!deckId || c.deckId === deckId) && (!tagNotes || tagNotes.has(c.noteId)))}
+          tomorrow={dueWithin(allCards, eligible, now, p.dayStartHour, aheadDays + 1, deckId, tagNotes) - dueWithin(allCards, eligible, now, p.dayStartHour, aheadDays, deckId, tagNotes)}
+          onAhead={() => setAheadDays((d) => d + 1)}
+        />
       ) : (
         <div class="study">
           <div
@@ -425,7 +447,9 @@ function Compare({ word, pos, en, others }: { word: string; pos: string; en: str
   );
 }
 
-function Done({ session, waitingMs, onContinue, onMore, onUndo, hasMoreNew }: { session: Session; waitingMs: number | null; onContinue(): void; onMore(): void; onUndo?: () => void; hasMoreNew: boolean }) {
+const aheadLabel = (n: number) => `Ôn trước ${n} thẻ sắp đến hạn`;
+
+function Done({ session, waitingMs, onContinue, onMore, onUndo, hasMoreNew, tomorrow, onAhead }: { session: Session; waitingMs: number | null; onContinue(): void; onMore(): void; onUndo?: () => void; hasMoreNew: boolean; tomorrow: number; onAhead(): void }) {
   const mins = Math.max(1, Math.round(session.ms / 60_000));
   const acc = session.answered ? Math.round(((session.answered - session.again) / session.answered) * 100) : 0;
   return (
@@ -449,6 +473,7 @@ function Done({ session, waitingMs, onContinue, onMore, onUndo, hasMoreNew }: { 
         {waitingMs !== null && <button type="button" class="btn primary" onClick={onContinue} data-testid="continue-early">Học tiếp ngay</button>}
         <button type="button" class={`btn${waitingMs === null ? " primary" : ""}`} onClick={() => go("/add")}><Icon n="plus" /> Thêm từ</button>
         {hasMoreNew && <button type="button" class="btn" onClick={onMore} data-testid="more-new">Học thêm 5 từ mới</button>}
+        {tomorrow > 0 && <button type="button" class="btn" onClick={onAhead} data-testid="review-ahead">{aheadLabel(tomorrow)}</button>}
         {onUndo && <button type="button" class="btn ghost" onClick={onUndo}><Icon n="undo" /> Hoàn tác</button>}
       </div>
     </div>

@@ -10,6 +10,8 @@ import java.time.ZoneId
  * Siblings (cards of one note) are buried for the rest of the session once one is answered.
  * Near-synonyms interfere when learned together, so a new word waits while another word sharing a
  * Vietnamese meaning phrase is new in this queue or reviewed but not yet on a SETTLE_DAYS interval.
+ * Custom study: [QueueInput.noteIds] limits the session to some notes (a lesson tag), [QueueInput.reviewAheadDays]
+ * also takes review cards due in the next N days.
  */
 const val LEARN_AHEAD_MS = 20 * 60_000L
 const val LEECH_LAPSES = 8
@@ -29,6 +31,10 @@ data class QueueInput(
     val zone: ZoneId = ZoneId.systemDefault(),
     /** Vietnamese meaning phrases per note ([meaningsByNote]); when given, near-synonyms are introduced apart. */
     val meanings: Map<Id, List<String>>? = null,
+    /** Only these notes (e.g. the notes of one lesson tag). */
+    val noteIds: Set<Id>? = null,
+    /** Also review cards due within this many days after today (review ahead). */
+    val reviewAheadDays: Int = 0,
 )
 
 data class Counts(val new: Int, val learning: Int, val review: Int)
@@ -38,13 +44,14 @@ data class Queue(val learning: List<Card>, val review: List<Card>, val newCards:
 }
 
 fun buildQueue(i: QueueInput): Queue {
-    val cutoff = nextDayStart(i.now, i.prefs.dayStartHour, i.zone)
+    val cutoff = nextDayStart(i.now, i.prefs.dayStartHour, i.zone) + i.reviewAheadDays * Fsrs.DAY_MS
     val learning = ArrayList<Card>()
     val review = ArrayList<Card>()
     val fresh = ArrayList<Card>()
     for (c in i.cards) {
         if (c.suspended || !i.eligible(c)) continue
         if (i.deckId != null && c.deckId != i.deckId) continue
+        if (i.noteIds != null && c.noteId !in i.noteIds) continue
         when (c.state) {
             CardState.LEARNING, CardState.RELEARNING -> if (c.due <= i.now + i.learnAheadMs) learning += c
             CardState.REVIEW -> if (c.due < cutoff && c.noteId !in i.buried) review += c
@@ -95,6 +102,36 @@ fun pickNext(q: Queue, s: SessionState, now: Long): Card? {
     if (q.review.isEmpty()) return q.newCards.first()
     val share = q.newCards.size.toDouble() / rest
     return if (s.shownNew < Fsrs.jsRound((s.shown + 1) * share)) q.newCards.first() else q.review.first()
+}
+
+/** Review cards outside today's queue that `reviewAheadDays = days` would add (for the "review ahead" button). */
+fun dueWithin(cards: List<Card>, eligible: (Card) -> Boolean, now: Long, dayStartHour: Int, days: Int, deckId: Id? = null, noteIds: Set<Id>? = null, zone: ZoneId = ZoneId.systemDefault()): Int {
+    val today = nextDayStart(now, dayStartHour, zone)
+    val until = today + days * Fsrs.DAY_MS
+    return cards.count { c ->
+        c.state == CardState.REVIEW && !c.suspended && c.due >= today && c.due < until && eligible(c) &&
+            (deckId == null || c.deckId == deckId) && (noteIds == null || c.noteId in noteIds)
+    }
+}
+
+/** Lesson / topic tags in use with their note counts, in natural order ("lesson-2" before "lesson-10"). */
+fun tagCounts(tagsPerNote: List<List<String>>): List<Pair<String, Int>> {
+    val m = HashMap<String, Int>()
+    for (tags in tagsPerNote) for (t in tags) m[t] = (m[t] ?: 0) + 1
+    return m.entries.map { it.key to it.value }.sortedWith { a, b -> naturalCompare(a.first, b.first) }
+}
+
+private fun naturalCompare(a: String, b: String): Int {
+    val re = Regex("\\d+|\\D+")
+    val pa = re.findAll(a).map { it.value }.toList()
+    val pb = re.findAll(b).map { it.value }.toList()
+    for (k in 0 until minOf(pa.size, pb.size)) {
+        val x = pa[k]
+        val y = pb[k]
+        val c = if (x[0].isDigit() && y[0].isDigit()) x.toBigInteger().compareTo(y.toBigInteger()) else x.compareTo(y, ignoreCase = true)
+        if (c != 0) return c
+    }
+    return pa.size - pb.size
 }
 
 fun isLeech(c: Card) = c.lapses >= LEECH_LAPSES

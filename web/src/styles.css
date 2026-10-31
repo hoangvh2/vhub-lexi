@@ -369,3 +369,15 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 
 input[type="range"], input[type="checkbox"] { accent-color: var(--accent); }
 input[type="range"] { width: 100%; }
+
+/* ---------- card info ---------- */
+.card-info { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid var(--line); }
+.card-stats { font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+.card-stats dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px 12px; }
+.card-stats dt { color: var(--muted); font-size: 12px; }
+.card-stats dd { margin: 0; font-weight: 600; }
+.card-stats summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.card-history { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.card-history li { display: grid; grid-template-columns: 84px 40px 1fr; gap: 8px; align-items: baseline; }
+.card-history .rate { font-weight: 600; min-width: 36px; }
+.card-history .r1 { color: var(--again); } .card-history .r2 { color: var(--hard); } .card-history .r3 { color: var(--good); } .card-history .r4 { color: var(--easy); }

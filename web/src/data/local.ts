@@ -167,6 +167,10 @@ export class LocalRepo implements Repo {
     this.emit(["prefs"]);
   }
 
+  async reviewsOfNote(noteId: string) {
+    return [...this.reviews.values()].filter((r) => r.noteId === noteId).sort((a, b) => a.reviewedAt - b.reviewedAt);
+  }
+
   async exportAll(): Promise<ExportFile> {
     return {
       app: "vhub-lexi",

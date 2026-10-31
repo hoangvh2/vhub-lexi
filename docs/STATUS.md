@@ -9,6 +9,7 @@ Cập nhật theo kết quả CI và các lần chạy thật, không theo dự 
 | Dựng từ điển | `tools/dict` build thật: 146.874 mục, 36.182 có IPA, 52.299 có nghĩa tiếng Việt (Wiktionary), ~7,6 MB nén; 6 test đơn vị (IPA, morphology, tách gloss, CMUdict, trích + gộp nghĩa Wiktionary) |
 | Lõi web (FSRS, hàng đợi, mẫu thẻ, cloze, từ dễ nhầm, thống kê, repo IndexedDB, import/export) | 36 test vitest |
 | Giao diện web | 11 kịch bản Playwright (thêm từ, ôn, gõ đáp án, từ dễ nhầm, hoàn tác, xoá có xác nhận, **offline sau lần truy cập đầu**, 3 cỡ màn hình không tràn ngang) chạy dưới đúng CSP của `firebase.json` |
+| Học tuỳ chọn + thông tin thẻ | Vector `tag-filter`, `review-ahead` (TS sinh, Kotlin phát lại: `:core:test` xanh); 3 test vitest; e2e chọn bài → ôn trước → xem lịch sử thẻ; test tích hợp `reviewsOfNote` trên emulator. Giao diện Android chỉ kiểm qua CI |
 | Rules Firestore | 15 test trên emulator, gồm tài liệu do chính code app sinh ra (`fixtures.json`) |
 | `CloudRepo` ↔ Firestore | 4 test trên emulator Auth + Firestore thật: hai thiết bị cùng tài khoản thấy ghi của nhau, bộ đếm theo ngày cộng dồn, undo lan truyền, tài khoản ngoài allowlist bị từ chối |
 | Function `enrich` | 13 test đơn vị (validate đầu vào/đầu ra, retry, hạn mức, allowlist, CORS); build bundle thành công |

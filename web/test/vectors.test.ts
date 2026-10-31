@@ -153,7 +153,9 @@ function queueVectors() {
     { name: "limits-and-today", prefs: { ...DEFAULT_PREFS, newPerDay: 3, maxReviewsPerDay: 2, dayStartHour: 4 }, today, deckId: null, buried: [], learnAheadMs: 0 },
     { name: "learn-ahead-and-buried", prefs: { ...DEFAULT_PREFS, newPerDay: 10, dayStartHour: 4 }, today: undefined, deckId: null, buried: ["n2", "n5"], learnAheadMs: 20 * MIN },
     { name: "deck-filter", prefs: { ...DEFAULT_PREFS, newPerDay: 10, dayStartHour: 4 }, today: undefined, deckId: "d2", buried: [], learnAheadMs: 0 },
-  ] as Array<{ name: string; prefs: typeof DEFAULT_PREFS; today?: typeof today; deckId: string | null; buried: string[]; learnAheadMs: number; extra?: Card[]; meanings?: Record<string, string[]> }>;
+    { name: "tag-filter", prefs: { ...DEFAULT_PREFS, newPerDay: 10, dayStartHour: 4 }, today: undefined, deckId: null, buried: [], learnAheadMs: 0, noteIds: ["n1", "n4", "n7", "n9", "n11"] },
+    { name: "review-ahead", prefs: { ...DEFAULT_PREFS, newPerDay: 0, dayStartHour: 4 }, today: undefined, deckId: null, buried: [], learnAheadMs: 0, reviewAheadDays: 1 },
+  ] as Array<{ name: string; prefs: typeof DEFAULT_PREFS; today?: typeof today; deckId: string | null; buried: string[]; learnAheadMs: number; extra?: Card[]; meanings?: Record<string, string[]>; noteIds?: string[]; reviewAheadDays?: number }>;
   // Near-synonyms: a new word waits while another word with a shared meaning phrase is new in this queue or still settling.
   const syn = (id: string, noteId: string, at: number, over: Partial<Card> = {}) => mk(id, noteId, { createdAt: T0 + at, ...over });
   scenarios.push({
@@ -173,7 +175,7 @@ function queueVectors() {
   return scenarios.map((s) => {
     const all = [...cards, ...(s.extra ?? [])];
     const meanings = s.meanings ? new Map(Object.entries(s.meanings)) : undefined;
-    const q = buildQueue({ cards: all, eligible, today: s.today, prefs: s.prefs, now: T0, deckId: s.deckId, buried: new Set(s.buried), learnAheadMs: s.learnAheadMs, meanings });
+    const q = buildQueue({ cards: all, eligible, today: s.today, prefs: s.prefs, now: T0, deckId: s.deckId, buried: new Set(s.buried), learnAheadMs: s.learnAheadMs, meanings, noteIds: s.noteIds ? new Set(s.noteIds) : undefined, reviewAheadDays: s.reviewAheadDays });
     // Walk the session the way the UI does: pick, drop the picked card from its list, repeat.
     const order: string[] = [];
     const sess = { shown: 0, shownNew: 0 };
@@ -189,7 +191,7 @@ function queueVectors() {
         if (k >= 0) list.splice(k, 1);
       }
     }
-    return { name: s.name, input: { prefs: normalizePrefs(s.prefs), today: s.today ?? null, deckId: s.deckId, buried: s.buried, learnAheadMs: s.learnAheadMs, now: T0, meanings: s.meanings ?? null }, counts: q.counts, learning: q.learning.map((c) => c.id), review: q.review.map((c) => c.id), newCards: q.newCards.map((c) => c.id), order, cards: all };
+    return { name: s.name, input: { prefs: normalizePrefs(s.prefs), today: s.today ?? null, deckId: s.deckId, buried: s.buried, learnAheadMs: s.learnAheadMs, now: T0, meanings: s.meanings ?? null, noteIds: s.noteIds ?? null, reviewAheadDays: s.reviewAheadDays ?? 0 }, counts: q.counts, learning: q.learning.map((c) => c.id), review: q.review.map((c) => c.id), newCards: q.newCards.map((c) => c.id), order, cards: all };
   });
 }
 
