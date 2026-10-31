@@ -3,6 +3,7 @@ import { after, before, describe, it } from "node:test";
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { addWord, chromium, open, serve } from "./harness.mjs";
 
 let server, base, browser;
@@ -229,6 +230,34 @@ describe("core flow (local-only mode)", () => {
     await page.click('[data-testid=note-delete]');
     await page.click('[data-testid=confirm-ok]');
     await page.waitForFunction(() => !document.querySelector('[data-testid=lib-item]'));
+    await ctx.close();
+  });
+
+  it("imports an Anki package under the production CSP: preview, mapping, progress kept", async () => {
+    const { ctx, page, errors } = await open(browser, base);
+    await page.goto(`${base}/#/settings`);
+    // Real package written by Anki's own library (tools/anki/make-fixture.py): 6 words in 2 lessons, 3 studied.
+    await page.setInputFiles('[data-testid=import-anki-file]', fileURLToPath(new URL("../../web/test/fixtures/anki-fsrs.apkg", import.meta.url)));
+    await page.waitForSelector('[data-testid=anki-report]');
+    assert.equal(await page.inputValue('[data-testid=anki-field-word]'), "Target word");
+    assert.equal(await page.inputValue('[data-testid=anki-field-vi]'), "Vietnamese");
+    assert.match(await page.textContent('[data-testid=anki-sample]'), /abide by.*verb.*tôn trọng, tuân theo/s);
+    const report = await page.textContent('[data-testid=anki-report]');
+    assert.match(report, /6 từ mới vào bộ thẻ mới “600 Essential”, chia theo 2 bài/);
+    assert.match(report, /3 thẻ giữ tiến độ ôn từ Anki/);
+    assert.equal(await noOverflow(page), true);
+    await page.click('[data-testid=anki-run]');
+    await page.waitForFunction(() => !document.querySelector('[data-testid=anki-report]'));
+    await page.goto(`${base}/#/library`);
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid=lib-item]').length === 6);
+    // Importing the same file again adds nothing and keeps the progress.
+    await page.goto(`${base}/#/settings`);
+    await page.setInputFiles('[data-testid=import-anki-file]', fileURLToPath(new URL("../../web/test/fixtures/anki-fsrs.apkg", import.meta.url)));
+    await page.waitForSelector('[data-testid=anki-report]');
+    assert.match(await page.textContent('[data-testid=anki-report]'), /^0 từ mới.*Bỏ qua 6 từ đã có/s);
+    assert.equal(await page.isEnabled('[data-testid=anki-run]'), false);
+    await page.click('[data-testid=anki-cancel]');
+    assert.deepEqual(errors, []);
     await ctx.close();
   });
 

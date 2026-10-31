@@ -62,6 +62,18 @@ Nhiều từ có cùng nghĩa Việt (convince, persuade: "thuyết phục, làm
 - Chạy hàng loạt (web và Android, Thư viện → Chọn → Điền bằng AI): `runBatch` (`web/src/lib/batch.ts`, port `AiBatch` trong `android/core`, giữ ở `LexiApp` để chạy tiếp khi đổi tab) gọi `enrich` cho từng từ, 3 lời gọi song song, lưu từng từ ngay khi có kết quả, chạy nền khi chuyển tab. Dừng khi người học bấm Dừng, hết hạn mức ngày (lọc “Chưa có AI” để chạy tiếp hôm sau) hoặc tài khoản bị từ chối; lỗi tạm thời thử lại 1 lần. Lựa chọn “Thay nghĩa tiếng Việt đang có” không hoàn tác được nên hỏi xác nhận (`confirmAndRun`).
 - Log của function chỉ ghi số đếm, số token (`tokensIn`, `tokensOut`, `tokensThinking`) và thời gian, không ghi từ vựng; dùng số token để đo chi phí thật.
 
+## Nhập từ Anki (.apkg)
+
+Cài đặt → Dữ liệu → "Nhập từ Anki (.apkg)" (chỉ web; Android nhận dữ liệu qua đồng bộ). Chỉ nhập chữ và tiến độ ôn, **không nhập ảnh/âm thanh** (Lexi không có kho media; âm thanh dùng TTS của máy).
+
+- **Đọc gói** (`web/src/lib/anki/read.ts`): giải nén bằng fflate, chọn `collection.anki21b` (zstd, fzstd) rồi `collection.anki21`; SQLite đọc bằng sql.js (WebAssembly nhúng trong một chunk ~1 MB, chỉ tải khi chọn file, không nằm trong precache). Vì vậy CSP có `'wasm-unsafe-eval'` trong `script-src`; e2e chứng minh thiếu nó thì nhập thất bại. Cột tên trong collection mới khai báo `COLLATE unicase` (collation Anki đăng ký bằng Rust), sql.js không có nên schema được viết lại sang collation mặc định trước khi đọc.
+- **Chuyển đổi** (`web/src/lib/anki/convert.ts`, hàm thuần): đoán ánh xạ trường theo tên (TOEIC2: Target word, Transcription, Word type, Vietnamese, Explanation, Example, Translation), người học sửa được trong hộp thoại. HTML → chữ; ví dụ tách theo dòng, bỏ "a." "b."; `(v)` → `verb`. Bộ thẻ gốc thành 1 bộ thẻ Lexi (dùng lại bộ cùng tên), bộ con ("Lesson 01") thành nhãn `lesson-01`.
+- **Tiến độ** (theo `rslib/src/import_export/package/apkg/import/cards.rs`, `storage/card/data.rs`): `due` của thẻ ôn là số ngày từ `col.crt` → epoch ms; thẻ đang học là epoch giây; thẻ mới giữ thứ tự Anki qua `createdAt`. Trí nhớ FSRS lấy từ `cards.data` (`s`, `d`) nếu Anki bật FSRS; nếu không thì phát lại nhật ký ôn qua FSRS của Lexi; không có nhật ký thì ước lượng từ interval + ease như `memory_state_from_sm2` (S = interval ở mức nhớ 90%). Thẻ tạm dừng giữ tạm dừng. Mẫu thẻ Lexi bật mà Anki không có (vd. cloze) thành thẻ mới.
+- **Nhật ký**: mỗi lượt trả lời (ease 1–4) thành `reviews` với `device: "anki"` và cộng vào `daily` (cộng dồn với số của Lexi cùng ngày), nên thống kê, heatmap, chuỗi ngày có cả lịch sử Anki.
+- **Không ghi đè**: ghi chú có id `anki-<note id>` đã có, hoặc từ đã có trong Lexi (mọi bộ thẻ), bị bỏ qua cùng nhật ký của nó. Nhập lại cùng file không làm mất tiến độ học trong Lexi.
+- Hộp thoại báo số lượt ghi Firestore cần dùng (mỗi note/thẻ/lượt ôn là 1 lượt), cảnh báo khi gần 20.000 lượt/ngày miễn phí.
+- Test: `web/test/anki.test.ts` đọc 2 gói thật do thư viện Python chính thức của Anki tạo (`tools/anki/make-fixture.py`, bản mới có FSRS và bản cũ SM-2); rules test ghi lại mọi document mà lần nhập tạo ra.
+
 ## Thêm nội dung TOEIC / IELTS
 
 Mọi thứ ngoài lớp "mẫu thẻ" đã không biết gì về từ vựng. Để thêm một loại ghi chú:
