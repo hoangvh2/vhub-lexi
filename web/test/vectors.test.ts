@@ -172,6 +172,15 @@ function queueVectors() {
       s5: ["hoãn lại"], s6: ["hoãn lại"], s7: ["hủy bỏ"], s8: ["hủy bỏ"], s9: ["trì hoãn"], s10: ["đàm phán"], s11: ["đàm phán", "thương lượng"],
     },
   });
+  // A new note's cards made at the same moment: the word is introduced with "recognize", never with a typing card.
+  scenarios.push({
+    name: "intro-order", prefs: { ...DEFAULT_PREFS, newPerDay: 10, dayStartHour: 4 }, today: undefined, deckId: null, buried: [], learnAheadMs: 0,
+    extra: [
+      mk("o1.cloze", "o1", { template: "cloze", createdAt: T0 + 20 }), mk("o1.recognize", "o1", { createdAt: T0 + 20 }),
+      mk("o2.listen", "o2", { template: "listen", createdAt: T0 + 21 }), mk("o2.recall", "o2", { template: "recall", createdAt: T0 + 21 }),
+      mk("o3.cloze", "o3", { template: "cloze", createdAt: T0 + 22 }), mk("o3.custom", "o3", { template: "custom", createdAt: T0 + 22 }),
+    ],
+  });
   return scenarios.map((s) => {
     const all = [...cards, ...(s.extra ?? [])];
     const meanings = s.meanings ? new Map(Object.entries(s.meanings)) : undefined;
