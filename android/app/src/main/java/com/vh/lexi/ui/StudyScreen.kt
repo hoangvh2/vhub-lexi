@@ -582,10 +582,10 @@ private fun DoneCard(
             Text(if (session.answered > 0) "Xong phần này!" else "Hết thẻ hôm nay", fontFamily = Quicksand, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = c.ink)
             if (session.answered > 0) {
                 val acc = ((session.answered - session.again) * 100) / session.answered
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Stat("${words.size}", "từ đã ôn")
-                    Stat("$acc%", "nhớ đúng")
-                    Stat("${maxOf(1, (session.ms / 60_000).toInt())}p", "thời gian")
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Stat("${words.size}", "từ đã ôn", Modifier.weight(1f))
+                    Stat("$acc%", "nhớ đúng", Modifier.weight(1f))
+                    Stat("${maxOf(1, (session.ms / 60_000).toInt())}p", "thời gian", Modifier.weight(1f))
                 }
             } else {
                 Text("Không có thẻ đến hạn. Quay lại sau, hoặc thêm từ mới.", color = c.muted, textAlign = TextAlign.Center)
@@ -624,15 +624,15 @@ private fun DoneCard(
 }
 
 @Composable
-private fun Stat(value: String, label: String) {
-    Column(Modifier.background(Lexi.colors.surface2, RoundedCornerShape(22.dp)).padding(horizontal = 16.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontFamily = Quicksand, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Lexi.colors.muted)
+private fun Stat(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier.background(Lexi.colors.surface2, RoundedCornerShape(22.dp)).padding(horizontal = 6.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, fontFamily = Quicksand, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Lexi.colors.muted, maxLines = 1, softWrap = false)
     }
 }
 
 /**
- * The finish screen's reward: a glossy lavender bubble with the streak (or a tick) that pops in with a bounce, and a few
+ * The finish screen's reward: a glossy accent bubble with the streak (or a tick) that pops in with a bounce, and a few
  * small bubbles drifting up from behind it (Study.tsx: motion.ts celebrate()).
  */
 @Composable

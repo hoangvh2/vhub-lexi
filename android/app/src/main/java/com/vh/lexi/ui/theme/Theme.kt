@@ -138,7 +138,7 @@ fun Modifier.clay(c: LexiColors, shape: Shape = RoundedCornerShape(26.dp), color
         .background(color, shape)
         .border(BorderStroke(1.5.dp, Brush.verticalGradient(0f to c.hi, 0.35f to Color.Transparent)), shape)
 
-/** Primary actions: the lavender gradient pill. */
+/** Primary actions: the accent gradient pill. */
 fun Modifier.gradientPill(c: LexiColors, shape: Shape = RoundedCornerShape(50)): Modifier =
     this.shadow(12.dp, shape, clip = false, ambientColor = c.accent, spotColor = c.accent)
         .background(Brush.verticalGradient(c.hero), shape)

@@ -317,14 +317,15 @@ private fun Orb(fill: Float, text: String, finished: Boolean) {
 @Composable
 private fun MiniStat(icon: ImageVector, fg: Color, bg: Color, shape: RoundedCornerShape, value: String, label: String, tag: String) {
     val c = Lexi.colors
-    Row(Modifier.testTag(if (tag == "today-streak") tag else "$tag-row"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-        Box(Modifier.size(32.dp).background(bg, shape), contentAlignment = Alignment.Center) { Icon(icon, null, Modifier.size(17.dp), tint = fg) }
+    Row(Modifier.testTag(if (tag == "today-streak") tag else "$tag-row"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        Box(Modifier.size(30.dp).background(bg, shape), contentAlignment = Alignment.Center) { Icon(icon, null, Modifier.size(17.dp), tint = fg) }
         Text(value, Modifier.widthIn(min = 24.dp).then(if (tag == "today-streak") Modifier else Modifier.testTag(tag)), fontFamily = Quicksand, fontSize = 21.sp, fontWeight = FontWeight.Bold, color = c.ink)
-        Text(label, fontSize = 12.5.sp, fontWeight = FontWeight.ExtraBold, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // Two lines at most: "ngày liền" must not be cut to "ngày li…" on 320dp phones.
+        Text(label, fontSize = 12.5.sp, lineHeight = 14.sp, fontWeight = FontWeight.ExtraBold, color = c.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
-/** The lavender gradient pill; [soft] is the quieter version for "nothing left today". */
+/** The accent gradient pill; [soft] is the quieter version for "nothing left today". */
 @Composable
 internal fun PrimaryPill(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, big: Boolean = false, soft: Boolean = false) {
     val c = Lexi.colors
