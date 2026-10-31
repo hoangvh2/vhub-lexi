@@ -75,7 +75,7 @@ fun StatsScreen(app: LexiApp) {
                 fc.forEachIndexed { i, n ->
                     val h = (n.toFloat() / max) * (size.height - 8f)
                     drawRoundRect(
-                        color = if (i == 0) c.again else c.accent,
+                        color = if (i == 0) c.peach else c.accent2,
                         topLeft = Offset(i * barW + barW * 0.15f, size.height - h),
                         size = Size(barW * 0.7f, h.coerceAtLeast(if (n > 0) 3f else 0f)),
                         cornerRadius = CornerRadius(4f, 4f),
@@ -92,8 +92,8 @@ fun StatsScreen(app: LexiApp) {
         Panel {
             Text("Tình trạng thẻ", fontWeight = FontWeight.Bold)
             val seg = listOf(
-                Triple("Mới", counts.new, c.easy), Triple("Đang học", counts.learning, c.again),
-                Triple("Mới ôn (<21 ngày)", counts.young, c.hard), Triple("Thuộc (≥21 ngày)", counts.mature, c.good),
+                Triple("Mới", counts.new, c.accent2), Triple("Đang học", counts.learning, c.rose),
+                Triple("Mới ôn (<21 ngày)", counts.young, c.butter), Triple("Thuộc (≥21 ngày)", counts.mature, c.mint),
             )
             val total = seg.sumOf { it.second }.coerceAtLeast(1)
             Row(Modifier.fillMaxWidth().height(14.dp).background(c.surface2, RoundedCornerShape(7.dp))) {
@@ -130,7 +130,7 @@ fun StatsScreen(app: LexiApp) {
 
 @Composable
 private fun StatTile(value: String, label: String) {
-    Column(Modifier.background(Lexi.colors.surface2, RoundedCornerShape(12.dp)).padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Column(Modifier.background(Lexi.colors.surface2, RoundedCornerShape(22.dp)).padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(label, fontSize = 12.sp, color = Lexi.colors.muted)
     }

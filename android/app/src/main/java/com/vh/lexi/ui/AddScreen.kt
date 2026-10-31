@@ -219,7 +219,7 @@ fun AddScreen(app: LexiApp) {
             )
 
             if (suggestions.isNotEmpty() && normalizeWord(q) != hit?.entry?.word) {
-                Surface(shape = RoundedCornerShape(12.dp), color = c.surface, border = BorderStroke(1.dp, c.line)) {
+                Surface(shape = RoundedCornerShape(20.dp), color = c.surface, shadowElevation = 4.dp) {
                     Column {
                         for (s in suggestions) Row(
                             Modifier.fillMaxWidth().clickable { scope.launch { withContext(Dispatchers.IO) { app.dictionary.lookup(s.word) }?.let(::choose) } }.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -256,7 +256,7 @@ fun AddScreen(app: LexiApp) {
                             picked = next
                             hit?.let { draft.fillFrom(it.entry, next.map { k -> senses[k] }, keepUser = true) }
                         },
-                        shape = RoundedCornerShape(12.dp), color = if (on) c.accentSoft else c.surface, border = BorderStroke(1.5.dp, if (on) c.accent else c.line),
+                        shape = RoundedCornerShape(18.dp), color = if (on) c.accentSoft else c.surface, border = BorderStroke(2.dp, if (on) c.accent else c.line),
                     ) {
                         Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Pill(s.pos, PillKind.OK)

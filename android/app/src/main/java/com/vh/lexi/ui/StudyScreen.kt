@@ -522,7 +522,7 @@ private fun NotThese(others: List<Confusable>) {
             withStyle(SpanStyle(color = c.ink, textDecoration = TextDecoration.LineThrough)) { append(o.word) }
         }
     }
-    Text(text, Modifier.fillMaxWidth().background(c.surface2, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 6.dp).testTag("not-these"), fontSize = 13.sp, color = c.muted, textAlign = TextAlign.Center)
+    Text(text, Modifier.fillMaxWidth().background(c.surface2, RoundedCornerShape(14.dp)).padding(horizontal = 12.dp, vertical = 6.dp).testTag("not-these"), fontSize = 13.sp, color = c.muted, textAlign = TextAlign.Center)
 }
 
 /** First try was another of the learner's words with this meaning: name it, show its definition, allow a retry. */
@@ -538,7 +538,7 @@ private fun MixedUp(other: Confusable) {
                     withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(other.word) }
                     append((if (other.pos.isNotEmpty()) " (${other.pos})" else "") + ": " + other.en)
                 },
-                Modifier.background(c.surface2, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 6.dp), fontSize = 13.sp, color = c.ink, textAlign = TextAlign.Center,
+                Modifier.background(c.surface2, RoundedCornerShape(14.dp)).padding(horizontal = 12.dp, vertical = 6.dp), fontSize = 13.sp, color = c.ink, textAlign = TextAlign.Center,
             )
         }
     }
@@ -550,7 +550,7 @@ private fun Compare(word: String, pos: String, en: String, others: List<Confusab
     val c = Lexi.colors
     @Composable
     fun Item(w: String, p: String, vi: String, def: String, mine: Boolean) {
-        Column(Modifier.fillMaxWidth().background(if (mine) c.accentSoft else c.surface2, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.fillMaxWidth().background(if (mine) c.accentSoft else c.surface2, RoundedCornerShape(18.dp)).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(w, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = c.ink)
             if (p.isNotEmpty()) Text(p, fontSize = 12.sp, color = c.muted)
             if (vi.isNotEmpty()) Text(vi, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
