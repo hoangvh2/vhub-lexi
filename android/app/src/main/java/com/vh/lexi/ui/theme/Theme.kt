@@ -19,11 +19,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -55,15 +53,23 @@ data class LexiColors(
     val dark: Boolean,
 )
 
-// Variable fonts, shipped unmodified (OFL, licenses/); each weight is an instance of the wght axis.
-@OptIn(ExperimentalTextApi::class)
-private fun variable(res: Int, weight: Int) = Font(res, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight)))
+// Static instances cut from the OFL variable fonts (licenses/) with fontTools, subset to Latin + Vietnamese.
+// Variable-axis instancing at runtime left headings at the default thin weight on some devices.
+// Quicksand is a Reserved Font Name, so the modified files are renamed "Lexi Rounded"; Nunito ones "Lexi Nunito".
 
 /** Text: rounded and friendly, with Vietnamese. */
-val Nunito = FontFamily(variable(R.font.nunito, 400), variable(R.font.nunito, 600), variable(R.font.nunito, 700), variable(R.font.nunito, 800))
+val Nunito = FontFamily(
+    Font(R.font.lexi_text_400, FontWeight.Normal),
+    Font(R.font.lexi_text_600, FontWeight.SemiBold),
+    Font(R.font.lexi_text_700, FontWeight.Bold),
+    Font(R.font.lexi_text_800, FontWeight.ExtraBold),
+)
 
 /** Headings and numbers. */
-val Quicksand = FontFamily(variable(R.font.quicksand, 500), variable(R.font.quicksand, 600), variable(R.font.quicksand, 700))
+val Quicksand = FontFamily(
+    Font(R.font.lexi_rounded_600, FontWeight.SemiBold),
+    Font(R.font.lexi_rounded_700, FontWeight.Bold),
+)
 
 /** Accent keys kept for stored settings: teal is the default jade, violet the earlier lavender. Returns accent, accent2, soft. */
 private fun accentOf(name: String, dark: Boolean): Triple<Color, Color, Color> = when (name) {

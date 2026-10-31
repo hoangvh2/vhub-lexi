@@ -169,7 +169,7 @@ internal fun TodayPanel(
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     MiniStat(Icons.Filled.CalendarMonth, c.peachDeep, c.peachSoft, BLOB_A, "${queue.counts.review + queue.counts.learning}", "Đến hạn", "today-due")
                     MiniStat(Icons.Filled.Star, c.mintDeep, c.mintSoft, BLOB_B, "${queue.counts.new}", "Từ mới", "today-new")
-                    MiniStat(Icons.Filled.LocalFireDepartment, c.butterDeep, c.butterSoft, BLOB_C, "${streak(daily, now, dayStartHour)}", "ngày liên tiếp", "today-streak")
+                    MiniStat(Icons.Filled.LocalFireDepartment, c.butterDeep, c.butterSoft, BLOB_C, "${streak(daily, now, dayStartHour)}", "ngày liền", "today-streak")
                 }
             }
             Text(
