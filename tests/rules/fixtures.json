@@ -174,5 +174,504 @@
     "aiEnabled": true,
     "dayStartHour": 4,
     "updatedAt": 1768446000000
+  },
+  "anki": {
+    "decks": [
+      {
+        "id": "anki-600-essential",
+        "name": "600 Essential",
+        "createdAt": 1768446000000,
+        "updatedAt": 1768446000000
+      }
+    ],
+    "notes": [
+      {
+        "id": "anki-1793405634189",
+        "type": "vocab",
+        "deckId": "anki-600-essential",
+        "fields": {
+          "word": "abide by",
+          "ipa": "/əˈbaɪd baɪ/",
+          "pos": "verb",
+          "vi": "tôn trọng, tuân theo",
+          "en": "to comply with; to conform",
+          "examples": [
+            "The two parties agreed to abide by the contract.",
+            "Employees must abide by the rules."
+          ],
+          "examplesVi": [
+            "Hai bên đồng ý tuân theo hợp đồng.",
+            "Nhân viên phải tuân theo quy định."
+          ]
+        },
+        "tags": [
+          "lesson-01",
+          "anki",
+          "lesson1"
+        ],
+        "createdAt": 1768446000000,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634190",
+        "type": "vocab",
+        "deckId": "anki-600-essential",
+        "fields": {
+          "word": "agreement",
+          "ipa": "/əˈɡriːmənt/",
+          "pos": "noun",
+          "vi": "sự đồng ý, hợp đồng",
+          "en": "a mutual arrangement between parties",
+          "examples": [
+            "The agreement was signed yesterday."
+          ],
+          "examplesVi": [
+            "Hợp đồng được ký hôm qua."
+          ]
+        },
+        "tags": [
+          "lesson-01",
+          "anki",
+          "lesson1"
+        ],
+        "createdAt": 1768446000001,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634191",
+        "type": "vocab",
+        "deckId": "anki-600-essential",
+        "fields": {
+          "word": "assurance",
+          "ipa": "/əˈʃʊərəns/",
+          "pos": "noun",
+          "vi": "sự cam đoan, bảo đảm",
+          "en": "a guarantee; a promise",
+          "examples": [
+            "He gave his assurance that the work would be done."
+          ]
+        },
+        "tags": [
+          "lesson-01",
+          "anki",
+          "lesson1"
+        ],
+        "createdAt": 1768446000002,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634192",
+        "type": "vocab",
+        "deckId": "anki-600-essential",
+        "fields": {
+          "word": "attract",
+          "ipa": "/əˈtrækt/",
+          "pos": "verb",
+          "vi": "thu hút, hấp dẫn",
+          "en": "to draw by appeal",
+          "examples": [
+            "The new ad will attract customers."
+          ],
+          "examplesVi": [
+            "Quảng cáo mới sẽ thu hút khách hàng."
+          ]
+        },
+        "tags": [
+          "lesson-02",
+          "anki",
+          "lesson2"
+        ],
+        "createdAt": 1768446000003,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634193",
+        "type": "vocab",
+        "deckId": "anki-600-essential",
+        "fields": {
+          "word": "compare",
+          "ipa": "/kəmˈpeər/",
+          "pos": "verb",
+          "vi": "so sánh",
+          "en": "to examine similarities and differences",
+          "examples": [
+            "Compare the prices before you buy."
+          ],
+          "examplesVi": [
+            "So sánh giá trước khi mua."
+          ]
+        },
+        "tags": [
+          "lesson-02",
+          "anki",
+          "lesson2"
+        ],
+        "createdAt": 1768446000004,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634194",
+        "type": "vocab",
+        "deckId": "anki-600-essential",
+        "fields": {
+          "word": "competition",
+          "ipa": "/ˌkɒmpəˈtɪʃn/",
+          "pos": "noun",
+          "vi": "sự cạnh tranh, cuộc thi",
+          "en": "rivalry",
+          "examples": [
+            "The competition between the two firms is fierce."
+          ]
+        },
+        "tags": [
+          "lesson-02",
+          "anki",
+          "lesson2"
+        ],
+        "createdAt": 1768446000005,
+        "updatedAt": 1768446000000
+      }
+    ],
+    "cards": [
+      {
+        "id": "anki-1793405634189.recognize",
+        "noteId": "anki-1793405634189",
+        "deckId": "anki-600-essential",
+        "template": "recognize",
+        "state": 1,
+        "due": 1793406332000,
+        "stability": 2.3065,
+        "difficulty": 2.118,
+        "scheduledDays": 0,
+        "learningSteps": 0,
+        "reps": 1,
+        "lapses": 0,
+        "lastReview": 1793405634000,
+        "createdAt": 1768446000000,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634189.cloze",
+        "noteId": "anki-1793405634189",
+        "deckId": "anki-600-essential",
+        "template": "cloze",
+        "state": 0,
+        "due": 1768446000000,
+        "stability": 0,
+        "difficulty": 0,
+        "scheduledDays": 0,
+        "learningSteps": 0,
+        "reps": 0,
+        "lapses": 0,
+        "createdAt": 1768446000000,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634190.recognize",
+        "noteId": "anki-1793405634190",
+        "deckId": "anki-600-essential",
+        "template": "recognize",
+        "state": 2,
+        "due": 1793764800000,
+        "stability": 8.2956,
+        "difficulty": 1,
+        "scheduledDays": 30,
+        "learningSteps": 0,
+        "reps": 4,
+        "lapses": 0,
+        "lastReview": 1793405634000,
+        "createdAt": 1768446000001,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634190.cloze",
+        "noteId": "anki-1793405634190",
+        "deckId": "anki-600-essential",
+        "template": "cloze",
+        "state": 0,
+        "due": 1768446000000,
+        "stability": 0,
+        "difficulty": 0,
+        "scheduledDays": 0,
+        "learningSteps": 0,
+        "reps": 0,
+        "lapses": 0,
+        "createdAt": 1768446000001,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634191.recognize",
+        "noteId": "anki-1793405634191",
+        "deckId": "anki-600-essential",
+        "template": "recognize",
+        "state": 1,
+        "due": 1793405706000,
+        "stability": 0.212,
+        "difficulty": 6.413,
+        "scheduledDays": 0,
+        "learningSteps": 0,
+        "reps": 1,
+        "lapses": 0,
+        "lastReview": 1793405634000,
+        "createdAt": 1768446000002,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634191.cloze",
+        "noteId": "anki-1793405634191",
+        "deckId": "anki-600-essential",
+        "template": "cloze",
+        "state": 0,
+        "due": 1768446000000,
+        "stability": 0,
+        "difficulty": 0,
+        "scheduledDays": 0,
+        "learningSteps": 0,
+        "reps": 0,
+        "lapses": 0,
+        "createdAt": 1768446000002,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634192.recognize",
+        "noteId": "anki-1793405634192",
+        "deckId": "anki-600-essential",
+        "template": "recognize",
+        "state": 0,
+        "due": 1768446000000,
+        "stability": 0,
+        "difficulty": 1,
+        "scheduledDays": 0,
+        "learningSteps": 0,
+        "reps": 0,
+        "lapses": 0,
+        "createdAt": 1768446000003,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634192.cloze",
+        "noteId": "anki-1793405634192",
+        "deckId": "anki-600-essential",
+        "template": "cloze",
+        "state": 0,
+        "due": 1768446000000,
+        "stability": 0,
+        "difficulty": 0,
+        "scheduledDays": 0,
+        "learningSteps": 0,
+        "reps": 0,
+        "lapses": 0,
+        "createdAt": 1768446000003,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634193.recognize",
+        "noteId": "anki-1793405634193",
+        "deckId": "anki-600-essential",
+        "template": "recognize",
+        "state": 0,
+        "due": 1768446000000,
+        "stability": 0,
+        "difficulty": 1,
+        "scheduledDays": 0,
+        "learningSteps": 0,
+        "reps": 0,
+        "lapses": 0,
+        "createdAt": 1768446000004,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634193.cloze",
+        "noteId": "anki-1793405634193",
+        "deckId": "anki-600-essential",
+        "template": "cloze",
+        "state": 0,
+        "due": 1768446000000,
+        "stability": 0,
+        "difficulty": 0,
+        "scheduledDays": 0,
+        "learningSteps": 0,
+        "reps": 0,
+        "lapses": 0,
+        "createdAt": 1768446000004,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634194.recognize",
+        "noteId": "anki-1793405634194",
+        "deckId": "anki-600-essential",
+        "template": "recognize",
+        "state": 0,
+        "due": 1768446000000,
+        "stability": 0,
+        "difficulty": 1,
+        "scheduledDays": 0,
+        "learningSteps": 0,
+        "reps": 0,
+        "lapses": 0,
+        "suspended": true,
+        "createdAt": 1768446000005,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "anki-1793405634194.cloze",
+        "noteId": "anki-1793405634194",
+        "deckId": "anki-600-essential",
+        "template": "cloze",
+        "state": 0,
+        "due": 1768446000000,
+        "stability": 0,
+        "difficulty": 0,
+        "scheduledDays": 0,
+        "learningSteps": 0,
+        "reps": 0,
+        "lapses": 0,
+        "createdAt": 1768446000005,
+        "updatedAt": 1768446000000
+      }
+    ],
+    "reviews": [
+      {
+        "id": "anki-1793405634189.recognize@1793405634194",
+        "cardId": "anki-1793405634189.recognize",
+        "noteId": "anki-1793405634189",
+        "deckId": "anki-600-essential",
+        "rating": 3,
+        "state": 0,
+        "stability": 2.3065,
+        "difficulty": 2.11810397,
+        "scheduledDays": 0,
+        "reviewedAt": 1793405634194,
+        "durationMs": 0,
+        "device": "anki"
+      },
+      {
+        "id": "anki-1793405634190.recognize@1789517634196",
+        "cardId": "anki-1793405634190.recognize",
+        "noteId": "anki-1793405634190",
+        "deckId": "anki-600-essential",
+        "rating": 3,
+        "state": 0,
+        "stability": 2.3065,
+        "difficulty": 2.11810397,
+        "scheduledDays": 0,
+        "reviewedAt": 1789517634196,
+        "durationMs": 8000,
+        "device": "anki"
+      },
+      {
+        "id": "anki-1793405634190.recognize@1789604034195",
+        "cardId": "anki-1793405634190.recognize",
+        "noteId": "anki-1793405634190",
+        "deckId": "anki-600-essential",
+        "rating": 3,
+        "state": 1,
+        "stability": 7.31530068,
+        "difficulty": 2.11121424,
+        "scheduledDays": 4,
+        "reviewedAt": 1789604034195,
+        "durationMs": 8000,
+        "device": "anki"
+      },
+      {
+        "id": "anki-1793405634190.recognize@1789949634194",
+        "cardId": "anki-1793405634190.recognize",
+        "noteId": "anki-1793405634190",
+        "deckId": "anki-600-essential",
+        "rating": 3,
+        "state": 2,
+        "stability": 23.18895679,
+        "difficulty": 2.1043314,
+        "scheduledDays": 12,
+        "reviewedAt": 1789949634194,
+        "durationMs": 8000,
+        "device": "anki"
+      },
+      {
+        "id": "anki-1793405634190.recognize@1790986434193",
+        "cardId": "anki-1793405634190.recognize",
+        "noteId": "anki-1793405634190",
+        "deckId": "anki-600-essential",
+        "rating": 3,
+        "state": 2,
+        "stability": 62.92605451,
+        "difficulty": 2.09745544,
+        "scheduledDays": 30,
+        "reviewedAt": 1790986434193,
+        "durationMs": 8000,
+        "device": "anki"
+      },
+      {
+        "id": "anki-1793405634191.recognize@1793405634196",
+        "cardId": "anki-1793405634191.recognize",
+        "noteId": "anki-1793405634191",
+        "deckId": "anki-600-essential",
+        "rating": 1,
+        "state": 0,
+        "stability": 0.212,
+        "difficulty": 6.4133,
+        "scheduledDays": 0,
+        "reviewedAt": 1793405634196,
+        "durationMs": 0,
+        "device": "anki"
+      }
+    ],
+    "daily": [
+      {
+        "id": "2026-09-15",
+        "newCards": 1,
+        "reviews": 0,
+        "again": 0,
+        "hard": 0,
+        "good": 1,
+        "easy": 0,
+        "ms": 8000,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "2026-09-16",
+        "newCards": 0,
+        "reviews": 1,
+        "again": 0,
+        "hard": 0,
+        "good": 1,
+        "easy": 0,
+        "ms": 8000,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "2026-09-20",
+        "newCards": 0,
+        "reviews": 1,
+        "again": 0,
+        "hard": 0,
+        "good": 1,
+        "easy": 0,
+        "ms": 8000,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "2026-10-02",
+        "newCards": 0,
+        "reviews": 1,
+        "again": 0,
+        "hard": 0,
+        "good": 1,
+        "easy": 0,
+        "ms": 8000,
+        "updatedAt": 1768446000000
+      },
+      {
+        "id": "2026-10-30",
+        "newCards": 2,
+        "reviews": 0,
+        "again": 1,
+        "hard": 0,
+        "good": 1,
+        "easy": 0,
+        "ms": 0,
+        "updatedAt": 1768446000000
+      }
+    ]
   }
 }

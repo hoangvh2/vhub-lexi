@@ -128,6 +128,15 @@ describe("shape checks reject bad data", () => {
     await assertFails(put("reviews", r.id, { ...r, rating: 1 }));
     await assertSucceeds(deleteDoc(doc(me(), ...path("reviews", r.id))));
   });
+  it("anki import: every document the importer writes is accepted", async () => {
+    const a = fx.anki;
+    for (const d of a.decks) await assertSucceeds(put("decks", d.id, d));
+    for (const n of a.notes) await assertSucceeds(put("notes", n.id, n));
+    for (const c of a.cards) await assertSucceeds(put("cards", c.id, c));
+    for (const r of a.reviews) await assertSucceeds(put("reviews", r.id, r));
+    for (const d of a.daily) await assertSucceeds(put("daily", d.id, d));
+    assert.ok(a.reviews.length > 0 && a.reviews.every((r) => r.device === "anki"));
+  });
   it("daily: id must be a date and match the path", async () => {
     await assertFails(put("daily", "today", { ...fx.daily, id: "today" }));
     await assertFails(put("daily", "2026-01-15", { ...fx.daily, id: "2026-01-16" }));

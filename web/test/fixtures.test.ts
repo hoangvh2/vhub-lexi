@@ -8,11 +8,20 @@ import { join } from "node:path";
 import { expect, it } from "vitest";
 import { DEFAULT_PREFS, cardId, dayId, normalizePrefs, reviewId, type Daily, type DailyDelta, type Note, type ReviewLog } from "@shared/model.ts";
 import { applyDelta } from "../src/data/local.ts";
+import { convertAnki, defaultPlan } from "../src/lib/anki/convert.ts";
+import { readApkg } from "../src/lib/anki/read.ts";
 import { answer, makeScheduler, newCard } from "../src/lib/scheduler.ts";
 
 const T = Date.UTC(2026, 0, 15, 3, 0, 0);
 
-function build() {
+/** Everything an Anki import writes (from the real package in fixtures/). */
+async function ankiImport() {
+  const col = await readApkg(new Uint8Array(readFileSync(join(__dirname, "fixtures/anki-fsrs.apkg"))));
+  const { file } = convertAnki(col, defaultPlan(col)!, { decks: [], notes: [], daily: [], prefs: DEFAULT_PREFS }, T);
+  return { decks: file.decks, notes: file.notes, cards: file.cards, reviews: file.reviews, daily: file.daily };
+}
+
+async function build() {
   const sched = makeScheduler(0.9);
   const note: Note = {
     id: "note1", type: "vocab", deckId: "deck1", createdAt: T, updatedAt: T, tags: ["toeic"], aiFields: ["vi"],
@@ -37,12 +46,13 @@ function build() {
     daily,
     delta,
     prefs: normalizePrefs({ ...DEFAULT_PREFS, newPerDay: 10, updatedAt: T }),
+    anki: await ankiImport(),
   };
 }
 
-it("fixtures for the rules tests match what the app produces", () => {
+it("fixtures for the rules tests match what the app produces", async () => {
   const file = join(__dirname, "../../tests/rules/fixtures.json");
-  const json = JSON.stringify(build(), null, 2) + "\n";
+  const json = JSON.stringify(await build(), null, 2) + "\n";
   if (process.env.UPDATE_FIXTURES || !existsSync(file)) writeFileSync(file, json);
   expect(JSON.parse(readFileSync(file, "utf8"))).toEqual(JSON.parse(json));
 });

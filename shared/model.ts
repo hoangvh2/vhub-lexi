@@ -80,7 +80,8 @@ export interface ReviewLog {
   scheduledDays: number;
   reviewedAt: number;
   durationMs: number;
-  device: "web" | "android";
+  /** "anki" = imported from an Anki package. */
+  device: "web" | "android" | "anki";
 }
 
 /**
