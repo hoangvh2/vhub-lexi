@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CardState, dayId, nextDayStart, normalizePrefs, DEFAULT_PREFS, type Card, type Note } from "@shared/model.ts";
 import { type Block, checkTyped, clozeSentence, str, suggestedRating, template, wantedTemplates } from "@shared/notetypes.ts";
 import { answer, formatInterval, makeScheduler, newCard, preview } from "../src/lib/scheduler.ts";
-import { buildQueue, pickNext } from "../src/lib/queue.ts";
+import { buildQueue, dueWithin, pickNext, tagCounts } from "../src/lib/queue.ts";
 import { cardCounts, forecast, heatmap, level, retention, streak } from "../src/lib/stats.ts";
 
 const T0 = new Date(2026, 0, 15, 10, 0, 0).getTime();
@@ -228,5 +228,32 @@ describe("stats", () => {
     expect(heat.find((c) => c.id === days[0])!.count).toBe(10);
     expect(level(0, 10)).toBe(0);
     expect(level(10, 10)).toBe(4);
+  });
+});
+
+describe("custom study", () => {
+  const T = new Date(2026, 9, 31, 10, 0, 0).getTime();
+  const DAY = 86_400_000;
+  const mk = (id: string, noteId: string, over: Partial<Card>): Card => ({ ...newCard(noteId, "d1", "recognize", T - 9 * DAY), id, ...over });
+  const cs = [
+    mk("a", "n1", { state: CardState.Review, due: T - DAY }),
+    mk("b", "n2", { state: CardState.Review, due: nextDayStart(T, 4) + 2 * 3_600_000 }),
+    mk("c", "n3", { state: CardState.Review, due: nextDayStart(T, 4) + DAY + 3_600_000 }),
+    mk("d", "n4", { state: CardState.Review, due: nextDayStart(T, 4) + 3_600_000, suspended: true }),
+  ];
+  const all = () => true;
+
+  it("counts review cards that reviewing N days ahead would add", () => {
+    expect(dueWithin(cs, all, T, 4, 1)).toBe(1);
+    expect(dueWithin(cs, all, T, 4, 2)).toBe(2);
+    expect(dueWithin(cs, all, T, 4, 2, null, new Set(["n3"]))).toBe(1);
+    const q = buildQueue({ cards: cs, eligible: all, today: undefined, prefs: DEFAULT_PREFS, now: T, buried: new Set(), reviewAheadDays: 1 });
+    expect(q.review.map((c) => c.id)).toEqual(["a", "b"]);
+  });
+
+  it("lists tags in natural order with note counts", () => {
+    expect(tagCounts([{ tags: ["lesson-10", "anki"] }, { tags: ["lesson-2", "anki"] }, {}])).toEqual([
+      { tag: "anki", count: 2 }, { tag: "lesson-2", count: 1 }, { tag: "lesson-10", count: 1 },
+    ]);
   });
 });

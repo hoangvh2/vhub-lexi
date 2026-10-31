@@ -94,6 +94,8 @@ describe("CloudRepo on the emulator", () => {
     // Review history survives deletion and is exported.
     const exp = await a.repo.exportAll();
     expect(exp.reviews.map((r) => r.id)).toEqual([`${cards[0].id}@${T}`]);
+    // Card info reads one note's history with an equality query the rules allow.
+    expect((await b.repo.reviewsOfNote("n1")).map((r) => r.id)).toEqual([`${cards[0].id}@${T}`]);
     expect(exp.prefs?.newPerDay).toBe(9);
     expect(a.state.sync === "synced" || a.state.sync === "pending").toBe(true);
   });

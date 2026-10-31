@@ -39,6 +39,13 @@ FSRS-6 (thư viện `ts-fsrs` ở web, bản port Kotlin ở Android), `enable_s
 
 Hàng đợi: thẻ đang học đến hạn → thẻ ôn đến hạn trước mốc đầu ngày học kế tiếp (mặc định 04:00) → thẻ mới (giới hạn mỗi ngày, rải đều giữa thẻ ôn); thẻ cùng ghi chú bị ẩn trong phiên sau khi trả lời một thẻ.
 
+## Học tuỳ chọn và thông tin thẻ (kiểu Anki)
+
+- **Chọn bài**: màn Ôn tập có ô "Tất cả bài" liệt kê các nhãn (vd. `lesson-25` khi nhập từ Anki), xếp tự nhiên. Chọn một nhãn thì hàng đợi chỉ lấy các ghi chú có nhãn đó (`QueueInput.noteIds`); giới hạn thẻ mới/ôn mỗi ngày vẫn áp dụng.
+- **Ôn trước**: khi hết thẻ, nút "Ôn trước N thẻ sắp đến hạn" thêm thẻ ôn của ngày học kế tiếp (`reviewAheadDays`, bấm nữa thì thêm một ngày). Lịch FSRS không đổi cách tính: trả lời sớm là một lượt ôn với số ngày trôi qua ngắn hơn. `dueWithin` đếm số thẻ cho nút.
+- Cả hai nằm trong `buildQueue` (TS và Kotlin), được ghim bằng các kịch bản `tag-filter` và `review-ahead` trong `shared/vectors/queue.json`.
+- **Thông tin thẻ** (trình sửa từ): trạng thái, khoảng ôn, khả năng nhớ lúc này, độ khó, độ bền trí nhớ, lượt ôn/quên, lần cuối, đến hạn. Web thêm lịch sử trả lời của ghi chú (`Repo.reviewsOfNote`: truy vấn `noteId ==` trên `reviews`, đọc cache khi offline), gồm cả lượt ôn nhập từ Anki. Android chỉ hiện dòng tóm tắt, vì app Android không tải `reviews` từ cloud.
+
 ## Thẻ gõ và từ dễ nhầm
 
 Nhiều từ có cùng nghĩa Việt (convince, persuade: "thuyết phục, làm cho tin"; ~31% từ đơn trong gói có nghĩa đầu trùng với từ khác), nên thẻ gõ phải chỉ ra đúng một từ. `shared/confusables.ts` (port: `android/core/.../Confusables.kt`, vector `shared/vectors/confusables.json`) tìm trong **chính các ghi chú của người học** những từ trùng một cụm nghĩa Việt (bỏ ngoặc, bỏ "sự/việc/cuộc/tính/một cách") hoặc trùng tiền tố dài (persuade/persuasion). Không dùng mạng hay từ điển; WordNet không xếp convince và persuade cùng synset nên không đủ.

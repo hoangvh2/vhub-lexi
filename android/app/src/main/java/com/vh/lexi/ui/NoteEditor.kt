@@ -23,7 +23,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.vh.lexi.core.Card
+import com.vh.lexi.core.CardState
 import com.vh.lexi.core.FieldValue
+import com.vh.lexi.core.Fsrs
 import com.vh.lexi.core.Note
 import com.vh.lexi.core.isLeech
 import com.vh.lexi.core.noteType
@@ -31,6 +34,9 @@ import com.vh.lexi.core.template
 import com.vh.lexi.data.LexiData
 import com.vh.lexi.ui.theme.Lexi
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /** Edits any note through its registered field list, so new note types need no new editor. */
 @Composable
@@ -41,6 +47,7 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
     val decks by data.decks.collectAsState()
     val allCards by data.cards.collectAsState()
     val cards = allCards.filter { it.noteId == note.id }
+    val prefs by data.prefs.collectAsState()
 
     var texts by remember { mutableStateOf(def.fields.associate { f -> f.key to (note.fields[f.key]?.let { v -> if (v is FieldValue.Items) v.value.joinToString("\n") else (v as FieldValue.Text).value } ?: "") }) }
     var deckId by remember { mutableStateOf(note.deckId) }
@@ -95,6 +102,7 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
                             if (isLeech(c)) Pill("Khó · quên ${c.lapses}", PillKind.BAD)
                             TextButton(onClick = { scope.launch { data.setSuspended(c, !c.suspended) } }) { Text(if (c.suspended) "Hiện lại" else "Ẩn") }
                         }
+                        Text(cardStats(c, prefs.desiredRetention), Modifier.testTag("card-info"), style = MaterialTheme.typography.bodySmall, color = Lexi.colors.muted)
                     }
                 }
             }
@@ -130,4 +138,17 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
             onDismiss = { confirmDelete = false },
         )
     }
+}
+
+private val STATE_LABEL = mapOf(CardState.NEW to "Mới", CardState.LEARNING to "Đang học", CardState.REVIEW to "Ôn tập", CardState.RELEARNING to "Học lại")
+private val DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+
+/** Anki's "card info" in one line: state, interval, recall probability now, difficulty, reps and lapses, due date. */
+private fun cardStats(c: Card, retention: Double, now: Long = System.currentTimeMillis()): String {
+    if (c.state == CardState.NEW) return "Chưa học lần nào."
+    val elapsed = c.lastReview?.let { maxOf(0.0, (now - it) / Fsrs.DAY_MS.toDouble()) } ?: 0.0
+    val recall = if (c.stability > 0) Fsrs(retention).forgettingCurve(elapsed, c.stability) else 1.0
+    val interval = if (c.scheduledDays >= 1) "${c.scheduledDays.toInt()} ngày" else "trong ngày"
+    val due = Instant.ofEpochMilli(c.due).atZone(ZoneId.systemDefault()).format(DATE)
+    return "${STATE_LABEL[c.state]} · khoảng $interval · nhớ ${(recall * 100).toInt()}% · độ khó ${"%.1f".format(c.difficulty)}/10 · ${c.reps} lượt, quên ${c.lapses} · đến hạn $due"
 }

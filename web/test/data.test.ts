@@ -27,6 +27,17 @@ describe("actions on the local repo", () => {
     expect(cs.every((c) => c.state === CardState.New && c.id.startsWith(note.id))).toBe(true);
   });
 
+  it("card info: the answer history of a note, oldest first", async () => {
+    const note = await addNote({ type: "vocab", fields: vocab });
+    const card = cards.get().find((c) => c.template === "recognize")!;
+    const t = Date.now();
+    await reviewCard(card, 3, 1000, t);
+    await reviewCard(cards.get().find((c) => c.id === card.id)!, 1, 2000, t + 60_000);
+    const h = await currentRepo().reviewsOfNote(note.id);
+    expect(h.map((r) => r.rating)).toEqual([3, 1]);
+    expect(await currentRepo().reviewsOfNote("other")).toEqual([]);
+  });
+
   it("drops empty fields and rejects unknown note types", async () => {
     const note = await addNote({ type: "vocab", fields: { ...vocab, mnemonic: "   ", examples: ["", " a "] } });
     expect(note.fields.mnemonic).toBeUndefined();

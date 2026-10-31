@@ -6,7 +6,7 @@
  * we never await `commit()`: offline it would not resolve until the server acknowledges.
  */
 import {
-  collection, deleteDoc, doc, getDocs, increment, limit, onSnapshot, orderBy, query, setDoc, writeBatch,
+  collection, deleteDoc, doc, getDocs, increment, limit, onSnapshot, orderBy, query, setDoc, where, writeBatch,
   type DocumentData, type Firestore, type Query, type QuerySnapshot, type WriteBatch,
 } from "firebase/firestore";
 import { RATING_FIELD, type Card, type Daily, type DailyDelta, type Deck, type Note, type Prefs, type ReviewLog } from "@shared/model.ts";
@@ -171,6 +171,12 @@ export class CloudRepo implements Repo {
 
   async savePrefs(p: Prefs) {
     void setDoc(this.ref("settings", "prefs"), p).catch((e) => this.fail(e));
+  }
+
+  async reviewsOfNote(noteId: string) {
+    // Equality on one field: served by Firestore's automatic index, and from the cache when offline.
+    const snap = await getDocs(query(this.col("reviews"), where("noteId", "==", noteId), limit(500)));
+    return snap.docs.map((d) => d.data() as ReviewLog).sort((a, b) => a.reviewedAt - b.reviewedAt);
   }
 
   async exportAll(): Promise<ExportFile> {

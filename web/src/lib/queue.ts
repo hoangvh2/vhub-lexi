@@ -8,6 +8,10 @@
  * Siblings (cards of the same note) are buried for the rest of the session once one is answered,
  * so you never see "word → meaning" and "cloze of the same word" back to back.
  *
+ * Custom study (Anki's "Custom study session", kept to what a vocabulary learner uses): `noteIds` limits the
+ * session to some notes (a lesson tag) and `reviewAheadDays` also takes review cards due in the next N days.
+ * Scheduling is unchanged: FSRS treats an early answer as a review at a shorter elapsed time.
+ *
  * Near-synonyms learned at the same time interfere with each other (convince/persuade both mean "thuyết
  * phục"), so a new word waits while another word sharing a Vietnamese meaning phrase is still settling:
  * introduced in this queue, or reviewed but not yet on an interval of SETTLE_DAYS days.
@@ -36,6 +40,10 @@ export interface QueueInput {
   deckNewPerDay?: ReadonlyMap<Id, number>;
   /** Vietnamese meaning phrases per note (meaningsByNote); when given, near-synonyms are introduced apart. */
   meanings?: ReadonlyMap<Id, readonly string[]>;
+  /** Only these notes (e.g. the notes of one lesson tag). */
+  noteIds?: ReadonlySet<Id>;
+  /** Also review cards due within this many days after today (review ahead). */
+  reviewAheadDays?: number;
 }
 
 export interface Queue {
@@ -47,13 +55,14 @@ export interface Queue {
 }
 
 export function buildQueue(i: QueueInput): Queue {
-  const cutoff = nextDayStart(i.now, i.prefs.dayStartHour);
+  const cutoff = nextDayStart(i.now, i.prefs.dayStartHour) + (i.reviewAheadDays ?? 0) * 86_400_000;
   const learning: Card[] = [];
   const review: Card[] = [];
   const fresh: Card[] = [];
   for (const c of i.cards) {
     if (c.suspended || !i.eligible(c)) continue;
     if (i.deckId && c.deckId !== i.deckId) continue;
+    if (i.noteIds && !i.noteIds.has(c.noteId)) continue;
     if (c.state === CardState.Learning || c.state === CardState.Relearning) {
       if (c.due <= i.now + (i.learnAheadMs ?? 0)) learning.push(c);
     } else if (c.state === CardState.Review) {
@@ -122,6 +131,20 @@ export function pickNext(q: Queue, s: SessionState, now: number): Card | null {
   // Spread new cards evenly among reviews.
   const share = q.newCards.length / rest;
   return s.shownNew < Math.round((s.shown + 1) * share) ? q.newCards[0] : q.review[0];
+}
+
+/** Review cards outside today's queue that `reviewAheadDays = days` would add (for the "review ahead" button). */
+export function dueWithin(cards: readonly Card[], eligible: (c: Card) => boolean, now: number, dayStartHour: number, days: number, deckId?: Id | null, noteIds?: ReadonlySet<Id>): number {
+  const today = nextDayStart(now, dayStartHour);
+  const until = today + days * 86_400_000;
+  return cards.filter((c) => c.state === CardState.Review && !c.suspended && c.due >= today && c.due < until && eligible(c) && (!deckId || c.deckId === deckId) && (!noteIds || noteIds.has(c.noteId))).length;
+}
+
+/** Lesson / topic tags in use, with how many notes carry each; natural order ("lesson-2" before "lesson-10"). */
+export function tagCounts(notes: readonly { tags?: string[] }[]): Array<{ tag: string; count: number }> {
+  const m = new Map<string, number>();
+  for (const n of notes) for (const t of n.tags ?? []) m.set(t, (m.get(t) ?? 0) + 1);
+  return [...m.entries()].map(([tag, count]) => ({ tag, count })).sort((a, b) => a.tag.localeCompare(b.tag, "en", { numeric: true }));
 }
 
 export function isLeech(c: Card): boolean {

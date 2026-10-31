@@ -51,6 +51,8 @@ export interface Repo {
   /** Reverts commitReview: restores the card, removes the log, subtracts the counters. */
   undoReview(prev: Card, logId: string, delta: DailyDelta): Promise<void>;
   savePrefs(p: Prefs): Promise<void>;
+  /** Answer history of one note (all its cards), oldest first: the "card info" view. */
+  reviewsOfNote(noteId: string): Promise<ReviewLog[]>;
   exportAll(): Promise<ExportFile>;
   /** Merges a previously exported file (existing ids are overwritten). */
   importAll(f: ExportFile): Promise<{ notes: number; cards: number }>;
