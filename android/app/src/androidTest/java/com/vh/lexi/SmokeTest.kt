@@ -235,6 +235,12 @@ class SmokeTest {
         for ((theme, accent) in listOf("light" to "teal", "dark" to "teal", "dark" to "blue")) {
             runBlocking { app.data.savePrefs(app.data.prefs.value.copy(theme = theme, accent = accent)) }
             waitFor("theme-$theme-$accent") { app.data.prefs.value.theme == theme && app.data.prefs.value.accent == accent }
+            // Status bar icons must contrast with the app background too (light icons on the dark theme).
+            waitFor("status-bar-$theme") {
+                var light = false
+                rule.runOnUiThread { light = WindowCompat.getInsetsController(rule.activity.window, rule.activity.window.decorView).isAppearanceLightStatusBars }
+                light == (theme == "light")
+            }
             for (tab in listOf("library", "stats", "settings", "study")) {
                 rule.onNodeWithTag("nav-$tab").performClick()
                 rule.waitForIdle()
