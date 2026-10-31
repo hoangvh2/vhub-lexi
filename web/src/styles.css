@@ -327,13 +327,13 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 
 /* ---------- library ---------- */
 .list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); overflow: hidden; }
-.li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); align-items: center; cursor: pointer; background: none; border-left: 0; border-right: 0; border-top: 0; text-align: left; width: 100%; }
+.li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); align-items: center; cursor: pointer; background: none; border-left: 0; border-right: 0; border-top: 0; text-align: left; width: 100%; }
 .li:last-child { border-bottom: 0; }
 .li:hover { background: var(--surface-2); }
 .li .t { font-weight: 650; }
 .li .s { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Selection mode: a round tick in front of each word, the selected ones tinted. */
-.li.pick { grid-template-columns: auto minmax(0, 1fr) auto; }
+/* First column: the word status, or the tick while selecting. */
 .li .tick { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; color: var(--accent-ink, #fff); transition: background .15s, border-color .15s; }
 .li[aria-pressed="true"] { background: var(--accent-soft); }
 .li[aria-pressed="true"] .tick { background: var(--accent); border-color: var(--accent); }
