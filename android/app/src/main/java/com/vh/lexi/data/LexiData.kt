@@ -133,9 +133,9 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
     private fun newCard(note: Note, template: String, now: Long) =
         Card(id = com.vh.lexi.core.cardId(note.id, template), noteId = note.id, deckId = note.deckId, template = template, due = now, createdAt = now, updatedAt = now)
 
-    suspend fun addNote(type: String, fields: Map<String, FieldValue>, deckId: Id? = null, aiFields: List<String> = emptyList(), now: Long = System.currentTimeMillis()): Note {
+    suspend fun addNote(type: String, fields: Map<String, FieldValue>, deckId: Id? = null, aiFields: List<String> = emptyList(), now: Long = System.currentTimeMillis(), tags: List<String> = emptyList()): Note {
         requireNotNull(noteType(type)) { "Unknown note type $type" }
-        val note = Note(newId(), type, deckId ?: ensureDeck(), cleanFields(type, fields), aiFields, emptyList(), now, now)
+        val note = Note(newId(), type, deckId ?: ensureDeck(), cleanFields(type, fields), aiFields, tags, now, now)
         db.withTransaction { putNote(note, missingCards(note, emptyList(), now)) }
         return note
     }

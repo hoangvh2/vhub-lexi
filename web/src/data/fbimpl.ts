@@ -68,3 +68,10 @@ export async function callEnrich(word: string, hints: { pos?: string; en?: strin
   const res = await fn({ word, ...hints });
   return res.data;
 }
+
+/** Questions and passages read from screenshots or pasted text (functions/src/extract.ts). */
+export async function callExtract(input: { images: Array<{ mime: string; data: string }>; text: string }): Promise<unknown> {
+  const { app } = firebase();
+  const fn = httpsCallable(getFunctions(app, env.VITE_FUNCTIONS_REGION || "asia-southeast1"), "extract-questions", { timeout: 120_000 });
+  return (await fn(input)).data;
+}

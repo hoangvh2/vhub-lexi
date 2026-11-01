@@ -12,6 +12,9 @@ export interface GeminiConfig {
   retryDelayMs?: number;
 }
 
+/** One part of a multimodal prompt. */
+export type Part = { text: string } | { inlineData: { mimeType: string; data: string } };
+
 /** A failure the user can be told about in one sentence. The upstream body is never forwarded. */
 export class GeminiError extends Error {
   constructor(
@@ -41,6 +44,15 @@ export class GeminiClient {
       system_instruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: user }] }],
       generationConfig: { temperature: 0.4, responseMimeType: "application/json", maxOutputTokens: 1400 },
+    });
+  }
+
+  /** Multimodal prompt (screenshots and text) with its own output budget. */
+  generateParts(system: string, parts: Part[], opts: { maxOutputTokens: number }): Promise<{ text: string; usage: TokenUsage }> {
+    return this.call({
+      system_instruction: { parts: [{ text: system }] },
+      contents: [{ role: "user", parts }],
+      generationConfig: { temperature: 0.1, responseMimeType: "application/json", maxOutputTokens: opts.maxOutputTokens },
     });
   }
 

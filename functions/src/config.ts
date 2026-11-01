@@ -9,6 +9,9 @@ export const LIMITS = {
   maxContext: 400,
   /** Every example of a note (the field holds 8) is sent, so each one gets a translation. */
   maxExamples: 8,
+  /** Quota units of one question extraction (an enrichment is 1): screenshots cost more tokens than pasted text. */
+  extractImageCost: 3,
+  extractTextCost: 2,
 } as const;
 
 /** Override with the GEMINI_MODEL parameter (Terraform variable gemini_model). */

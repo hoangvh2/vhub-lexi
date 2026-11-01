@@ -1,0 +1,683 @@
+[
+ {
+  "name": "missed question passes every check",
+  "existing": [],
+  "questions": [
+   {
+    "number": 132,
+    "part": 6,
+    "kind": "fill",
+    "stem": "Many fans are already _____ that it will be a sequel.",
+    "options": {
+     "A": "requesting",
+     "B": "analyzing",
+     "C": "confirming",
+     "D": "speculating"
+    },
+    "correct": "D",
+    "result": "wrong",
+    "passage": 1,
+    "topic": "Khác",
+    "rule": "speculating that: đoán rằng.",
+    "translation": "Nhiều người hâm mộ đã suy đoán.",
+    "flags": []
+   }
+  ],
+  "skipped": 0,
+  "drafts": [
+   {
+    "number": 132,
+    "include": true,
+    "correct": "D",
+    "fields": {
+     "sentence": "Many fans are already speculating that it will be a sequel.",
+     "answer": "speculating",
+     "topic": "Khác",
+     "translation": "Nhiều người hâm mộ đã suy đoán.",
+     "rule": "speculating that: đoán rằng."
+    },
+    "problems": {
+     "block": [],
+     "warn": []
+    },
+    "aiFields": [
+     "topic",
+     "rule",
+     "translation"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "answered right is not preselected",
+  "existing": [],
+  "questions": [
+   {
+    "number": 132,
+    "part": 6,
+    "kind": "fill",
+    "stem": "Many fans are already _____ that it will be a sequel.",
+    "options": {
+     "A": "requesting",
+     "B": "analyzing",
+     "C": "confirming",
+     "D": "speculating"
+    },
+    "correct": "D",
+    "result": "right",
+    "passage": 1,
+    "topic": "Khác",
+    "rule": "speculating that: đoán rằng.",
+    "translation": "Nhiều người hâm mộ đã suy đoán.",
+    "flags": []
+   }
+  ],
+  "skipped": 0,
+  "drafts": [
+   {
+    "number": 132,
+    "include": false,
+    "correct": "D",
+    "fields": {
+     "sentence": "Many fans are already speculating that it will be a sequel.",
+     "answer": "speculating",
+     "topic": "Khác",
+     "translation": "Nhiều người hâm mộ đã suy đoán.",
+     "rule": "speculating that: đoán rằng."
+    },
+    "problems": {
+     "block": [],
+     "warn": [
+      "right"
+     ]
+    },
+    "aiFields": [
+     "topic",
+     "rule",
+     "translation"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "no result is preselected",
+  "existing": [],
+  "questions": [
+   {
+    "number": 132,
+    "part": 6,
+    "kind": "fill",
+    "stem": "Many fans are already _____ that it will be a sequel.",
+    "options": {
+     "A": "requesting",
+     "B": "analyzing",
+     "C": "confirming",
+     "D": "speculating"
+    },
+    "correct": "D",
+    "result": "unknown",
+    "passage": 1,
+    "topic": "Khác",
+    "rule": "speculating that: đoán rằng.",
+    "translation": "Nhiều người hâm mộ đã suy đoán.",
+    "flags": []
+   }
+  ],
+  "skipped": 0,
+  "drafts": [
+   {
+    "number": 132,
+    "include": true,
+    "correct": "D",
+    "fields": {
+     "sentence": "Many fans are already speculating that it will be a sequel.",
+     "answer": "speculating",
+     "topic": "Khác",
+     "translation": "Nhiều người hâm mộ đã suy đoán.",
+     "rule": "speculating that: đoán rằng."
+    },
+    "problems": {
+     "block": [],
+     "warn": []
+    },
+    "aiFields": [
+     "topic",
+     "rule",
+     "translation"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "no answer blocks",
+  "existing": [],
+  "questions": [
+   {
+    "number": 132,
+    "part": 6,
+    "kind": "fill",
+    "stem": "Many fans are already _____ that it will be a sequel.",
+    "options": {
+     "A": "requesting",
+     "B": "analyzing",
+     "C": "confirming",
+     "D": "speculating"
+    },
+    "correct": null,
+    "result": "wrong",
+    "passage": 1,
+    "topic": "Khác",
+    "rule": "",
+    "translation": "",
+    "flags": []
+   }
+  ],
+  "skipped": 0,
+  "drafts": [
+   {
+    "number": 132,
+    "include": false,
+    "correct": null,
+    "fields": {
+     "sentence": "Many fans are already _____ that it will be a sequel.",
+     "answer": "",
+     "topic": "Khác",
+     "translation": "",
+     "rule": ""
+    },
+    "problems": {
+     "block": [
+      "no-answer"
+     ],
+     "warn": []
+    },
+    "aiFields": [
+     "topic"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "answer option empty is dropped",
+  "existing": [],
+  "questions": [
+   {
+    "number": 132,
+    "part": 6,
+    "kind": "fill",
+    "stem": "Many fans are already _____ that it will be a sequel.",
+    "options": {
+     "A": "a",
+     "B": "",
+     "C": "c",
+     "D": "d"
+    },
+    "correct": "B",
+    "result": "wrong",
+    "passage": 1,
+    "topic": "Khác",
+    "rule": "speculating that: đoán rằng.",
+    "translation": "Nhiều người hâm mộ đã suy đoán.",
+    "flags": []
+   }
+  ],
+  "skipped": 0,
+  "drafts": [
+   {
+    "number": 132,
+    "include": false,
+    "correct": null,
+    "fields": {
+     "sentence": "Many fans are already _____ that it will be a sequel.",
+     "answer": "",
+     "topic": "Khác",
+     "translation": "Nhiều người hâm mộ đã suy đoán.",
+     "rule": "speculating that: đoán rằng."
+    },
+    "problems": {
+     "block": [
+      "no-answer"
+     ],
+     "warn": []
+    },
+    "aiFields": [
+     "topic",
+     "rule",
+     "translation"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "no blank blocks",
+  "existing": [],
+  "questions": [
+   {
+    "number": 132,
+    "part": 6,
+    "kind": "fill",
+    "stem": "Many fans are already speculating.",
+    "options": {
+     "A": "requesting",
+     "B": "analyzing",
+     "C": "confirming",
+     "D": "speculating"
+    },
+    "correct": "D",
+    "result": "wrong",
+    "passage": 1,
+    "topic": "Khác",
+    "rule": "speculating that: đoán rằng.",
+    "translation": "Nhiều người hâm mộ đã suy đoán.",
+    "flags": []
+   }
+  ],
+  "skipped": 0,
+  "drafts": [
+   {
+    "number": 132,
+    "include": false,
+    "correct": "D",
+    "fields": {
+     "sentence": "Many fans are already speculating.",
+     "answer": "speculating",
+     "topic": "Khác",
+     "translation": "Nhiều người hâm mộ đã suy đoán.",
+     "rule": "speculating that: đoán rằng."
+    },
+    "problems": {
+     "block": [
+      "no-blank"
+     ],
+     "warn": []
+    },
+    "aiFields": [
+     "topic",
+     "rule",
+     "translation"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "blank inside a word blocks",
+  "existing": [],
+  "questions": [
+   {
+    "number": 132,
+    "part": 6,
+    "kind": "fill",
+    "stem": "Fans re_____ to the news.",
+    "options": {
+     "A": "act",
+     "B": "acts",
+     "C": "acted",
+     "D": "acting"
+    },
+    "correct": "A",
+    "result": "wrong",
+    "passage": 1,
+    "topic": "Khác",
+    "rule": "speculating that: đoán rằng.",
+    "translation": "Nhiều người hâm mộ đã suy đoán.",
+    "flags": []
+   }
+  ],
+  "skipped": 0,
+  "drafts": [
+   {
+    "number": 132,
+    "include": false,
+    "correct": "A",
+    "fields": {
+     "sentence": "Fans react to the news.",
+     "answer": "act",
+     "topic": "Khác",
+     "translation": "Nhiều người hâm mộ đã suy đoán.",
+     "rule": "speculating that: đoán rằng."
+    },
+    "problems": {
+     "block": [
+      "not-found"
+     ],
+     "warn": []
+    },
+    "aiFields": [
+     "topic",
+     "rule",
+     "translation"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "duplicate is flagged and not preselected",
+  "existing": [
+   "many fans are already speculating that it will be a sequel."
+  ],
+  "questions": [
+   {
+    "number": 132,
+    "part": 6,
+    "kind": "fill",
+    "stem": "Many fans are already _____ that it will be a sequel.",
+    "options": {
+     "A": "requesting",
+     "B": "analyzing",
+     "C": "confirming",
+     "D": "speculating"
+    },
+    "correct": "D",
+    "result": "wrong",
+    "passage": 1,
+    "topic": "Khác",
+    "rule": "speculating that: đoán rằng.",
+    "translation": "Nhiều người hâm mộ đã suy đoán.",
+    "flags": []
+   }
+  ],
+  "skipped": 0,
+  "drafts": [
+   {
+    "number": 132,
+    "include": false,
+    "correct": "D",
+    "fields": {
+     "sentence": "Many fans are already speculating that it will be a sequel.",
+     "answer": "speculating",
+     "topic": "Khác",
+     "translation": "Nhiều người hâm mộ đã suy đoán.",
+     "rule": "speculating that: đoán rằng."
+    },
+    "problems": {
+     "block": [],
+     "warn": [
+      "duplicate"
+     ]
+    },
+    "aiFields": [
+     "topic",
+     "rule",
+     "translation"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "unsure and few options are flagged",
+  "existing": [],
+  "questions": [
+   {
+    "number": 132,
+    "part": 6,
+    "kind": "fill",
+    "stem": "Many fans are already _____ that it will be a sequel.",
+    "options": {
+     "A": "requesting",
+     "B": "analyzing",
+     "C": "confirming",
+     "D": "speculating"
+    },
+    "correct": "D",
+    "result": "wrong",
+    "passage": 1,
+    "topic": "Khác",
+    "rule": "speculating that: đoán rằng.",
+    "translation": "Nhiều người hâm mộ đã suy đoán.",
+    "flags": [
+     "unsure",
+     "few-options"
+    ]
+   }
+  ],
+  "skipped": 0,
+  "drafts": [
+   {
+    "number": 132,
+    "include": false,
+    "correct": "D",
+    "fields": {
+     "sentence": "Many fans are already speculating that it will be a sequel.",
+     "answer": "speculating",
+     "topic": "Khác",
+     "translation": "Nhiều người hâm mộ đã suy đoán.",
+     "rule": "speculating that: đoán rằng."
+    },
+    "problems": {
+     "block": [],
+     "warn": [
+      "unsure",
+      "few-options"
+     ]
+    },
+    "aiFields": [
+     "topic",
+     "rule",
+     "translation"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "phrase answer and capital start",
+  "existing": [],
+  "questions": [
+   {
+    "number": 101,
+    "part": 5,
+    "kind": "fill",
+    "stem": "_____ you need any help, please call us.",
+    "options": {
+     "A": "Should",
+     "B": "Because",
+     "C": "Despite",
+     "D": "Unless"
+    },
+    "correct": "A",
+    "result": "wrong",
+    "passage": 1,
+    "topic": "Đảo ngữ",
+    "rule": "speculating that: đoán rằng.",
+    "translation": "Nhiều người hâm mộ đã suy đoán.",
+    "flags": []
+   }
+  ],
+  "skipped": 0,
+  "drafts": [
+   {
+    "number": 101,
+    "include": true,
+    "correct": "A",
+    "fields": {
+     "sentence": "Should you need any help, please call us.",
+     "answer": "Should",
+     "topic": "Đảo ngữ",
+     "translation": "Nhiều người hâm mộ đã suy đoán.",
+     "rule": "speculating that: đoán rằng."
+    },
+    "problems": {
+     "block": [],
+     "warn": []
+    },
+    "aiFields": [
+     "topic",
+     "rule",
+     "translation"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "multi-word answer",
+  "existing": [],
+  "questions": [
+   {
+    "number": 132,
+    "part": 6,
+    "kind": "fill",
+    "stem": "A preview of the game _____ a presentation will be streamed.",
+    "options": {
+     "A": "how",
+     "B": "as well as",
+     "C": "but",
+     "D": "even though"
+    },
+    "correct": "B",
+    "result": "wrong",
+    "passage": 1,
+    "topic": "Giới từ / liên từ",
+    "rule": "speculating that: đoán rằng.",
+    "translation": "Nhiều người hâm mộ đã suy đoán.",
+    "flags": []
+   }
+  ],
+  "skipped": 0,
+  "drafts": [
+   {
+    "number": 132,
+    "include": true,
+    "correct": "B",
+    "fields": {
+     "sentence": "A preview of the game as well as a presentation will be streamed.",
+     "answer": "as well as",
+     "topic": "Giới từ / liên từ",
+     "translation": "Nhiều người hâm mộ đã suy đoán.",
+     "rule": "speculating that: đoán rằng."
+    },
+    "problems": {
+     "block": [],
+     "warn": []
+    },
+    "aiFields": [
+     "topic",
+     "rule",
+     "translation"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "insert and reading questions are skipped",
+  "existing": [],
+  "questions": [
+   {
+    "number": 132,
+    "part": 6,
+    "kind": "fill",
+    "stem": "Many fans are already _____ that it will be a sequel.",
+    "options": {
+     "A": "requesting",
+     "B": "analyzing",
+     "C": "confirming",
+     "D": "speculating"
+    },
+    "correct": "D",
+    "result": "wrong",
+    "passage": 1,
+    "topic": "Khác",
+    "rule": "speculating that: đoán rằng.",
+    "translation": "Nhiều người hâm mộ đã suy đoán.",
+    "flags": []
+   },
+   {
+    "number": 132,
+    "part": 6,
+    "kind": "insert",
+    "stem": "Which sentence fits?",
+    "options": {
+     "A": "requesting",
+     "B": "analyzing",
+     "C": "confirming",
+     "D": "speculating"
+    },
+    "correct": "D",
+    "result": "wrong",
+    "passage": 1,
+    "topic": "Khác",
+    "rule": "speculating that: đoán rằng.",
+    "translation": "Nhiều người hâm mộ đã suy đoán.",
+    "flags": []
+   },
+   {
+    "number": 132,
+    "part": 6,
+    "kind": "reading",
+    "stem": "What is the email about?",
+    "options": {
+     "A": "requesting",
+     "B": "analyzing",
+     "C": "confirming",
+     "D": "speculating"
+    },
+    "correct": "D",
+    "result": "wrong",
+    "passage": 1,
+    "topic": "Khác",
+    "rule": "speculating that: đoán rằng.",
+    "translation": "Nhiều người hâm mộ đã suy đoán.",
+    "flags": []
+   }
+  ],
+  "skipped": 2,
+  "drafts": [
+   {
+    "number": 132,
+    "include": true,
+    "correct": "D",
+    "fields": {
+     "sentence": "Many fans are already speculating that it will be a sequel.",
+     "answer": "speculating",
+     "topic": "Khác",
+     "translation": "Nhiều người hâm mộ đã suy đoán.",
+     "rule": "speculating that: đoán rằng."
+    },
+    "problems": {
+     "block": [],
+     "warn": []
+    },
+    "aiFields": [
+     "topic",
+     "rule",
+     "translation"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "missing optional fields",
+  "existing": [],
+  "questions": [
+   {
+    "kind": "fill",
+    "stem": "Please _____ us.",
+    "options": {
+     "A": "call",
+     "B": "calls",
+     "C": "called",
+     "D": "calling"
+    },
+    "correct": "A"
+   }
+  ],
+  "skipped": 0,
+  "drafts": [
+   {
+    "number": null,
+    "include": true,
+    "correct": "A",
+    "fields": {
+     "sentence": "Please call us.",
+     "answer": "call",
+     "topic": "",
+     "translation": "",
+     "rule": ""
+    },
+    "problems": {
+     "block": [],
+     "warn": []
+    },
+    "aiFields": []
+   }
+  ]
+ }
+]

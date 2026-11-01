@@ -675,3 +675,17 @@ input[type="range"] { width: 100%; }
 .spark circle { fill: var(--accent); }
 .spark .goal { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
 @media (max-width: 899px) { .t-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; } .t-score b { font-size: 40px; } }
+
+.import .drop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px; border-radius: 18px; border: 2px dashed var(--line); }
+.thumbs { display: flex; gap: 10px; flex-wrap: wrap; }
+.thumb { position: relative; width: 84px; height: 112px; border-radius: 12px; overflow: hidden; background: var(--surface-2); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.thumb .x { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; border: 0; cursor: pointer; font: inherit; font-weight: 800; background: var(--ink); color: var(--bg); line-height: 1; }
+.drafts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.draft { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 18px; background: var(--surface-2); }
+.draft.blocked { box-shadow: inset 0 0 0 2px var(--rose-deep); }
+.draft .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.draft .opt { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: var(--surface); cursor: pointer; min-height: 40px; overflow-wrap: anywhere; }
+.draft .opt.on { box-shadow: inset 0 0 0 2px var(--accent); }
+.draft .clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 0; white-space: pre-wrap; }
+.draft .btn.sm { align-self: flex-start; }

@@ -113,7 +113,7 @@ function startsSentence(text: string, at: number): boolean {
     i--;
   }
   if (i < 0) return true;
-  if (text[i] === "." && /\b(?:mr|mrs|ms|dr|prof|inc|corp|ltd|co|st|jr|sr|vs|no|dept)$/i.test(text.slice(Math.max(0, i - 5), i))) return false;
+  if (text[i] === "." && /\b(?:mr|mrs|ms|dr|prof|inc|corp|ltd|co|st|jr|sr|vs|no|dept|a\.m|p\.m)$/i.test(text.slice(Math.max(0, i - 5), i))) return false;
   if (SENTENCE_END.test(text[i])) return true;
   // "1." / "a)" list markers
   return /[\d)]/.test(text[i]) && /(?:^|\n)\s*[\w]{1,2}[.)]\s*$/.test(text.slice(Math.max(0, at - 6), at));

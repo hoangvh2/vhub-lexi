@@ -1,5 +1,7 @@
 package com.vh.lexi.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,6 +40,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
@@ -80,6 +83,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val app = application as LexiApp
+        handleShare(intent)
         setContent {
             val prefs by app.data.prefs.collectAsState()
             // The status bar icons follow the app's theme, not the system one: with "Tối" chosen on a phone in light
@@ -94,6 +98,23 @@ class MainActivity : ComponentActivity() {
             LexiTheme(prefs.theme, prefs.accent) { Main(app) }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleShare(intent)
+    }
+}
+
+/** Screenshots shared into Lexi (share sheet) wait in [LexiApp.pendingShare] until the import screen takes them. */
+private fun MainActivity.handleShare(intent: Intent?) {
+    @Suppress("DEPRECATION")
+    val uris: List<Uri> = when (intent?.action) {
+        Intent.ACTION_SEND -> listOfNotNull(intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM))
+        Intent.ACTION_SEND_MULTIPLE -> intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
+        else -> emptyList()
+    }
+    if (uris.isNotEmpty()) (application as LexiApp).pendingShare.value = uris.take(6)
 }
 
 private enum class Tab(val label: String, val icon: ImageVector) {
@@ -107,6 +128,10 @@ private enum class Tab(val label: String, val icon: ImageVector) {
 @Composable
 private fun Main(app: LexiApp) {
     var tab by rememberSaveable { mutableStateOf(Tab.STUDY) }
+    // "Nhập từ đề thi" is a screen over the tabs, opened from Today or by sharing a screenshot to Lexi.
+    var importing by rememberSaveable { mutableStateOf(false) }
+    val shared by app.pendingShare.collectAsState()
+    LaunchedEffect(shared) { if (shared.isNotEmpty()) importing = true }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val toaster = remember {
@@ -160,7 +185,7 @@ private fun Main(app: LexiApp) {
                         containerColor = Color.Transparent, tonalElevation = 0.dp, windowInsets = WindowInsets(0, 0, 0, 0),
                     ) {
                         for (t in Tab.entries) NavigationBarItem(
-                            selected = tab == t, onClick = { tab = t }, modifier = Modifier.testTag("nav-${t.name.lowercase()}"),
+                            selected = tab == t && !importing, onClick = { tab = t; importing = false }, modifier = Modifier.testTag("nav-${t.name.lowercase()}"),
                             label = { Text(t.label, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = c.accent, selectedTextColor = c.accent, indicatorColor = c.accentSoft, unselectedIconColor = c.muted, unselectedTextColor = c.muted,
@@ -188,8 +213,8 @@ private fun Main(app: LexiApp) {
                         else Pill(syncLabel(SyncState.OFF))
                     }
                     Box(Modifier.weight(1f)) {
-                        when (tab) {
-                            Tab.STUDY -> StudyScreen(app) { tab = Tab.ADD }
+                        if (importing) ImportScreen(app) { importing = false } else when (tab) {
+                            Tab.STUDY -> StudyScreen(app, onAdd = { tab = Tab.ADD }, onImport = { importing = true })
                             Tab.ADD -> AddScreen(app)
                             Tab.LIBRARY -> LibraryScreen(app) { tab = Tab.ADD }
                             Tab.STATS -> StatsScreen(app)

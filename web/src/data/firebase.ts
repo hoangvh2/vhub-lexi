@@ -22,6 +22,9 @@ export async function signOutUser(): Promise<void> {
 export async function callEnrich(word: string, hints: { pos?: string; en?: string; examples?: string[] }): Promise<unknown> {
   return (await impl()).callEnrich(word, hints);
 }
+export async function callExtract(input: { images: Array<{ mime: string; data: string }>; text: string }): Promise<unknown> {
+  return (await impl()).callExtract(input);
+}
 export async function makeCloudRepo(uid: string) {
   const { CloudRepo } = await import("./cloud.ts");
   return new CloudRepo(uid);

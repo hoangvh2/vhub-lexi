@@ -122,3 +122,10 @@ describe("unknown words in a passage", () => {
     expect(sentenceAround("x ".repeat(400) + "merger " + "y ".repeat(400), 800).length).toBeLessThanOrEqual(300);
   });
 });
+
+describe("capital after a time abbreviation", () => {
+  it("does not take a name after P.M. / a.m. for the start of a sentence", () => {
+    const a = analyze("It starts at 3:00 P.M. Japan Standard Time on Thursday.", new Map());
+    expect(a.tokens.find((t) => t.raw === "Japan")?.kind).toBe("skip");
+  });
+});

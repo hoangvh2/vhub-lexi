@@ -136,5 +136,5 @@ export function notesByTestTag(notes: readonly Note[]): Map<string, { vocab: num
 export function completeSentence(sentence: string, answer: string): string {
   const s = sentence.trim();
   const a = answer.trim();
-  return /_{2,}/.test(s) && a ? s.replace(/_{2,}/, a) : s;
+  return /_{2,}/.test(s) && a ? s.replace(/_{2,}/, () => a) : s;
 }

@@ -14,6 +14,9 @@ import { checkTyped, clozeSentence, findExact, findWord, normalizeAnswer, templa
 import { answerHint, confusables, letterCount, matchConfusable, meaningPhrases, suggestedRatingWith } from "@shared/confusables.ts";
 import { buildQueue, pickNext } from "../src/lib/queue.ts";
 import { answer, makeScheduler, newCard } from "../src/lib/scheduler.ts";
+import { aiFieldsOf, draftsFrom, grammarFields, problems, type ExtractedQuestion } from "../src/lib/import.ts";
+import { analyze, sentenceAround } from "../src/lib/readcheck.ts";
+import { testTag } from "../src/lib/practice.ts";
 
 const T0 = Date.UTC(2026, 0, 15, 8, 30, 0);
 const MIN = 60_000;
@@ -245,6 +248,61 @@ ${body}
 `;
 }
 
+function importVectors() {
+  const opts = (a: string, b: string, c: string, d: string) => ({ A: a, B: b, C: c, D: d });
+  const q = (o: Partial<ExtractedQuestion>): ExtractedQuestion => ({
+    number: 132, part: 6, kind: "fill", stem: "Many fans are already _____ that it will be a sequel.", options: opts("requesting", "analyzing", "confirming", "speculating"),
+    correct: "D", result: "wrong", passage: 1, topic: "Khác", rule: "speculating that: đoán rằng.", translation: "Nhiều người hâm mộ đã suy đoán.", flags: [], ...o,
+  });
+  const cases: Array<{ name: string; existing: string[]; questions: ExtractedQuestion[] }> = [
+    { name: "missed question passes every check", existing: [], questions: [q({})] },
+    { name: "answered right is not preselected", existing: [], questions: [q({ result: "right" })] },
+    { name: "no result is preselected", existing: [], questions: [q({ result: "unknown" })] },
+    { name: "no answer blocks", existing: [], questions: [q({ correct: null, rule: "", translation: "" })] },
+    { name: "answer option empty is dropped", existing: [], questions: [q({ correct: "B", options: opts("a", "", "c", "d") })] },
+    { name: "no blank blocks", existing: [], questions: [q({ stem: "Many fans are already speculating." })] },
+    { name: "blank inside a word blocks", existing: [], questions: [q({ stem: "Fans re_____ to the news.", options: opts("act", "acts", "acted", "acting"), correct: "A" })] },
+    { name: "duplicate is flagged and not preselected", existing: ["many fans are already speculating that it will be a sequel."], questions: [q({})] },
+    { name: "unsure and few options are flagged", existing: [], questions: [q({ flags: ["unsure", "few-options"] })] },
+    { name: "phrase answer and capital start", existing: [], questions: [q({ number: 101, part: 5, stem: "_____ you need any help, please call us.", options: opts("Should", "Because", "Despite", "Unless"), correct: "A", topic: "Đảo ngữ" })] },
+    { name: "multi-word answer", existing: [], questions: [q({ stem: "A preview of the game _____ a presentation will be streamed.", options: opts("how", "as well as", "but", "even though"), correct: "B", topic: "Giới từ / liên từ" })] },
+    { name: "insert and reading questions are skipped", existing: [], questions: [q({}), q({ kind: "insert", stem: "Which sentence fits?" }), q({ kind: "reading", stem: "What is the email about?" })] },
+    { name: "missing optional fields", existing: [], questions: [{ kind: "fill", stem: "Please _____ us.", options: opts("call", "calls", "called", "calling"), correct: "A" } as unknown as ExtractedQuestion] },
+  ];
+  return cases.map((c) => {
+    const { drafts, skipped } = draftsFrom({ passages: [], questions: c.questions }, new Set(c.existing));
+    return {
+      ...c, skipped,
+      drafts: drafts.map((d) => ({ number: d.number, include: d.include, correct: d.correct, fields: grammarFields(d), problems: problems(d, new Set(c.existing)), aiFields: aiFieldsOf(d) })),
+    };
+  });
+}
+
+function readcheckVectors() {
+  const index = { merger: "deck", invoice: "known", agenda: "deck", approve: "known", game: "known" } as const;
+  const texts: Array<{ name: string; text: string; ignored?: string[] }> = [
+    { name: "email with names, a heading and abbreviations", text: "Dear Ms. Tran,\nThe merger with Acme Corp. was postponed until the invoice is approved. Please review the agenda.\nThe NASA team won't attend." },
+    { name: "part 6 passage with blanks", text: "OSAKA (14 October) - Maruya Interactive revealed this morning that it will unveil its newest video game later this week. A preview of the game _____ a presentation from the design team will be streamed on the company's Web site on Thursday at 3:00 P.M. Japan Standard Time." },
+    { name: "heading lines and lists", text: "BOOKKEEPING FUNDAMENTALS\nOctober 1, 7 P.M.\nKingsley County Library System, Ashwood Branch\n- Set up a simple record-keeping system that works for you\n- Record your daily income and expenses accurately\n1. Prepare basic financial statements" },
+    { name: "known words and ignored", text: "She approved the invoices; the merger is postponed. Postponing is not a good idea.", ignored: ["postponed"] },
+    { name: "contractions and plurals", text: "They don't know the company's plans, and we can't reveal what we've seen, children's books aren't ready." },
+    { name: "empty and numbers only", text: "12345 ... ?!" },
+  ];
+  const around = [
+    { text: "First sentence. The merger was postponed. Last one.", at: 20, max: 300 },
+    { text: "Line one\nThe agenda is long and tedious without end", at: 14, max: 300 },
+    { text: "x ".repeat(200) + "merger " + "y ".repeat(200), at: 400, max: 60 },
+  ];
+  return {
+    index,
+    analyses: texts.map((t) => {
+      const a = analyze(t.text, new Map(Object.entries(index)) as Map<string, "known" | "deck">, new Set(t.ignored ?? []));
+      return { name: t.name, text: t.text, ignored: t.ignored ?? [], counted: a.counted, covered: a.covered, coverage: a.coverage === null ? null : Math.round(a.coverage * 1e9) / 1e9, pending: a.pending, unknown: a.unknown.map((u) => [u.key, u.count, u.first.start]), tokens: a.tokens.map((k) => [k.start, k.key, k.kind]) };
+    }),
+    around: around.map((x) => ({ ...x, expect: sentenceAround(x.text, x.at, x.max) })),
+  };
+}
+
 it("cross-platform vectors are up to date", () => {
   const dir = join(__dirname, "../../shared/vectors");
   const files: Array<[string, string]> = [
@@ -253,6 +311,9 @@ it("cross-platform vectors are up to date", () => {
     ["morphy.json", JSON.stringify(morphyVectors(), null, 1)],
     ["confusables.json", JSON.stringify(confusableVectors(), null, 1)],
     ["queue.json", JSON.stringify(queueVectors(), null, 1)],
+    ["import.json", JSON.stringify(importVectors(), null, 1)],
+    ["readcheck.json", JSON.stringify(readcheckVectors(), null, 1)],
+    ["testtag.json", JSON.stringify(["Test 1 TOEIC NEW 2026", "Đề ETS 2026 — Test #2", "   ", "Kiểm tra giữa kỳ: Ôn tập rất dài của năm học 2026 lần thứ ba", "ĐĐ ñandú", "a--b"].map((n) => [n, testTag(n)]), null, 1)],
     [join("../../android/core/src/main/kotlin/com/vh/lexi/core/Irregular.kt"), irregularKotlin()],
   ];
   for (const [name, text] of files) {

@@ -109,7 +109,7 @@ data class LessonProgress(val tag: String, val started: Int, val count: Int)
 @Composable
 internal fun TodayPanel(
     cards: List<Card>, notesById: Map<String, Note>, queue: Queue, daily: List<Daily>, dayStartHour: Int, newPerDay: Int, now: Long,
-    lessons: List<LessonProgress>, onStart: () -> Unit, onLesson: (String) -> Unit,
+    lessons: List<LessonProgress>, onStart: () -> Unit, onLesson: (String) -> Unit, onImport: () -> Unit = {},
 ) {
     val c = Lexi.colors
     // Cards, not answers: a card answered today and not waiting again is done; one in the queue is left.
@@ -239,6 +239,13 @@ internal fun TodayPanel(
                     drawRoundRect(levels[heatLevel(h.count, max)], Offset(h.week * step, h.dow * step), Size(cell, cell), CornerRadius(cell * 0.33f))
                 }
             }
+        }
+
+        // Practice tests: the wrong questions of a test become cards (ImportScreen).
+        Panel(Modifier.enter(3).testTag("today-practice")) {
+            PanelHead("Luyện đề", null)
+            Text("Chụp câu sai ở Voca Prep hoặc dán văn bản: AI đọc câu hỏi, bạn kiểm tra rồi mới lưu thành thẻ. Có thể chia sẻ ảnh thẳng vào Lexi.", fontSize = 13.sp, color = c.muted)
+            SoftPill("Nhập câu sai từ đề thi", onImport, Modifier.fillMaxWidth().testTag("open-import"))
         }
 
         // Words to watch
