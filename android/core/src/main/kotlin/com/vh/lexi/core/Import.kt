@@ -7,6 +7,9 @@ package com.vh.lexi.core
  */
 val LETTERS = listOf("A", "B", "C", "D")
 
+/** The grammar topics a row can carry (same list as GRAMMAR_TOPICS in shared/notetypes.ts). */
+val IMPORT_TOPICS = listOf("Dạng từ", "Giới từ / liên từ", "Thì và bị động", "Mệnh đề quan hệ", "Trợ động từ", "Đảo ngữ", "Khác")
+
 data class ExtractedQuestion(
     val number: Int?, val kind: String, val stem: String, val options: Map<String, String>, val correct: String?,
     val result: String, val topic: String, val rule: String, val translation: String, val flags: List<String>,
@@ -35,14 +38,14 @@ fun extractedFrom(raw: Map<*, *>): Extracted {
     return Extracted(passages, questions)
 }
 
-data class Draft(
+data class ImportDraft(
     val key: String, val number: Int?, val stem: String, val options: Map<String, String>, val correct: String?, val result: String,
     val topic: String, val rule: String, val translation: String, val flags: List<String>, val include: Boolean, val edited: List<String> = emptyList(),
 )
 
 data class Problems(val block: List<String>, val warn: List<String>)
 
-fun Draft.answer(): String = correct?.let { options[it] } ?: ""
+fun ImportDraft.answer(): String = correct?.let { options[it] } ?: ""
 
 /** The sentence with the blank (first run of two or more underscores) replaced by [answer]. Port of completeSentence. */
 fun completeSentence(sentence: String, answer: String): String {
@@ -51,7 +54,7 @@ fun completeSentence(sentence: String, answer: String): String {
     return if (a.isNotEmpty() && Regex("_{2,}").containsMatchIn(s)) Regex("_{2,}").replaceFirst(s, Regex.escapeReplacement(a)) else s
 }
 
-fun Draft.problems(existing: Set<String>): Problems {
+fun ImportDraft.problems(existing: Set<String>): Problems {
     val block = mutableListOf<String>()
     val warn = mutableListOf<String>()
     val answer = answer()
@@ -77,29 +80,29 @@ val PROBLEM_TEXT = mapOf(
 )
 
 /** The fields of the grammar note a row becomes. */
-fun Draft.grammarFields(): Map<String, String> {
+fun ImportDraft.grammarFields(): Map<String, String> {
     val a = answer().trim()
     return mapOf("sentence" to completeSentence(stem, a), "answer" to a, "topic" to topic, "translation" to translation.trim(), "rule" to rule.trim())
 }
 
 /** Which of topic, rule and translation the AI wrote and the learner did not touch: they get the "AI" label. */
-fun Draft.aiFields(): List<String> =
+fun ImportDraft.aiFields(): List<String> =
     listOf("topic" to topic, "rule" to rule, "translation" to translation).filter { (k, v) -> v.isNotBlank() && k !in edited }.map { it.first }
 
 /** Selected by default: a question the learner missed (or has no result for) that passes every check. */
-fun Draft.recommended(existing: Set<String>): Boolean {
+fun ImportDraft.recommended(existing: Set<String>): Boolean {
     val p = problems(existing)
     return p.block.isEmpty() && "duplicate" !in p.warn && "unsure" !in p.warn && result != "right"
 }
 
 /** Rows ready for review, and how many questions (comprehension, sentence insertion) do not become grammar rows. */
-fun draftsFrom(r: Extracted, existing: Set<String>): Pair<List<Draft>, Int> {
+fun draftsFrom(r: Extracted, existing: Set<String>): Pair<List<ImportDraft>, Int> {
     var skipped = 0
-    val out = mutableListOf<Draft>()
+    val out = mutableListOf<ImportDraft>()
     for ((i, q) in r.questions.withIndex()) {
         if (q.kind != "fill") { skipped++; continue }
         val correct = q.correct?.takeIf { it in LETTERS && !q.options[it].isNullOrBlank() }
-        val d = Draft(
+        val d = ImportDraft(
             key = "q$i", number = q.number, stem = q.stem.trim(), options = LETTERS.associateWith { q.options[it]?.trim() ?: "" }, correct = correct,
             result = q.result, topic = q.topic, rule = q.rule, translation = q.translation, flags = q.flags, include = false,
         )

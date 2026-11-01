@@ -16,6 +16,7 @@ import { buildQueue, pickNext } from "../src/lib/queue.ts";
 import { answer, makeScheduler, newCard } from "../src/lib/scheduler.ts";
 import { aiFieldsOf, draftsFrom, grammarFields, problems, type ExtractedQuestion } from "../src/lib/import.ts";
 import { analyze, sentenceAround } from "../src/lib/readcheck.ts";
+import { testTag } from "../src/lib/practice.ts";
 
 const T0 = Date.UTC(2026, 0, 15, 8, 30, 0);
 const MIN = 60_000;
@@ -312,6 +313,7 @@ it("cross-platform vectors are up to date", () => {
     ["queue.json", JSON.stringify(queueVectors(), null, 1)],
     ["import.json", JSON.stringify(importVectors(), null, 1)],
     ["readcheck.json", JSON.stringify(readcheckVectors(), null, 1)],
+    ["testtag.json", JSON.stringify(["Test 1 TOEIC NEW 2026", "Đề ETS 2026 — Test #2", "   ", "Kiểm tra giữa kỳ: Ôn tập rất dài của năm học 2026 lần thứ ba", "ĐĐ ñandú", "a--b"].map((n) => [n, testTag(n)]), null, 1)],
     [join("../../android/core/src/main/kotlin/com/vh/lexi/core/Irregular.kt"), irregularKotlin()],
   ];
   for (const [name, text] of files) {

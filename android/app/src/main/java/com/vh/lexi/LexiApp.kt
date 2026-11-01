@@ -1,6 +1,7 @@
 package com.vh.lexi
 
 import android.app.Application
+import android.net.Uri
 import com.vh.lexi.cloud.Cloud
 import com.vh.lexi.core.AiBatch
 import com.vh.lexi.core.Dictionary
@@ -11,6 +12,7 @@ import com.vh.lexi.util.Speech
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class LexiApp : Application() {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -31,6 +33,9 @@ class LexiApp : Application() {
             save = { n, fields, ai -> data.updateNote(n, fields = fields, aiFields = ai.toList()) },
         )
     }
+
+    /** Images shared into Lexi from another app (the share sheet): the import screen takes them and empties this. */
+    val pendingShare = MutableStateFlow<List<Uri>>(emptyList())
 
     /** False when the APK was built without the dictionary pack (node tools/dict/build.ts --copy-android). */
     var hasDictionary: Boolean = false

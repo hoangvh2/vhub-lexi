@@ -84,4 +84,17 @@ class ImportVectorsTest {
         val (drafts, _) = draftsFrom(e, emptySet())
         assertEquals(listOf("no-answer"), drafts[0].problems(emptySet()).block)
     }
+
+    @Test
+    fun `test tags match the web app and the latest test is picked by date`() {
+        val pairs = JSONArray(vectors("testtag.json"))
+        for (i in 0 until pairs.length()) {
+            val p = pairs.getJSONArray(i)
+            assertEquals(p.getString(1), testTag(p.getString(0)), "tag of ${p.getString(0)}")
+        }
+        fun test(id: String, name: String, date: String, at: Long) = Note(id, "test", "d", mapOf("name" to FieldValue.Text(name), "date" to FieldValue.Text(date)), createdAt = at, updatedAt = at)
+        val notes = listOf(test("a", "Test 2", "2026-11-10", 5), test("b", "Test 1", "2026-10-31", 9), Note("c", "vocab", "d", mapOf("word" to FieldValue.Text("x")), createdAt = 99, updatedAt = 99))
+        assertEquals("Test 2", latestTestName(notes))
+        assertEquals(null, latestTestName(notes.drop(2)))
+    }
 }

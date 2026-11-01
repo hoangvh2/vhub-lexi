@@ -109,7 +109,18 @@ Một vòng khép kín, không thêm collection Firestore: mọi thứ là `Note
 - **Từ lạ** (`web/src/lib/readcheck.ts`, hàm thuần): dán đoạn đọc, từ nào không thuộc (chung / có thẻ đã ôn / "biết rồi") thì đánh dấu; độ phủ = từ phủ / từ đếm (bỏ tên riêng, viết tắt, số). Bấm một từ → từ điển offline + câu trong đề làm ví dụ → `vocab` gắn nhãn `de-<tên bài>`.
 - Mọi thẻ tạo từ một bài mang nhãn `de-<slug tên bài>` (hạn 10 nhãn/ghi chú theo rules), nên "học các từ của bài này" là Học tuỳ chọn theo nhãn có sẵn.
 - **Today** (`Readiness.tsx`) đọc các ghi chú `test` và đếm theo nhãn để hiện RC đúng/mục tiêu, từng Part, lý do sai nhiều nhất và nút tiếp theo. Mục tiêu (`practice.ts`: Part 5 25, Part 6 11, Part 7 34 = 70/100 RC) là giả định cho khoảng 700 điểm, không phải bảng quy đổi của ETS.
-- Rules: `grammarFields`, `testFields`; Kotlin có bản port của hai kiểu và vector `grammar`/`noCards`, nhưng màn nhập chỉ có trên web.
+- Rules: `grammarFields`, `testFields`; Kotlin có bản port của hai kiểu và vector `grammar`/`noCards`.
+
+### Nhập nhanh (ảnh chụp hoặc văn bản → AI đọc → người học duyệt → thẻ)
+
+Nhập tay từng câu quá chậm khi một bài sai ~47 câu, nên có một callable thứ hai, `extract-questions` (entry point `extractQuestions`, Terraform riêng, cùng gói code và cùng cổng kiểm tra với `enrich`):
+
+- **Vào**: tối đa 6 ảnh (JPEG/PNG/WebP, ≤ 1,5 MB base64 mỗi ảnh, ≤ 6 MB tổng; client thu nhỏ về ~2000 px) và/hoặc ≤ 12.000 ký tự văn bản. Ảnh chỉ tồn tại trong một lần gọi, không lưu. Văn bản dán là dữ liệu, không phải chỉ thị.
+- **Ra** (`functions/src/extract.ts`): `passages` (đoạn đọc, có cờ `truncated`) và `questions` (`kind` fill / insert / reading, `stem` có chỗ trống `_____`, 4 đáp án, `correct`, `result` wrong/right/unknown, `topic`, `rule`, `translation`, `flags`). Phía server làm các kiểm tra cơ học: chuẩn hoá chỗ trống, đáp án đúng phải là một lựa chọn có chữ, bỏ câu trùng giữa các ảnh chồng nhau, chủ đề ngoài danh sách thành rỗng, **không giữ quy tắc/bản dịch khi không có đáp án đúng** (chúng sẽ giải thích một đoán mò).
+- **Hạn mức**: dùng chung 300 đơn vị/ngày; một lần đọc ảnh tốn 3, văn bản 2 (`LIMITS.extractImageCost/extractTextCost`). Log chỉ có số lượng, token và thời gian, không có nội dung.
+- **Duyệt** (`web/src/lib/import.ts`, port `android/core/.../Import.kt`, vector `shared/vectors/import.json`): chỉ câu `fill` thành hàng ngữ pháp; `insert`/`reading` chỉ được đếm. Hàng chặn lưu khi thiếu đáp án / chỗ trống / đáp án không khớp chỗ trống; cảnh báo khi trùng thẻ có sẵn, AI không chắc, thiếu đáp án (ảnh bị cắt), bạn đã làm đúng. Mặc định chỉ chọn câu sai hoặc chưa rõ kết quả mà qua mọi kiểm tra. Đổi đáp án đúng bằng tay thì quy tắc/bản dịch do AI viết cho đáp án cũ bị xoá. Trường AI viết mà người học không sửa được gắn nhãn AI (`aiFields`).
+- **Đoạn đọc** đi vào đúng chức năng Từ lạ: web đưa văn bản sang tab Từ lạ (độ phủ, bấm từng từ); Android (`ReadCheck.kt`, port `readcheck.ts`, vector `readcheck.json`) liệt kê từ lạ kèm gợi ý Wiktionary để chọn nhiều từ rồi thêm. Thẻ mang nhãn `de-<bài gần nhất>` (Android lấy bài có ngày mới nhất, kết quả bài nhập trên web).
+- **Vào ứng dụng**: web chọn/kéo thả/dán ảnh (Ctrl+V); Android chọn ảnh hoặc "Chia sẻ" ảnh thẳng vào Lexi.
 
 ## Thêm nội dung TOEIC / IELTS
 

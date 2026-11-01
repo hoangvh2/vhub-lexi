@@ -6,6 +6,7 @@ import android.os.ParcelFileDescriptor
 import android.view.accessibility.AccessibilityWindowInfo
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -169,6 +170,13 @@ class SmokeTest {
         waitFor("today") { rule.onAllNodesWithTagCount("start-study") > 0 }
         assertTrue(rule.textOf("today-ring"), rule.textOf("today-ring").contains("0/1"))
         shot("04a-today")
+        // The practice-test entry opens the import screen. Signed out, reading is off and the screen says what it needs.
+        rule.onNodeWithTag("open-import").performScrollTo().performClick()
+        waitFor("import-screen") { rule.onAllNodesWithTagCount("import-screen") > 0 }
+        rule.onNodeWithTag("import-run").assertIsNotEnabled()
+        shot("04a2-import")
+        rule.onNodeWithTag("nav-study").performClick()
+        waitFor("today-again") { rule.onAllNodesWithTagCount("start-study") > 0 }
         rule.onNodeWithTag("start-study").performClick()
         waitFor("study-card") { rule.onAllNodesWithTextCount("serendipity") > 0 }
         shot("04-study-front")

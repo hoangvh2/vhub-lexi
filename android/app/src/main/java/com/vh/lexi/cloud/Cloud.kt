@@ -22,11 +22,14 @@ import com.vh.lexi.BuildConfig
 import com.vh.lexi.data.LexiData
 import com.vh.lexi.core.AiError
 import com.vh.lexi.core.Enriched
+import com.vh.lexi.core.Extracted
+import com.vh.lexi.core.extractedFrom
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.util.concurrent.TimeUnit
 
 /** Who is signed in. [Off]: this build has no Firebase settings (phone-only). */
 sealed interface Account {
@@ -141,15 +144,33 @@ class Cloud(private val context: Context, private val data: LexiData, private va
                 mnemonic = res["mnemonic"] as? String,
             )
         } catch (e: com.google.firebase.functions.FirebaseFunctionsException) {
-            // Sorted by what a batch does next (AiBatch): stop, skip the word, or retry once.
-            throw when (e.code) {
-                com.google.firebase.functions.FirebaseFunctionsException.Code.RESOURCE_EXHAUSTED -> AiError(AiError.Kind.QUOTA, "Hết lượt AI hôm nay. Bạn vẫn có thể nhập tay.")
-                com.google.firebase.functions.FirebaseFunctionsException.Code.UNAUTHENTICATED,
-                com.google.firebase.functions.FirebaseFunctionsException.Code.PERMISSION_DENIED -> AiError(AiError.Kind.AUTH, "Cần đăng nhập bằng tài khoản được cấp quyền để dùng AI.")
-                com.google.firebase.functions.FirebaseFunctionsException.Code.INVALID_ARGUMENT -> AiError(AiError.Kind.INVALID, e.message ?: "Từ không hợp lệ")
-                else -> AiError(AiError.Kind.TEMPORARY, e.message ?: "Không gọi được AI.")
-            }
+            throw aiError(e, "Từ không hợp lệ")
         }
+    }
+
+    /**
+     * Questions and passages read from screenshots (base64 JPEG) and/or pasted text by the `extract-questions` function.
+     * Nothing is saved by the function; the caller shows the rows for review. Throws [AiError] with a readable message.
+     */
+    suspend fun extractQuestions(images: List<String>, text: String): Extracted {
+        val fn = functions ?: throw AiError(AiError.Kind.AUTH, "Chưa kết nối tài khoản")
+        try {
+            val payload = hashMapOf<String, Any?>("images" to images.map { hashMapOf("mime" to "image/jpeg", "data" to it) }, "text" to text)
+            val res = fn.getHttpsCallable("extract-questions").withTimeout(120, TimeUnit.SECONDS).call(payload).await().getData() as? Map<*, *>
+                ?: throw AiError(AiError.Kind.TEMPORARY, "Phản hồi không hợp lệ")
+            return extractedFrom(res)
+        } catch (e: com.google.firebase.functions.FirebaseFunctionsException) {
+            throw aiError(e, "Nội dung không hợp lệ")
+        }
+    }
+
+    /** Sorted by what a caller does next: stop, skip the item, or retry. */
+    private fun aiError(e: com.google.firebase.functions.FirebaseFunctionsException, invalid: String): AiError = when (e.code) {
+        com.google.firebase.functions.FirebaseFunctionsException.Code.RESOURCE_EXHAUSTED -> AiError(AiError.Kind.QUOTA, "Hết lượt AI hôm nay. Bạn vẫn có thể nhập tay.")
+        com.google.firebase.functions.FirebaseFunctionsException.Code.UNAUTHENTICATED,
+        com.google.firebase.functions.FirebaseFunctionsException.Code.PERMISSION_DENIED -> AiError(AiError.Kind.AUTH, "Cần đăng nhập bằng tài khoản được cấp quyền để dùng AI.")
+        com.google.firebase.functions.FirebaseFunctionsException.Code.INVALID_ARGUMENT -> AiError(AiError.Kind.INVALID, e.message ?: invalid)
+        else -> AiError(AiError.Kind.TEMPORARY, e.message ?: "Không gọi được AI.")
     }
 
     companion object {

@@ -14,6 +14,9 @@ Cập nhật theo kết quả CI và các lần chạy thật, không theo dự 
 | Rules Firestore | 15 test trên emulator, gồm tài liệu do chính code app sinh ra (`fixtures.json`) |
 | `CloudRepo` ↔ Firestore | 4 test trên emulator Auth + Firestore thật: hai thiết bị cùng tài khoản thấy ghi của nhau, bộ đếm theo ngày cộng dồn, undo lan truyền, tài khoản ngoài allowlist bị từ chối |
 | Function `enrich` | 13 test đơn vị (validate đầu vào/đầu ra, retry, hạn mức, allowlist, CORS); build bundle thành công |
+| Function `extract-questions` | 14 test đơn vị: validate ảnh/văn bản, chuẩn hoá chỗ trống, các cờ kiểm tra chéo, câu trùng giữa ảnh chồng nhau, gọi Gemini có ảnh, hạn mức theo chi phí; đầu ra mẫu viết tay theo ảnh Q131-134 của người học. **Chưa gọi Gemini thật với ảnh**: độ chính xác đọc ảnh chưa đo |
+| Nhập nhanh từ đề (web) | 6 test vitest cho hàng duyệt + 3 e2e Playwright (ảnh → duyệt → sửa đáp án → lưu chỉ hàng đã chọn → trùng thẻ → đoạn sang tab Từ lạ; lỗi hết lượt; chưa đăng nhập) với hàm AI giả |
+| Nhập nhanh (Kotlin) | Vector `import.json`, `readcheck.json`, `testtag.json` do TypeScript sinh, test Kotlin phát lại: khớp. Màn Android (`ImportScreen`) chỉ kiểm qua CI/emulator, chưa chạy với Gemini thật |
 | Terraform | `fmt` + `validate` đạt (provider google 8.9) |
 | Lõi Kotlin (Android) | Test JVM phát lại vector do TypeScript sinh: FSRS 10 kịch bản, mẫu thẻ, cloze, kiểm tra đáp án, từ dễ nhầm, morphology, hàng đợi: khớp |
 | App Android trên emulator | CI chạy APK debug trên emulator Android 15 (chế độ chỉ-lưu-trên-máy): thêm từ qua từ điển offline → ôn → thư viện → thống kê → cài đặt; chụp 9 màn hình, đã xem bằng mắt (release `android-ci-screens`) |
@@ -38,6 +41,6 @@ Một lỗi thật do test tích hợp bắt được và đã sửa: `increment
 4. Bài kiểm tra e2e chưa phủ đăng nhập (Auth emulator) và sửa ghi chú trên giao diện.
 5. Mẹo nhớ/ví dụ do AI sinh chỉ được lọc cơ học (phải chứa từ); chưa có bước kiểm chất lượng.
 6. TOEIC: có `vocab`, `grammar` (thẻ điền câu Part 5) và `test` (kết quả bài làm thử, không tạo thẻ); chưa có câu hỏi trắc nghiệm đầy đủ (`toeic-mcq`) và chưa có luyện Listening trong app (xem mục Luyện đề trong ARCHITECTURE.md).
-7. Luyện đề chỉ nhập được trên web (màn `/practice`); Android hiển thị và ôn thẻ ngữ pháp, nhưng chưa có màn nhập. Danh sách từ quen ("common") trong `readcheck.ts` do tác giả viết tay, không phải danh sách tần suất từ kho ngữ liệu.
+7. Android nhập câu sai qua ảnh/văn bản (màn Nhập từ đề thi), nhưng nhập kết quả bài và theo dõi mục tiêu (Part 5/6/7) vẫn chỉ có trên web. Quy tắc/bản dịch do AI viết có thể sai: luôn gắn nhãn AI và người học duyệt trước khi lưu. Danh sách từ quen ("common") trong `readcheck.ts` do tác giả viết tay, không phải danh sách tần suất từ kho ngữ liệu.
 7. Android: thông báo (snackbar) hiện ở đáy, che các nút chấm điểm khoảng 4 giây sau khi lưu từ; cần chuyển lên đầu màn hình.
 8. Android: trường hợp bàn phím che nút Lưu ở màn Thêm từ (người dùng phải cuộn); test phải gọi action thay vì chạm.
