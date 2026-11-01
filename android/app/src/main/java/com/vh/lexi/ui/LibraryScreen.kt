@@ -58,6 +58,7 @@ import com.vh.lexi.core.batchSummary
 import com.vh.lexi.core.hasAi
 import com.vh.lexi.core.Fsrs
 import com.vh.lexi.core.isLeech
+import com.vh.lexi.core.isMaterial
 import com.vh.lexi.core.noteType
 import com.vh.lexi.ui.theme.Lexi
 import kotlinx.coroutines.CompletableDeferred
@@ -120,7 +121,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
         val needle = q.trim().lowercase()
         val list = notes.filter { n ->
             val def = noteType(n.type) ?: return@filter false
-            (deck == null || n.deckId == deck) && (needle.isEmpty() || def.searchText(n).contains(needle)) && matches(filter, n, byNote[n.id].orEmpty())
+            isMaterial(n) && (deck == null || n.deckId == deck) && (needle.isEmpty() || def.searchText(n).contains(needle)) && matches(filter, n, byNote[n.id].orEmpty())
         }
         when (sort) {
             Sort.RECENT -> list.sortedByDescending { it.createdAt }
@@ -132,7 +133,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
 
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         ScreenHeader("Thư viện") {
-            Pill("${notes.size} từ")
+            Pill("${notes.count { isMaterial(it) }} từ")
             if (aiAvailable) TextButton(onClick = { selecting = !selecting; selected = emptySet() }, Modifier.testTag("lib-select")) { Text(if (selecting) "Xong" else "Chọn") }
             OutlinedButton(onClick = { deckDialog = null to "" }) { Text("+ Bộ thẻ", fontSize = 13.sp) }
         }
@@ -175,9 +176,9 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
         if (!loaded) Text("Đang tải…", color = c.muted)
         else if (rows.isEmpty()) {
             Column(Modifier.fillMaxWidth().padding(vertical = 32.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(if (notes.isEmpty()) "Thư viện trống" else "Không có kết quả", style = MaterialTheme.typography.titleLarge)
-                Text(if (notes.isEmpty()) "Thêm từ đầu tiên để bắt đầu." else "Thử đổi từ khoá hoặc bộ lọc.", color = c.muted)
-                if (notes.isEmpty()) Button(onClick = onAdd) { Text("Thêm từ") }
+                Text(if (notes.none { isMaterial(it) }) "Thư viện trống" else "Không có kết quả", style = MaterialTheme.typography.titleLarge)
+                Text(if (notes.none { isMaterial(it) }) "Thêm từ đầu tiên để bắt đầu." else "Thử đổi từ khoá hoặc bộ lọc.", color = c.muted)
+                if (notes.none { isMaterial(it) }) Button(onClick = onAdd) { Text("Thêm từ") }
             }
         } else {
             LazyColumn(Modifier.fillMaxSize()) {

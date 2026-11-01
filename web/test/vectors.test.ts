@@ -10,7 +10,7 @@ import { expect, it } from "vitest";
 import { CardState, DEFAULT_PREFS, normalizePrefs, type Card, type Note, type Rating } from "@shared/model.ts";
 import { IRREGULAR } from "@shared/irregular.ts";
 import { baseForms } from "@shared/morphy.ts";
-import { checkTyped, clozeSentence, findWord, normalizeAnswer, template, wantedTemplates } from "@shared/notetypes.ts";
+import { checkTyped, clozeSentence, findExact, findWord, normalizeAnswer, template, wantedTemplates } from "@shared/notetypes.ts";
 import { answerHint, confusables, letterCount, matchConfusable, meaningPhrases, suggestedRatingWith } from "@shared/confusables.ts";
 import { buildQueue, pickNext } from "../src/lib/queue.ts";
 import { answer, makeScheduler, newCard } from "../src/lib/scheduler.ts";
@@ -97,7 +97,28 @@ function templateVectors() {
     ["Resilient", ["resilient"]], ["  resilient ", ["resilient"]], ["resiliant", ["resilient"]], ["cat", ["cut"]], ["", ["x"]], ["look  after", ["look after"]],
     ["Café", ["cafe"]], ["it's", ["its"]], ["resilient!", ["resilient"]], ["procrastinatee", ["procrastinate"]], ["abc", ["abd"]],
   ].map(([t, e]) => ({ typed: t, expected: e, verdict: checkTyped(t as string, e as string[]), normalized: normalizeAnswer(t as string) }));
-  return { layouts, cases, clozes, typed };
+  // Grammar notes (TOEIC Part 5): the 'fill' template, and which note types make no card at all.
+  const g = (id: string, fields: Record<string, string>): Note => ({ id, type: "grammar", deckId: "d1", createdAt: T0, updatedAt: T0, fields });
+  const grammarNotes: Note[] = [
+    g("g1", { sentence: "Should you need any help, please call us.", answer: "Should", topic: "Đảo ngữ", translation: "Nếu cần giúp, hãy gọi chúng tôi.", rule: "Should + S + V = If + S + should + V" }),
+    g("g2", { sentence: "The completion of the report was delayed.", answer: "completion" }),
+    g("g3", { sentence: "The completion of the report was delayed.", answer: "complete" }),
+    g("g4", { sentence: "She has worked here since 2019.", answer: "has worked", topic: "Thì và bị động", rule: "Since + mốc thời gian đi với thì hiện tại hoàn thành" }),
+    g("g5", { sentence: "Call us.", answer: "" }),
+  ];
+  const grammar = grammarNotes.map((n) => {
+    const t = template("grammar", "fill")!;
+    return {
+      note: n,
+      applies: t.applies(n),
+      ...(t.applies(n) ? { mode: t.mode, front: t.front(n, layouts[0]), back: t.back(n, layouts[0]), expected: t.expected!(n), speakBack: t.speak?.back?.(n) ?? null } : {}),
+      wanted: wantedTemplates(n, undefined),
+      exact: findExact(String(n.fields.sentence), String(n.fields.answer)),
+    };
+  });
+  const testNote: Note = { id: "t1", type: "test", deckId: "d1", createdAt: T0, updatedAt: T0, fields: { name: "Test 1", p5: "20/30" } };
+  const noCards = { type: testNote.type, wanted: wantedTemplates(testNote, undefined) };
+  return { layouts, cases, clozes, typed, grammar, noCards };
 }
 
 function confusableVectors() {

@@ -36,6 +36,7 @@ import com.vh.lexi.core.cardCounts
 import com.vh.lexi.core.dayId
 import com.vh.lexi.core.forecast
 import com.vh.lexi.core.heatLevel
+import com.vh.lexi.core.isMaterial
 import com.vh.lexi.core.heatmap
 import com.vh.lexi.core.retention
 import com.vh.lexi.core.streak
@@ -60,7 +61,7 @@ fun StatsScreen(app: LexiApp) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeader("Thống kê")
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatTile("${notes.size}", "từ trong thư viện")
+            StatTile("${notes.count { isMaterial(it) }}", "từ trong thư viện")
             StatTile("${(today?.newCards ?: 0) + (today?.reviews ?: 0)}", "thẻ đã học hôm nay")
             StatTile("$st", "ngày liên tiếp")
             StatTile(ret?.let { "${Math.round(it * 100)}%" } ?: "–", "nhớ đúng (30 ngày)")

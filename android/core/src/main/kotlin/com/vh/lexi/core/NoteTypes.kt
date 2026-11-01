@@ -276,7 +276,90 @@ object Vocab : NoteTypeDef {
         (listOf(note.f("word").str(), note.f("vi").str(), note.f("en").str()) + note.f("examples").items() + note.f("examplesVi").items() + note.tags).joinToString(" ").lowercase()
 }
 
-val NOTE_TYPES: Map<String, NoteTypeDef> = mapOf(Vocab.id to Vocab)
+// ------------------------------------------------------------------ grammar (TOEIC Part 5/6 patterns)
+
+/** Where [answer] occurs in [sentence] as whole words, ignoring case: start until end (exclusive), or null. No inflection matching. */
+fun findExact(sentence: String, answer: String): Pair<Int, Int>? {
+    val a = answer.trim()
+    if (a.isEmpty()) return null
+    val body = escapeRe(a).replace(Regex("\\s+"), "\\\\s+")
+    val m = Regex("(?<![A-Za-z0-9'])$body(?![A-Za-z0-9'])", RegexOption.IGNORE_CASE).find(sentence) ?: return null
+    return m.range.first to m.range.last + 1
+}
+
+/** The sentence with the answer blanked, and where the answer was. */
+private fun grammarCloze(n: Note): Pair<String, Pair<Int, Int>>? {
+    val s = n.f("sentence").str()
+    val at = findExact(s, n.f("answer").str()) ?: return null
+    return (s.substring(0, at.first) + "_____" + s.substring(at.second)) to at
+}
+
+private object GrammarFill : TemplateDef {
+    override val id = "fill"
+    override val label = "Điền từ vào câu"
+    override val description = "Câu TOEIC Part 5 che mất đáp án; gõ lại từ đúng, lý do hiện ở mặt sau."
+    override val mode = AnswerMode.TYPE
+    override fun applies(note: Note) = grammarCloze(note) != null
+    override fun front(note: Note, layout: CardLayout) = buildList<Block> {
+        grammarCloze(note)?.let { add(Block.Quote(it.first)) }
+        if (note.f("topic").str().isNotEmpty()) add(Block.Badge(note.f("topic").str()))
+    }
+    // The blanked sentence stays above the back, so the back shows the answer, the full sentence and why.
+    override fun back(note: Note, layout: CardLayout) = buildList<Block> {
+        add(Block.Title(note.f("answer").str()))
+        add(Block.Example(note.f("sentence").str(), grammarCloze(note)?.second, note.f("translation").str().ifEmpty { null }))
+        if (note.f("rule").str().isNotEmpty()) add(Block.Text("Quy tắc: ${note.f("rule").str()}"))
+    }
+    override fun expected(note: Note) = listOf(note.f("answer").str())
+    override fun speakBack(note: Note) = note.f("sentence").str().ifEmpty { null }
+}
+
+object Grammar : NoteTypeDef {
+    override val id = "grammar"
+    override val label = "Ngữ pháp"
+    override val fields = listOf(
+        FieldDef("sentence", "Câu đầy đủ (đã có đáp án đúng)", "text", required = true, maxLength = 300),
+        FieldDef("answer", "Đáp án (từ/cụm bị che)", "text", required = true, maxLength = 80),
+        FieldDef("topic", "Chủ đề", "text", maxLength = 40),
+        FieldDef("translation", "Nghĩa của câu", "text", maxLength = 300),
+        FieldDef("rule", "Quy tắc / vì sao đáp án này đúng", "longtext", maxLength = 300),
+    )
+    override val templates: List<TemplateDef> = listOf(GrammarFill)
+    override fun title(note: Note) = note.f("sentence").str()
+    override fun subtitle(note: Note) = listOf(note.f("topic").str(), note.f("answer").str()).filter { it.isNotEmpty() }.joinToString(" · ")
+    override fun searchText(note: Note) =
+        (listOf(note.f("sentence").str(), note.f("answer").str(), note.f("topic").str(), note.f("translation").str(), note.f("rule").str()) + note.tags).joinToString(" ").lowercase()
+}
+
+// ------------------------------------------------------------------ test (one practice test's result; makes no cards)
+
+/** A practice test the learner logged on the web app: right/total per part and why answers were wrong. It makes no cards. */
+object TestResultType : NoteTypeDef {
+    override val id = "test"
+    override val label = "Bài làm thử"
+    override val fields = listOf(
+        FieldDef("name", "Tên bài", "text", required = true, maxLength = 80),
+        FieldDef("date", "Ngày làm (YYYY-MM-DD)", "text", maxLength = 10),
+        FieldDef("p5", "Part 5 đúng/tổng", "text", maxLength = 9),
+        FieldDef("p6", "Part 6 đúng/tổng", "text", maxLength = 9),
+        FieldDef("p7", "Part 7 đúng/tổng", "text", maxLength = 9),
+        FieldDef("lc", "Listening đúng/tổng", "text", maxLength = 9),
+        FieldDef("minutes", "Số phút làm RC", "text", maxLength = 3),
+        FieldDef("v", "Sai vì từ vựng", "text", maxLength = 3),
+        FieldDef("g", "Sai vì ngữ pháp", "text", maxLength = 3),
+        FieldDef("p", "Sai vì không nhận ra diễn đạt lại", "text", maxLength = 3),
+        FieldDef("t", "Sai vì hết giờ / vội", "text", maxLength = 3),
+    )
+    override val templates: List<TemplateDef> = emptyList()
+    override fun title(note: Note) = note.f("name").str()
+    override fun subtitle(note: Note) = note.f("date").str()
+    override fun searchText(note: Note) = listOf(note.f("name").str(), note.f("date").str()).joinToString(" ").lowercase()
+}
+
+/** Note types that hold learning material (shown in the library, counted as words); a test result is not. */
+fun isMaterial(note: Note) = note.type != "test"
+
+val NOTE_TYPES: Map<String, NoteTypeDef> = mapOf(Vocab.id to Vocab, Grammar.id to Grammar, TestResultType.id to TestResultType)
 
 fun noteType(id: String): NoteTypeDef? = NOTE_TYPES[id]
 fun template(typeId: String, templateId: String): TemplateDef? = NOTE_TYPES[typeId]?.templates?.firstOrNull { it.id == templateId }

@@ -73,6 +73,7 @@ import com.vh.lexi.core.heatLevel
 import com.vh.lexi.core.heatmap
 import com.vh.lexi.core.lessonName
 import com.vh.lexi.core.nextDayStart
+import com.vh.lexi.core.noteType
 import com.vh.lexi.core.str
 import com.vh.lexi.core.streak
 import com.vh.lexi.ui.theme.Lexi
@@ -249,8 +250,8 @@ internal fun TodayPanel(
                         Modifier.fillMaxWidth().background(c.surface2, RoundedCornerShape(16.dp)).padding(horizontal = 12.dp, vertical = 9.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Text(w.first.fields["word"].str(), fontWeight = FontWeight.ExtraBold, color = c.ink, maxLines = 1)
-                        Text(w.first.fields["vi"].str(), Modifier.weight(1f), fontSize = 13.sp, color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(noteType(w.first.type)?.title(w.first) ?: "", fontWeight = FontWeight.ExtraBold, color = c.ink, maxLines = 1)
+                        Text(noteType(w.first.type)?.subtitle(w.first) ?: "", Modifier.weight(1f), fontSize = 13.sp, color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Pill("quên ${w.second}", PillKind.BAD)
                     }
                 }

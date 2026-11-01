@@ -105,6 +105,23 @@ describe("shape checks reject bad data", () => {
     await assertFails(put("notes", n.id, noDeck));
     await assertFails(put("notes", n.id, { ...n, extra: 1 }));
   });
+  it("grammar and test notes: accepted when well formed, rejected with unknown/oversized/missing fields", async () => {
+    const base = { id: "g1", type: "grammar", deckId: "deck1", createdAt: 1, updatedAt: 1, tags: ["ngu-phap"] };
+    const g = { ...base, fields: { sentence: "Should you need help, call us.", answer: "Should", topic: "Đảo ngữ", translation: "Nếu cần, hãy gọi.", rule: "Should + S + V = If you should need" } };
+    await assertSucceeds(put("notes", "g1", g));
+    await assertSucceeds(put("cards", "g1.fill", { ...fx.cards.fresh, id: "g1.fill", noteId: "g1", template: "fill" }));
+    await assertFails(put("notes", "g1", { ...g, fields: { ...g.fields, answer: "" } }));
+    await assertFails(put("notes", "g1", { ...g, fields: { sentence: g.fields.sentence } }));
+    await assertFails(put("notes", "g1", { ...g, fields: { ...g.fields, sentence: "x".repeat(301) } }));
+    await assertFails(put("notes", "g1", { ...g, fields: { ...g.fields, word: "x" } }));
+    await assertFails(put("notes", "g1", { ...g, fields: { ...g.fields, rule: "x".repeat(301) } }));
+    const t = { id: "t1", type: "test", deckId: "deck1", createdAt: 1, updatedAt: 1, fields: { name: "Test 1 TOEIC NEW 2026", date: "2026-10-31", p5: "20/30", p6: "8/16", p7: "25/54", minutes: "57", v: "10", g: "8", p: "6", t: "0" } };
+    await assertSucceeds(put("notes", "t1", t));
+    await assertFails(put("notes", "t1", { ...t, fields: { ...t.fields, name: "" } }));
+    await assertFails(put("notes", "t1", { ...t, fields: { ...t.fields, score: "99" } }));
+    await assertFails(put("notes", "t1", { ...t, fields: { ...t.fields, p5: "1234567890" } }));
+    await assertFails(put("notes", "t1", { ...t, fields: { ...t.fields, v: 5 } }));
+  });
   it("notes: type and createdAt cannot change after creation", async () => {
     await assertSucceeds(put("notes", fx.note.id, fx.note));
     await assertFails(put("notes", fx.note.id, { ...fx.note, createdAt: fx.note.createdAt + 1 }));

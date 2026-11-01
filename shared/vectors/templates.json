@@ -2839,5 +2839,203 @@
    "verdict": "wrong",
    "normalized": "abc"
   }
- ]
+ ],
+ "grammar": [
+  {
+   "note": {
+    "id": "g1",
+    "type": "grammar",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "sentence": "Should you need any help, please call us.",
+     "answer": "Should",
+     "topic": "Đảo ngữ",
+     "translation": "Nếu cần giúp, hãy gọi chúng tôi.",
+     "rule": "Should + S + V = If + S + should + V"
+    }
+   },
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ you need any help, please call us."
+    },
+    {
+     "k": "badge",
+     "text": "Đảo ngữ"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "Should"
+    },
+    {
+     "k": "example",
+     "text": "Should you need any help, please call us.",
+     "at": [
+      0,
+      6
+     ],
+     "vi": "Nếu cần giúp, hãy gọi chúng tôi."
+    },
+    {
+     "k": "text",
+     "text": "Quy tắc: Should + S + V = If + S + should + V"
+    }
+   ],
+   "expected": [
+    "Should"
+   ],
+   "speakBack": "Should you need any help, please call us.",
+   "wanted": [
+    "fill"
+   ],
+   "exact": [
+    0,
+    6
+   ]
+  },
+  {
+   "note": {
+    "id": "g2",
+    "type": "grammar",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "sentence": "The completion of the report was delayed.",
+     "answer": "completion"
+    }
+   },
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "The _____ of the report was delayed."
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "completion"
+    },
+    {
+     "k": "example",
+     "text": "The completion of the report was delayed.",
+     "at": [
+      4,
+      14
+     ]
+    }
+   ],
+   "expected": [
+    "completion"
+   ],
+   "speakBack": "The completion of the report was delayed.",
+   "wanted": [
+    "fill"
+   ],
+   "exact": [
+    4,
+    14
+   ]
+  },
+  {
+   "note": {
+    "id": "g3",
+    "type": "grammar",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "sentence": "The completion of the report was delayed.",
+     "answer": "complete"
+    }
+   },
+   "applies": false,
+   "wanted": [],
+   "exact": null
+  },
+  {
+   "note": {
+    "id": "g4",
+    "type": "grammar",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "sentence": "She has worked here since 2019.",
+     "answer": "has worked",
+     "topic": "Thì và bị động",
+     "rule": "Since + mốc thời gian đi với thì hiện tại hoàn thành"
+    }
+   },
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "She _____ here since 2019."
+    },
+    {
+     "k": "badge",
+     "text": "Thì và bị động"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "has worked"
+    },
+    {
+     "k": "example",
+     "text": "She has worked here since 2019.",
+     "at": [
+      4,
+      14
+     ]
+    },
+    {
+     "k": "text",
+     "text": "Quy tắc: Since + mốc thời gian đi với thì hiện tại hoàn thành"
+    }
+   ],
+   "expected": [
+    "has worked"
+   ],
+   "speakBack": "She has worked here since 2019.",
+   "wanted": [
+    "fill"
+   ],
+   "exact": [
+    4,
+    14
+   ]
+  },
+  {
+   "note": {
+    "id": "g5",
+    "type": "grammar",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "sentence": "Call us.",
+     "answer": ""
+    }
+   },
+   "applies": false,
+   "wanted": [],
+   "exact": null
+  }
+ ],
+ "noCards": {
+  "type": "test",
+  "wanted": []
+ }
 }

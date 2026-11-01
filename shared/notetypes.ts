@@ -316,7 +316,100 @@ export const VOCAB: NoteTypeDef = {
     [str(n.fields.word), str(n.fields.vi), str(n.fields.en), ...list(n.fields.examples), ...list(n.fields.examplesVi), ...(n.tags ?? [])].join(" ").toLowerCase(),
 };
 
-export const NOTE_TYPES: Readonly<Record<string, NoteTypeDef>> = { vocab: VOCAB };
+// ------------------------------------------------------------------ grammar (TOEIC Part 5/6 patterns)
+
+/** Where `answer` occurs in `sentence` as whole words, ignoring case: [start, end), or null. No inflection matching:
+ *  in grammar practice "completion" must never blank out "complete". */
+export function findExact(sentence: string, answer: string): [number, number] | null {
+  const a = answer.trim();
+  if (!a) return null;
+  const re = new RegExp(`(?<![A-Za-z0-9'])${escapeRe(a).replace(/\s+/g, "\\s+")}(?![A-Za-z0-9'])`, "i");
+  const m = re.exec(sentence);
+  return m ? [m.index, m.index + m[0].length] : null;
+}
+
+/** The grammar topics TOEIC Part 5/6 keeps asking, as the learner picks them (stored as text in `topic`). */
+export const GRAMMAR_TOPICS = ["Dạng từ", "Giới từ / liên từ", "Thì và bị động", "Mệnh đề quan hệ", "Trợ động từ", "Đảo ngữ", "Khác"] as const;
+
+function grammarCloze(n: Note): { text: string; at: [number, number] } | null {
+  const sentence = str(n.fields.sentence);
+  const at = findExact(sentence, str(n.fields.answer));
+  return at ? { text: sentence.slice(0, at[0]) + "_____" + sentence.slice(at[1]), at } : null;
+}
+
+const fill: TemplateDef = {
+  id: "fill",
+  label: "Điền từ vào câu",
+  description: "Câu TOEIC Part 5 che mất đáp án; gõ lại từ đúng, lý do hiện ở mặt sau.",
+  mode: "type",
+  applies: (n) => grammarCloze(n) !== null,
+  front: (n) => {
+    const c = grammarCloze(n);
+    const out: Block[] = c ? [{ k: "quote", text: c.text }] : [];
+    if (str(n.fields.topic)) out.push({ k: "badge", text: str(n.fields.topic) });
+    return out;
+  },
+  // The blanked sentence stays above the back, so the back shows the answer, the full sentence and why.
+  back: (n) => {
+    const c = grammarCloze(n);
+    const vi = str(n.fields.translation);
+    const out: Block[] = [{ k: "title", text: str(n.fields.answer) }];
+    out.push({ k: "example", text: str(n.fields.sentence), ...(c ? { at: c.at } : {}), ...(vi ? { vi } : {}) });
+    if (str(n.fields.rule)) out.push({ k: "text", text: `Quy tắc: ${str(n.fields.rule)}` });
+    return out;
+  },
+  expected: (n) => [str(n.fields.answer)],
+  speak: { back: (n) => str(n.fields.sentence) || null },
+};
+
+export const GRAMMAR: NoteTypeDef = {
+  id: "grammar",
+  label: "Ngữ pháp",
+  fields: [
+    { key: "sentence", label: "Câu đầy đủ (đã có đáp án đúng)", kind: "text", required: true, maxLength: 300 },
+    { key: "answer", label: "Đáp án (từ/cụm bị che)", kind: "text", required: true, maxLength: 80 },
+    { key: "topic", label: "Chủ đề", kind: "text", maxLength: 40 },
+    { key: "translation", label: "Nghĩa của câu", kind: "text", maxLength: 300 },
+    { key: "rule", label: "Quy tắc / vì sao đáp án này đúng", kind: "longtext", maxLength: 300 },
+  ],
+  templates: [fill],
+  title: (n) => str(n.fields.sentence),
+  subtitle: (n) => [str(n.fields.topic), str(n.fields.answer)].filter(Boolean).join(" · "),
+  searchText: (n) => [str(n.fields.sentence), str(n.fields.answer), str(n.fields.topic), str(n.fields.translation), str(n.fields.rule), ...(n.tags ?? [])].join(" ").toLowerCase(),
+};
+
+// ------------------------------------------------------------------ test (one practice test's result; makes no cards)
+
+/**
+ * A practice test the learner took: how many questions were right per part, and why the wrong ones were wrong.
+ * It makes no cards: it is the data the progress panel (Today) reads. Counts are strings ("20/30" = right/total).
+ */
+export const TEST: NoteTypeDef = {
+  id: "test",
+  label: "Bài làm thử",
+  fields: [
+    { key: "name", label: "Tên bài", kind: "text", required: true, maxLength: 80 },
+    { key: "date", label: "Ngày làm (YYYY-MM-DD)", kind: "text", maxLength: 10 },
+    { key: "p5", label: "Part 5 đúng/tổng", kind: "text", maxLength: 9 },
+    { key: "p6", label: "Part 6 đúng/tổng", kind: "text", maxLength: 9 },
+    { key: "p7", label: "Part 7 đúng/tổng", kind: "text", maxLength: 9 },
+    { key: "lc", label: "Listening đúng/tổng", kind: "text", maxLength: 9 },
+    { key: "minutes", label: "Số phút làm RC", kind: "text", maxLength: 3 },
+    { key: "v", label: "Sai vì từ vựng", kind: "text", maxLength: 3 },
+    { key: "g", label: "Sai vì ngữ pháp", kind: "text", maxLength: 3 },
+    { key: "p", label: "Sai vì không nhận ra diễn đạt lại", kind: "text", maxLength: 3 },
+    { key: "t", label: "Sai vì hết giờ / vội", kind: "text", maxLength: 3 },
+  ],
+  templates: [],
+  title: (n) => str(n.fields.name),
+  subtitle: (n) => str(n.fields.date),
+  searchText: (n) => [str(n.fields.name), str(n.fields.date)].join(" ").toLowerCase(),
+};
+
+/** Note types that hold learning material (and so show in the library, the word count and the "no words yet" screen). */
+export const isMaterial = (n: { type: string }) => n.type !== "test";
+
+export const NOTE_TYPES: Readonly<Record<string, NoteTypeDef>> = { vocab: VOCAB, grammar: GRAMMAR, test: TEST };
 
 export function noteType(id: string): NoteTypeDef | undefined {
   return NOTE_TYPES[id];
