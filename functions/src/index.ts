@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { isAllowedToken, parseAllowedEmails } from "./auth";
 import { LIMITS, REGION, allowedOrigins, DEFAULT_GEMINI_MODEL, GEMINI_BASE_URL } from "./config";
 import { EnrichError, SYSTEM_PROMPT, buildUserPrompt, parseEnrichInput, parseEnrichResult } from "./enrich";
+import { ExtractError, EXTRACT_PROMPT, buildParts, extractCost, parseExtractInput, parseExtractResult } from "./extract";
 import { GeminiClient, GeminiError } from "./gemini";
 import { FirestoreQuota } from "./usage";
 
@@ -77,6 +78,52 @@ export const enrich = onCall(
         throw new HttpsError("unavailable", e.message);
       }
       logger.error("enrich crashed", { uid: shortHash(uid), error: e instanceof Error ? e.name : "unknown" });
+      throw new HttpsError("internal", "Có lỗi khi gọi AI");
+    }
+  },
+);
+
+/**
+ * Screenshots or pasted text of practice questions → structured questions and passages for the learner to review.
+ * Same gates as `enrich`, a larger quota cost, no storage: the images exist only for the length of this call.
+ */
+export const extractQuestions = onCall(
+  {
+    region: REGION,
+    secrets: [GEMINI_API_KEY],
+    enforceAppCheck,
+    consumeAppCheckToken: enforceAppCheck,
+    cors: inEmulator ? true : allowedOrigins(project, process.env.EXTRA_ORIGINS),
+    maxInstances: 2,
+    concurrency: 4,
+    timeoutSeconds: 120,
+    memory: "512MiB",
+  },
+  async (request) => {
+    const uid = requireAllowed(request);
+    const started = Date.now();
+    try {
+      const input = parseExtractInput(request.data);
+      const allowed = await new FirestoreQuota(getFirestore()).consume(uid, LIMITS.dailyEnrich, new Date(), extractCost(input));
+      if (!allowed) throw new HttpsError("resource-exhausted", "Hết lượt dùng AI hôm nay");
+      const gemini = new GeminiClient({ apiKey: GEMINI_API_KEY.value(), model: GEMINI_MODEL.value(), baseUrl: GEMINI_BASE_URL, timeoutMs: 50_000 });
+      const { text, usage } = await gemini.generateParts(EXTRACT_PROMPT, buildParts(input), { maxOutputTokens: 8000 });
+      const result = parseExtractResult(text);
+      // Counts, tokens and timings only: the questions and passages a person studies stay out of logs.
+      logger.info("extract", {
+        uid: shortHash(uid), images: input.images.length, chars: input.text.length, questions: result.questions.length,
+        flagged: result.questions.filter((q) => q.flags.length).length, passages: result.passages.length,
+        tokensIn: usage.input, tokensOut: usage.output, tokensThinking: usage.thinking, ms: Date.now() - started,
+      });
+      return result;
+    } catch (e) {
+      if (e instanceof HttpsError) throw e;
+      if (e instanceof ExtractError) throw new HttpsError(e.code, e.message);
+      if (e instanceof GeminiError) {
+        logger.warn("extract failed", { uid: shortHash(uid), status: e.status ?? 0, ms: Date.now() - started });
+        throw new HttpsError("unavailable", e.message);
+      }
+      logger.error("extract crashed", { uid: shortHash(uid), error: e instanceof Error ? e.name : "unknown" });
       throw new HttpsError("internal", "Có lỗi khi gọi AI");
     }
   },

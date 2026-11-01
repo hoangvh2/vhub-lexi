@@ -11,6 +11,7 @@ import { analyze, buildIndex, sentenceAround, type Tok } from "../lib/readcheck.
 import { useStore } from "../lib/store.ts";
 import { Blocks } from "./Blocks.tsx";
 import { Icon, confirmDialog, go, toast } from "./common.tsx";
+import { ImportPanel } from "./ImportPanel.tsx";
 
 type Tab = "result" | "words" | "grammar";
 const TABS: Array<{ id: Tab; label: string }> = [
@@ -36,6 +37,8 @@ export function Practice({ initialTab }: { initialTab: string }) {
   // The test new cards are tagged with: the latest one unless the learner picks another.
   const [pick, setPick] = useState<string>("");
   const current = tests.find((t) => t.id === pick) ?? tests[tests.length - 1] ?? null;
+  // The passage under analysis lives here so "Nhập nhanh" can hand one over and the tab keeps it while the learner moves around.
+  const [passage, setPassage] = useState("");
 
   return (
     <div class="page narrow practice" data-testid="practice">
@@ -61,8 +64,9 @@ export function Practice({ initialTab }: { initialTab: string }) {
         )}
       </div>
 
+      {tab !== "result" && <ImportPanel testName={current?.name ?? null} onPassage={(t) => (setPassage(t), setTab("words"))} />}
       {tab === "result" && <ResultTab tests={tests} onSaved={(t) => (setPick(t.id), setTab("words"))} />}
-      {tab === "words" && <WordsTab testName={current?.name ?? null} />}
+      {tab === "words" && <WordsTab testName={current?.name ?? null} text={passage} setText={setPassage} />}
       {tab === "grammar" && <GrammarTab testName={current?.name ?? null} />}
     </div>
   );
@@ -223,11 +227,10 @@ function ResultTab({ tests, onSaved }: { tests: TestResult[]; onSaved(t: TestRes
 
 // ------------------------------------------------------------------ unknown words
 
-function WordsTab({ testName }: { testName: string | null }) {
+function WordsTab({ testName, text, setText }: { testName: string | null; text: string; setText(t: string): void }) {
   const allNotes = useStore(notes);
   const allCards = useStore(cards);
   const p = useStore(prefs);
-  const [text, setText] = useState("");
   const [ignored, setIgnored] = useState<ReadonlySet<string>>(new Set());
   const [sel, setSel] = useState<Tok | null>(null);
   const index = useMemo(() => buildIndex(allNotes, allCards), [allNotes, allCards]);

@@ -581,3 +581,105 @@ describe("responsive layout", () => {
     await desk.ctx.close();
   });
 });
+
+describe("nhập nhanh: screenshots -> reviewed rows -> grammar cards and a passage for the unknown-words check", () => {
+  // What the Cloud Function returns for the Q131-134 screenshots (there is no Gemini in CI).
+  const OPTS = (a, b, c, d) => ({ A: a, B: b, C: c, D: d });
+  const ANSWER = {
+    passages: [{ id: 1, label: "Questions 131-134", truncated: true, text: "OSAKA (14 October) - Maruya Interactive revealed this morning that it will unveil its newest video game later this week. A preview of the game _____ a presentation from the design team will be streamed on Thursday." }],
+    questions: [
+      { number: 131, part: 6, kind: "fill", stem: "A preview of the game _____ a presentation from the design team will be streamed on Thursday.", options: OPTS("how", "as well as", "but", "even though"), correct: "B", result: "right", passage: 1, topic: "Giới từ / liên từ", rule: "as well as nối hai danh từ.", translation: "Bản xem trước cùng bài thuyết trình sẽ được phát trực tuyến.", flags: [] },
+      { number: 132, part: 6, kind: "fill", stem: "Many fans are already _____ that it will be a sequel to the beloved series.", options: OPTS("requesting", "analyzing", "confirming", "speculating"), correct: "D", result: "wrong", passage: 1, topic: "Khác", rule: "speculating that: đoán rằng.", translation: "Nhiều người hâm mộ đã suy đoán đây là phần tiếp theo.", flags: [] },
+      { number: 133, part: 6, kind: "fill", stem: "The first title was a _____ success for the company.", options: OPTS("remarking", "remark", "remarkable", "remarkably"), correct: "C", result: "wrong", passage: 1, topic: "Dạng từ", rule: "Sau mạo từ a, trước danh từ success: tính từ.", translation: "Tựa đầu tiên là một thành công đáng kể.", flags: [] },
+      { number: 135, part: 5, kind: "fill", stem: "The report will be _____ by Friday.", options: OPTS("complete", "completed", "completing", "completion"), correct: null, result: "unknown", passage: null, topic: "", rule: "", translation: "", flags: ["no-answer"] },
+      { number: 134, part: 6, kind: "insert", stem: "Which sentence fits?", options: OPTS("Its worldwide sales were double that number.", "b", "c", "d"), correct: "A", result: "unknown", passage: 1, topic: "", rule: "", translation: "", flags: [] },
+    ],
+  };
+  const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+
+  it("reads a screenshot, lets the learner correct a row, and saves only what was checked", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    let calls = 0;
+    await page.exposeFunction("__stubExtract", (input) => (calls++, input.images.length === 1 && input.images[0].mime === "image/jpeg" && input.images[0].data.length > 20 ? ANSWER : { passages: [], questions: [] }));
+    await page.addInitScript(() => { window.__lexiExtract = (input) => window.__stubExtract(input); });
+    await page.goto(`${base}/#/practice?tab=grammar`);
+    await page.waitForSelector('[data-testid=import]');
+    await page.click('[data-testid=import-toggle]');
+    assert.equal(await page.locator('[data-testid=import-run]').isDisabled(), true); // nothing to read yet
+    await page.setInputFiles('[data-testid=import-file]', { name: "q131.png", mimeType: "image/png", buffer: PNG });
+    await page.waitForSelector('.thumb img');
+    await page.click('[data-testid=import-run]');
+    await page.waitForSelector('[data-testid=import-review]');
+    assert.equal(calls, 1);
+
+    const rows = page.locator('[data-testid=import-draft]');
+    assert.equal(await rows.count(), 4); // the "insert" question is not a grammar row
+    assert.match(await page.textContent('[data-testid=import-skipped]'), /1 câu/);
+    // Missed questions are selected, the one answered right and the one without an answer are not.
+    const checked = await page.locator('[data-testid=draft-include]').evaluateAll((els) => els.map((e) => [e.checked, e.disabled]));
+    assert.deepEqual(checked, [[false, false], [true, false], [true, false], [false, true]]);
+    assert.match(await rows.nth(3).textContent(), /Chưa có đáp án đúng/);
+    assert.match(await page.textContent('[data-testid=import-save]'), /Lưu 2 thẻ/);
+
+    // The learner picks the answer of the unanswered row: it becomes savable and selected.
+    await rows.nth(3).locator('label.opt', { hasText: "completed" }).click();
+    assert.match(await page.textContent('[data-testid=import-save]'), /Lưu 3 thẻ/);
+    assert.equal(await rows.nth(3).locator('[data-testid=draft-include]').isChecked(), true);
+    // Edit a rule by hand, and look at the card that will be saved.
+    await rows.nth(1).locator('[data-testid=draft-edit]').click();
+    await rows.nth(1).locator('[data-testid=draft-rule]').fill("Quy tắc do tôi viết.");
+    assert.match(await rows.nth(1).locator('[data-testid=draft-preview]').textContent(), /speculating/);
+    // Unchecking a row keeps it out.
+    await rows.nth(2).locator('[data-testid=draft-include]').uncheck();
+    await page.click('[data-testid=import-save]');
+    await page.waitForFunction(() => /Đã thêm 2 thẻ ngữ pháp/.test(document.body.textContent));
+
+    // The two saved rows left the list; the others stay for a later look. The passage is still offered.
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid=import-draft]').length === 2);
+    assert.match(await page.textContent('[data-testid=import-truncated]'), /bị cắt/);
+    assert.match(await page.textContent('[data-testid=grammar-tab]'), /2 thẻ ngữ pháp/);
+
+    // Reading the same screenshot again flags what was saved as a duplicate and does not preselect it.
+    await page.click('text=Làm lại');
+    await page.setInputFiles('[data-testid=import-file]', { name: "q131.png", mimeType: "image/png", buffer: PNG });
+    await page.waitForSelector('.thumb img');
+    await page.click('[data-testid=import-run]');
+    await page.waitForSelector('[data-testid=import-review]');
+    const dup = await page.locator('[data-testid=draft-include]').evaluateAll((els) => els.map((e) => e.checked));
+    // 132 and 135 were saved (133 was unchecked): only 133 is still new.
+    assert.deepEqual(dup, [false, false, true, false]);
+    assert.match(await page.textContent('[data-testid=import-review]'), /Câu này đã có thẻ/);
+
+    // The passage goes to the unknown-words tab.
+    await page.click('[data-testid=import-use-passage]');
+    await page.waitForSelector('[data-testid=coverage]');
+    assert.match(await page.inputValue('[data-testid=passage]'), /^OSAKA \(14 October\)/);
+    assert.equal(await noOverflow(page), true);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("shows a clear message when the AI is unreachable and keeps what was typed", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    await page.addInitScript(() => { window.__lexiExtract = async () => { throw Object.assign(new Error("x"), { code: "functions/resource-exhausted" }); }; });
+    await page.goto(`${base}/#/practice?tab=grammar`);
+    await page.click('[data-testid=import-toggle]');
+    await page.fill('[data-testid=import-text]', "101. ___ you need any help, please call us. (A) Should (B) Because Đáp án: A");
+    await page.click('[data-testid=import-run]');
+    assert.match(await page.textContent('[data-testid=import-error]'), /Hết lượt AI hôm nay/);
+    assert.match(await page.inputValue('[data-testid=import-text]'), /Should/);
+    assert.equal(errors.filter((e) => !/resource-exhausted/.test(e)).length, 0);
+    await ctx.close();
+  });
+
+  it("without sign-in the panel says what it needs and the manual tabs still work", async () => {
+    const { ctx, page } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    await page.goto(`${base}/#/practice?tab=grammar`);
+    await page.click('[data-testid=import-toggle]');
+    await page.fill('[data-testid=import-text]', "x".repeat(40));
+    assert.match(await page.textContent('[data-testid=import-off]'), /đăng nhập/);
+    assert.equal(await page.locator('[data-testid=import-run]').isDisabled(), true);
+    await page.fill('[data-testid=g-sentence]', "Please ___ us.");
+    await ctx.close();
+  });
+});
