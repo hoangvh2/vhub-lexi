@@ -7,6 +7,9 @@ package com.vh.lexi.core
  */
 val LETTERS = listOf("A", "B", "C", "D")
 
+/** Deck that cards made from a test go to by default, so they do not land among unrelated words (same as PRACTICE_DECK on the web). */
+const val PRACTICE_DECK = "Luyện đề TOEIC"
+
 /** The grammar topics a row can carry (same list as GRAMMAR_TOPICS in shared/notetypes.ts). */
 val IMPORT_TOPICS = listOf("Dạng từ", "Giới từ / liên từ", "Thì và bị động", "Mệnh đề quan hệ", "Trợ động từ", "Đảo ngữ", "Khác")
 

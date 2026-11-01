@@ -689,3 +689,6 @@ input[type="range"] { width: 100%; }
 .draft .opt.on { box-shadow: inset 0 0 0 2px var(--accent); }
 .draft .clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 0; white-space: pre-wrap; }
 .draft .btn.sm { align-self: flex-start; }
+.deck-pick { align-items: center; gap: 8px; flex-wrap: nowrap; }
+.deck-pick .select, .deck-pick .input { min-width: 0; flex: 1; }
+.deck-pick label { white-space: nowrap; }

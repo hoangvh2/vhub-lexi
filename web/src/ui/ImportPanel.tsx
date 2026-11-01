@@ -10,6 +10,7 @@ import { testTag } from "../lib/practice.ts";
 import { useStore } from "../lib/store.ts";
 import { Blocks } from "./Blocks.tsx";
 import { Icon, toast } from "./common.tsx";
+import type { DeckSink } from "./Practice.tsx";
 
 const MAX_IMAGES = 6;
 
@@ -29,7 +30,7 @@ function describeError(e: unknown): string {
  * Nhập nhanh: screenshots of the missed questions (or their pasted text) → AI reads them → the learner reviews each row
  * → grammar cards are saved, and any reading passage goes to the unknown-words check. The AI only proposes.
  */
-export function ImportPanel({ testName, onPassage }: { testName: string | null; onPassage(text: string): void }) {
+export function ImportPanel({ deck, testName, onPassage }: { deck: DeckSink; testName: string | null; onPassage(text: string): void }) {
   const allNotes = useStore(notes);
   const p = useStore(prefs);
   const [open, setOpen] = useState(false);
@@ -96,8 +97,9 @@ export function ImportPanel({ testName, onPassage }: { testName: string | null; 
     try {
       const tags = ["ngu-phap", ...(testName ? [testTag(testName)] : [])];
       const done = new Set<string>();
+      const deckId = await deck.resolve();
       for (const d of chosen) {
-        await addNote({ type: "grammar", fields: grammarFields(d), tags, aiFields: aiFieldsOf(d) });
+        await addNote({ type: "grammar", fields: grammarFields(d), tags, deckId, aiFields: aiFieldsOf(d) });
         done.add(d.key);
       }
       toast(`Đã thêm ${done.size} thẻ ngữ pháp${testName ? ` · ${testName}` : ""}`);

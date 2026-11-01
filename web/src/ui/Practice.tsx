@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { Note } from "@shared/model.ts";
 import { GRAMMAR_TOPICS, findExact, list, str, template, wantedTemplates } from "@shared/notetypes.ts";
-import { addNote, removeNote, updateNote } from "../data/actions.ts";
+import { addNote, createDeck, removeNote, updateNote } from "../data/actions.ts";
 import { callEnrich, firebaseConfigured } from "../data/firebase.ts";
-import { cards, notes, prefs } from "../data/state.ts";
+import { cards, decks, notes, prefs } from "../data/state.ts";
 import { dictionary, normalizeWord, viFor, POS_NAMES, type Lookup } from "../lib/dict.ts";
 import { mergeEnrich, type Enriched } from "../lib/enrich.ts";
 import { CAUSES, PARTS, PART_TARGET, RC_TARGET, completeSentence, formatScore, parseScore, testResults, testTag, wrongTotal, type CauseKey, type PartKey, type TestResult } from "../lib/practice.ts";
@@ -19,6 +19,19 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "grammar", label: "Ngữ pháp" },
   { id: "result", label: "Kết quả bài" },
 ];
+
+/** Where cards made on this screen go. The default is a deck of their own, so they do not land among unrelated words. */
+export const PRACTICE_DECK = "Luyện đề TOEIC";
+
+/** The deck choice: an existing deck (`id`), or a new one to create on first save (`newName`). */
+export interface DeckTarget {
+  id: string;
+  newName: string | null;
+}
+export interface DeckSink {
+  /** The id to save into, creating the deck first when a new one was named. Undefined means the app's default deck. */
+  resolve(): Promise<string | undefined>;
+}
 
 const todayIso = () => {
   const d = new Date();
@@ -39,6 +52,20 @@ export function Practice({ initialTab }: { initialTab: string }) {
   const current = tests.find((t) => t.id === pick) ?? tests[tests.length - 1] ?? null;
   // The passage under analysis lives here so "Nhập nhanh" can hand one over and the tab keeps it while the learner moves around.
   const [passage, setPassage] = useState("");
+  const allDecks = useStore(decks);
+  const [picked, setPicked] = useState<DeckTarget | null>(null);
+  const own = allDecks.find((d) => d.name === PRACTICE_DECK);
+  const target: DeckTarget = picked && (picked.newName !== null || allDecks.some((d) => d.id === picked.id)) ? picked : own ? { id: own.id, newName: null } : { id: "", newName: PRACTICE_DECK };
+  const sink: DeckSink = {
+    async resolve() {
+      if (target.newName === null) return target.id || undefined;
+      const name = target.newName.trim();
+      if (!name) return undefined;
+      const d = await createDeck(name);
+      setPicked({ id: d.id, newName: null });
+      return d.id;
+    },
+  };
 
   return (
     <div class="page narrow practice" data-testid="practice">
@@ -64,10 +91,11 @@ export function Practice({ initialTab }: { initialTab: string }) {
         )}
       </div>
 
-      {tab !== "result" && <ImportPanel testName={current?.name ?? null} onPassage={(t) => (setPassage(t), setTab("words"))} />}
+      {tab !== "result" && <DeckPick target={target} decks={allDecks} onChange={setPicked} />}
+      {tab !== "result" && <ImportPanel deck={sink} testName={current?.name ?? null} onPassage={(t) => (setPassage(t), setTab("words"))} />}
       {tab === "result" && <ResultTab tests={tests} onSaved={(t) => (setPick(t.id), setTab("words"))} />}
-      {tab === "words" && <WordsTab testName={current?.name ?? null} text={passage} setText={setPassage} />}
-      {tab === "grammar" && <GrammarTab testName={current?.name ?? null} />}
+      {tab === "words" && <WordsTab deck={sink} testName={current?.name ?? null} text={passage} setText={setPassage} />}
+      {tab === "grammar" && <GrammarTab deck={sink} testName={current?.name ?? null} />}
     </div>
   );
 }
@@ -227,7 +255,7 @@ function ResultTab({ tests, onSaved }: { tests: TestResult[]; onSaved(t: TestRes
 
 // ------------------------------------------------------------------ unknown words
 
-function WordsTab({ testName, text, setText }: { testName: string | null; text: string; setText(t: string): void }) {
+function WordsTab({ deck, testName, text, setText }: { deck: DeckSink; testName: string | null; text: string; setText(t: string): void }) {
   const allNotes = useStore(notes);
   const allCards = useStore(cards);
   const p = useStore(prefs);
@@ -282,6 +310,7 @@ function WordsTab({ testName, text, setText }: { testName: string | null; text: 
           tok={sel}
           sentence={sentenceAround(text, sel.start)}
           tag={tag}
+          deck={deck}
           aiAvailable={firebaseConfigured && p.aiEnabled}
           onKnow={() => (setIgnored(new Set(ignored).add(sel.key)), setSel(null))}
           onClose={() => setSel(null)}
@@ -309,10 +338,11 @@ function renderPassage(text: string, tokens: Tok[], sel: Tok | null, onPick: (t:
   return out;
 }
 
-function WordPanel({ tok, sentence, tag, aiAvailable, onKnow, onClose, onAdded }: {
+function WordPanel({ tok, sentence, tag, deck, aiAvailable, onKnow, onClose, onAdded }: {
   tok: Tok;
   sentence: string;
   tag: string | null;
+  deck: DeckSink;
   aiAvailable: boolean;
   onKnow(): void;
   onClose(): void;
@@ -347,7 +377,7 @@ function WordPanel({ tok, sentence, tag, aiAvailable, onKnow, onClose, onAdded }
     setBusy(true);
     try {
       const fields: Note["fields"] = { word, ipa: entry?.ipa ?? "", pos, vi: vi.trim(), en, examples: ex.trim() ? [ex.trim()] : [] };
-      const note = await addNote({ type: "vocab", fields, ...(tag ? { tags: [tag] } : {}) });
+      const note = await addNote({ type: "vocab", fields, deckId: await deck.resolve(), ...(tag ? { tags: [tag] } : {}) });
       toast(`Đã thêm “${word}” · ${wantedTemplates(note, prefs.get().templates).length} thẻ`);
       onAdded();
       if (withAi) {
@@ -397,7 +427,7 @@ function WordPanel({ tok, sentence, tag, aiAvailable, onKnow, onClose, onAdded }
 
 // ------------------------------------------------------------------ grammar
 
-function GrammarTab({ testName }: { testName: string | null }) {
+function GrammarTab({ deck, testName }: { deck: DeckSink; testName: string | null }) {
   const allNotes = useStore(notes);
   const p = useStore(prefs);
   const [sentence, setSentence] = useState("");
@@ -421,7 +451,7 @@ function GrammarTab({ testName }: { testName: string | null }) {
     setBusy(true);
     try {
       const tags = ["ngu-phap", ...(testName ? [testTag(testName)] : [])];
-      await addNote({ type: "grammar", fields: { sentence: full, answer: answer.trim(), topic, translation, rule }, tags });
+      await addNote({ type: "grammar", fields: { sentence: full, answer: answer.trim(), topic, translation, rule }, tags, deckId: await deck.resolve() });
       toast("Đã thêm thẻ ngữ pháp");
       setSentence(""); setAnswer(""); setTranslation(""); setRule("");
       box.current?.focus();
@@ -478,6 +508,27 @@ function GrammarTab({ testName }: { testName: string | null }) {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function DeckPick({ target, decks: list, onChange }: { target: DeckTarget; decks: Array<{ id: string; name: string }>; onChange(t: DeckTarget): void }) {
+  return (
+    <div class="deck-pick row" data-testid="deck-pick">
+      <label class="muted small" for="dp">Lưu thẻ vào bộ</label>
+      {target.newName === null ? (
+        <>
+          <select id="dp" class="select" value={target.id} onChange={(e) => onChange({ id: e.currentTarget.value, newName: null })} data-testid="deck-select">
+            {list.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+          <button type="button" class="btn sm" onClick={() => onChange({ id: target.id, newName: "" })} data-testid="deck-new">+ Mới</button>
+        </>
+      ) : (
+        <>
+          <input id="dp" class="input" value={target.newName} maxLength={60} placeholder="Tên bộ thẻ mới" onInput={(e) => onChange({ id: target.id, newName: e.currentTarget.value })} data-testid="deck-name" />
+          {list.length > 0 && <button type="button" class="btn ghost sm" onClick={() => onChange({ id: list[0].id, newName: null })}>Chọn bộ có sẵn</button>}
+        </>
+      )}
     </div>
   );
 }
