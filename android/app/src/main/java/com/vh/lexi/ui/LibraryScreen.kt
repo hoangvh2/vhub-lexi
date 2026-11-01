@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -46,6 +47,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vh.lexi.LexiApp
@@ -193,9 +195,10 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
                     ) {
                         if (selecting) Checkbox(checked = picked, onCheckedChange = null) else WordStatus(cs)
                         Column(Modifier.weight(1f)) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(def.title(n), fontWeight = FontWeight.Bold)
-                                Text(decks.firstOrNull { it.id == n.deckId }?.name.orEmpty(), color = c.muted, fontSize = 12.sp)
+                            // A long title (a grammar sentence) must not squeeze the deck name to zero width: it would wrap one letter per line and stretch the row over the whole screen.
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
+                                Text(def.title(n), Modifier.weight(1f, fill = false), fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(decks.firstOrNull { it.id == n.deckId }?.name.orEmpty(), Modifier.widthIn(max = 110.dp), color = c.muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             Text(def.subtitle(n), color = c.muted, maxLines = 1, fontSize = 14.sp)
                         }

@@ -620,6 +620,8 @@ describe("nhập nhanh: screenshots -> reviewed rows -> grammar cards and a pass
     assert.deepEqual(checked, [[false, false], [true, false], [true, false], [false, true]]);
     assert.match(await rows.nth(3).textContent(), /Chưa có đáp án đúng/);
     assert.match(await page.textContent('[data-testid=import-save]'), /Lưu 2 thẻ/);
+    // Cards from a test do not land among unrelated words: the default is a deck of their own, to be created on save.
+    assert.equal(await page.inputValue('[data-testid=deck-name]'), "Luyện đề TOEIC");
 
     // The learner picks the answer of the unanswered row: it becomes savable and selected.
     await rows.nth(3).locator('label.opt', { hasText: "completed" }).click();
@@ -634,6 +636,10 @@ describe("nhập nhanh: screenshots -> reviewed rows -> grammar cards and a pass
     await page.click('[data-testid=import-save]');
     await page.waitForFunction(() => /Đã thêm 2 thẻ ngữ pháp/.test(document.body.textContent));
 
+    // The deck now exists and is the selected one; the cards are in it, not in the default deck.
+    await page.waitForSelector('[data-testid=deck-select]');
+    assert.equal(await page.locator('[data-testid=deck-select] option:checked').textContent(), "Luyện đề TOEIC");
+    assert.equal(await page.locator('[data-testid=deck-select] option').count(), 1);
     // The two saved rows left the list; the others stay for a later look. The passage is still offered.
     await page.waitForFunction(() => document.querySelectorAll('[data-testid=import-draft]').length === 2);
     assert.match(await page.textContent('[data-testid=import-truncated]'), /bị cắt/);
