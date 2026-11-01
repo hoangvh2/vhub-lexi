@@ -103,6 +103,7 @@ import com.vh.lexi.core.dueWithin
 import com.vh.lexi.core.streak
 import com.vh.lexi.core.tagCounts
 import com.vh.lexi.core.isLeech
+import com.vh.lexi.core.isMaterial
 import com.vh.lexi.core.isLesson
 import com.vh.lexi.core.lessonTitle
 import com.vh.lexi.core.pickNext
@@ -235,7 +236,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
         busy = true
         val dur = System.currentTimeMillis() - shownAt
         val wasNew = c.state == CardState.NEW
-        val answered = note?.let { Answered(it.id, it.fields["word"].str(), it.fields["vi"].str(), r) }
+        val answered = note?.let { Answered(it.id, it.fields["word"].str().ifEmpty { it.fields["answer"].str() }, it.fields["vi"].str(), r) }
         scope.launch {
             val res = data.review(c, r, dur)
             history.add(res); if (history.size > 10) history.removeAt(0)
@@ -265,7 +266,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit) {
 
     if (!loaded) return Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Đang tải dữ liệu…", color = Lexi.colors.muted) }
 
-    if (notes.isEmpty()) {
+    if (notes.none { isMaterial(it) }) {
         Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text("Chưa có từ nào", style = MaterialTheme.typography.titleLarge)
             Text("Thêm từ đầu tiên: chỉ cần gõ từ tiếng Anh, thẻ sẽ tự điền phiên âm, nghĩa và ví dụ.", Modifier.padding(vertical = 12.dp), color = Lexi.colors.muted, textAlign = TextAlign.Center)

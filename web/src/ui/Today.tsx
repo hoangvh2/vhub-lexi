@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { meaningsByNote } from "@shared/confusables.ts";
 import { CardState, dayId, nextDayStart } from "@shared/model.ts";
-import { str } from "@shared/notetypes.ts";
+import { isMaterial, noteType } from "@shared/notetypes.ts";
 import { cards, daily, loaded, notes, prefs } from "../data/state.ts";
 import { isLesson, lessonName } from "../lib/lessons.ts";
 import { buildQueue, tagCounts } from "../lib/queue.ts";
@@ -10,6 +10,7 @@ import { enter, orb } from "../lib/motion.ts";
 import { forecast, heatmap, level, streak } from "../lib/stats.ts";
 import { useStore } from "../lib/store.ts";
 import { Icon, go } from "./common.tsx";
+import { TargetPanel } from "./Readiness.tsx";
 
 const DAY_MS = 86_400_000;
 const WEEKDAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
@@ -34,7 +35,7 @@ export function Today() {
   const [allLessons, setAllLessons] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const now = Date.now();
-  const hasNotes = allNotes.length > 0;
+  const hasNotes = allNotes.some(isMaterial);
   useEffect(() => {
     const stops = [enter(root.current), orb(root.current?.querySelector(".orb") ?? null)];
     return () => stops.forEach((s) => s());
@@ -71,7 +72,7 @@ export function Today() {
 
   if (!ready) return <div class="page"><p class="muted">Đang tải dữ liệu…</p></div>;
 
-  if (allNotes.length === 0) {
+  if (!hasNotes) {
     return (
       <div class="page narrow">
         <div class="empty">
@@ -179,6 +180,8 @@ export function Today() {
         </div>
       </section>
 
+      <TargetPanel />
+
       <div class="today-grid">
         {lessons.length > 0 && (
           <section class="panel path" data-testid="today-lesson" data-in>
@@ -243,8 +246,8 @@ export function Today() {
               <ul class="watch">
                 {watch.map(({ note, lapses }) => (
                   <li key={note.id}>
-                    <b>{str(note.fields.word)}</b>
-                    <span class="muted">{str(note.fields.vi)}</span>
+                    <b>{noteType(note.type)?.title(note) ?? ""}</b>
+                    <span class="muted">{noteType(note.type)?.subtitle(note) ?? ""}</span>
                     <span class="pill bad">quên {lapses}</span>
                   </li>
                 ))}

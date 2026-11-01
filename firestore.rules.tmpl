@@ -67,16 +67,38 @@ service cloud.firestore {
         && optList(f, 'examplesVi', 8);
     }
 
+    function grammarFields(f) {
+      return f.keys().hasAll(['sentence', 'answer'])
+        && f.keys().hasOnly(['sentence', 'answer', 'topic', 'translation', 'rule'])
+        && f.sentence is string && f.sentence.size() > 0 && f.sentence.size() <= 300
+        && f.answer is string && f.answer.size() > 0 && f.answer.size() <= 80
+        && optStr(f, 'topic', 40)
+        && optStr(f, 'translation', 300)
+        && optStr(f, 'rule', 300);
+    }
+
+    function testFields(f) {
+      return f.keys().hasAll(['name'])
+        && f.keys().hasOnly(['name', 'date', 'p5', 'p6', 'p7', 'lc', 'minutes', 'v', 'g', 'p', 't'])
+        && f.name is string && f.name.size() > 0 && f.name.size() <= 80
+        && optStr(f, 'date', 10)
+        && optStr(f, 'p5', 9) && optStr(f, 'p6', 9) && optStr(f, 'p7', 9) && optStr(f, 'lc', 9)
+        && optStr(f, 'minutes', 3)
+        && optStr(f, 'v', 3) && optStr(f, 'g', 3) && optStr(f, 'p', 3) && optStr(f, 't', 3);
+    }
+
     function validFields(type, f) {
       return f is map && f.size() <= 12
-        && (type == 'vocab' && vocabFields(f));
+        && ((type == 'vocab' && vocabFields(f))
+          || (type == 'grammar' && grammarFields(f))
+          || (type == 'test' && testFields(f)));
     }
 
     function validNote(d, id) {
       return d.keys().hasAll(['id', 'type', 'deckId', 'fields', 'createdAt', 'updatedAt'])
         && d.keys().hasOnly(['id', 'type', 'deckId', 'fields', 'aiFields', 'tags', 'createdAt', 'updatedAt'])
         && d.id == id
-        && d.type is string && d.type in ['vocab']
+        && d.type is string && d.type in ['vocab', 'grammar', 'test']
         && okId(d.deckId)
         && validFields(d.type, d.fields)
         && optList(d, 'aiFields', 12)

@@ -1,5 +1,6 @@
 import { useMemo } from "preact/hooks";
 import { dayId } from "@shared/model.ts";
+import { isMaterial } from "@shared/notetypes.ts";
 import { cards, daily, loaded, notes, prefs } from "../data/state.ts";
 import { cardCounts, forecast, heatmap, level, retention, streak } from "../lib/stats.ts";
 import { useStore } from "../lib/store.ts";
@@ -35,7 +36,7 @@ export function Stats() {
     <div class="page">
       <div class="page-head"><h1>Thống kê</h1></div>
       <div class="stat-grid">
-        <div class="stat"><b data-testid="stat-words">{allNotes.length}</b><span>từ trong thư viện</span></div>
+        <div class="stat"><b data-testid="stat-words">{allNotes.filter(isMaterial).length}</b><span>từ trong thư viện</span></div>
         <div class="stat"><b>{(today?.newCards ?? 0) + (today?.reviews ?? 0)}</b><span>thẻ đã học hôm nay</span></div>
         <div class="stat"><b>{st}</b><span>ngày liên tiếp</span></div>
         <div class="stat"><b>{ret === null ? "–" : `${Math.round(ret * 100)}%`}</b><span>nhớ đúng (30 ngày)</span></div>

@@ -37,6 +37,7 @@ Một lỗi thật do test tích hợp bắt được và đã sửa: `increment
 3. FSRS không tối ưu tham số theo dữ liệu cá nhân (dùng tham số mặc định); fuzz tắt.
 4. Bài kiểm tra e2e chưa phủ đăng nhập (Auth emulator) và sửa ghi chú trên giao diện.
 5. Mẹo nhớ/ví dụ do AI sinh chỉ được lọc cơ học (phải chứa từ); chưa có bước kiểm chất lượng.
-6. TOEIC/IELTS: kiến trúc sẵn sàng (xem ARCHITECTURE.md) nhưng chưa có loại ghi chú nào ngoài `vocab`.
+6. TOEIC: có `vocab`, `grammar` (thẻ điền câu Part 5) và `test` (kết quả bài làm thử, không tạo thẻ); chưa có câu hỏi trắc nghiệm đầy đủ (`toeic-mcq`) và chưa có luyện Listening trong app (xem mục Luyện đề trong ARCHITECTURE.md).
+7. Luyện đề chỉ nhập được trên web (màn `/practice`); Android hiển thị và ôn thẻ ngữ pháp, nhưng chưa có màn nhập. Danh sách từ quen ("common") trong `readcheck.ts` do tác giả viết tay, không phải danh sách tần suất từ kho ngữ liệu.
 7. Android: thông báo (snackbar) hiện ở đáy, che các nút chấm điểm khoảng 4 giây sau khi lưu từ; cần chuyển lên đầu màn hình.
 8. Android: trường hợp bàn phím che nút Lưu ở màn Thêm từ (người dùng phải cuộn); test phải gọi action thay vì chạm.

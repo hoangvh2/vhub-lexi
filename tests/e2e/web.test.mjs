@@ -434,6 +434,125 @@ describe("core flow (local-only mode)", () => {
   });
 });
 
+describe("practice loop: test result -> missed words and grammar -> cards -> progress", () => {
+  const PASSAGE = "Dear Ms. Tran,\nThe merger with Acme Corp. was postponed until the invoice is approved. Please review the agenda.";
+  const shot = async (page, name) => {
+    if (!process.env.SHOTS) return;
+    await page.waitForTimeout(1300); // entrance animations and toasts settle
+    await page.screenshot({ path: join(process.env.SHOTS, `${name}.png`), fullPage: true });
+  };
+
+  it("logs a test, turns a missed passage and a grammar question into cards, and shows the target on Today", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    await page.goto(`${base}/#/practice`);
+    await page.waitForSelector('[data-testid=result-form]');
+
+    // 1. result of a test: 53/100, 47 wrong, all classified
+    await page.fill('[data-testid=t-name]', "Test 1 TOEIC NEW 2026");
+    await page.fill('[data-testid=t-p5]', "20");
+    await page.fill('[data-testid=t-p6]', "8");
+    await page.fill('[data-testid=t-p7]', "25");
+    await page.fill('[data-testid=t-min]', "57");
+    for (const [k, v] of [["v", "20"], ["g", "15"], ["p", "8"], ["t", "4"]]) await page.fill(`[data-testid=t-c-${k}]`, v);
+    assert.match(await page.textContent('[data-testid=result-form]'), /đã phân loại 47\/47/);
+    await shot(page, "1-result");
+    await page.click('[data-testid=t-save]');
+    await page.waitForSelector('[data-testid=words-tab]');
+
+    // 2. paste the passage of a missed question: unknown words are marked, coverage is shown
+    await page.fill('[data-testid=passage]', PASSAGE);
+    await page.waitForSelector('[data-testid=coverage]');
+    const keys = await page.locator('[data-testid=unknown-chip]').allTextContents();
+    assert.deepEqual(keys.map((k) => k.replace(/ ×\d+/, "")).sort(), ["approved", "merger", "postponed", "review", "invoice", "agenda"].sort());
+    assert.match(await page.textContent('[data-testid=coverage]'), /Bạn quen khoảng \d+% số từ/);
+    assert.equal(await page.locator('[data-testid=unknown-word]').filter({ hasText: /^Acme$|^Corp$|^Tran$/ }).count(), 0); // names are not "unknown words"
+    await shot(page, "2-words");
+    await page.locator('[data-testid=unknown-chip]', { hasText: "merger" }).click();
+    await page.waitForSelector('[data-testid=wp-vi]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=wp-vi]').value.length > 0);
+    assert.match(await page.inputValue('[data-testid=wp-ex]'), /merger with Acme/);
+    await shot(page, "3-word-panel");
+    await page.click('[data-testid=wp-add]');
+    await page.waitForFunction(() => !document.querySelector('[data-testid=word-panel]'));
+    // the added word is no longer "chưa có": it is in the deck but not learned yet
+    assert.equal(await page.locator('[data-testid=unknown-chip]', { hasText: "merger" }).count(), 0);
+    // "Biết rồi" removes a word from the unknown list and raises coverage
+    const before = Number((await page.textContent('[data-testid=coverage]')).match(/Bạn quen khoảng (\d+)%/)[1]);
+    await page.locator('[data-testid=unknown-chip]', { hasText: "review" }).click();
+    await page.click('[data-testid=wp-know]');
+    const after = Number((await page.textContent('[data-testid=coverage]')).match(/Bạn quen khoảng (\d+)%/)[1]);
+    assert.ok(after > before, `coverage ${before} -> ${after}`);
+
+    // 3. a missed grammar question becomes a fill-in card
+    await page.click('[data-testid=tab-grammar]');
+    await page.fill('[data-testid=g-sentence]', "___ you need any help, please call us.");
+    await page.fill('[data-testid=g-answer]', "Should");
+    await page.fill('[data-testid=g-rule]', "Đảo ngữ điều kiện: Should + S + V = If + S + should + V");
+    await page.waitForSelector('[data-testid=g-preview]');
+    assert.match(await page.textContent('[data-testid=g-preview]'), /_____ you need any help/);
+    // An answer that is not in a finished sentence cannot make a card
+    await page.fill('[data-testid=g-sentence]', "Should you need any help, please call us.");
+    await page.fill('[data-testid=g-answer]', "Would");
+    await page.waitForSelector('[data-testid=g-notfound]');
+    assert.equal(await page.isDisabled('[data-testid=g-save]'), true);
+    await page.fill('[data-testid=g-sentence]', "___ you need any help, please call us.");
+    await page.fill('[data-testid=g-answer]', "Should");
+    await shot(page, "4-grammar");
+    await page.click('[data-testid=g-save]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=g-sentence]').value === "");
+
+    // 4. Today shows the result against the target and links to what to study
+    await page.goto(`${base}/#/today`);
+    await page.waitForSelector('[data-testid=target]');
+    assert.match(await page.textContent('[data-testid=target-score]'), /53\/100/);
+    assert.match(await page.textContent('[data-testid=target]'), /mục tiêu 70/);
+    assert.match(await page.textContent('[data-testid=target-advice]'), /thiếu từ/);
+    assert.match(await page.textContent('[data-testid=target-study-words]'), /Học 1 từ của bài này/);
+    assert.equal(await noOverflow(page), true);
+    await shot(page, "5-today");
+
+    // Library lists the word and the sentence, never the test result; the count in Stats matches.
+    await page.goto(`${base}/#/library`);
+    await page.waitForSelector('[data-testid=lib-item]');
+    const lib = await page.locator('[data-testid=lib-item]').allTextContents();
+    assert.equal(lib.length, 2);
+    assert.ok(!lib.some((t) => /Test 1 TOEIC/.test(t)));
+    await page.goto(`${base}/#/stats`);
+    assert.equal(await page.textContent('[data-testid=stat-words]'), "2");
+
+    // 5. the grammar card is studied like any other: typed answer, back shows the rule
+    await page.goto(`${base}/#/study?tag=ngu-phap`);
+    await page.waitForSelector('[data-testid=study-card]');
+    assert.match(await page.textContent('[data-testid=study-card]'), /_____ you need any help/);
+    assert.doesNotMatch(await page.textContent('[data-testid=study-card]'), /Should you/);
+    await shot(page, "6-grammar-front");
+    await page.fill('[data-testid=type-input]', "should");
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => /Đảo ngữ điều kiện/.test(document.querySelector('[data-testid=study-card]')?.textContent ?? ""));
+    await shot(page, "7-grammar-back");
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("deleting a result needs confirmation and keeps the cards made from it", async () => {
+    const { ctx, page } = await open(browser, base);
+    await page.goto(`${base}/#/practice?tab=result`);
+    await page.fill('[data-testid=t-name]', "Test 2");
+    await page.fill('[data-testid=t-p5]', "27");
+    await page.click('[data-testid=t-save]');
+    await page.waitForSelector('[data-testid=words-tab]');
+    await page.click('[data-testid=tab-result]');
+    await page.waitForSelector('[data-testid=test-history]');
+    await page.click('[data-testid=test-history] button:has-text("Xoá")');
+    await page.click('[data-testid=confirm-cancel]');
+    assert.equal(await page.locator('[data-testid=test-history]').count(), 1);
+    await page.click('[data-testid=test-history] button:has-text("Xoá")');
+    await page.click('[data-testid=confirm-ok]');
+    await page.waitForFunction(() => !document.querySelector('[data-testid=test-history]'));
+    await ctx.close();
+  });
+});
+
 describe("responsive layout", () => {
   for (const [name, vp] of [["phone", { width: 390, height: 780 }], ["tablet", { width: 820, height: 1000 }], ["desktop", { width: 1440, height: 900 }]]) {
     it(`${name}: every screen fits without horizontal scrolling`, async () => {

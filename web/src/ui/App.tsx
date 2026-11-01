@@ -8,6 +8,7 @@ import { useStore } from "../lib/store.ts";
 import { Add } from "./Add.tsx";
 import { ConfirmHost, Icon, Toasts, route, syncLabel, toast } from "./common.tsx";
 import { Library } from "./Library.tsx";
+import { Practice } from "./Practice.tsx";
 import { Settings } from "./Settings.tsx";
 import { Stats } from "./Stats.tsx";
 import { Study } from "./Study.tsx";
@@ -56,11 +57,12 @@ export function App({ email }: { email: string | null }) {
   const [path, query = ""] = r.split("?");
   const [, section, arg] = path.split("/");
   // The study session belongs to the "Ôn tập" tab, whose home is the Today screen.
-  const current = "/" + (!section || section === "study" ? "today" : section);
+  const current = "/" + (!section || section === "study" || section === "practice" ? "today" : section);
   const page =
     section === "add" ? <Add /> :
     section === "library" ? <Library /> :
     section === "stats" ? <Stats /> :
+    section === "practice" ? <Practice initialTab={new URLSearchParams(query).get("tab") ?? ""} key={r} /> :
     section === "settings" ? <Settings email={email} /> :
     section === "study" ? <Study deckId={arg || null} initialTag={new URLSearchParams(query).get("tag") ?? ""} key={r} /> :
     <Today />;

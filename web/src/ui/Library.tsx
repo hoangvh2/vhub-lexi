@@ -1,6 +1,6 @@
 import { useMemo, useState } from "preact/hooks";
 import { CardState, type Card, type Id, type Note } from "@shared/model.ts";
-import { noteType } from "@shared/notetypes.ts";
+import { isMaterial, noteType } from "@shared/notetypes.ts";
 import { createDeck, deleteDeckAndContents, renameDeck, updateNote } from "../data/actions.ts";
 import { callEnrich, firebaseConfigured } from "../data/firebase.ts";
 import { cards, decks, loaded, notes, prefs } from "../data/state.ts";
@@ -58,7 +58,7 @@ export function Library() {
     const needle = q.trim().toLowerCase();
     const list = allNotes.filter((n) => {
       const def = noteType(n.type);
-      if (!def) return false;
+      if (!def || !isMaterial(n)) return false;
       if (deck && n.deckId !== deck) return false;
       if (needle && !def.searchText(n).includes(needle)) return false;
       return matches(filter, n, cardsByNote.get(n.id) ?? []);

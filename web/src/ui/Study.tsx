@@ -176,7 +176,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
     busy.current = true;
     const dur = Date.now() - shownAt.current;
     const wasNew = card.state === 0;
-    const answered: Answered | null = note ? { noteId: note.id, word: str(note.fields.word) || tpl?.label || "", vi: str(note.fields.vi), rating: r } : null;
+    const answered: Answered | null = note ? { noteId: note.id, word: str(note.fields.word) || str(note.fields.answer) || tpl?.label || "", vi: str(note.fields.vi), rating: r } : null;
     try {
       const res = await reviewCard(card, r, dur);
       history.current = [...history.current.slice(-9), res];

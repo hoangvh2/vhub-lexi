@@ -75,6 +75,34 @@ class TemplateVectorsTest {
     }
 
     @Test
+    fun `grammar fill cards and result notes match the web app`() {
+        val root = JSONObject(vectors("templates.json"))
+        val layout = layoutFromJson(root.getJSONArray("layouts").getJSONObject(0))
+        val t = template("grammar", "fill")!!
+        for ((n, c) in root.getJSONArray("grammar").objects().withIndex()) {
+            val note = noteFromJson(c.getJSONObject("note"))
+            val where = "grammar case $n"
+            assertEquals(c.getBoolean("applies"), t.applies(note), "$where applies")
+            if (c.getBoolean("applies")) {
+                assertEquals(c.getString("mode"), t.mode.name.lowercase(), "$where mode")
+                assertEquals(JSONArray(c.getJSONArray("front").objects().map { it.canon() }).toString(), JSONArray(t.front(note, layout).map { it.toJson().canon() }).toString(), "$where front")
+                assertEquals(JSONArray(c.getJSONArray("back").objects().map { it.canon() }).toString(), JSONArray(t.back(note, layout).map { it.toJson().canon() }).toString(), "$where back")
+                assertEquals(c.getJSONArray("expected").strings(), t.expected(note), "$where expected")
+                assertEquals(if (c.isNull("speakBack")) null else c.getString("speakBack"), t.speakBack(note), "$where speakBack")
+            }
+            assertEquals(c.getJSONArray("wanted").strings(), wantedTemplates(note, null), "$where wanted")
+            val exact = findExact(note.fields["sentence"].str(), note.fields["answer"].str())
+            if (c.isNull("exact")) assertNull(exact, where) else assertEquals(c.getJSONArray("exact").let { it.getInt(0) to it.getInt(1) }, exact, "$where exact")
+        }
+        // A test result holds scores, not cards; it is not material for the library.
+        val no = root.getJSONObject("noCards")
+        val result = Note(id = "t1", type = no.getString("type"), deckId = "d1", fields = mapOf("name" to FieldValue.Text("Test 1")), createdAt = 0, updatedAt = 0)
+        assertEquals(no.getJSONArray("wanted").strings(), wantedTemplates(result, null))
+        assertEquals(false, isMaterial(result))
+        assertEquals(true, isMaterial(result.copy(type = "grammar")))
+    }
+
+    @Test
     fun `cloze and typed-answer checks match`() {
         val root = JSONObject(vectors("templates.json"))
         for (c in root.getJSONArray("clozes").objects()) {

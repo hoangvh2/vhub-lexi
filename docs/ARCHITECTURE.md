@@ -100,6 +100,17 @@ Cài đặt → Dữ liệu → "Nhập từ Anki (.apkg)" (chỉ web; Android n
 - Hộp thoại báo số lượt ghi Firestore cần dùng (mỗi note/thẻ/lượt ôn là 1 lượt), cảnh báo khi gần 20.000 lượt/ngày miễn phí.
 - Test: `web/test/anki.test.ts` đọc 2 gói thật do thư viện Python chính thức của Anki tạo (`tools/anki/make-fixture.py`, bản mới có FSRS và bản cũ SM-2); rules test ghi lại mọi document mà lần nhập tạo ra.
 
+## Luyện đề (vòng lặp đề thi → thẻ → tiến độ)
+
+Một vòng khép kín, không thêm collection Firestore: mọi thứ là `Note` của một kiểu đã đăng ký.
+
+- **`test`** (`shared/notetypes.ts`): kết quả một bài làm thử, trường là chuỗi ("20/30" = đúng/tổng; số câu sai theo lý do V/G/P/T). Không có mẫu thẻ nên không bao giờ vào hàng đợi; `isMaterial()` loại nó khỏi Thư viện và số từ.
+- **`grammar`**: câu Part 5 + đáp án + quy tắc; mẫu `fill` (gõ lại đáp án). Chỗ trống tìm bằng `findExact` (nguyên từ, không biến thể: "completion" không che "complete").
+- **Từ lạ** (`web/src/lib/readcheck.ts`, hàm thuần): dán đoạn đọc, từ nào không thuộc (chung / có thẻ đã ôn / "biết rồi") thì đánh dấu; độ phủ = từ phủ / từ đếm (bỏ tên riêng, viết tắt, số). Bấm một từ → từ điển offline + câu trong đề làm ví dụ → `vocab` gắn nhãn `de-<tên bài>`.
+- Mọi thẻ tạo từ một bài mang nhãn `de-<slug tên bài>` (hạn 10 nhãn/ghi chú theo rules), nên "học các từ của bài này" là Học tuỳ chọn theo nhãn có sẵn.
+- **Today** (`Readiness.tsx`) đọc các ghi chú `test` và đếm theo nhãn để hiện RC đúng/mục tiêu, từng Part, lý do sai nhiều nhất và nút tiếp theo. Mục tiêu (`practice.ts`: Part 5 25, Part 6 11, Part 7 34 = 70/100 RC) là giả định cho khoảng 700 điểm, không phải bảng quy đổi của ETS.
+- Rules: `grammarFields`, `testFields`; Kotlin có bản port của hai kiểu và vector `grammar`/`noCards`, nhưng màn nhập chỉ có trên web.
+
 ## Thêm nội dung TOEIC / IELTS
 
 Mọi thứ ngoài lớp "mẫu thẻ" đã không biết gì về từ vựng. Để thêm một loại ghi chú:
