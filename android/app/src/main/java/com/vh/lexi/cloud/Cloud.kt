@@ -129,7 +129,7 @@ class Cloud(private val context: Context, private val data: LexiData, private va
         scope.launch { signOut() }
     }
 
-    /** Meanings by context, translated examples and a truyện chêm from the `enrich` Cloud Function. Throws with a readable message. */
+    /** Meanings by context, translated examples and a short memory hook from the `enrich` Cloud Function. Throws with a readable message. */
     suspend fun enrich(word: String, pos: String?, en: String?, examples: List<String>): Enriched {
         val fn = functions ?: throw AiError(AiError.Kind.AUTH, "Chưa kết nối tài khoản")
         try {

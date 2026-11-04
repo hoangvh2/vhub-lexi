@@ -16,7 +16,7 @@ sealed interface Block {
     data class Quote(val text: String) : Block
     /** An example sentence; [at] = start until end (exclusive) of the studied word in it, [vi] = its translation. */
     data class Example(val text: String, val at: Pair<Int, Int>? = null, val vi: String? = null) : Block
-    /** The learner's memory tip ("truyện chêm"), shown in its own box. */
+    /** The learner's memory tip (sound-alike pun or short hook), shown in its own box. */
     data class Memo(val text: String) : Block
     /** Secondary text, collapsed under [label] until the learner opens it. */
     data class Fold(val label: String, val text: String) : Block

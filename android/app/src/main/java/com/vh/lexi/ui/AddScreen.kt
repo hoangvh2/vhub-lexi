@@ -284,7 +284,7 @@ fun AddScreen(app: LexiApp) {
                 )
                 // No field for the example translations here: AI fills them, and the note editor edits them. An extra field
                 // between the meaning and the mnemonic hung the keyboard step of the emulator smoke test (CI, 4 runs).
-                OutlinedTextField(value = draft.mnemonic, onValueChange = { draft.mnemonic = it; edited("mnemonic") }, label = { Text("Mẹo nhớ / truyện chêm" + if ("mnemonic" in draft.ai) " · AI" else "") }, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping().testTag("mnemonic-input"))
+                OutlinedTextField(value = draft.mnemonic, onValueChange = { draft.mnemonic = it; edited("mnemonic") }, label = { Text("Mẹo nhớ" + if ("mnemonic" in draft.ai) " · AI" else "") }, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping().testTag("mnemonic-input"))
 
                 val deckName = decks.firstOrNull { it.id == (deckId ?: prefs.defaultDeckId) }?.name ?: decks.firstOrNull()?.name ?: "Mặc định"
                 if (newDeck == null) {

@@ -23,7 +23,7 @@ export type Block =
   | { k: "quote"; text: string }
   /** An example sentence; `at` = [start, end) of the studied word in it (highlighted), `vi` = its translation. */
   | { k: "example"; text: string; at?: [number, number]; vi?: string }
-  /** The learner's memory tip ("truyện chêm"), shown in its own box. */
+  /** The learner's memory tip (sound-alike pun or short hook), shown in its own box. */
   | { k: "memo"; text: string }
   /** Secondary text, collapsed under `label` until the learner opens it. */
   | { k: "fold"; label: string; text: string }
