@@ -8,12 +8,14 @@ import com.vh.lexi.core.Daily
 import com.vh.lexi.core.DailyDelta
 import com.vh.lexi.core.Deck
 import com.vh.lexi.core.FieldValue
+import com.vh.lexi.core.HintLog
 import com.vh.lexi.core.Id
 import com.vh.lexi.core.Note
 import com.vh.lexi.core.Prefs
 import com.vh.lexi.core.ReviewLog
 import com.vh.lexi.core.apply
 import com.vh.lexi.core.dayId
+import com.vh.lexi.core.hintLog
 import com.vh.lexi.core.noteType
 import com.vh.lexi.core.reviewId
 import com.vh.lexi.core.wantedTemplates
