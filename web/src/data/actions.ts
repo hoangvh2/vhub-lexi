@@ -193,7 +193,7 @@ export interface Reviewed {
   delta: DailyDelta;
 }
 
-export async function reviewCard(card: Card, rating: Rating, durationMs: number, now = Date.now()): Promise<Reviewed> {
+export async function reviewCard(card: Card, rating: Rating, durationMs: number, now = Date.now(), hint: 0 | 1 | 2 = 0): Promise<Reviewed> {
   const p = prefs.get();
   const sched = makeScheduler(p.desiredRetention, p.fsrsWeights);
   const next = answer(sched, card, rating, now);
@@ -210,6 +210,7 @@ export async function reviewCard(card: Card, rating: Rating, durationMs: number,
     reviewedAt: now,
     durationMs: Math.max(0, Math.min(Math.round(durationMs), 10 * 60_000)),
     device: "web",
+    ...(hint ? { hint } : {}),
   };
   const wasNew = card.state === CardState.New;
   const delta: DailyDelta = { id: dayId(now, p.dayStartHour), newCards: wasNew ? 1 : 0, reviews: wasNew ? 0 : 1, rating, ms: log.durationMs };

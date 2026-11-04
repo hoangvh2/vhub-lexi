@@ -71,6 +71,8 @@ data class ReviewLog(
     val reviewedAt: Long,
     val durationMs: Long,
     val device: String = "android",
+    /** Hint opened on the front before answering (Hints.kt): 1 cue, 2 whole tip or note, 0 none (not stored). */
+    val hint: Int = 0,
 )
 
 /** Counters for one study day (id = yyyy-MM-dd). On the server they are updated with atomic increments. */

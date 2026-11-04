@@ -51,6 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +60,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -108,6 +110,12 @@ import com.vh.lexi.core.isLesson
 import com.vh.lexi.core.lessonTitle
 import com.vh.lexi.core.pickNext
 import com.vh.lexi.core.template
+import com.vh.lexi.core.hintDependent
+import com.vh.lexi.core.hintGateMs
+import com.vh.lexi.core.maxRating
+import com.vh.lexi.core.rotateExamples
+import com.vh.lexi.core.Block
+import com.vh.lexi.cloud.Account
 import com.vh.lexi.data.Reviewed
 import com.vh.lexi.ui.theme.Lexi
 import com.vh.lexi.ui.theme.Quicksand
@@ -158,6 +166,11 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
     var extraHints by remember { mutableStateOf(0) }
     var mixedUp by remember { mutableStateOf<Confusable?>(null) }
     var editing by remember { mutableStateOf<String?>(null) }
+    // Hints opened on the front of this card (core/Hints.kt), the tip/notes editor, and whether the word leans on hints.
+    var levels by remember { mutableStateOf(mapOf(HintKind.MEMO to 0, HintKind.NOTES to 0)) }
+    var memoryEdit by remember { mutableStateOf<String?>(null) }
+    var leaning by remember { mutableStateOf(false) }
+    val account by app.cloud.account.collectAsState()
     var deckMenu by remember { mutableStateOf(false) }
     val history = remember { mutableStateListOf<Reviewed>() }
     val holder = remember { arrayOf<String?>(null) } // id of the card on screen; kept until it is answered
@@ -206,6 +219,12 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
     // Keyed by card and turn: a learning card can come straight back (learn-ahead) and must start unanswered again.
     LaunchedEffect(card?.id, session.shown) {
         revealed = false; typed = ""; verdict = null; extraHints = 0; mixedUp = null; shownAt = System.currentTimeMillis()
+        levels = mapOf(HintKind.MEMO to 0, HintKind.NOTES to 0)
+        // A word that leaned on hints in its last answers gets them locked (read from its review history).
+        leaning = false
+        if (note != null && note.type == "vocab" && (note.fields["mnemonic"].str().isNotEmpty() || note.fields["notes"].str().isNotEmpty())) {
+            leaning = hintDependent(data.hintLogsOfNote(note.id))
+        }
         // Listening cards always play the sentence; others read the front aloud if the learner chose that.
         if (tpl != null && note != null && (prefs.autoSpeak == "front" || tpl.id == "listen")) tpl.speakFront(note)?.let { app.speech.speak(it) }
     }
@@ -230,15 +249,23 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
         reveal(v)
     }
 
+    val hint = maxOf(levels[HintKind.MEMO] ?: 0, levels[HintKind.NOTES] ?: 0)
+    val cap = maxRating(hint)
+    val hintable = note != null && note.type == "vocab" && !revealed
+
     fun rate(r: Int) {
         val c = card ?: return
         if (!revealed || busy) return
+        if (r > cap) {
+            toast(if (cap == 2) "Đã xem gợi ý đầy đủ nên lần này tối đa là Khó" else "Đã dùng gợi ý nên lần này không chấm Dễ")
+            return
+        }
         busy = true
         val dur = System.currentTimeMillis() - shownAt
         val wasNew = c.state == CardState.NEW
         val answered = note?.let { Answered(it.id, it.fields["word"].str().ifEmpty { it.fields["answer"].str() }, it.fields["vi"].str(), r) }
         scope.launch {
-            val res = data.review(c, r, dur)
+            val res = data.review(c, r, dur, hint = hint)
             history.add(res); if (history.size > 10) history.removeAt(0)
             buried = buried + c.noteId
             session = Session(session.answered + 1, session.again + if (r == 1) 1 else 0, session.ms + minOf(dur, 120_000), session.shown + 1, session.shownNew + if (wasNew) 1 else 0, if (answered != null) session.log + answered else session.log)
@@ -294,7 +321,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
     val letters = letterCount(answer)
 
     val fsrs = remember(prefs.desiredRetention, prefs.fsrsWeights) { prefs.fsrs() }
-    val suggested = verdict?.let { suggestedRatingWith(it, extraHints, mixedUp != null) }
+    val suggested = verdict?.let { minOf(suggestedRatingWith(it, extraHints, mixedUp != null), cap) }
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // Deck picker on its own line: next to the three count chips it was squeezed to one letter on a 320dp phone.
@@ -351,10 +378,19 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
                         .then(if (!revealed && tpl.mode == AnswerMode.FLIP) Modifier.clickable { reveal() } else Modifier),
                 ) {
                   Column {
-                    Column(Modifier.padding(horizontal = 20.dp, vertical = 24.dp).animateContentSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
+                    // Hint buttons in their own row at the top of the card, so they never sit on the mode chip.
+                    if (hintable) key(card.id, session.shown) {
+                        HintButtons(
+                            note, levels, hintGateMs(card.state, card.stability), leaning,
+                            onOpen = { k -> levels = levels + (k to minOf(2, (levels[k] ?: 0) + 1)) },
+                            modifier = Modifier.align(Alignment.End).padding(top = 12.dp, end = 12.dp),
+                        )
+                    }
+                    Column(Modifier.padding(start = 20.dp, end = 20.dp, top = if (hintable) 4.dp else 24.dp, bottom = 24.dp).animateContentSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
                         // What the card asks for; once answered, the space goes to the answer so the rating row stays in view.
                         if (!revealed) ModeHeader(tpl.id, tpl.label, mode)
                         BlocksView(tpl.front(note, prefs.layout), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
+                        if (hintable) HintBoxes(note, tpl.id, levels)
                         if (tpl.mode == AnswerMode.TYPE && !revealed && answer.isNotEmpty()) {
                             AnswerHint(answerHint(answer, 1 + extraHints), letters, answer.trim().split(Regex("\\s+")).size, mode)
                             if (similar.isNotEmpty()) NotThese(similar.take(3))
@@ -389,7 +425,11 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
                                     wrap = true,
                                 )
                             }
-                            BlocksView(tpl.back(note, prefs.layout), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
+                            // The tip and notes get their own panel (with an edit button) below the meaning and examples; the examples
+                            // start at a different one each review so the word is met in several contexts.
+                            val back = tpl.back(note, prefs.layout).filter { note.type != "vocab" || it !is Block.Memo }
+                            BlocksView(rotateExamples(back, card.reps), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
+                            if (note.type == "vocab") MemoryPanel(note, prefs.layout.showMnemonic) { memoryEdit = note.id }
                         } else if (tpl.mode == AnswerMode.FLIP) {
                             Text("Chạm thẻ để xem đáp án", color = c.muted, fontSize = 13.sp)
                         }
@@ -434,12 +474,12 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
                             val next = fsrs.next(card, now, r)
                             val shape = RoundedCornerShape(24.dp)
                             Surface(
-                                onClick = { rate(r) }, modifier = Modifier.weight(1f).heightIn(min = 66.dp).testTag("rate-$r"), shape = shape,
+                                onClick = { rate(r) }, modifier = Modifier.weight(1f).heightIn(min = 66.dp).alpha(if (r > cap) 0.35f else 1f).testTag("rate-$r"), shape = shape,
                                 color = soft, border = if (suggested == r) BorderStroke(2.5.dp, fg) else BorderStroke(1.5.dp, Brush.verticalGradient(0f to c.hi, 0.4f to Color.Transparent)),
                                 shadowElevation = 3.dp,
                             ) {
                                 Column(Modifier.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                                    Text(label, color = c.ink, fontFamily = Quicksand, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                    Text(label, color = c.ink, fontFamily = Quicksand, fontSize = 16.sp, fontWeight = FontWeight.Bold, textDecoration = if (r > cap) TextDecoration.LineThrough else null)
                                     Text(Fsrs.formatInterval(next.due - now), color = c.muted, fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold)
                                 }
                             }
@@ -451,6 +491,11 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
     }
 
     editing?.let { id -> notesById[id]?.let { NoteEditor(data, it) { editing = null } } }
+    memoryEdit?.let { id ->
+        notesById[id]?.let { n ->
+            MemoryEditor(data, n, aiAvailable = account is Account.SignedIn && prefs.aiEnabled, askAi = { x -> app.cloud.enrichMemo(x.fields["word"].str(), x.fields["pos"].str().ifEmpty { null }, x.fields["vi"].str().ifEmpty { null }) }) { memoryEdit = null }
+        }
+    }
 }
 
 /** What the card asks for, in the learner's words; shown at the top of the card. */

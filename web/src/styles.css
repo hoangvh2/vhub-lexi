@@ -692,3 +692,34 @@ input[type="range"] { width: 100%; }
 .deck-pick { align-items: center; gap: 8px; flex-wrap: nowrap; }
 .deck-pick .select, .deck-pick .input { min-width: 0; flex: 1; }
 .deck-pick label { white-space: nowrap; }
+
+/* ------------------------------------------------------------------ hints while studying (shared/hints.ts) */
+/* Two round buttons in the card's corner. Asleep for --gate (a ring fills), then full colour. */
+.scard.has-hints { padding-top: 66px; }
+.hint-tools { position: absolute; top: 14px; right: 14px; display: flex; gap: 8px; z-index: 1; }
+.hint-btn { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; background: var(--accent-soft); color: var(--accent); transition: opacity 0.3s, transform 0.15s; }
+.hint-tools:not(.awake) .hint-btn, .hint-tools.locked .hint-btn, .hint-btn.empty { opacity: 0.4; }
+.hint-btn:hover { transform: translateY(-1px); }
+.hint-btn.on { background: var(--accent); color: var(--accent-ink); }
+.hint-btn:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+.hint-ring { position: absolute; inset: -3px; border-radius: 50%; background: conic-gradient(var(--accent) var(--p, 0%), transparent 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); animation: hint-fill var(--gate) linear forwards; }
+@property --p { syntax: "<percentage>"; inherits: false; initial-value: 0%; }
+@keyframes hint-fill { to { --p: 100%; } }
+.hint-dot { position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--peach-deep); box-shadow: 0 0 0 2px var(--surface); }
+@media (prefers-reduced-motion: reduce) { .hint-ring { animation: none; --p: 100%; opacity: 0.5; } }
+.hint-boxes { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 8px; cursor: default; animation: answer-in 0.25s ease-out; }
+.hint-box { text-align: left; border-radius: 18px; padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 2px; font-size: 15.5px; line-height: 1.55; }
+.hint-box p { margin: 0; white-space: pre-line; }
+.hint-box.memo { background: var(--memo); }
+.hint-box.notes { background: var(--butter-soft); }
+.hint-lbl { font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.hint-box.memo .hint-lbl { color: var(--mint-deep); }
+.hint-box.notes .hint-lbl { color: var(--butter-deep); }
+/* The answer inside a hint: a blank of the same width, so the shape of the sentence stays. */
+.hint-mask { color: transparent; background: color-mix(in srgb, var(--ink) 16%, transparent); border-radius: 6px; user-select: none; }
+.hint-note { margin: 0; font-size: 12.5px; color: var(--muted); text-align: center; }
+.memory { width: 100%; display: flex; flex-direction: column; gap: 8px; cursor: default; }
+.memory-edit, .memory-add { align-self: center; }
+.ai-memo { align-self: flex-start; margin-top: 6px; }
+.rate button.capped { opacity: 0.35; text-decoration: line-through; cursor: not-allowed; }
+.rate button.capped:hover { transform: none; box-shadow: inset 0 2px 0 var(--hi), 0 8px 16px -10px var(--sh); }

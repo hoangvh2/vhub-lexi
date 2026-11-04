@@ -56,13 +56,14 @@ service cloud.firestore {
     // NOTE_TYPES: the note types the app knows. Add new ones here and in validFields().
     function vocabFields(f) {
       return f.keys().hasAll(['word'])
-        && f.keys().hasOnly(['word', 'ipa', 'pos', 'vi', 'en', 'examples', 'examplesVi', 'mnemonic'])
+        && f.keys().hasOnly(['word', 'ipa', 'pos', 'vi', 'en', 'examples', 'examplesVi', 'mnemonic', 'notes'])
         && f.word is string && f.word.size() > 0 && f.word.size() <= 80
         && optStr(f, 'ipa', 80)
         && optStr(f, 'pos', 30)
         && optStr(f, 'vi', 300)
         && optStr(f, 'en', 400)
         && optStr(f, 'mnemonic', 300)
+        && optStr(f, 'notes', 500)
         && optList(f, 'examples', 8)
         && optList(f, 'examplesVi', 8);
     }
@@ -132,7 +133,7 @@ service cloud.firestore {
     // ------------------------------------------------------------ review log (append-only history)
     function validReview(d, id) {
       return d.keys().hasOnly(['id', 'cardId', 'noteId', 'deckId', 'rating', 'state', 'stability', 'difficulty',
-                               'scheduledDays', 'reviewedAt', 'durationMs', 'device'])
+                               'scheduledDays', 'reviewedAt', 'durationMs', 'device', 'hint'])
         && d.keys().hasAll(['id', 'cardId', 'noteId', 'deckId', 'rating', 'state', 'reviewedAt', 'device'])
         && d.id == id
         && okId(d.cardId) && okId(d.noteId) && okId(d.deckId)
@@ -143,7 +144,9 @@ service cloud.firestore {
         && (!('durationMs' in d) || intIn(d.durationMs, 0, 3600000))
         && (!('stability' in d) || d.stability is number)
         && (!('difficulty' in d) || d.difficulty is number)
-        && (!('scheduledDays' in d) || d.scheduledDays is number);
+        && (!('scheduledDays' in d) || d.scheduledDays is number)
+        // A recall helped by a hint is capped (shared/hints.ts maxRating): cue at Good, whole hint at Hard.
+        && (!('hint' in d) || (intIn(d.hint, 1, 2) && d.rating <= 4 - d.hint));
     }
 
     // ------------------------------------------------------------ per-day counters (atomic increments)

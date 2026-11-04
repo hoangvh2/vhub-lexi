@@ -148,6 +148,18 @@ class Cloud(private val context: Context, private val data: LexiData, private va
         }
     }
 
+    /** Only a memory hook for one word (the "AI gợi ý mẹo" button while studying): one cheap call. Throws [AiError]. */
+    suspend fun enrichMemo(word: String, pos: String?, vi: String?): String {
+        val fn = functions ?: throw AiError(AiError.Kind.AUTH, "Chưa kết nối tài khoản")
+        try {
+            val payload = hashMapOf<String, Any?>("word" to word, "pos" to pos, "vi" to vi, "only" to "memo")
+            val res = fn.getHttpsCallable("enrich").call(payload).await().getData() as? Map<*, *> ?: throw AiError(AiError.Kind.TEMPORARY, "Phản hồi không hợp lệ")
+            return (res["mnemonic"] as? String)?.trim().orEmpty()
+        } catch (e: com.google.firebase.functions.FirebaseFunctionsException) {
+            throw aiError(e, "Từ không hợp lệ")
+        }
+    }
+
     /**
      * Questions and passages read from screenshots (base64 JPEG) and/or pasted text by the `extract-questions` function.
      * Nothing is saved by the function; the caller shows the rows for review. Throws [AiError] with a readable message.

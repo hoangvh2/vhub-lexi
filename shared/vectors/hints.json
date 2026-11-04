@@ -1,0 +1,578 @@
+{
+ "gate": [
+  {
+   "state": 0,
+   "stability": 0,
+   "expect": 0
+  },
+  {
+   "state": 1,
+   "stability": 0.4,
+   "expect": 0
+  },
+  {
+   "state": 3,
+   "stability": 30,
+   "expect": 0
+  },
+  {
+   "state": 2,
+   "stability": 5,
+   "expect": 4000
+  },
+  {
+   "state": 2,
+   "stability": 20.99,
+   "expect": 4000
+  },
+  {
+   "state": 2,
+   "stability": 21,
+   "expect": 6000
+  }
+ ],
+ "maxRating": [
+  4,
+  3,
+  2
+ ],
+ "terms": [
+  {
+   "vi": "bảo vệ, sự bảo vệ, che chở",
+   "expect": [
+    "sự bảo vệ",
+    "che chở",
+    "bảo vệ"
+   ]
+  },
+  {
+   "vi": "(cốt lõi) cho thấy rõ; (công việc) trình diễn, hướng dẫn cách dùng; (chung) chứng minh",
+   "expect": [
+    "hướng dẫn cách dùng",
+    "cho thấy rõ",
+    "trình diễn",
+    "chứng minh"
+   ]
+  },
+  {
+   "vi": "có; là, ở",
+   "expect": []
+  },
+  {
+   "vi": "Hợp Đồng / bản cam kết\nthỏa thuận",
+   "expect": [
+    "bản cam kết",
+    "thỏa thuận",
+    "hợp đồng"
+   ]
+  },
+  {
+   "vi": "",
+   "expect": []
+  }
+ ],
+ "masks": [
+  {
+   "fields": {
+    "word": "protect",
+    "vi": "bảo vệ, sự bảo vệ, che chở"
+   },
+   "template": "recognize",
+   "text": "Đọc như \"pờ-rô tếch\": thủ môn Tếch lao ra Bảo vệ khung thành.",
+   "expect": [
+    {
+     "text": "Đọc như \"pờ-rô tếch\": thủ môn Tếch lao ra ",
+     "masked": false
+    },
+    {
+     "text": "Bảo vệ",
+     "masked": true
+    },
+    {
+     "text": " khung thành.",
+     "masked": false
+    }
+   ]
+  },
+  {
+   "fields": {
+    "word": "protect",
+    "vi": "bảo vệ, sự bảo vệ, che chở"
+   },
+   "template": "recognize",
+   "text": "Khác prevent; protect A from B, che chở ai đó. Sự bảo vệ.",
+   "expect": [
+    {
+     "text": "Khác prevent; protect A from B, ",
+     "masked": false
+    },
+    {
+     "text": "che chở",
+     "masked": true
+    },
+    {
+     "text": " ai đó. ",
+     "masked": false
+    },
+    {
+     "text": "Sự bảo vệ",
+     "masked": true
+    },
+    {
+     "text": ".",
+     "masked": false
+    }
+   ]
+  },
+  {
+   "fields": {
+    "word": "protect",
+    "vi": "bảo vệ, sự bảo vệ, che chở"
+   },
+   "template": "recognize",
+   "text": "bảo vệt và bảo  vệ",
+   "expect": [
+    {
+     "text": "bảo vệt và ",
+     "masked": false
+    },
+    {
+     "text": "bảo  vệ",
+     "masked": true
+    }
+   ]
+  },
+  {
+   "fields": {
+    "word": "protect",
+    "vi": "bảo vệ, sự bảo vệ, che chở"
+   },
+   "template": "recall",
+   "text": "protect A from B; protected, protecting. Che chở.",
+   "expect": [
+    {
+     "text": "protect",
+     "masked": true
+    },
+    {
+     "text": " A from B; ",
+     "masked": false
+    },
+    {
+     "text": "protected",
+     "masked": true
+    },
+    {
+     "text": ", ",
+     "masked": false
+    },
+    {
+     "text": "protecting",
+     "masked": true
+    },
+    {
+     "text": ". Che chở.",
+     "masked": false
+    }
+   ]
+  },
+  {
+   "fields": {
+    "word": "protect",
+    "vi": "bảo vệ, sự bảo vệ, che chở"
+   },
+   "template": "cloze",
+   "text": "Protects!",
+   "expect": [
+    {
+     "text": "Protects",
+     "masked": true
+    },
+    {
+     "text": "!",
+     "masked": false
+    }
+   ]
+  },
+  {
+   "fields": {
+    "word": "demonstrate",
+    "vi": "(cốt lõi) cho thấy rõ; (công việc) trình diễn, hướng dẫn cách dùng; (chung) chứng minh"
+   },
+   "template": "recognize",
+   "text": "Anh sales trình diễn máy in, chứng minh nó chạy êm. Cho thấy rõ!",
+   "expect": [
+    {
+     "text": "Anh sales ",
+     "masked": false
+    },
+    {
+     "text": "trình diễn",
+     "masked": true
+    },
+    {
+     "text": " máy in, ",
+     "masked": false
+    },
+    {
+     "text": "chứng minh",
+     "masked": true
+    },
+    {
+     "text": " nó chạy êm. ",
+     "masked": false
+    },
+    {
+     "text": "Cho thấy rõ",
+     "masked": true
+    },
+    {
+     "text": "!",
+     "masked": false
+    }
+   ]
+  },
+  {
+   "fields": {
+    "word": "demonstrate",
+    "vi": "(cốt lõi) cho thấy rõ; (công việc) trình diễn, hướng dẫn cách dùng; (chung) chứng minh"
+   },
+   "template": "listen",
+   "text": "She demonstrated it; demonstration is a noun.",
+   "expect": [
+    {
+     "text": "She ",
+     "masked": false
+    },
+    {
+     "text": "demonstrated",
+     "masked": true
+    },
+    {
+     "text": " it; ",
+     "masked": false
+    },
+    {
+     "text": "demonstration",
+     "masked": true
+    },
+    {
+     "text": " is a noun.",
+     "masked": false
+    }
+   ]
+  },
+  {
+   "fields": {
+    "word": "protect",
+    "vi": "bảo vệ, sự bảo vệ, che chở"
+   },
+   "template": "recognize",
+   "text": "",
+   "expect": []
+  },
+  {
+   "fields": {
+    "word": "protect",
+    "vi": "bảo vệ, sự bảo vệ, che chở"
+   },
+   "template": "recognize",
+   "text": "Thủ môn lao ra.",
+   "expect": [
+    {
+     "text": "Thủ môn lao ra.",
+     "masked": false
+    }
+   ]
+  }
+ ],
+ "cues": [
+  [
+   "Đọc như \"con vịt\": Cố thuyết phục một con vịt biết nói tiếng Anh.",
+   "Đọc như \"con vịt\"…"
+  ],
+  [
+   "rely (dựa vào) + able (được): dựa vào được, tức đáng tin cậy.",
+   "rely (dựa vào) + able (được)…"
+  ],
+  [
+   "Một hai ba bốn năm sáu bảy tám chín",
+   "Một hai ba bốn năm sáu…"
+  ],
+  [
+   "Ngắn gọn",
+   "Ngắn gọn"
+  ],
+  [
+   "Khác prevent. Dùng protect A from B.",
+   "Khác prevent…"
+  ],
+  [
+   "Dòng một\nDòng hai",
+   "Dòng một…"
+  ],
+  [
+   "   ",
+   ""
+  ],
+  [
+   "Ab: cd",
+   "Ab: cd"
+  ]
+ ],
+ "dependent": [
+  {
+   "logs": [
+    {
+     "reviewedAt": 1,
+     "rating": 3,
+     "hint": 1
+    },
+    {
+     "reviewedAt": 2,
+     "rating": 3,
+     "hint": 2
+    },
+    {
+     "reviewedAt": 3,
+     "rating": 2,
+     "hint": 1
+    }
+   ],
+   "expect": true
+  },
+  {
+   "logs": [
+    {
+     "reviewedAt": 1,
+     "rating": 3,
+     "hint": 1
+    },
+    {
+     "reviewedAt": 2,
+     "rating": 3,
+     "hint": 2
+    },
+    {
+     "reviewedAt": 3,
+     "rating": 2
+    }
+   ],
+   "expect": false
+  },
+  {
+   "logs": [
+    {
+     "reviewedAt": 1,
+     "rating": 3,
+     "hint": 1
+    },
+    {
+     "reviewedAt": 2,
+     "rating": 3,
+     "hint": 1
+    },
+    {
+     "reviewedAt": 3,
+     "rating": 3,
+     "hint": 1
+    },
+    {
+     "reviewedAt": 4,
+     "rating": 2,
+     "hint": 0
+    },
+    {
+     "reviewedAt": 5,
+     "rating": 1,
+     "hint": 0
+    },
+    {
+     "reviewedAt": 6,
+     "rating": 2,
+     "hint": 0
+    },
+    {
+     "reviewedAt": 7,
+     "rating": 1,
+     "hint": 0
+    },
+    {
+     "reviewedAt": 8,
+     "rating": 2,
+     "hint": 0
+    }
+   ],
+   "expect": false
+  },
+  {
+   "logs": [
+    {
+     "reviewedAt": 1,
+     "rating": 3,
+     "hint": 1
+    },
+    {
+     "reviewedAt": 2,
+     "rating": 3,
+     "hint": 1
+    },
+    {
+     "reviewedAt": 3,
+     "rating": 3,
+     "hint": 1
+    },
+    {
+     "reviewedAt": 4,
+     "rating": 3
+    },
+    {
+     "reviewedAt": 5,
+     "rating": 4
+    }
+   ],
+   "expect": false
+  },
+  {
+   "logs": [
+    {
+     "reviewedAt": 1,
+     "rating": 3,
+     "hint": 1
+    },
+    {
+     "reviewedAt": 2,
+     "rating": 3,
+     "hint": 1
+    },
+    {
+     "reviewedAt": 3,
+     "rating": 3,
+     "hint": 1
+    },
+    {
+     "reviewedAt": 4,
+     "rating": 3
+    },
+    {
+     "reviewedAt": 5,
+     "rating": 2
+    }
+   ],
+   "expect": true
+  },
+  {
+   "logs": [
+    {
+     "reviewedAt": 5,
+     "rating": 3,
+     "hint": 1
+    },
+    {
+     "reviewedAt": 1,
+     "rating": 3,
+     "hint": 1
+    },
+    {
+     "reviewedAt": 3,
+     "rating": 3,
+     "hint": 1
+    }
+   ],
+   "expect": true
+  },
+  {
+   "logs": [
+    {
+     "reviewedAt": 1,
+     "rating": 3
+    },
+    {
+     "reviewedAt": 2,
+     "rating": 1
+    }
+   ],
+   "expect": false
+  },
+  {
+   "logs": [],
+   "expect": false
+  }
+ ],
+ "rotate": [
+  {
+   "reps": 0,
+   "expect": [
+    "nghĩa",
+    "A",
+    "m",
+    "B",
+    "C"
+   ]
+  },
+  {
+   "reps": 1,
+   "expect": [
+    "nghĩa",
+    "B",
+    "m",
+    "C",
+    "A"
+   ]
+  },
+  {
+   "reps": 2,
+   "expect": [
+    "nghĩa",
+    "C",
+    "m",
+    "A",
+    "B"
+   ]
+  },
+  {
+   "reps": 3,
+   "expect": [
+    "nghĩa",
+    "A",
+    "m",
+    "B",
+    "C"
+   ]
+  },
+  {
+   "reps": 4,
+   "expect": [
+    "nghĩa",
+    "B",
+    "m",
+    "C",
+    "A"
+   ]
+  },
+  {
+   "reps": -1,
+   "expect": [
+    "nghĩa",
+    "C",
+    "m",
+    "A",
+    "B"
+   ]
+  }
+ ],
+ "rotateBlocks": [
+  "nghĩa",
+  "A",
+  "m",
+  "B",
+  "C"
+ ],
+ "rotateKinds": [
+  "text",
+  "example",
+  "memo",
+  "example",
+  "example"
+ ]
+}

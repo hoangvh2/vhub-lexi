@@ -141,3 +141,10 @@ IELTS Writing/Speaking có chấm bằng AI sẽ cần thêm một callable tron
 - CSP chặt trên Hosting (`default-src 'none'`); e2e chạy đúng CSP này.
 - **App Check**: bản web dùng reCAPTCHA Enterprise nếu bật `enforce_app_check`; APK cài ngoài Play không lấy được token nên mặc định `false` (cùng lựa chọn với my-recap). Rules + allowlist vẫn chặn truy cập trái phép.
 - Khoá ký APK `android/keystore/sideload.jks` **công khai có chủ đích** (để bản mới cài đè bản cũ); đừng dùng cho bản phát hành công khai.
+
+## Gợi ý khi ôn tập: Mẹo và Ghi chú
+
+- Từ vựng có thêm trường `notes` (ghi chú riêng, 500 ký tự). Mặt trước thẻ có 2 nút: Mẹo (`mnemonic`) và Ghi chú (`notes`). Logic nằm ở `shared/hints.ts`, bản Kotlin `android/core/.../Hints.kt` phát lại `shared/vectors/hints.json`.
+- Chống học vẹt: nút ngủ 4 giây trên thẻ ôn (6 giây khi stability ≥ 21 ngày, 0 với thẻ mới/đang học); bấm lần 1 hiện manh mối (`hintCue`), lần 2 hiện đầy đủ; đáp án luôn bị che (`maskHint`: nghĩa tiếng Việt ở thẻ recognize, mọi dạng của từ tiếng Anh ở thẻ gõ).
+- Dùng gợi ý thì giới hạn điểm (`maxRating`: mức 1 tối đa Tốt, mức 2 tối đa Khó) và ghi `hint` vào ReviewLog; Firestore rules từ chối log vượt giới hạn. Từ dùng gợi ý 3/5 lần gần nhất bị khoá gợi ý ở mặt trước (`hintDependent`), mở lại sau 2 lần liên tiếp tự nhớ được (Tốt/Dễ).
+- Mặt sau: ví dụ xoay vòng theo `card.reps`; Mẹo và Ghi chú có nút sửa ngay. Nút "AI gợi ý mẹo" gọi `enrich` với `only: "memo"` (prompt ngắn `MEMO_PROMPT`, 1 lượt AI), chỉ lưu khi bấm Lưu.

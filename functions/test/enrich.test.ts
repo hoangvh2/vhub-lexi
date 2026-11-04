@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isAllowedToken, parseAllowedEmails } from "../src/auth";
 import { allowedOrigins } from "../src/config";
-import { EnrichError, MEMO_MAX, SYSTEM_PROMPT, buildUserPrompt, joinSenses, parseEnrichInput, parseEnrichResult, usesWord } from "../src/enrich";
+import { EnrichError, MEMO_MAX, MEMO_PROMPT, parseMemoResult, SYSTEM_PROMPT, buildUserPrompt, joinSenses, parseEnrichInput, parseEnrichResult, usesWord } from "../src/enrich";
 import { GeminiClient, GeminiError, parseGenerateResponse, parseUsage } from "../src/gemini";
 import { FirestoreQuota } from "../src/usage";
 
@@ -199,5 +199,25 @@ describe("memo (mnemonic)", () => {
   it("still accepts an older-style story that uses the word", () => {
     expect(parse({ story: "Anh ấy convince sếp tăng lương." })).toBe("Anh ấy convince sếp tăng lương.");
     expect(parse({ story: "Không có từ cần học." })).toBeUndefined();
+  });
+});
+
+describe("memo-only mode", () => {
+  it("parses the mode and the learner's meaning, and sends the meaning to the model", () => {
+    const i = parseEnrichInput({ word: "protect", vi: "  bảo vệ ", only: "memo" });
+    expect(i.only).toBe("memo");
+    expect(i.vi).toBe("bảo vệ");
+    expect(JSON.parse(buildUserPrompt(i)).vietnameseMeaning).toBe("bảo vệ");
+    expect(parseEnrichInput({ word: "protect", only: "everything" }).only).toBeUndefined();
+  });
+  it("memo prompt asks only for the two memo keys", () => {
+    for (const k of ['"soundAlike"', '"memo"', "con vịt"]) expect(MEMO_PROMPT).toContain(k);
+    for (const k of ['"senses"', '"existingVi"']) expect(MEMO_PROMPT).not.toContain(k);
+  });
+  it("returns the composed memo, and an error the learner can act on when there is none", () => {
+    const i = parseEnrichInput({ word: "invoice", only: "memo" });
+    expect(parseMemoResult('{"soundAlike":"in voi","memo":"In hóa đơn mua một con voi."}', i)).toEqual({ mnemonic: 'Đọc như "in voi": In hóa đơn mua một con voi.' });
+    expect(() => parseMemoResult('{"soundAlike":"","memo":""}', i)).toThrow(EnrichError);
+    expect(() => parseMemoResult("nope", i)).toThrow(GeminiError);
   });
 });

@@ -6,7 +6,7 @@ import { HttpsError, onCall, type CallableRequest } from "firebase-functions/v2/
 import { createHash } from "node:crypto";
 import { isAllowedToken, parseAllowedEmails } from "./auth";
 import { LIMITS, REGION, allowedOrigins, DEFAULT_GEMINI_MODEL, GEMINI_BASE_URL } from "./config";
-import { EnrichError, SYSTEM_PROMPT, buildUserPrompt, parseEnrichInput, parseEnrichResult } from "./enrich";
+import { EnrichError, MEMO_PROMPT, SYSTEM_PROMPT, buildUserPrompt, parseEnrichInput, parseEnrichResult, parseMemoResult } from "./enrich";
 import { ExtractError, EXTRACT_PROMPT, buildParts, extractCost, parseExtractInput, parseExtractResult } from "./extract";
 import { GeminiClient, GeminiError } from "./gemini";
 import { FirestoreQuota } from "./usage";
@@ -61,6 +61,12 @@ export const enrich = onCall(
       const allowed = await new FirestoreQuota(getFirestore()).consume(uid, LIMITS.dailyEnrich, new Date());
       if (!allowed) throw new HttpsError("resource-exhausted", "Hết lượt dùng AI hôm nay");
       const gemini = new GeminiClient({ apiKey: GEMINI_API_KEY.value(), model: GEMINI_MODEL.value(), baseUrl: GEMINI_BASE_URL });
+      if (input.only === "memo") {
+        const { text, usage } = await gemini.generate(MEMO_PROMPT, buildUserPrompt(input));
+        const memo = parseMemoResult(text, input);
+        logger.info("enrich memo", { uid: shortHash(uid), tokensIn: usage.input, tokensOut: usage.output, tokensThinking: usage.thinking, ms: Date.now() - started });
+        return memo;
+      }
       const { text, usage } = await gemini.generate(SYSTEM_PROMPT, buildUserPrompt(input));
       const result = parseEnrichResult(text, input);
       // Counts, tokens and timings only: the words a person studies are personal data and stay out of logs.
