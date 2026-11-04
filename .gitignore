@@ -37,3 +37,8 @@ android/app/src/main/assets/dict/
 .idea/
 *-debug.log
 infra/.build/
+
+# memo-eval output and temp files
+functions/memo-eval.md
+functions/src/.enrich-base-*
+functions/src/.memo-eval-*

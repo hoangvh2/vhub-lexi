@@ -319,7 +319,7 @@ export function Add() {
                 />
               </div>
               <div class="field">
-                <label for="mn">Mẹo nhớ / truyện chêm {aiTag("mnemonic")}</label>
+                <label for="mn">Mẹo nhớ {aiTag("mnemonic")}</label>
                 <textarea id="mn" class="textarea" rows={2} value={draft.mnemonic} onInput={edit("mnemonic")} data-testid="mnemonic-input" />
               </div>
               <div class="row">

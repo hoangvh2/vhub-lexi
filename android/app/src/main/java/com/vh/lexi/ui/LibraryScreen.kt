@@ -221,7 +221,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
             title = { Text("Điền bằng AI cho ${ids.size} từ") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Mỗi từ có tối đa 3 nghĩa theo ngữ cảnh, câu ví dụ kèm bản dịch và một truyện chêm. AI chạy nền, bạn có thể ôn bài trong lúc chờ. Mỗi từ dùng 1 lượt AI, tối đa 300 lượt mỗi ngày.")
+                    Text("Mỗi từ có tối đa 3 nghĩa theo ngữ cảnh, câu ví dụ kèm bản dịch và một mẹo nhớ ngắn. AI chạy nền, bạn có thể ôn bài trong lúc chờ. Mỗi từ dùng 1 lượt AI, tối đa 300 lượt mỗi ngày.")
                     Row(Modifier.fillMaxWidth().clickable { aiDialog = !skipDone to overwrite }, verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = skipDone, onCheckedChange = null); Text(" Bỏ qua từ đã điền bằng AI")
                     }

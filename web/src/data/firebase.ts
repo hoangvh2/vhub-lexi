@@ -19,7 +19,7 @@ export async function signInGoogle(): Promise<void> {
 export async function signOutUser(): Promise<void> {
   return (await impl()).signOutUser();
 }
-export async function callEnrich(word: string, hints: { pos?: string; en?: string; examples?: string[] }): Promise<unknown> {
+export async function callEnrich(word: string, hints: { pos?: string; en?: string; examples?: string[]; vi?: string; only?: "memo" }): Promise<unknown> {
   return (await impl()).callEnrich(word, hints);
 }
 export async function callExtract(input: { images: Array<{ mime: string; data: string }>; text: string }): Promise<unknown> {

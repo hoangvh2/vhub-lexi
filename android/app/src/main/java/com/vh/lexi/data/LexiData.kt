@@ -8,12 +8,14 @@ import com.vh.lexi.core.Daily
 import com.vh.lexi.core.DailyDelta
 import com.vh.lexi.core.Deck
 import com.vh.lexi.core.FieldValue
+import com.vh.lexi.core.HintLog
 import com.vh.lexi.core.Id
 import com.vh.lexi.core.Note
 import com.vh.lexi.core.Prefs
 import com.vh.lexi.core.ReviewLog
 import com.vh.lexi.core.apply
 import com.vh.lexi.core.dayId
+import com.vh.lexi.core.hintLog
 import com.vh.lexi.core.noteType
 import com.vh.lexi.core.reviewId
 import com.vh.lexi.core.wantedTemplates
@@ -198,13 +200,14 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
 
     // ---------------------------------------------------------------- reviewing
 
-    suspend fun review(card: Card, rating: Int, durationMs: Long, now: Long = System.currentTimeMillis()): Reviewed {
+    suspend fun review(card: Card, rating: Int, durationMs: Long, now: Long = System.currentTimeMillis(), hint: Int = 0): Reviewed {
         val p = prefs.value
         val next = p.fsrs().next(card, now, rating)
         val dur = durationMs.coerceIn(0, 10 * 60_000L)
         val log = ReviewLog(
             id = reviewId(card.id, now), cardId = card.id, noteId = card.noteId, deckId = card.deckId, rating = rating, state = card.state,
             stability = next.stability, difficulty = next.difficulty, scheduledDays = next.scheduledDays, reviewedAt = now, durationMs = dur,
+            hint = hint.coerceIn(0, 2),
         )
         val wasNew = card.state == CardState.NEW
         val delta = DailyDelta(dayId(now, p.dayStartHour), if (wasNew) 1 else 0, if (wasNew) 0 else 1, rating, dur)
@@ -215,6 +218,11 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
         cloud?.commitReview(next, log, delta)
         return Reviewed(card, next, log.id, delta)
     }
+
+    /** Past answers of one note, for the "leans on hints" check. Review ids start with the card id ("noteId.template@…"). */
+    suspend fun hintLogsOfNote(noteId: Id): List<HintLog> =
+        dao.all(Col.REVIEWS).asSequence().filter { it.id.startsWith("$noteId.") }.map { reviewFromDoc(parseDoc(it.json)) }
+            .filter { it.noteId == noteId }.map { it.hintLog() }.toList()
 
     suspend fun undo(r: Reviewed) {
         val now = System.currentTimeMillis()

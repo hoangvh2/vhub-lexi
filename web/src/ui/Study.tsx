@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { dayId, type Card, type Id, type Rating } from "@shared/model.ts";
 import { answerHint, confusables, letterCount, matchConfusable, meaningsByNote, suggestedRatingWith, type Confusable } from "@shared/confusables.ts";
 import { checkTyped, str, template, type AnswerVerdict } from "@shared/notetypes.ts";
+import { hintDependent, hintGateMs, maxRating, rotateExamples, type HintLevel } from "@shared/hints.ts";
 import { reviewCard, setSuspended, undoReview, type Reviewed } from "../data/actions.ts";
-import { cards, daily, decks, loaded, notes, prefs } from "../data/state.ts";
+import { cards, currentRepo, daily, decks, loaded, notes, prefs } from "../data/state.ts";
 import { LEARN_AHEAD_MS, buildQueue, dueWithin, isLeech, pickNext, tagCounts, type Queue } from "../lib/queue.ts";
 import { celebrate } from "../lib/motion.ts";
 import { streak } from "../lib/stats.ts";
@@ -14,6 +15,7 @@ import { speak, stopSpeaking } from "../lib/speech.ts";
 import { useStore } from "../lib/store.ts";
 import { Blocks } from "./Blocks.tsx";
 import { Icon, go, toast } from "./common.tsx";
+import { HintBoxes, HintButtons, MemoryEditor, MemoryPanel, type HintKind } from "./Hints.tsx";
 import { NoteEditor } from "./NoteEditor.tsx";
 
 /** One answer of this session, for the summary at the end. */
@@ -59,6 +61,10 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
   const [extraHints, setExtraHints] = useState(0);
   const [mixedUp, setMixedUp] = useState<Confusable | null>(null);
   const [editing, setEditing] = useState<Id | null>(null);
+  // Hints opened on the front of this card (shared/hints.ts), the tip/notes editor, and whether the word leans on hints.
+  const [levels, setLevels] = useState<Record<HintKind, HintLevel>>({ memo: 0, notes: 0 });
+  const [memoryEdit, setMemoryEdit] = useState<Id | null>(null);
+  const [leaning, setLeaning] = useState(false);
   const history = useRef<Reviewed[]>([]);
   const currentId = useRef<Id | null>(null);
   const shownAt = useRef(Date.now());
@@ -135,8 +141,26 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
     setVerdict(null);
     setExtraHints(0);
     setMixedUp(null);
+    setLevels({ memo: 0, notes: 0 });
     shownAt.current = Date.now();
   }, [turn]);
+
+  // A word that leaned on hints in its last answers gets them locked (read from its review history).
+  const hasHints = !!note && note.type === "vocab" && (!!str(note.fields.mnemonic) || !!str(note.fields.notes));
+  useEffect(() => {
+    setLeaning(false);
+    if (!note || !hasHints) return;
+    let live = true;
+    currentRepo().reviewsOfNote(note.id).then((logs) => live && setLeaning(hintDependent(logs)), () => undefined);
+    return () => {
+      live = false;
+    };
+  }, [turn]);
+  const hint = Math.max(levels.memo, levels.notes) as HintLevel;
+  const cap = maxRating(hint);
+  const gateMs = card ? hintGateMs(card) : 0;
+  const openHint = (kind: HintKind) => setLevels((l) => ({ ...l, [kind]: Math.min(2, l[kind] + 1) as HintLevel }));
+  const hintable = !!note && note.type === "vocab" && !revealed;
 
   // Read the front aloud when a card appears: always on listening cards, otherwise if the learner chose that.
   useEffect(() => {
@@ -169,16 +193,21 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
     }
     reveal(v);
   };
-  const suggested = verdict ? suggestedRatingWith(verdict, { extraHints, retried: !!mixedUp }) : null;
+  const suggestedRaw = verdict ? suggestedRatingWith(verdict, { extraHints, retried: !!mixedUp }) : null;
+  const suggested = suggestedRaw === null ? null : (Math.min(suggestedRaw, cap) as Rating);
 
   const rate = async (r: Rating) => {
     if (!card || !revealed || busy.current) return;
+    if (r > cap) {
+      toast(cap === 2 ? "Đã xem gợi ý đầy đủ nên lần này tối đa là Khó" : "Đã dùng gợi ý nên lần này không chấm Dễ");
+      return;
+    }
     busy.current = true;
     const dur = Date.now() - shownAt.current;
     const wasNew = card.state === 0;
     const answered: Answered | null = note ? { noteId: note.id, word: str(note.fields.word) || str(note.fields.answer) || tpl?.label || "", vi: str(note.fields.vi), rating: r } : null;
     try {
-      const res = await reviewCard(card, r, dur);
+      const res = await reviewCard(card, r, dur, Date.now(), hint);
       history.current = [...history.current.slice(-9), res];
       setBuried((b) => new Set(b).add(card!.noteId));
       setSession((s) => ({
@@ -243,6 +272,11 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
         return;
       }
       if (!card || !tpl || !note) return;
+      if (hintable && (e.key === "h" || e.key === "g")) {
+        // Same rules as the buttons: they handle the wait, the lock and the empty case.
+        (document.querySelector(`[data-testid="hint-${e.key === "h" ? "memo" : "notes"}"]`) as HTMLButtonElement | null)?.click();
+        return;
+      }
       if (!revealed && tpl.mode === "flip" && (e.key === " " || e.key === "Enter")) {
         e.preventDefault();
         reveal();
@@ -251,7 +285,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
         void rate(Number(e.key) as Rating);
       } else if (revealed && (e.key === " " || e.key === "Enter")) {
         e.preventDefault();
-        void rate((suggested ?? 3) as Rating);
+        void rate(Math.min(suggested ?? 3, cap) as Rating);
       } else if (e.key === "r") {
         const t = revealed ? tpl.speak?.back?.(note) ?? tpl.speak?.front?.(note) : tpl.speak?.front?.(note);
         if (t) speak(t);
@@ -336,7 +370,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
         <div class="study">
           <div
             key={turn}
-            class={`scard mode-${tpl.id}${revealed ? " revealed" : ""}`}
+            class={`scard mode-${tpl.id}${revealed ? " revealed" : ""}${hintable ? " has-hints" : ""}`}
             onClick={() => tpl.mode === "flip" && !revealed && reveal()}
             data-testid="study-card"
             data-template={tpl.id}
@@ -350,7 +384,9 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
               </div>
             )}
             {!revealed && MODE_Q[tpl.id] && <div class="mode-q">{MODE_Q[tpl.id]}</div>}
+            {hintable && <HintButtons key={turn} note={note} levels={levels} gateMs={gateMs} locked={leaning} onOpen={openHint} />}
             <Blocks blocks={tpl.front(note, p.layout)} cloze={tpl.id === "cloze"} />
+            {hintable && <HintBoxes note={note} templateId={tpl.id} levels={levels} />}
             {tpl.mode === "type" && !revealed && answer && (
               <div class="target" data-testid="target">
                 <div class="skel" aria-label={`Đáp án có ${letters} chữ cái, bắt đầu bằng ${answer.trim()[0]}`} data-testid="answer-hint">
@@ -417,7 +453,10 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
                       {mixedUp ? ` · lần đầu gõ “${mixedUp.word}”` : extraHints ? " · có dùng gợi ý" : ""}
                     </span>
                   )}
-                  <Blocks blocks={tpl.back(note, p.layout)} />
+                  {/* The tip and notes get their own panel (with an edit button) below the meaning and examples; the examples
+                      start at a different one each review so the word is met in several contexts. */}
+                  <Blocks blocks={rotateExamples(tpl.back(note, p.layout).filter((b) => note.type !== "vocab" || b.k !== "memo"), card.reps)} />
+                  {note.type === "vocab" && <MemoryPanel note={note} showMemo={p.layout.showMnemonic} onEdit={() => setMemoryEdit(note.id)} />}
                 </div>
               </>
             )}
@@ -435,7 +474,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
           ) : revealed && outcomes ? (
             <div class="actbar rate" role="group" aria-label="Bạn nhớ thế nào?">
               {([1, 2, 3, 4] as const).map((r) => (
-                <button type="button" key={r} class={`r${r}${suggested === r ? " suggest" : ""}`} onClick={() => void rate(r)} data-testid={`rate-${r}`}>
+                <button type="button" key={r} class={`r${r}${suggested === r ? " suggest" : ""}${r > cap ? " capped" : ""}`} onClick={() => void rate(r)} aria-disabled={r > cap} data-testid={`rate-${r}`}>
                   {["Quên", "Khó", "Tốt", "Dễ"][r - 1]}
                   <small>{outcomes[r].label}</small>
                   <kbd>{r}</kbd>
@@ -459,6 +498,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
         </div>
       )}
       {editing && byId.get(editing) && <NoteEditor note={byId.get(editing)!} onClose={() => setEditing(null)} />}
+      {memoryEdit && byId.get(memoryEdit) && <MemoryEditor note={byId.get(memoryEdit)!} onClose={() => setMemoryEdit(null)} />}
     </div>
   );
 }

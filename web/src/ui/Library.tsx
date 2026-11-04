@@ -221,7 +221,7 @@ export function Library() {
 
       {aiDlg && (
         <Modal title={`Điền bằng AI cho ${runIds(aiDlg.skipDone).length} từ`} onClose={() => setAiDlg(null)}>
-          <p>Mỗi từ có tối đa 3 nghĩa theo ngữ cảnh, câu ví dụ kèm bản dịch và một truyện chêm. AI chạy nền, bạn có thể ôn bài hay thêm từ trong lúc chờ. Mỗi từ dùng 1 lượt AI, tối đa 300 lượt mỗi ngày.</p>
+          <p>Mỗi từ có tối đa 3 nghĩa theo ngữ cảnh, câu ví dụ kèm bản dịch và một mẹo nhớ ngắn. AI chạy nền, bạn có thể ôn bài hay thêm từ trong lúc chờ. Mỗi từ dùng 1 lượt AI, tối đa 300 lượt mỗi ngày.</p>
           <label class="switch">
             <span>Bỏ qua từ đã điền bằng AI</span>
             <input type="checkbox" checked={aiDlg.skipDone} onChange={(e) => setAiDlg({ ...aiDlg, skipDone: e.currentTarget.checked })} />

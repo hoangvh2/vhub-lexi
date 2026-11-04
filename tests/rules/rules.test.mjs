@@ -104,6 +104,11 @@ describe("shape checks reject bad data", () => {
     const { deckId, ...noDeck } = n;
     await assertFails(put("notes", n.id, noDeck));
     await assertFails(put("notes", n.id, { ...n, extra: 1 }));
+    // The learner's own notes ("Ghi chú"): text up to 500 characters.
+    await assertSucceeds(put("notes", n.id, { ...n, fields: { ...n.fields, notes: "Khác prevent. protect A from B." } }));
+    await assertSucceeds(put("notes", n.id, { ...n, fields: { ...n.fields, notes: "x".repeat(500) } }));
+    await assertFails(put("notes", n.id, { ...n, fields: { ...n.fields, notes: "x".repeat(501) } }));
+    await assertFails(put("notes", n.id, { ...n, fields: { ...n.fields, notes: ["a list"] } }));
   });
   it("grammar and test notes: accepted when well formed, rejected with unknown/oversized/missing fields", async () => {
     const base = { id: "g1", type: "grammar", deckId: "deck1", createdAt: 1, updatedAt: 1, tags: ["ngu-phap"] };
@@ -146,6 +151,16 @@ describe("shape checks reject bad data", () => {
     await assertSucceeds(put("reviews", r.id, r));
     await assertFails(put("reviews", r.id, { ...r, rating: 1 }));
     await assertSucceeds(deleteDoc(doc(me(), ...path("reviews", r.id))));
+  });
+  it("reviews: a hint caps the rating (cue at Good, whole hint at Hard); bad hint values rejected", async () => {
+    const r = (n, rating, hint) => ({ ...fx.review, id: `${fx.review.cardId}@${fx.review.reviewedAt + n}`, reviewedAt: fx.review.reviewedAt + n, rating, hint });
+    await assertSucceeds(put("reviews", r(1, 3, 1).id, r(1, 3, 1)));
+    await assertFails(put("reviews", r(2, 4, 1).id, r(2, 4, 1)));
+    await assertSucceeds(put("reviews", r(3, 2, 2).id, r(3, 2, 2)));
+    await assertFails(put("reviews", r(4, 3, 2).id, r(4, 3, 2)));
+    await assertFails(put("reviews", r(5, 1, 0).id, r(5, 1, 0)));
+    await assertFails(put("reviews", r(6, 1, 3).id, r(6, 1, 3)));
+    await assertFails(put("reviews", r(7, 1, "1").id, r(7, 1, "1")));
   });
   it("anki import: every document the importer writes is accepted", async () => {
     const a = fx.anki;

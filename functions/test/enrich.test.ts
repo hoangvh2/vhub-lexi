@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isAllowedToken, parseAllowedEmails } from "../src/auth";
 import { allowedOrigins } from "../src/config";
-import { EnrichError, SYSTEM_PROMPT, buildUserPrompt, joinSenses, parseEnrichInput, parseEnrichResult, usesWord } from "../src/enrich";
+import { EnrichError, MEMO_MAX, MEMO_PROMPT, parseMemoResult, SYSTEM_PROMPT, buildUserPrompt, joinSenses, parseEnrichInput, parseEnrichResult, usesWord } from "../src/enrich";
 import { GeminiClient, GeminiError, parseGenerateResponse, parseUsage } from "../src/gemini";
 import { FirestoreQuota } from "../src/usage";
 
@@ -25,7 +25,7 @@ describe("input", () => {
   });
 });
 
-describe("senses and truyện chêm", () => {
+describe("senses and memo", () => {
   const demo = parseEnrichInput({ word: "demonstrate", pos: "verb", examples: ["She demonstrated the new app.", "Data demonstrate the trend."] });
   const answer = {
     senses: [
@@ -55,8 +55,9 @@ describe("senses and truyện chêm", () => {
     expect(joinSenses(long).length).toBeLessThanOrEqual(300);
     expect(joinSenses(long).split("; ")).toHaveLength(2);
   });
-  it("prompt asks for senses, a core meaning, translations and a story", () => {
-    for (const k of ['"senses"', '"core"', '"existingVi"', '"story"', "truyện chêm"]) expect(SYSTEM_PROMPT).toContain(k);
+  it("prompt asks for senses, a core meaning, translations and a short sound-alike memo", () => {
+    for (const k of ['"senses"', '"core"', '"existingVi"', '"soundAlike"', '"memo"', "con vịt"]) expect(SYSTEM_PROMPT).toContain(k);
+    expect(SYSTEM_PROMPT).not.toContain('"story"');
   });
   it("leads vi with the core meaning when there are several senses", () => {
     const r = parseEnrichResult(JSON.stringify({ ...answer, core: "cho người khác thấy rõ" }), demo);
@@ -168,5 +169,55 @@ describe("allowlist, origins, quota", () => {
     expect(await q.consume("u", 2, d1)).toBe(true);
     expect(await q.consume("u", 2, d1)).toBe(false);
     expect(await q.consume("u", 2, new Date("2026-01-02T00:00:01Z"))).toBe(true);
+  });
+});
+
+describe("memo (mnemonic)", () => {
+  const convince = parseEnrichInput({ word: "convince" });
+  const base = { senses: [{ context: "chung", vi: "thuyết phục" }] };
+  const parse = (extra: Record<string, unknown>) => parseEnrichResult(JSON.stringify({ ...base, ...extra }), convince).mnemonic;
+  it("leads with the sound-alike when the memo uses it", () => {
+    expect(parse({ soundAlike: "con vịt", memo: "Cố thuyết phục một con vịt biết nói tiếng Anh." })).toBe('Đọc như "con vịt": Cố thuyết phục một con vịt biết nói tiếng Anh.');
+    expect(parse({ soundAlike: "“Con Vịt”", memo: "Thuyết phục con vịt." })).toBe('Đọc như "Con Vịt": Thuyết phục con vịt.');
+    // The words of the sound-alike may be apart in the memo, as in the prompt's own example.
+    expect(parse({ soundAlike: "in voi", memo: "In hóa đơn mua một con voi." })).toBe('Đọc như "in voi": In hóa đơn mua một con voi.');
+  });
+  it("shows the memo alone when there is no usable sound-alike", () => {
+    const memo = "con (cùng) + vince (thắng): cùng thắng lý lẽ, tức thuyết phục.";
+    expect(parse({ soundAlike: "", memo })).toBe(memo);
+    // Not used in the memo, a transliteration with dashes, the headword itself, or too many words.
+    expect(parse({ soundAlike: "con vịt", memo: "Thuyết phục ai đó rất khó." })).toBe("Thuyết phục ai đó rất khó.");
+    expect(parse({ soundAlike: "côn-vin", memo: "côn-vin là thuyết phục." })).toBe("côn-vin là thuyết phục.");
+    expect(parse({ soundAlike: "convince", memo: "convince là thuyết phục." })).toBe("convince là thuyết phục.");
+    expect(parse({ soundAlike: "con vịt con gà con", memo: "con vịt con gà con thuyết phục." })).toBe("con vịt con gà con thuyết phục.");
+  });
+  it("drops a memo that grew into a long story", () => {
+    const story = "Sếp ngồi nhìn màn hình trắng xóa chờ cảm hứng đến, bỗng nhiên có một luồng convince cực mạnh giúp anh ấy viết xong báo cáo trước giờ họp.";
+    expect(story.length).toBeGreaterThan(MEMO_MAX);
+    expect(parse({ soundAlike: "", memo: story })).toBeUndefined();
+  });
+  it("still accepts an older-style story that uses the word", () => {
+    expect(parse({ story: "Anh ấy convince sếp tăng lương." })).toBe("Anh ấy convince sếp tăng lương.");
+    expect(parse({ story: "Không có từ cần học." })).toBeUndefined();
+  });
+});
+
+describe("memo-only mode", () => {
+  it("parses the mode and the learner's meaning, and sends the meaning to the model", () => {
+    const i = parseEnrichInput({ word: "protect", vi: "  bảo vệ ", only: "memo" });
+    expect(i.only).toBe("memo");
+    expect(i.vi).toBe("bảo vệ");
+    expect(JSON.parse(buildUserPrompt(i)).vietnameseMeaning).toBe("bảo vệ");
+    expect(parseEnrichInput({ word: "protect", only: "everything" }).only).toBeUndefined();
+  });
+  it("memo prompt asks only for the two memo keys", () => {
+    for (const k of ['"soundAlike"', '"memo"', "con vịt"]) expect(MEMO_PROMPT).toContain(k);
+    for (const k of ['"senses"', '"existingVi"']) expect(MEMO_PROMPT).not.toContain(k);
+  });
+  it("returns the composed memo, and an error the learner can act on when there is none", () => {
+    const i = parseEnrichInput({ word: "invoice", only: "memo" });
+    expect(parseMemoResult('{"soundAlike":"in voi","memo":"In hóa đơn mua một con voi."}', i)).toEqual({ mnemonic: 'Đọc như "in voi": In hóa đơn mua một con voi.' });
+    expect(() => parseMemoResult('{"soundAlike":"","memo":""}', i)).toThrow(EnrichError);
+    expect(() => parseMemoResult("nope", i)).toThrow(GeminiError);
   });
 });

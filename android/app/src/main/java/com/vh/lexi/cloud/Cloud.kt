@@ -129,7 +129,7 @@ class Cloud(private val context: Context, private val data: LexiData, private va
         scope.launch { signOut() }
     }
 
-    /** Meanings by context, translated examples and a truyện chêm from the `enrich` Cloud Function. Throws with a readable message. */
+    /** Meanings by context, translated examples and a short memory hook from the `enrich` Cloud Function. Throws with a readable message. */
     suspend fun enrich(word: String, pos: String?, en: String?, examples: List<String>): Enriched {
         val fn = functions ?: throw AiError(AiError.Kind.AUTH, "Chưa kết nối tài khoản")
         try {
@@ -143,6 +143,18 @@ class Cloud(private val context: Context, private val data: LexiData, private va
                 existingVi = (res["existingVi"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                 mnemonic = res["mnemonic"] as? String,
             )
+        } catch (e: com.google.firebase.functions.FirebaseFunctionsException) {
+            throw aiError(e, "Từ không hợp lệ")
+        }
+    }
+
+    /** Only a memory hook for one word (the "AI gợi ý mẹo" button while studying): one cheap call. Throws [AiError]. */
+    suspend fun enrichMemo(word: String, pos: String?, vi: String?): String {
+        val fn = functions ?: throw AiError(AiError.Kind.AUTH, "Chưa kết nối tài khoản")
+        try {
+            val payload = hashMapOf<String, Any?>("word" to word, "pos" to pos, "vi" to vi, "only" to "memo")
+            val res = fn.getHttpsCallable("enrich").call(payload).await().getData() as? Map<*, *> ?: throw AiError(AiError.Kind.TEMPORARY, "Phản hồi không hợp lệ")
+            return (res["mnemonic"] as? String)?.trim().orEmpty()
         } catch (e: com.google.firebase.functions.FirebaseFunctionsException) {
             throw aiError(e, "Từ không hợp lệ")
         }

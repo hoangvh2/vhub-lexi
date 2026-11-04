@@ -82,6 +82,8 @@ export interface ReviewLog {
   durationMs: number;
   /** "anki" = imported from an Anki package. */
   device: "web" | "android" | "anki";
+  /** Hint opened on the front before answering (shared/hints.ts): 1 cue, 2 whole tip or note. Absent = none. */
+  hint?: 1 | 2;
 }
 
 /**

@@ -23,7 +23,7 @@ export type Block =
   | { k: "quote"; text: string }
   /** An example sentence; `at` = [start, end) of the studied word in it (highlighted), `vi` = its translation. */
   | { k: "example"; text: string; at?: [number, number]; vi?: string }
-  /** The learner's memory tip ("truyện chêm"), shown in its own box. */
+  /** The memory tip (sound-alike pun or short hook), shown in its own box. */
   | { k: "memo"; text: string }
   /** Secondary text, collapsed under `label` until the learner opens it. */
   | { k: "fold"; label: string; text: string }
@@ -308,12 +308,13 @@ export const VOCAB: NoteTypeDef = {
     { key: "examples", label: "Ví dụ", kind: "list", maxLength: 300 },
     { key: "examplesVi", label: "Dịch ví dụ", kind: "list", maxLength: 300, placeholder: "Mỗi dòng dịch một ví dụ, cùng thứ tự" },
     { key: "mnemonic", label: "Mẹo nhớ", kind: "longtext", maxLength: 300 },
+    { key: "notes", label: "Ghi chú của tôi", kind: "longtext", maxLength: 500, placeholder: "Điều bạn hay nhầm, cách dùng, từ hay đi kèm…" },
   ],
   templates: [recognize, recall, cloze, listen],
   title: (n) => str(n.fields.word),
   subtitle: (n) => str(n.fields.vi) || str(n.fields.en),
   searchText: (n) =>
-    [str(n.fields.word), str(n.fields.vi), str(n.fields.en), ...list(n.fields.examples), ...list(n.fields.examplesVi), ...(n.tags ?? [])].join(" ").toLowerCase(),
+    [str(n.fields.word), str(n.fields.vi), str(n.fields.en), ...list(n.fields.examples), ...list(n.fields.examplesVi), str(n.fields.notes), ...(n.tags ?? [])].join(" ").toLowerCase(),
 };
 
 // ------------------------------------------------------------------ grammar (TOEIC Part 5/6 patterns)

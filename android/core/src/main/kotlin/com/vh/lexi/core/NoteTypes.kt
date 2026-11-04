@@ -16,7 +16,7 @@ sealed interface Block {
     data class Quote(val text: String) : Block
     /** An example sentence; [at] = start until end (exclusive) of the studied word in it, [vi] = its translation. */
     data class Example(val text: String, val at: Pair<Int, Int>? = null, val vi: String? = null) : Block
-    /** The learner's memory tip ("truyện chêm"), shown in its own box. */
+    /** The learner's memory tip (sound-alike pun or short hook), shown in its own box. */
     data class Memo(val text: String) : Block
     /** Secondary text, collapsed under [label] until the learner opens it. */
     data class Fold(val label: String, val text: String) : Block
@@ -268,12 +268,13 @@ object Vocab : NoteTypeDef {
         FieldDef("examples", "Ví dụ", "list", maxLength = 300),
         FieldDef("examplesVi", "Dịch ví dụ", "list", maxLength = 300, placeholder = "Mỗi dòng dịch một ví dụ, cùng thứ tự"),
         FieldDef("mnemonic", "Mẹo nhớ", "longtext", maxLength = 300),
+        FieldDef("notes", "Ghi chú của tôi", "longtext", maxLength = 500, placeholder = "Điều bạn hay nhầm, cách dùng, từ hay đi kèm…"),
     )
     override val templates: List<TemplateDef> = listOf(Recognize, Recall, ClozeTemplate, ListenTemplate)
     override fun title(note: Note) = note.f("word").str()
     override fun subtitle(note: Note) = note.f("vi").str().ifEmpty { note.f("en").str() }
     override fun searchText(note: Note) =
-        (listOf(note.f("word").str(), note.f("vi").str(), note.f("en").str()) + note.f("examples").items() + note.f("examplesVi").items() + note.tags).joinToString(" ").lowercase()
+        (listOf(note.f("word").str(), note.f("vi").str(), note.f("en").str()) + note.f("examples").items() + note.f("examplesVi").items() + note.f("notes").str() + note.tags).joinToString(" ").lowercase()
 }
 
 // ------------------------------------------------------------------ grammar (TOEIC Part 5/6 patterns)

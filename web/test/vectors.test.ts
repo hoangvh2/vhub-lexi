@@ -10,13 +10,14 @@ import { expect, it } from "vitest";
 import { CardState, DEFAULT_PREFS, normalizePrefs, type Card, type Note, type Rating } from "@shared/model.ts";
 import { IRREGULAR } from "@shared/irregular.ts";
 import { baseForms } from "@shared/morphy.ts";
-import { checkTyped, clozeSentence, findExact, findWord, normalizeAnswer, template, wantedTemplates } from "@shared/notetypes.ts";
+import { type Block, checkTyped, clozeSentence, findExact, findWord, normalizeAnswer, template, wantedTemplates } from "@shared/notetypes.ts";
 import { answerHint, confusables, letterCount, matchConfusable, meaningPhrases, suggestedRatingWith } from "@shared/confusables.ts";
 import { buildQueue, pickNext } from "../src/lib/queue.ts";
 import { answer, makeScheduler, newCard } from "../src/lib/scheduler.ts";
 import { aiFieldsOf, draftsFrom, grammarFields, problems, type ExtractedQuestion } from "../src/lib/import.ts";
 import { analyze, sentenceAround } from "../src/lib/readcheck.ts";
 import { testTag } from "../src/lib/practice.ts";
+import { hintCue, hintDependent, hintGateMs, maskHint, maxRating, meaningTerms, rotateExamples } from "@shared/hints.ts";
 
 const T0 = Date.UTC(2026, 0, 15, 8, 30, 0);
 const MIN = 60_000;
@@ -303,6 +304,57 @@ function readcheckVectors() {
   };
 }
 
+function hintVectors() {
+  const vocab = (fields: Record<string, string>): Note => ({ id: "n", type: "vocab", deckId: "d", fields, createdAt: 0, updatedAt: 0 });
+  const protect = { word: "protect", vi: "bảo vệ, sự bảo vệ, che chở" };
+  const demo = { word: "demonstrate", vi: "(cốt lõi) cho thấy rõ; (công việc) trình diễn, hướng dẫn cách dùng; (chung) chứng minh" };
+  const masks: Array<{ fields: Record<string, string>; template: string; text: string }> = [
+    { fields: protect, template: "recognize", text: 'Đọc như "pờ-rô tếch": thủ môn Tếch lao ra Bảo vệ khung thành.' },
+    { fields: protect, template: "recognize", text: "Khác prevent; protect A from B, che chở ai đó. Sự bảo vệ." },
+    { fields: protect, template: "recognize", text: "bảo vệt và bảo  vệ" },
+    { fields: protect, template: "recall", text: "protect A from B; protected, protecting. Che chở." },
+    { fields: protect, template: "cloze", text: "Protects!" },
+    { fields: demo, template: "recognize", text: "Anh sales trình diễn máy in, chứng minh nó chạy êm. Cho thấy rõ!" },
+    { fields: demo, template: "listen", text: "She demonstrated it; demonstration is a noun." },
+    { fields: protect, template: "recognize", text: "" },
+    { fields: protect, template: "recognize", text: "Thủ môn lao ra." },
+  ];
+  const cues = [
+    'Đọc như "con vịt": Cố thuyết phục một con vịt biết nói tiếng Anh.',
+    "rely (dựa vào) + able (được): dựa vào được, tức đáng tin cậy.",
+    "Một hai ba bốn năm sáu bảy tám chín",
+    "Ngắn gọn",
+    "Khác prevent. Dùng protect A from B.",
+    "Dòng một\nDòng hai",
+    "   ",
+    "Ab: cd",
+  ];
+  const L = (t: number, rating: number, hint?: number) => ({ reviewedAt: t, rating, ...(hint === undefined ? {} : { hint }) });
+  const logs = [
+    [L(1, 3, 1), L(2, 3, 2), L(3, 2, 1)],
+    [L(1, 3, 1), L(2, 3, 2), L(3, 2)],
+    [L(1, 3, 1), L(2, 3, 1), L(3, 3, 1), L(4, 2, 0), L(5, 1, 0), L(6, 2, 0), L(7, 1, 0), L(8, 2, 0)],
+    [L(1, 3, 1), L(2, 3, 1), L(3, 3, 1), L(4, 3), L(5, 4)],
+    [L(1, 3, 1), L(2, 3, 1), L(3, 3, 1), L(4, 3), L(5, 2)],
+    [L(5, 3, 1), L(1, 3, 1), L(3, 3, 1)],
+    [L(1, 3), L(2, 1)],
+    [],
+  ];
+  const ex = (t: string): Block => ({ k: "example", text: t });
+  const rot: Block[] = [{ k: "text", text: "nghĩa" }, ex("A"), { k: "memo", text: "m" }, ex("B"), ex("C")];
+  return {
+    gate: [[0, 0], [1, 0.4], [3, 30], [2, 5], [2, 20.99], [2, 21]].map(([state, stability]) => ({ state, stability, expect: hintGateMs({ state, stability }) })),
+    maxRating: [0, 1, 2].map((l) => maxRating(l as 0 | 1 | 2)),
+    terms: [protect.vi, demo.vi, "có; là, ở", "Hợp Đồng / bản cam kết\nthỏa thuận", ""].map((vi) => ({ vi, expect: meaningTerms(vi) })),
+    masks: masks.map((m) => ({ ...m, expect: maskHint(m.text, vocab(m.fields), m.template) })),
+    cues: cues.map((t) => [t, hintCue(t)]),
+    dependent: logs.map((l) => ({ logs: l, expect: hintDependent(l) })),
+    rotate: [0, 1, 2, 3, 4, -1].map((reps) => ({ reps, expect: rotateExamples(rot, reps).map((b) => (b as { text: string }).text) })),
+    rotateBlocks: rot.map((b) => (b as { text: string }).text),
+    rotateKinds: rot.map((b) => b.k),
+  };
+}
+
 it("cross-platform vectors are up to date", () => {
   const dir = join(__dirname, "../../shared/vectors");
   const files: Array<[string, string]> = [
@@ -313,6 +365,7 @@ it("cross-platform vectors are up to date", () => {
     ["queue.json", JSON.stringify(queueVectors(), null, 1)],
     ["import.json", JSON.stringify(importVectors(), null, 1)],
     ["readcheck.json", JSON.stringify(readcheckVectors(), null, 1)],
+    ["hints.json", JSON.stringify(hintVectors(), null, 1)],
     ["testtag.json", JSON.stringify(["Test 1 TOEIC NEW 2026", "Đề ETS 2026 — Test #2", "   ", "Kiểm tra giữa kỳ: Ôn tập rất dài của năm học 2026 lần thứ ba", "ĐĐ ñandú", "a--b"].map((n) => [n, testTag(n)]), null, 1)],
     [join("../../android/core/src/main/kotlin/com/vh/lexi/core/Irregular.kt"), irregularKotlin()],
   ];

@@ -228,7 +228,7 @@ describe("core flow (local-only mode)", () => {
     assert.match(await page.textContent('[data-testid=verdict]'), /Chính xác/);
     assert.equal(await page.textContent('[data-testid=example] mark'), "desire");
     assert.match(await page.textContent('[data-testid=example]'), /Chúng tôi ao ước có nhà riêng\./);
-    assert.match(await page.textContent('[data-testid=memo]'), /đì-zai-ơ/);
+    assert.match(await page.textContent('[data-testid=memory]'), /đì-zai-ơ/);
     assert.deepEqual(errors, []);
     await ctx.close();
   });
@@ -686,6 +686,117 @@ describe("nhập nhanh: screenshots -> reviewed rows -> grammar cards and a pass
     assert.match(await page.textContent('[data-testid=import-off]'), /đăng nhập/);
     assert.equal(await page.locator('[data-testid=import-run]').isDisabled(), true);
     await page.fill('[data-testid=g-sentence]', "Please ___ us.");
+    await ctx.close();
+  });
+
+  it("hints on the front: wait, cue, whole tip with the answer blanked, rating capped, tip and notes edited in place", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    const shots = process.env.LEXI_SHOTS;
+    // Let the card and dialog animations settle so the pictures show the resting state.
+    const shot = async (name) => shots && (await page.waitForTimeout(500), await page.screenshot({ path: join(shots, `${name}.png`) }));
+    const T = Date.now() - 60_000;
+    const DAY = 86_400_000;
+    const file = join(tmpdir(), `lexi-hints-${process.pid}.json`);
+    writeFileSync(file, JSON.stringify({
+      app: "vhub-lexi", version: 1, exportedAt: T, decks: [{ id: "d1", name: "TOEIC", createdAt: T, updatedAt: T }],
+      notes: [{
+        id: "n1", type: "vocab", deckId: "d1", createdAt: T, updatedAt: T,
+        fields: {
+          word: "protect", ipa: "prəˈtɛkt", pos: "verb", vi: "bảo vệ, che chở",
+          examples: ["Consumer laws protect the public.", "The warranty protects you against defects."],
+          examplesVi: ["Luật tiêu dùng bảo vệ công chúng.", "Bảo hành bảo vệ bạn khỏi lỗi sản xuất."],
+          mnemonic: 'Đọc như "pờ-rô tếch": thủ môn Tếch lao ra bảo vệ khung thành.',
+          notes: "Khác prevent (ngăn chuyện xảy ra).\nprotect A from/against B",
+        },
+      }],
+      cards: [{ id: "n1.recognize", noteId: "n1", deckId: "d1", template: "recognize", state: 2, due: T, stability: 10, difficulty: 5, scheduledDays: 10, learningSteps: 0, reps: 3, lapses: 0, lastReview: T - 10 * DAY, createdAt: T, updatedAt: T }],
+    }));
+    await page.goto(`${base}/#/settings`);
+    await page.setInputFiles('[data-testid=import-file]', file);
+    await page.click('[data-testid=confirm-ok]');
+    await page.goto(`${base}/#/study`);
+    await page.waitForSelector('[data-testid=hint-memo]');
+    await shot("01-front-waiting");
+
+    // Asleep for the first seconds: a tap opens nothing.
+    await page.click('[data-testid=hint-memo]');
+    assert.equal(await page.locator('[data-testid=hint-box-memo]').count(), 0);
+    await page.waitForFunction(() => document.querySelector(".hint-tools")?.classList.contains("awake"), null, { timeout: 6000 });
+    // Level 1: only the sound.
+    await page.click('[data-testid=hint-memo]');
+    assert.equal((await page.textContent('[data-testid=hint-box-memo] p')).trim(), 'Đọc như "pờ-rô tếch"…');
+    await shot("02-front-cue");
+    // Level 2: the whole tip, the Vietnamese meaning blanked.
+    await page.click('[data-testid=hint-memo]');
+    assert.match(await page.textContent('[data-testid=hint-box-memo] p'), /thủ môn Tếch lao ra/);
+    assert.equal(await page.textContent('[data-testid=hint-box-memo] .hint-mask'), "bảo vệ");
+    // The notes: first line only at level 1, nothing of the meaning in it to blank.
+    await page.keyboard.press("g");
+    assert.equal((await page.textContent('[data-testid=hint-box-notes] p')).trim(), "Khác prevent (ngăn chuyện xảy ra)…");
+    await shot("03-front-full");
+
+    await page.click('[data-testid=show-answer]');
+    // Whole tip seen: Good and Easy are out this time; a click on them does nothing.
+    assert.equal(await page.getAttribute('[data-testid=rate-3]', 'aria-disabled'), "true");
+    assert.equal(await page.getAttribute('[data-testid=rate-4]', 'aria-disabled'), "true");
+    assert.equal(await page.getAttribute('[data-testid=rate-2]', 'aria-disabled'), "false");
+    // Examples start at a different one each review (reps = 3, two examples → the second first).
+    assert.match(await page.textContent('[data-testid=example]'), /warranty/);
+    assert.match(await page.textContent('[data-testid=memory]'), /Khác prevent/);
+    await shot("04-back-capped");
+    await page.click('[data-testid=rate-3]', { force: true });
+    assert.equal(await page.getAttribute('[data-testid=study-card]', 'data-revealed'), "true");
+
+    // Edit the notes without leaving the session.
+    await page.click('[data-testid=memory-edit]');
+    await page.fill('[data-testid=notes-input]', "protect A from B. Khác prevent.");
+    await shot("05-edit");
+    await page.click('[data-testid=memory-save]');
+    await page.waitForFunction(() => /protect A from B\. Khác prevent\./.test(document.querySelector('[data-testid=memory]')?.textContent ?? ""));
+    await shot("06-back-saved");
+    await page.click('[data-testid=rate-2]');
+    await page.waitForSelector('[data-testid=session-done]');
+
+    // The answer was logged with the hint level, so the next reviews know this word leaned on it.
+    const logs = await page.evaluate(async () => {
+      const req = indexedDB.open("vhub-lexi");
+      const db = await new Promise((ok, ko) => ((req.onsuccess = () => ok(req.result)), (req.onerror = ko)));
+      return new Promise((ok) => {
+        const r = db.transaction("reviews").objectStore("reviews").getAll();
+        r.onsuccess = () => ok(r.result);
+      });
+    });
+    assert.ok(logs.some((l) => l.hint === 2 && l.rating === 2), JSON.stringify(logs));
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("a word that leaned on hints lately has them locked until the answer is shown", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    const T = Date.now() - 60_000;
+    const DAY = 86_400_000;
+    const file = join(tmpdir(), `lexi-hints-lock-${process.pid}.json`);
+    const log = (n, hint) => ({ id: `n1.recognize@${T - n * DAY}`, cardId: "n1.recognize", noteId: "n1", deckId: "d1", rating: 2, state: 2, stability: 3, difficulty: 6, scheduledDays: 3, reviewedAt: T - n * DAY, durationMs: 5000, device: "web", ...(hint ? { hint } : {}) });
+    writeFileSync(file, JSON.stringify({
+      app: "vhub-lexi", version: 1, exportedAt: T, decks: [{ id: "d1", name: "TOEIC", createdAt: T, updatedAt: T }],
+      notes: [{ id: "n1", type: "vocab", deckId: "d1", createdAt: T, updatedAt: T, fields: { word: "convince", vi: "thuyết phục", mnemonic: 'Đọc như "con vịt": cố thuyết phục một con vịt biết nói tiếng Anh.' } }],
+      cards: [{ id: "n1.recognize", noteId: "n1", deckId: "d1", template: "recognize", state: 2, due: T, stability: 3, difficulty: 6, scheduledDays: 3, learningSteps: 0, reps: 5, lapses: 0, lastReview: T - 3 * DAY, createdAt: T, updatedAt: T }],
+      reviews: [log(20, 2), log(12, 1), log(8), log(3, 2)],
+    }));
+    await page.goto(`${base}/#/settings`);
+    await page.setInputFiles('[data-testid=import-file]', file);
+    await page.click('[data-testid=confirm-ok]');
+    await page.goto(`${base}/#/study`);
+    await page.waitForSelector('[data-testid=hint-memo] .hint-dot');
+    await page.waitForTimeout(4200);
+    await page.click('[data-testid=hint-memo]');
+    assert.equal(await page.locator('[data-testid=hint-box-memo]').count(), 0);
+    if (process.env.LEXI_SHOTS) await page.screenshot({ path: join(process.env.LEXI_SHOTS, "07-locked.png") });
+    // After the answer the tip is there to read, and every rating is allowed (no hint was used).
+    await page.click('[data-testid=show-answer]');
+    assert.match(await page.textContent('[data-testid=memory]'), /con vịt/);
+    assert.equal(await page.getAttribute('[data-testid=rate-4]', 'aria-disabled'), "false");
+    assert.deepEqual(errors, []);
     await ctx.close();
   });
 });

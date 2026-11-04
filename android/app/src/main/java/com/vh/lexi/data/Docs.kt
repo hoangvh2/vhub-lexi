@@ -92,12 +92,13 @@ fun ReviewLog.toDoc(): Doc = mapOf(
     "id" to id, "cardId" to cardId, "noteId" to noteId, "deckId" to deckId, "rating" to rating.toLong(), "state" to state.toLong(),
     "stability" to stability, "difficulty" to difficulty, "scheduledDays" to scheduledDays, "reviewedAt" to reviewedAt,
     "durationMs" to durationMs, "device" to device,
-)
+) + (if (hint > 0) mapOf("hint" to hint.toLong()) else emptyMap())
 
 fun reviewFromDoc(d: Doc) = ReviewLog(
     id = d.s("id") ?: "", cardId = d.s("cardId") ?: "", noteId = d.s("noteId") ?: "", deckId = d.s("deckId") ?: "",
     rating = d.l("rating")?.toInt() ?: 3, state = d.l("state")?.toInt() ?: 0, stability = d.d("stability") ?: 0.0, difficulty = d.d("difficulty") ?: 0.0,
     scheduledDays = d.d("scheduledDays") ?: 0.0, reviewedAt = d.l("reviewedAt") ?: 0, durationMs = d.l("durationMs") ?: 0, device = d.s("device") ?: "android",
+    hint = d.l("hint")?.toInt() ?: 0,
 )
 
 fun Daily.toDoc(): Doc = mapOf(
