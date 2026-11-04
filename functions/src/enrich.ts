@@ -123,10 +123,15 @@ export const MEMO_MAX = 120;
 /** Vietnamese words only (letters with diacritics and spaces), at most 4 of them. */
 const SOUND_ALIKE = /^[\p{L}]+(?: [\p{L}]+){0,3}$/u;
 const fold = (t: string) => t.normalize("NFC").toLowerCase();
+/** Every word of the sound-alike appears in the memo ("in voi" in "In hóa đơn mua một con voi"). */
+const usesAllWords = (memo: string, sound: string) => {
+  const words = new Set(fold(memo).split(/[^\p{L}]+/u));
+  return fold(sound).split(" ").every((w) => words.has(w));
+};
 
 /**
  * 'Đọc như "con vịt": <memo>' from the model's soundAlike + memo. The sound-alike is shown only when it is a few
- * real words, not the headword itself, and the memo actually uses it (otherwise the pun explains nothing).
+ * real words, not the headword itself, and the memo actually uses each of its words (otherwise the pun explains nothing).
  * Older answers ("story" / "mnemonic") still pass when they mention the word.
  */
 export function buildMnemonic(o: Record<string, unknown>, word: string): string | undefined {
@@ -134,7 +139,7 @@ export function buildMnemonic(o: Record<string, unknown>, word: string): string 
   if (memo) {
     if (memo.length > MEMO_MAX) return undefined;
     const sound = str(o.soundAlike, 40).replace(/^["'“”]+|["'“”]+$/g, "").trim();
-    const ok = sound && SOUND_ALIKE.test(sound) && fold(sound) !== fold(word) && fold(memo).includes(fold(sound));
+    const ok = sound && SOUND_ALIKE.test(sound) && fold(sound) !== fold(word) && usesAllWords(memo, sound);
     return ok ? `Đọc như "${sound}": ${memo}` : memo;
   }
   const story = str(o.story, 300) || str(o.mnemonic, 300);

@@ -179,6 +179,8 @@ describe("memo (mnemonic)", () => {
   it("leads with the sound-alike when the memo uses it", () => {
     expect(parse({ soundAlike: "con vịt", memo: "Cố thuyết phục một con vịt biết nói tiếng Anh." })).toBe('Đọc như "con vịt": Cố thuyết phục một con vịt biết nói tiếng Anh.');
     expect(parse({ soundAlike: "“Con Vịt”", memo: "Thuyết phục con vịt." })).toBe('Đọc như "Con Vịt": Thuyết phục con vịt.');
+    // The words of the sound-alike may be apart in the memo, as in the prompt's own example.
+    expect(parse({ soundAlike: "in voi", memo: "In hóa đơn mua một con voi." })).toBe('Đọc như "in voi": In hóa đơn mua một con voi.');
   });
   it("shows the memo alone when there is no usable sound-alike", () => {
     const memo = "con (cùng) + vince (thắng): cùng thắng lý lẽ, tức thuyết phục.";
