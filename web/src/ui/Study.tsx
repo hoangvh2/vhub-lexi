@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { dayId, type Card, type Id, type Rating } from "@shared/model.ts";
-import { answerHint, confusables, letterCount, matchConfusable, meaningsByNote, suggestedRatingWith, type Confusable } from "@shared/confusables.ts";
+import { answerHint, confusables, hintNote, letterCount, matchConfusable, meaningsByNote, suggestedRatingWith, typingTarget, type Confusable } from "@shared/confusables.ts";
 import { checkTyped, str, template, type AnswerVerdict } from "@shared/notetypes.ts";
 import { hintDependent, hintGateMs, maxRating, rotateExamples, type HintLevel } from "@shared/hints.ts";
 import { reviewCard, setSuspended, undoReview, type Reviewed } from "../data/actions.ts";
@@ -324,9 +324,10 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
   const total = queue.counts.new + queue.counts.learning + queue.counts.review;
   const doneFrac = session.answered + total === 0 ? 1 : session.answered / (session.answered + total);
   const kind = card ? (card.state === 0 ? "new" : card.state === 2 ? "review" : "learn") : null;
-  const answer = note && tpl?.expected ? tpl.expected(note)[0] ?? "" : "";
+  // The hint spells out the word being learned, not the inflected form a cloze sentence uses (sail, not sailed).
+  const target = typingTarget(note && tpl?.expected ? tpl.expected(note) : []);
+  const answer = target.word;
   const letters = letterCount(answer);
-  const words = answer.trim().split(/\s+/).filter(Boolean).length;
 
   return (
     <div class="page narrow">
@@ -394,7 +395,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
                     ch === " " ? <i key={i} class="gap" /> : <span key={i} class={ch === "_" ? "" : "on"}>{ch === "_" ? "" : ch}</span>,
                   )}
                 </div>
-                <div class="skel-note">{words > 1 ? `${words} từ, ` : ""}{letters} chữ cái</div>
+                <div class="skel-note" data-testid="answer-note">{hintNote(target)}</div>
                 {similar.length > 0 && (
                   <div class="notthis" data-testid="not-these">
                     Trong bộ thẻ của bạn, <b>không phải</b>: {similar.slice(0, 3).map((c, i) => <span key={c.noteId}>{i ? " · " : ""}<s>{c.word}</s></span>)}

@@ -93,6 +93,37 @@ fun matchConfusable(typed: String, list: List<Confusable>): Confusable? {
 /** Letters in an answer (spaces, hyphens and apostrophes are not letters). */
 fun letterCount(answer: String): Int = answer.trim().codePoints().filter { Character.isLetter(it) }.count().toInt()
 
+/** Endings that a sentence form may add to the word being learned and that the hint names (sail -> sailed: "ed"). */
+private val ENDINGS = listOf("s", "es", "d", "ed", "ing", "er", "est", "ly")
+
+/**
+ * What the typing hint spells out (port of typingTarget in shared/confusables.ts): the word being learned
+ * ([expected] first), never the form a cloze sentence uses, so "sail" stays 4 letters when the sentence says
+ * "sailed". [ending]: null = same word, "ed" = the word plus "-ed", "" = another form.
+ */
+data class TypingTarget(val word: String, val ending: String?)
+
+fun typingTarget(expected: List<String>): TypingTarget {
+    val word = expected.getOrNull(0)?.trim() ?: ""
+    val form = expected.getOrNull(1)?.trim() ?: ""
+    val w = normalizeAnswer(word)
+    val f = normalizeAnswer(form)
+    if (f.isEmpty() || f == w) return TypingTarget(word, null)
+    val wp = w.split(" ")
+    val fp = f.split(" ")
+    val rest = if (fp[0].startsWith(wp[0])) fp[0].substring(wp[0].length) else ""
+    val ending = if (wp.drop(1) == fp.drop(1) && rest in ENDINGS) rest else ""
+    return TypingTarget(word, ending)
+}
+
+/** The line under the skeleton: "4 chữ cái", "2 từ, 9 chữ cái", "4 chữ cái · trong câu thêm -ed". */
+fun hintNote(t: TypingTarget): String {
+    val words = t.word.split(Regex("\\s+")).count { it.isNotEmpty() }
+    val base = (if (words > 1) "$words từ, " else "") + "${letterCount(t.word)} chữ cái"
+    val ending = t.ending ?: return base
+    return "$base · " + if (ending.isNotEmpty()) "trong câu thêm -$ending" else "trong câu ở dạng khác"
+}
+
 /**
  * The answer with only its first [shown] letters visible: answerHint("look after", 1) = "l___ _____".
  * Never shows every letter: at most all but the last.

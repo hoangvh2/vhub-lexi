@@ -145,7 +145,7 @@ describe("note types", () => {
     const t = template("vocab", "listen")!;
     expect(t.mode).toBe("type");
     expect(t.front(n, DEFAULT_PREFS.layout)).toEqual([{ k: "listen", text: "She is running fast." }, { k: "quote", text: "She is _____ fast." }]);
-    expect(t.expected!(n)).toEqual(["running", "run"]);
+    expect(t.expected!(n)).toEqual(["run", "running"]);
     expect(t.speak?.front?.(n)).toBe("She is running fast.");
     expect(t.applies(note({ examples: [] }))).toBe(false);
   });
@@ -155,6 +155,9 @@ describe("note types", () => {
     expect(clozeSentence("Please look after the kids.", "look after")).toEqual({ text: "Please _____ the kids.", answer: "look after" });
     expect(clozeSentence("Nothing here.", "resilient")).toBeNull();
     expect(clozeSentence("Children are often more resilient.", "resilient")?.text).toBe("Children are often more _____.");
+    // Accented letters belong to the word: "café" must blank all of "cafés", not "caf" (leaving "_____és").
+    expect(clozeSentence("Two cafés here.", "café")).toEqual({ text: "Two _____ here.", answer: "cafés" });
+    expect(clozeSentence("Một naïve idea.", "naïve")).toEqual({ text: "Một _____ idea.", answer: "naïve" });
   });
   it("typed answers: exact, close (1 typo), wrong", () => {
     expect(checkTyped("  Resilient ", ["resilient"])).toBe("correct");

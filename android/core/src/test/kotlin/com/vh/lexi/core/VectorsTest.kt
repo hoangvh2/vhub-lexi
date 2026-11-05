@@ -205,6 +205,14 @@ class ConfusablesVectorsTest {
             assertEquals(h.getString("hint"), answerHint(h.getString("answer"), h.getInt("shown")), h.toString())
             assertEquals(h.getInt("letters"), letterCount(h.getString("answer")), h.toString())
         }
+        for (t in root.getJSONArray("targets").objects()) {
+            val target = typingTarget(t.getJSONArray("expected").strings())
+            assertEquals(t.getString("word"), target.word, t.toString())
+            assertEquals(if (t.isNull("ending")) null else t.getString("ending"), target.ending, t.toString())
+            assertEquals(t.getString("note"), hintNote(target), t.toString())
+            assertEquals(t.getInt("letters"), letterCount(target.word), t.toString())
+            assertEquals(t.getString("hint"), answerHint(target.word, 1), t.toString())
+        }
         for (r in root.getJSONArray("ratings").objects()) {
             val v = Verdict.valueOf(r.getString("verdict").uppercase())
             assertEquals(r.getInt("rating"), suggestedRatingWith(v, r.getInt("extraHints"), r.getBoolean("retried")), r.toString())

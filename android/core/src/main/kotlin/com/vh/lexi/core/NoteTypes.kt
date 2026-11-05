@@ -74,8 +74,9 @@ fun findWord(sentence: String, word: String): Pair<Int, Int>? {
     val stemLen = if (h.length >= 6) h.length - 2 else if (h.length >= 4) h.length - 1 else h.length
     val stem = h.substring(0, stemLen)
     val last = escapeRe(h.last().toString())
-    val headRe = if (h.length >= 4) "${escapeRe(stem)}[a-z]*" else "${escapeRe(h)}$last?(?:s|es|ed|d|ing)?"
-    val re = Regex("(?<![A-Za-z])(${(listOf(headRe) + rest.map { escapeRe(it) }).joinToString("\\s+")})(?![A-Za-z])", RegexOption.IGNORE_CASE)
+    // Letters are any Unicode letter, so "cafés" is one word and never cut to "caf" + "és"; (?iu) = the TS "iu" flags.
+    val headRe = if (h.length >= 4) "${escapeRe(stem)}\\p{L}*" else "${escapeRe(h)}$last?(?:s|es|ed|d|ing)?"
+    val re = Regex("(?iu)(?<!\\p{L})(${(listOf(headRe) + rest.map { escapeRe(it) }).joinToString("\\s+")})(?!\\p{L})")
     val m = re.find(sentence) ?: return null
     return m.range.first to m.range.last + 1
 }
@@ -198,10 +199,14 @@ private object Recall : TemplateDef {
     override fun speakBack(note: Note) = note.f("word").str()
 }
 
-/** Typed answers for cards that blank the word out of an example (the inflected form or the base word). */
+/**
+ * Typed answers for cards that blank the word out of an example: the word being learned first (the answer hint
+ * spells it out), then the form the sentence uses when it differs ("sail", "sailed"). Both are correct.
+ */
 private fun clozeExpected(note: Note): List<String> {
-    val c = firstExampleWith(note)
-    return if (c != null) listOf(c.cloze.answer, note.f("word").str()) else listOf(note.f("word").str())
+    val word = note.f("word").str()
+    val form = firstExampleWith(note)?.cloze?.answer ?: ""
+    return if (form.isNotEmpty() && normalizeAnswer(form) != normalizeAnswer(word)) listOf(word, form) else listOf(word)
 }
 
 private object ClozeTemplate : TemplateDef {

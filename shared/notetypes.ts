@@ -99,8 +99,9 @@ export function findWord(sentence: string, word: string): [number, number] | nul
   const stem = h.slice(0, stemLen);
   // Short words take suffixes, with a doubled final consonant: run -> running, put -> putting.
   const last = escapeRe(h[h.length - 1]);
-  const headRe = h.length >= 4 ? `${escapeRe(stem)}[a-z]*` : `${escapeRe(h)}${last}?(?:s|es|ed|d|ing)?`;
-  const re = new RegExp(`(?<![A-Za-z])(${[headRe, ...rest.map(escapeRe)].join("\\s+")})(?![A-Za-z])`, "i");
+  // Letters are any Unicode letter, so "cafés" is one word and never cut to "caf" + "és".
+  const headRe = h.length >= 4 ? `${escapeRe(stem)}\\p{L}*` : `${escapeRe(h)}${last}?(?:s|es|ed|d|ing)?`;
+  const re = new RegExp(`(?<!\\p{L})(${[headRe, ...rest.map(escapeRe)].join("\\s+")})(?!\\p{L})`, "iu");
   const m = re.exec(sentence);
   return m ? [m.index, m.index + m[0].length] : null;
 }
@@ -238,10 +239,14 @@ const recall: TemplateDef = {
   speak: { back: (n) => str(n.fields.word) },
 };
 
-/** Typed answers for cards that blank the word out of an example (the inflected form or the base word). */
+/**
+ * Typed answers for cards that blank the word out of an example: the word being learned first (the answer hint
+ * spells it out), then the form the sentence uses when it differs ("sail", "sailed"). Both are correct.
+ */
 function clozeExpected(n: Note): string[] {
-  const c = firstExampleWith(n);
-  return c ? [c.cloze.answer, str(n.fields.word)] : [str(n.fields.word)];
+  const word = str(n.fields.word);
+  const form = firstExampleWith(n)?.cloze.answer ?? "";
+  return form && normalizeAnswer(form) !== normalizeAnswer(word) ? [word, form] : [word];
 }
 
 const cloze: TemplateDef = {

@@ -88,10 +88,12 @@ import com.vh.lexi.core.CardState
 import com.vh.lexi.core.Confusable
 import com.vh.lexi.core.answerHint
 import com.vh.lexi.core.confusables
+import com.vh.lexi.core.hintNote
 import com.vh.lexi.core.letterCount
 import com.vh.lexi.core.matchConfusable
 import com.vh.lexi.core.str
 import com.vh.lexi.core.suggestedRatingWith
+import com.vh.lexi.core.typingTarget
 import com.vh.lexi.core.Fsrs
 import com.vh.lexi.core.LEARN_AHEAD_MS
 import com.vh.lexi.core.QueueInput
@@ -317,7 +319,9 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
     val total = queue.counts.new + queue.counts.learning + queue.counts.review
     val doneFrac = if (session.answered + total == 0) 1f else session.answered.toFloat() / (session.answered + total)
     val kind = card?.let { if (it.state == CardState.NEW) "new" else if (it.state == CardState.REVIEW) "review" else "learn" }
-    val answer = if (note != null && tpl != null) tpl.expected(note).firstOrNull() ?: "" else ""
+    // The hint spells out the word being learned, not the inflected form a cloze sentence uses (sail, not sailed).
+    val target = typingTarget(if (note != null && tpl != null) tpl.expected(note) else emptyList())
+    val answer = target.word
     val letters = letterCount(answer)
 
     val fsrs = remember(prefs.desiredRetention, prefs.fsrsWeights) { prefs.fsrs() }
@@ -392,7 +396,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
                         BlocksView(tpl.front(note, prefs.layout), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
                         if (hintable) HintBoxes(note, tpl.id, levels)
                         if (tpl.mode == AnswerMode.TYPE && !revealed && answer.isNotEmpty()) {
-                            AnswerHint(answerHint(answer, 1 + extraHints), letters, answer.trim().split(Regex("\\s+")).size, mode)
+                            AnswerHint(answerHint(answer, 1 + extraHints), hintNote(target), mode)
                             if (similar.isNotEmpty()) NotThese(similar.take(3))
                         }
                         if (tpl.mode == AnswerMode.TYPE && !revealed) {
@@ -538,7 +542,7 @@ private fun CountChip(text: String, color: Color, on: Boolean) {
 
 /** The answer's first letter(s) and its length: "c _ _ _ _ _ _ _", "8 chữ cái". */
 @Composable
-private fun AnswerHint(hint: String, letters: Int, words: Int, mode: Color) {
+private fun AnswerHint(hint: String, note: String, mode: Color) {
     val c = Lexi.colors
     // Narrower cells for long answers so "procrastination" still fits on one line of a phone card.
     val long = hint.length > 11
@@ -553,7 +557,7 @@ private fun AnswerHint(hint: String, letters: Int, words: Int, mode: Color) {
                 }
             }
         }
-        Text((if (words > 1) "$words từ, " else "") + "$letters chữ cái", fontSize = 12.sp, color = c.muted)
+        Text(note, Modifier.testTag("answer-note"), fontSize = 12.sp, color = c.muted, textAlign = TextAlign.Center)
     }
 }
 
