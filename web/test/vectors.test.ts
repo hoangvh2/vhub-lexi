@@ -221,6 +221,18 @@ function queueVectors() {
       mk("o3.cloze", "o3", { template: "cloze", createdAt: T0 + 22 }), mk("o3.custom", "o3", { template: "custom", createdAt: T0 + 22 }),
     ],
   });
+  // A word answered today keeps its review cards for tomorrow (also under review ahead); learning steps still come back.
+  scenarios.push({
+    name: "answered-today", prefs: { ...DEFAULT_PREFS, newPerDay: 0, dayStartHour: 4 }, today: undefined, deckId: null, buried: [], learnAheadMs: 20 * MIN, reviewAheadDays: 30,
+    extra: [
+      mk("h1.recognize", "h1", { state: CardState.Review, due: T0 + 27 * DAY, lastReview: T0 - 10 * MIN, createdAt: T0 - 60 * DAY }),
+      mk("h1.cloze", "h1", { template: "cloze", state: CardState.Review, due: T0 - HOUR, lastReview: T0 - 5 * DAY, createdAt: T0 - 60 * DAY }),
+      mk("h2.recognize", "h2", { state: CardState.Review, due: T0 + 3 * DAY, lastReview: T0 - 5 * HOUR, createdAt: T0 - 60 * DAY }),
+      mk("h2.cloze", "h2", { template: "cloze", state: CardState.Review, due: T0 - 2 * HOUR, lastReview: T0 - 5 * DAY, createdAt: T0 - 60 * DAY }),
+      mk("h3.recognize", "h3", { state: CardState.Relearning, due: T0 + 5 * MIN, lastReview: T0 - 5 * MIN, createdAt: T0 - 60 * DAY }),
+      mk("h3.cloze", "h3", { template: "cloze", state: CardState.Review, due: T0 - 3 * HOUR, lastReview: T0 - 5 * DAY, createdAt: T0 - 60 * DAY }),
+    ],
+  });
   return scenarios.map((s) => {
     const all = [...cards, ...(s.extra ?? [])];
     const meanings = s.meanings ? new Map(Object.entries(s.meanings)) : undefined;

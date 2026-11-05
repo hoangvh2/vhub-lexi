@@ -8,6 +8,8 @@ import java.time.ZoneId
  *   review    review cards due before the next study-day boundary, most overdue first
  *   new       never-seen cards, oldest first, capped by the daily limit
  * Siblings (cards of one note) are buried for the rest of the session once one is answered.
+ * Review cards of a note answered today are also held until the next study day ([answeredToday], from lastReview),
+ * so leaving and reopening the study screen does not bring the word straight back (queue.ts).
  * Near-synonyms interfere when learned together, so a new word waits while another word sharing a
  * Vietnamese meaning phrase is new in this queue or reviewed but not yet on a SETTLE_DAYS interval.
  * Custom study: [QueueInput.noteIds] limits the session to some notes (a lesson tag), [QueueInput.reviewAheadDays]
@@ -47,8 +49,15 @@ data class Queue(val learning: List<Card>, val review: List<Card>, val newCards:
     val all: List<Card> get() = learning + review + newCards
 }
 
+/** Notes with a card answered in the current study day (queue.ts answeredToday). */
+fun answeredToday(cards: List<Card>, now: Long, dayStartHour: Int, zone: ZoneId = ZoneId.systemDefault()): Set<Id> {
+    val dayStart = nextDayStart(now, dayStartHour, zone) - Fsrs.DAY_MS
+    return cards.filter { it.state != CardState.NEW && (it.lastReview ?: Long.MIN_VALUE) >= dayStart }.mapTo(HashSet()) { it.noteId }
+}
+
 fun buildQueue(i: QueueInput): Queue {
     val cutoff = nextDayStart(i.now, i.prefs.dayStartHour, i.zone) + i.reviewAheadDays * Fsrs.DAY_MS
+    val doneToday = answeredToday(i.cards, i.now, i.prefs.dayStartHour, i.zone)
     val learning = ArrayList<Card>()
     val review = ArrayList<Card>()
     val fresh = ArrayList<Card>()
@@ -58,7 +67,7 @@ fun buildQueue(i: QueueInput): Queue {
         if (i.noteIds != null && c.noteId !in i.noteIds) continue
         when (c.state) {
             CardState.LEARNING, CardState.RELEARNING -> if (c.due <= i.now + i.learnAheadMs) learning += c
-            CardState.REVIEW -> if (c.due < cutoff && c.noteId !in i.buried) review += c
+            CardState.REVIEW -> if (c.due < cutoff && c.noteId !in i.buried && c.noteId !in doneToday) review += c
             else -> if (c.noteId !in i.buried) fresh += c
         }
     }
@@ -109,12 +118,13 @@ fun pickNext(q: Queue, s: SessionState, now: Long): Card? {
 }
 
 /** Review cards outside today's queue that `reviewAheadDays = days` would add (for the "review ahead" button). */
-fun dueWithin(cards: List<Card>, eligible: (Card) -> Boolean, now: Long, dayStartHour: Int, days: Int, deckId: Id? = null, noteIds: Set<Id>? = null, zone: ZoneId = ZoneId.systemDefault()): Int {
+/** [skip]: notes the queue holds back today ([answeredToday]), so the button never offers cards it would not add. */
+fun dueWithin(cards: List<Card>, eligible: (Card) -> Boolean, now: Long, dayStartHour: Int, days: Int, deckId: Id? = null, noteIds: Set<Id>? = null, zone: ZoneId = ZoneId.systemDefault(), skip: Set<Id> = emptySet()): Int {
     val today = nextDayStart(now, dayStartHour, zone)
     val until = today + days * Fsrs.DAY_MS
     return cards.count { c ->
         c.state == CardState.REVIEW && !c.suspended && c.due >= today && c.due < until && eligible(c) &&
-            (deckId == null || c.deckId == deckId) && (noteIds == null || c.noteId in noteIds)
+            (deckId == null || c.deckId == deckId) && (noteIds == null || c.noteId in noteIds) && c.noteId !in skip
     }
 }
 

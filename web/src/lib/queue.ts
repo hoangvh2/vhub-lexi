@@ -6,7 +6,9 @@
  *   new       never-seen cards, oldest first, capped by the daily limit
  *
  * Siblings (cards of the same note) are buried for the rest of the session once one is answered,
- * so you never see "word → meaning" and "cloze of the same word" back to back.
+ * so you never see "word → meaning" and "cloze of the same word" back to back. Review cards of a note answered
+ * today are also held until the next study day (Anki's "bury review siblings"): the session-only set is lost when
+ * the screen is left, and the same word came back as "Ôn" right after the learner had rated it Hard for 27 days.
  *
  * Custom study (Anki's "Custom study session", kept to what a vocabulary learner uses): `noteIds` limits the
  * session to some notes (a lesson tag) and `reviewAheadDays` also takes review cards due in the next N days.
@@ -54,8 +56,17 @@ export interface Queue {
   counts: { new: number; learning: number; review: number };
 }
 
+/** Notes with a card answered in the current study day (from the cards' lastReview, so it holds across sessions and devices). */
+export function answeredToday(cards: readonly Card[], now: number, dayStartHour: number): Set<Id> {
+  const dayStart = nextDayStart(now, dayStartHour) - 86_400_000;
+  const out = new Set<Id>();
+  for (const c of cards) if (c.state !== CardState.New && c.lastReview !== undefined && c.lastReview >= dayStart) out.add(c.noteId);
+  return out;
+}
+
 export function buildQueue(i: QueueInput): Queue {
   const cutoff = nextDayStart(i.now, i.prefs.dayStartHour) + (i.reviewAheadDays ?? 0) * 86_400_000;
+  const doneToday = answeredToday(i.cards, i.now, i.prefs.dayStartHour);
   const learning: Card[] = [];
   const review: Card[] = [];
   const fresh: Card[] = [];
@@ -66,7 +77,7 @@ export function buildQueue(i: QueueInput): Queue {
     if (c.state === CardState.Learning || c.state === CardState.Relearning) {
       if (c.due <= i.now + (i.learnAheadMs ?? 0)) learning.push(c);
     } else if (c.state === CardState.Review) {
-      if (c.due < cutoff && !i.buried.has(c.noteId)) review.push(c);
+      if (c.due < cutoff && !i.buried.has(c.noteId) && !doneToday.has(c.noteId)) review.push(c);
     } else if (!i.buried.has(c.noteId)) {
       fresh.push(c);
     }
@@ -144,11 +155,14 @@ export function pickNext(q: Queue, s: SessionState, now: number): Card | null {
   return s.shownNew < Math.round((s.shown + 1) * share) ? q.newCards[0] : q.review[0];
 }
 
-/** Review cards outside today's queue that `reviewAheadDays = days` would add (for the "review ahead" button). */
-export function dueWithin(cards: readonly Card[], eligible: (c: Card) => boolean, now: number, dayStartHour: number, days: number, deckId?: Id | null, noteIds?: ReadonlySet<Id>): number {
+/**
+ * Review cards outside today's queue that `reviewAheadDays = days` would add (for the "review ahead" button).
+ * `skip`: notes the queue holds back today (answeredToday), so the button never offers cards it would not add.
+ */
+export function dueWithin(cards: readonly Card[], eligible: (c: Card) => boolean, now: number, dayStartHour: number, days: number, deckId?: Id | null, noteIds?: ReadonlySet<Id>, skip?: ReadonlySet<Id>): number {
   const today = nextDayStart(now, dayStartHour);
   const until = today + days * 86_400_000;
-  return cards.filter((c) => c.state === CardState.Review && !c.suspended && c.due >= today && c.due < until && eligible(c) && (!deckId || c.deckId === deckId) && (!noteIds || noteIds.has(c.noteId))).length;
+  return cards.filter((c) => c.state === CardState.Review && !c.suspended && c.due >= today && c.due < until && eligible(c) && (!deckId || c.deckId === deckId) && (!noteIds || noteIds.has(c.noteId)) && !skip?.has(c.noteId)).length;
 }
 
 /** Lesson / topic tags in use, with how many notes carry each; natural order ("lesson-2" before "lesson-10"). */

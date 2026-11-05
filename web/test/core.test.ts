@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CardState, dayId, nextDayStart, normalizePrefs, DEFAULT_PREFS, type Card, type Note } from "@shared/model.ts";
 import { type Block, checkTyped, clozeSentence, str, suggestedRating, template, wantedTemplates } from "@shared/notetypes.ts";
 import { answer, formatInterval, makeScheduler, newCard, preview } from "../src/lib/scheduler.ts";
-import { buildQueue, dueWithin, pickNext, tagCounts } from "../src/lib/queue.ts";
+import { answeredToday, buildQueue, dueWithin, pickNext, tagCounts } from "../src/lib/queue.ts";
 import { cardCounts, forecast, heatmap, level, retention, streak } from "../src/lib/stats.ts";
 
 const T0 = new Date(2026, 0, 15, 10, 0, 0).getTime();
@@ -92,6 +92,39 @@ describe("queue", () => {
     expect(q.learning).toEqual([]); // nothing in learning is due yet
     const ahead = buildQueue({ ...base, cards, learnAheadMs: 20 * 60_000 });
     expect(ahead.learning.map((c) => c.id)).toEqual(["learnSoon"]);
+  });
+  it("a word rated Hard (27 days) does not come back today through its sibling card, even in a new session", () => {
+    // Both cards of one word are in review and due; the learner answers "recognize" with Hard.
+    const s = makeScheduler(0.9);
+    const past = T0 - 30 * DAY;
+    const rec = mk("w.recognize", "w", { state: CardState.Review, due: T0 - 3_600_000, stability: 25, difficulty: 6, scheduledDays: 30, reps: 6, lastReview: past });
+    const clz = mk("w.cloze", "w", { template: "cloze", state: CardState.Review, due: T0 - 1_800_000, stability: 25, difficulty: 6, scheduledDays: 30, reps: 6, lastReview: past });
+    const hard = preview(s, rec, T0)[2];
+    expect(hard.card.due - T0).toBeGreaterThan(20 * DAY);
+    const after = answer(s, rec, 2, T0);
+    // The session buries the sibling only while the study screen stays open; reopening starts with nothing buried.
+    const reopened = buildQueue({ ...base, cards: [after, clz], now: T0 + 60_000 });
+    expect(reopened.review.map((c) => c.id)).toEqual([]);
+    expect(reopened.counts.review).toBe(0);
+    // Review ahead does not pull the word back either, nor does the button offer it.
+    expect(buildQueue({ ...base, cards: [after, clz], now: T0 + 60_000, reviewAheadDays: 30 }).review).toEqual([]);
+    expect(dueWithin([after, clz], all, T0 + 60_000, 4, 30, null, undefined, answeredToday([after, clz], T0 + 60_000, 4))).toBe(0);
+    // Next study day (after 04:00) the sibling is due as usual; the Hard card waits for its interval.
+    const tomorrow = buildQueue({ ...base, cards: [after, clz], now: nextDayStart(T0, 4) + 60_000 });
+    expect(tomorrow.review.map((c) => c.id)).toEqual(["w.cloze"]);
+    expect(buildQueue({ ...base, cards: [after], now: after.due - 2 * DAY }).review).toEqual([]);
+    expect(buildQueue({ ...base, cards: [after], now: after.due + 1 }).review.map((c) => c.id)).toEqual(["w.recognize"]);
+  });
+  it("learning cards of a word answered today still come back (short steps are never held)", () => {
+    const relearn = mk("w.recognize", "w", { state: CardState.Relearning, due: T0 + 5 * 60_000, lastReview: T0 - 5 * 60_000 });
+    const sib = mk("w.cloze", "w", { template: "cloze", state: CardState.Review, due: T0 - DAY, lastReview: T0 - 9 * DAY });
+    const q = buildQueue({ ...base, cards: [relearn, sib], learnAheadMs: 20 * 60_000 });
+    expect(q.learning.map((c) => c.id)).toEqual(["w.recognize"]);
+    expect(q.review).toEqual([]);
+    // Answered yesterday (before 04:00 today) does not hold anything.
+    const y = mk("v.recognize", "v", { state: CardState.Review, due: T0 + 9 * DAY, lastReview: new Date(2026, 0, 15, 3, 0).getTime() });
+    const ysib = mk("v.cloze", "v", { template: "cloze", state: CardState.Review, due: T0 - DAY, lastReview: T0 - 9 * DAY });
+    expect(buildQueue({ ...base, cards: [y, ysib] }).review.map((c) => c.id)).toEqual(["v.cloze"]);
   });
   it("skips suspended, ineligible and other-deck cards", () => {
     const cards = [mk("s", "n1", { suspended: true }), mk("x", "n2"), mk("o", "n3", { deckId: "d2" })];
