@@ -5,7 +5,7 @@ import { checkTyped, str, template, type AnswerVerdict } from "@shared/notetypes
 import { hintDependent, hintGateMs, maxRating, rotateExamples, type HintLevel } from "@shared/hints.ts";
 import { reviewCard, setSuspended, undoReview, type Reviewed } from "../data/actions.ts";
 import { cards, currentRepo, daily, decks, loaded, notes, prefs } from "../data/state.ts";
-import { LEARN_AHEAD_MS, buildQueue, dueWithin, isLeech, pickNext, tagCounts, type Queue } from "../lib/queue.ts";
+import { LEARN_AHEAD_MS, answeredToday, buildQueue, dueWithin, isLeech, pickNext, tagCounts, type Queue } from "../lib/queue.ts";
 import { celebrate } from "../lib/motion.ts";
 import { streak } from "../lib/stats.ts";
 import { isLesson, lessonTitle } from "../lib/lessons.ts";
@@ -322,6 +322,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
     .reduce((m, c) => Math.min(m, c.due), Infinity);
   const waitingMs = Number.isFinite(nextLearn) ? nextLearn - now : null;
   const total = queue.counts.new + queue.counts.learning + queue.counts.review;
+  const doneToday = answeredToday(allCards, now, p.dayStartHour);
   const doneFrac = session.answered + total === 0 ? 1 : session.answered / (session.answered + total);
   const kind = card ? (card.state === 0 ? "new" : card.state === 2 ? "review" : "learn") : null;
   // The hint spells out the word being learned, not the inflected form a cloze sentence uses (sail, not sailed).
@@ -364,7 +365,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
           onMore={() => setExtraNew((n) => n + 5)}
           onUndo={history.current.length ? undo : undefined}
           hasMoreNew={allCards.some((c) => c.state === 0 && !c.suspended && eligible(c) && (!deckId || c.deckId === deckId) && (!tagNotes || tagNotes.has(c.noteId)))}
-          tomorrow={dueWithin(allCards, eligible, now, p.dayStartHour, aheadDays + 1, deckId, tagNotes) - dueWithin(allCards, eligible, now, p.dayStartHour, aheadDays, deckId, tagNotes)}
+          tomorrow={dueWithin(allCards, eligible, now, p.dayStartHour, aheadDays + 1, deckId, tagNotes, doneToday) - dueWithin(allCards, eligible, now, p.dayStartHour, aheadDays, deckId, tagNotes, doneToday)}
           onAhead={() => setAheadDays((d) => d + 1)}
         />
       ) : (

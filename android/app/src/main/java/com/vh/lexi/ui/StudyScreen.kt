@@ -99,6 +99,7 @@ import com.vh.lexi.core.LEARN_AHEAD_MS
 import com.vh.lexi.core.QueueInput
 import com.vh.lexi.core.SessionState
 import com.vh.lexi.core.Verdict
+import com.vh.lexi.core.answeredToday
 import com.vh.lexi.core.buildQueue
 import com.vh.lexi.core.meaningsByNote
 import com.vh.lexi.core.checkTyped
@@ -367,7 +368,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
                     nextLesson = nextLesson, onLesson = { t -> tag = t; aheadDays = 0; holder[0] = null },
                     session = session, waitingMs = cards.filter { (it.state == CardState.LEARNING || it.state == CardState.RELEARNING) && !it.suspended && it.due > now && (deckId == null || it.deckId == deckId) }.minOfOrNull { it.due }?.let { it - now },
                     hasMoreNew = cards.any { it.state == CardState.NEW && !it.suspended && eligible(it) && (deckId == null || it.deckId == deckId) && (tagNotes == null || it.noteId in tagNotes) }, canUndo = history.isNotEmpty(),
-                    aheadCount = dueWithin(cards, eligible, now, prefs.dayStartHour, aheadDays + 1, deckId, tagNotes) - dueWithin(cards, eligible, now, prefs.dayStartHour, aheadDays, deckId, tagNotes),
+                    aheadCount = answeredToday(cards, now, prefs.dayStartHour).let { done -> dueWithin(cards, eligible, now, prefs.dayStartHour, aheadDays + 1, deckId, tagNotes, skip = done) - dueWithin(cards, eligible, now, prefs.dayStartHour, aheadDays, deckId, tagNotes, skip = done) },
                     onContinue = { ahead = DAY_MS; holder[0] = null }, onMore = { extraNew += 5; holder[0] = null }, onAhead = { aheadDays += 1; holder[0] = null }, onUndo = ::undo, onAdd = onAdd,
                 )
             } else {
