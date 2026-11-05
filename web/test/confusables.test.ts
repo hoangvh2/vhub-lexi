@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CardState, DEFAULT_PREFS, type Card, type Note } from "@shared/model.ts";
-import { answerHint, confusables, letterCount, matchConfusable, meaningPhrases, meaningsByNote, suggestedRatingWith } from "@shared/confusables.ts";
+import { answerHint, confusables, hintNote, letterCount, matchConfusable, meaningPhrases, meaningsByNote, suggestedRatingWith, typingTarget } from "@shared/confusables.ts";
+import { checkTyped, template } from "@shared/notetypes.ts";
 import { SETTLE_DAYS, buildQueue } from "../src/lib/queue.ts";
 import { newCard } from "../src/lib/scheduler.ts";
 
@@ -86,5 +87,49 @@ describe("near-synonyms are introduced apart", () => {
     expect(buildQueue({ ...base, cards: [learning, mk("n2", 2)] }).newCards).toHaveLength(0);
     expect(buildQueue({ ...base, cards: [short, mk("n2", 2)] }).newCards).toHaveLength(0);
     expect(buildQueue({ ...base, cards: [settled, mk("n2", 2)] }).newCards.map((c) => c.noteId)).toEqual(["n2"]);
+  });
+});
+
+describe("typing hint target (regression: cloze 'sail' showed 6 letters from 'sailed')", () => {
+  const vocab = (word: string, examples: string[]): Note =>
+    ({ id: "n", type: "vocab", deckId: "d", createdAt: 1, updatedAt: 1, fields: { word, vi: "nghĩa", pos: "verb", examples } }) as Note;
+  const hintFor = (tplId: string, word: string, sentence: string) => {
+    const t = typingTarget(template("vocab", tplId)!.expected!(vocab(word, [sentence])));
+    return { skeleton: answerHint(t.word, 1), letters: letterCount(t.word), note: hintNote(t) };
+  };
+
+  it("counts the word being learned on cloze and listen cards, and names the sentence's ending", () => {
+    for (const id of ["cloze", "listen"]) {
+      expect(hintFor(id, "sail", "We sailed the Atlantic")).toEqual({ skeleton: "s___", letters: 4, note: "4 chữ cái · trong câu thêm -ed" });
+    }
+    expect(hintFor("cloze", "sail", "Ships sail at dawn.").note).toBe("4 chữ cái");
+    expect(hintFor("cloze", "sail", "Sail away.").note).toBe("4 chữ cái");
+    expect(hintFor("cloze", "box", "Two boxes.").note).toBe("3 chữ cái · trong câu thêm -es");
+  });
+
+  it("says 'another form' when the sentence form is not the word plus an ending", () => {
+    expect(hintFor("cloze", "run", "She is running fast.")).toEqual({ skeleton: "r__", letters: 3, note: "3 chữ cái · trong câu ở dạng khác" });
+    expect(hintFor("cloze", "study", "They studied hard.").note).toBe("5 chữ cái · trong câu ở dạng khác");
+    expect(hintFor("cloze", "complete", "The completion was late.").note).toBe("8 chữ cái · trong câu ở dạng khác");
+  });
+
+  it("handles phrases, hyphens, apostrophes and accents", () => {
+    expect(hintFor("cloze", "look after", "She looked after the kids.")).toEqual({ skeleton: "l___ _____", letters: 9, note: "2 từ, 9 chữ cái · trong câu thêm -ed" });
+    expect(hintFor("cloze", "look after", "Please look after the kids.").note).toBe("2 từ, 9 chữ cái");
+    expect(hintFor("cloze", "well-being", "Your well-being matters.")).toEqual({ skeleton: "w___-_____", letters: 9, note: "9 chữ cái" });
+    expect(hintFor("cloze", "o'clock", "At five o'clock.")).toEqual({ skeleton: "o'_____", letters: 6, note: "6 chữ cái" });
+    expect(hintFor("cloze", "café", "Two cafés here.")).toEqual({ skeleton: "c___", letters: 4, note: "4 chữ cái · trong câu thêm -s" });
+  });
+
+  it("still accepts both the word and the sentence form as correct", () => {
+    const e = template("vocab", "cloze")!.expected!(vocab("sail", ["We sailed the Atlantic"]));
+    expect(e).toEqual(["sail", "sailed"]);
+    expect(checkTyped("sail", e)).toBe("correct");
+    expect(checkTyped("sailed", e)).toBe("correct");
+  });
+
+  it("recall cards are unchanged", () => {
+    const t = typingTarget(template("vocab", "recall")!.expected!(vocab("sail", ["We sailed the Atlantic"])));
+    expect(t).toEqual({ word: "sail", ending: null });
   });
 });

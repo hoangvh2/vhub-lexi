@@ -581,6 +581,169 @@
    "letters": 0
   }
  ],
+ "targets": [
+  {
+   "expected": [
+    "sail"
+   ],
+   "word": "sail",
+   "ending": null,
+   "note": "4 chữ cái",
+   "letters": 4,
+   "hint": "s___"
+  },
+  {
+   "expected": [
+    "sail",
+    "sailed"
+   ],
+   "word": "sail",
+   "ending": "ed",
+   "note": "4 chữ cái · trong câu thêm -ed",
+   "letters": 4,
+   "hint": "s___"
+  },
+  {
+   "expected": [
+    "sail",
+    "Sailed"
+   ],
+   "word": "sail",
+   "ending": "ed",
+   "note": "4 chữ cái · trong câu thêm -ed",
+   "letters": 4,
+   "hint": "s___"
+  },
+  {
+   "expected": [
+    "sail",
+    "sails"
+   ],
+   "word": "sail",
+   "ending": "s",
+   "note": "4 chữ cái · trong câu thêm -s",
+   "letters": 4,
+   "hint": "s___"
+  },
+  {
+   "expected": [
+    "run",
+    "running"
+   ],
+   "word": "run",
+   "ending": "",
+   "note": "3 chữ cái · trong câu ở dạng khác",
+   "letters": 3,
+   "hint": "r__"
+  },
+  {
+   "expected": [
+    "make",
+    "made"
+   ],
+   "word": "make",
+   "ending": "",
+   "note": "4 chữ cái · trong câu ở dạng khác",
+   "letters": 4,
+   "hint": "m___"
+  },
+  {
+   "expected": [
+    "complete",
+    "completion"
+   ],
+   "word": "complete",
+   "ending": "",
+   "note": "8 chữ cái · trong câu ở dạng khác",
+   "letters": 8,
+   "hint": "c_______"
+  },
+  {
+   "expected": [
+    "look after",
+    "looked after"
+   ],
+   "word": "look after",
+   "ending": "ed",
+   "note": "2 từ, 9 chữ cái · trong câu thêm -ed",
+   "letters": 9,
+   "hint": "l___ _____"
+  },
+  {
+   "expected": [
+    "look after",
+    "look"
+   ],
+   "word": "look after",
+   "ending": "",
+   "note": "2 từ, 9 chữ cái · trong câu ở dạng khác",
+   "letters": 9,
+   "hint": "l___ _____"
+  },
+  {
+   "expected": [
+    "well-being",
+    "well-being"
+   ],
+   "word": "well-being",
+   "ending": null,
+   "note": "9 chữ cái",
+   "letters": 9,
+   "hint": "w___-_____"
+  },
+  {
+   "expected": [
+    "it's",
+    "it's"
+   ],
+   "word": "it's",
+   "ending": null,
+   "note": "3 chữ cái",
+   "letters": 3,
+   "hint": "i_'_"
+  },
+  {
+   "expected": [
+    "café",
+    "cafés"
+   ],
+   "word": "café",
+   "ending": "s",
+   "note": "4 chữ cái · trong câu thêm -s",
+   "letters": 4,
+   "hint": "c___"
+  },
+  {
+   "expected": [
+    "happy",
+    "happily"
+   ],
+   "word": "happy",
+   "ending": "",
+   "note": "5 chữ cái · trong câu ở dạng khác",
+   "letters": 5,
+   "hint": "h____"
+  },
+  {
+   "expected": [
+    "box",
+    "boxes"
+   ],
+   "word": "box",
+   "ending": "es",
+   "note": "3 chữ cái · trong câu thêm -es",
+   "letters": 3,
+   "hint": "b__"
+  },
+  {
+   "expected": [],
+   "word": "",
+   "ending": null,
+   "note": "0 chữ cái",
+   "letters": 0,
+   "hint": ""
+  }
+ ],
  "ratings": [
   {
    "verdict": "correct",

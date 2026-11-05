@@ -11,7 +11,7 @@ import { CardState, DEFAULT_PREFS, normalizePrefs, type Card, type Note, type Ra
 import { IRREGULAR } from "@shared/irregular.ts";
 import { baseForms } from "@shared/morphy.ts";
 import { type Block, checkTyped, clozeSentence, findExact, findWord, normalizeAnswer, template, wantedTemplates } from "@shared/notetypes.ts";
-import { answerHint, confusables, letterCount, matchConfusable, meaningPhrases, suggestedRatingWith } from "@shared/confusables.ts";
+import { answerHint, confusables, hintNote, letterCount, matchConfusable, meaningPhrases, suggestedRatingWith, typingTarget } from "@shared/confusables.ts";
 import { buildQueue, pickNext } from "../src/lib/queue.ts";
 import { answer, makeScheduler, newCard } from "../src/lib/scheduler.ts";
 import { aiFieldsOf, draftsFrom, grammarFields, problems, type ExtractedQuestion } from "../src/lib/import.ts";
@@ -78,6 +78,8 @@ function templateVectors() {
     sampleNote({ examplesVi: ["Trẻ em thường kiên cường hơn người lớn."], examples: ["Kids are tough.", "Children are often more resilient than adults."] }),
     sampleNote({ examplesVi: ["Cô ấy chạy nhanh.", "Họ chạy mỗi sáng."], vi: "chạy", en: "", word: "run", pos: "verb", examples: ["She is running fast.", "They run every morning."], mnemonic: "" }),
     sampleNote({ vi: "", examplesVi: ["Nhóm vẫn kiên cường."] }),
+    // The sentence uses an inflected form: the hint must still describe "sail" (4 letters), not "sailed".
+    sampleNote({ word: "sail", pos: "verb", vi: "đi thuyền", en: "", ipa: "", mnemonic: "", examples: ["We sailed the Atlantic"] }),
   ];
   const cases = [];
   for (const n of notes) {
@@ -95,7 +97,7 @@ function templateVectors() {
   const clozes = [
     ["She is running fast.", "run"], ["They studied hard.", "study"], ["Please look after the kids.", "look after"], ["Nothing here.", "resilient"],
     ["Children are often more resilient than adults.", "resilient"], ["He put it away, putting it back later.", "put"], ["Cats are cute.", "cat"], ["The bigger one.", "big"],
-    ["Prices keep rising.", "rise"], ["An apple a day.", "apple"], ["It is what it is.", "is"],
+    ["Prices keep rising.", "rise"], ["An apple a day.", "apple"], ["It is what it is.", "is"], ["We sailed the Atlantic", "sail"], ["Two cafés here.", "café"], ["Một naïve idea.", "naïve"],
   ].map(([s, w]) => ({ sentence: s, word: w, result: clozeSentence(s, w), at: findWord(s, w) }));
   const typed = [
     ["Resilient", ["resilient"]], ["  resilient ", ["resilient"]], ["resiliant", ["resilient"]], ["cat", ["cut"]], ["", ["x"]], ["look  after", ["look after"]],
@@ -153,10 +155,15 @@ function confusableVectors() {
   const typed = ["persuade", "Persuaded", "persuasions", "persuading", "convince", "resilient", "", "persuasion!"].map((t) => ({ typed: t, match: matchConfusable(t, conv)?.noteId ?? null }));
   const hints = [["convince", 0], ["convince", 1], ["convince", 3], ["convince", 99], ["look after", 1], ["look after", 5], ["well-being", 2], ["it's", 1], ["ox", 1], ["café", 2], ["", 1]]
     .map(([a, n]) => ({ answer: a, shown: n, hint: answerHint(a as string, n as number), letters: letterCount(a as string) }));
+  // The typing hint follows the word being learned, whatever form the sentence uses (sail / sailed).
+  const targets = [
+    ["sail"], ["sail", "sailed"], ["sail", "Sailed"], ["sail", "sails"], ["run", "running"], ["make", "made"], ["complete", "completion"], ["look after", "looked after"],
+    ["look after", "look"], ["well-being", "well-being"], ["it's", "it's"], ["café", "cafés"], ["happy", "happily"], ["box", "boxes"], [],
+  ].map((e) => { const t = typingTarget(e); return { expected: e, word: t.word, ending: t.ending, note: hintNote(t), letters: letterCount(t.word), hint: answerHint(t.word, 1) }; });
   const ratings = (["correct", "close", "wrong"] as const).flatMap((verdict) =>
     [[0, false], [1, false], [0, true], [2, true]].map(([extraHints, retried]) => ({ verdict, extraHints, retried, rating: suggestedRatingWith(verdict, { extraHints: extraHints as number, retried: retried as boolean }) })),
   );
-  return { notes, phrases, lists, typed, hints, ratings };
+  return { notes, phrases, lists, typed, hints, targets, ratings };
 }
 
 function morphyVectors() {

@@ -194,7 +194,6 @@
       }
      ],
      "expected": [
-      "resilient",
       "resilient"
      ],
      "speakFront": null,
@@ -254,7 +253,6 @@
       }
      ],
      "expected": [
-      "resilient",
       "resilient"
      ],
      "speakFront": "Children are often more resilient than adults.",
@@ -389,7 +387,6 @@
       }
      ],
      "expected": [
-      "resilient",
       "resilient"
      ],
      "speakFront": null,
@@ -440,7 +437,6 @@
       }
      ],
      "expected": [
-      "resilient",
       "resilient"
      ],
      "speakFront": "Children are often more resilient than adults.",
@@ -804,8 +800,8 @@
       }
      ],
      "expected": [
-      "running",
-      "run"
+      "run",
+      "running"
      ],
      "speakFront": null,
      "speakBack": "She is running fast."
@@ -859,8 +855,8 @@
       }
      ],
      "expected": [
-      "running",
-      "run"
+      "run",
+      "running"
      ],
      "speakFront": "She is running fast.",
      "speakBack": "run"
@@ -988,8 +984,8 @@
       }
      ],
      "expected": [
-      "running",
-      "run"
+      "run",
+      "running"
      ],
      "speakFront": null,
      "speakBack": "She is running fast."
@@ -1034,8 +1030,8 @@
       }
      ],
      "expected": [
-      "running",
-      "run"
+      "run",
+      "running"
      ],
      "speakFront": "She is running fast.",
      "speakBack": "run"
@@ -1107,7 +1103,6 @@
       }
      ],
      "expected": [
-      "look after",
       "look after"
      ],
      "speakFront": null,
@@ -1153,7 +1148,6 @@
       }
      ],
      "expected": [
-      "look after",
       "look after"
      ],
      "speakFront": "Please look after the kids.",
@@ -1219,7 +1213,6 @@
       }
      ],
      "expected": [
-      "look after",
       "look after"
      ],
      "speakFront": null,
@@ -1261,7 +1254,6 @@
       }
      ],
      "expected": [
-      "look after",
       "look after"
      ],
      "speakFront": "Please look after the kids.",
@@ -1519,7 +1511,6 @@
       }
      ],
      "expected": [
-      "resilient",
       "resilient"
      ],
      "speakFront": null,
@@ -1579,7 +1570,6 @@
       }
      ],
      "expected": [
-      "resilient",
       "resilient"
      ],
      "speakFront": "Children are often more resilient than adults.",
@@ -1717,7 +1707,6 @@
       }
      ],
      "expected": [
-      "resilient",
       "resilient"
      ],
      "speakFront": null,
@@ -1768,7 +1757,6 @@
       }
      ],
      "expected": [
-      "resilient",
       "resilient"
      ],
      "speakFront": "Children are often more resilient than adults.",
@@ -1951,8 +1939,8 @@
       }
      ],
      "expected": [
-      "running",
-      "run"
+      "run",
+      "running"
      ],
      "speakFront": null,
      "speakBack": "She is running fast."
@@ -2003,8 +1991,8 @@
       }
      ],
      "expected": [
-      "running",
-      "run"
+      "run",
+      "running"
      ],
      "speakFront": "She is running fast.",
      "speakBack": "run"
@@ -2138,8 +2126,8 @@
       }
      ],
      "expected": [
-      "running",
-      "run"
+      "run",
+      "running"
      ],
      "speakFront": null,
      "speakBack": "She is running fast."
@@ -2186,8 +2174,8 @@
       }
      ],
      "expected": [
-      "running",
-      "run"
+      "run",
+      "running"
      ],
      "speakFront": "She is running fast.",
      "speakBack": "run"
@@ -2374,7 +2362,6 @@
       }
      ],
      "expected": [
-      "resilient",
       "resilient"
      ],
      "speakFront": null,
@@ -2430,7 +2417,6 @@
       }
      ],
      "expected": [
-      "resilient",
       "resilient"
      ],
      "speakFront": "Children are often more resilient than adults.",
@@ -2562,7 +2548,6 @@
       }
      ],
      "expected": [
-      "resilient",
       "resilient"
      ],
      "speakFront": null,
@@ -2609,11 +2594,372 @@
       }
      ],
      "expected": [
-      "resilient",
       "resilient"
      ],
      "speakFront": "Children are often more resilient than adults.",
      "speakBack": "resilient"
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze",
+    "listen"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "sail",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "đi thuyền",
+     "en": "",
+     "examples": [
+      "We sailed the Atlantic"
+     ],
+     "mnemonic": ""
+    }
+   },
+   "layoutIndex": 0,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "sail"
+      },
+      {
+       "k": "speak",
+       "text": "sail"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "đi thuyền",
+       "tone": "strong"
+      },
+      {
+       "k": "example",
+       "text": "We sailed the Atlantic",
+       "at": [
+        3,
+        9
+       ]
+      }
+     ],
+     "expected": null,
+     "speakFront": "sail",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "đi thuyền",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "sail"
+      },
+      {
+       "k": "speak",
+       "text": "sail"
+      },
+      {
+       "k": "example",
+       "text": "We sailed the Atlantic",
+       "at": [
+        3,
+        9
+       ]
+      }
+     ],
+     "expected": [
+      "sail"
+     ],
+     "speakFront": null,
+     "speakBack": "sail"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "We _____ the Atlantic"
+      },
+      {
+       "k": "text",
+       "text": "đi thuyền",
+       "tone": "muted"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "sail"
+      },
+      {
+       "k": "speak",
+       "text": "sail"
+      }
+     ],
+     "expected": [
+      "sail",
+      "sailed"
+     ],
+     "speakFront": null,
+     "speakBack": "We sailed the Atlantic"
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "We sailed the Atlantic"
+      },
+      {
+       "k": "quote",
+       "text": "We _____ the Atlantic"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "sail"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "speak",
+       "text": "sail"
+      },
+      {
+       "k": "example",
+       "text": "We sailed the Atlantic",
+       "at": [
+        3,
+        9
+       ]
+      },
+      {
+       "k": "text",
+       "text": "đi thuyền",
+       "tone": "strong"
+      }
+     ],
+     "expected": [
+      "sail",
+      "sailed"
+     ],
+     "speakFront": "We sailed the Atlantic",
+     "speakBack": "sail"
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze",
+    "listen"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "sail",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "đi thuyền",
+     "en": "",
+     "examples": [
+      "We sailed the Atlantic"
+     ],
+     "mnemonic": ""
+    }
+   },
+   "layoutIndex": 1,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "sail"
+      },
+      {
+       "k": "speak",
+       "text": "sail"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "đi thuyền",
+       "tone": "strong"
+      }
+     ],
+     "expected": null,
+     "speakFront": "sail",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "đi thuyền",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "sail"
+      },
+      {
+       "k": "speak",
+       "text": "sail"
+      }
+     ],
+     "expected": [
+      "sail"
+     ],
+     "speakFront": null,
+     "speakBack": "sail"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "We _____ the Atlantic"
+      },
+      {
+       "k": "text",
+       "text": "đi thuyền",
+       "tone": "muted"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "sail"
+      },
+      {
+       "k": "speak",
+       "text": "sail"
+      }
+     ],
+     "expected": [
+      "sail",
+      "sailed"
+     ],
+     "speakFront": null,
+     "speakBack": "We sailed the Atlantic"
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "We sailed the Atlantic"
+      },
+      {
+       "k": "quote",
+       "text": "We _____ the Atlantic"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "sail"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "speak",
+       "text": "sail"
+      },
+      {
+       "k": "example",
+       "text": "We sailed the Atlantic",
+       "at": [
+        3,
+        9
+       ]
+      },
+      {
+       "k": "text",
+       "text": "đi thuyền",
+       "tone": "strong"
+      }
+     ],
+     "expected": [
+      "sail",
+      "sailed"
+     ],
+     "speakFront": "We sailed the Atlantic",
+     "speakBack": "sail"
     }
    },
    "wanted": [
@@ -2747,6 +3093,42 @@
    "at": [
     3,
     5
+   ]
+  },
+  {
+   "sentence": "We sailed the Atlantic",
+   "word": "sail",
+   "result": {
+    "text": "We _____ the Atlantic",
+    "answer": "sailed"
+   },
+   "at": [
+    3,
+    9
+   ]
+  },
+  {
+   "sentence": "Two cafés here.",
+   "word": "café",
+   "result": {
+    "text": "Two _____ here.",
+    "answer": "cafés"
+   },
+   "at": [
+    4,
+    9
+   ]
+  },
+  {
+   "sentence": "Một naïve idea.",
+   "word": "naïve",
+   "result": {
+    "text": "Một _____ idea.",
+    "answer": "naïve"
+   },
+   "at": [
+    4,
+    9
    ]
   }
  ],

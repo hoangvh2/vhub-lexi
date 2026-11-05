@@ -105,6 +105,38 @@ export function letterCount(answer: string): number {
   return [...answer.trim()].filter((ch) => /\p{L}/u.test(ch)).length;
 }
 
+/** Endings that a sentence form may add to the word being learned and that the hint names (sail -> sailed: "ed"). */
+const ENDINGS = ["s", "es", "d", "ed", "ing", "er", "est", "ly"];
+
+/**
+ * What the typing hint (skeleton, letter count, "more letters") spells out, from a template's expected answers.
+ *
+ * The hint follows the word being learned (`expected[0]`), never the form a cloze sentence happens to use: a
+ * sentence with "sailed" must still show "sail" as 4 letters, or the learner memorises the wrong length.
+ * `ending` says how the sentence form (`expected[1]`) differs: null = same word, "ed" = the word plus "-ed",
+ * "" = another form ("running", "made", "completion"). Both forms are accepted as correct answers.
+ */
+export function typingTarget(expected: readonly string[]): { word: string; ending: string | null } {
+  const word = (expected[0] ?? "").trim();
+  const form = (expected[1] ?? "").trim();
+  const w = normalizeAnswer(word);
+  const f = normalizeAnswer(form);
+  if (!f || f === w) return { word, ending: null };
+  const [w0, ...wr] = w.split(" ");
+  const [f0, ...fr] = f.split(" ");
+  const rest = f0.startsWith(w0) ? f0.slice(w0.length) : "";
+  const ending = wr.join(" ") === fr.join(" ") && ENDINGS.includes(rest) ? rest : "";
+  return { word, ending };
+}
+
+/** The line under the skeleton: "4 chữ cái", "2 từ, 9 chữ cái", "4 chữ cái · trong câu thêm -ed". */
+export function hintNote(t: { word: string; ending: string | null }): string {
+  const words = t.word.split(/\s+/).filter(Boolean).length;
+  const base = `${words > 1 ? `${words} từ, ` : ""}${letterCount(t.word)} chữ cái`;
+  if (t.ending === null) return base;
+  return `${base} · ${t.ending ? `trong câu thêm -${t.ending}` : "trong câu ở dạng khác"}`;
+}
+
 /**
  * The answer with only its first `shown` letters visible: answerHint("look after", 1) = "l___ _____".
  * Never shows every letter: at most all but the last.
