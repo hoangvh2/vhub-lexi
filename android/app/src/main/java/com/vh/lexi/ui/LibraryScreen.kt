@@ -57,7 +57,9 @@ import com.vh.lexi.core.BatchProgress
 import com.vh.lexi.core.CardState
 import com.vh.lexi.core.Note
 import com.vh.lexi.core.batchSummary
+import com.vh.lexi.core.BatchMode
 import com.vh.lexi.core.hasAi
+import com.vh.lexi.core.hasPhrases
 import com.vh.lexi.core.Fsrs
 import com.vh.lexi.core.isLeech
 import com.vh.lexi.core.isMaterial
@@ -67,12 +69,19 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-private enum class Filter(val label: String) { ALL("Tất cả"), NEW("Mới"), LEARNING("Đang học"), REVIEW("Ôn tập"), SUSPENDED("Đã ẩn"), LEECH("Thẻ khó"), NO_AI("Chưa có AI") }
+private enum class Filter(val label: String) { ALL("Tất cả"), NEW("Mới"), LEARNING("Đang học"), REVIEW("Ôn tập"), SUSPENDED("Đã ẩn"), LEECH("Thẻ khó"), NO_AI("Chưa có AI"), NO_PHRASES("Chưa có cụm ngắn") }
+
+/** The AI dialog: skip words already filled, replace existing meanings (full mode only), and what the AI writes. */
+private data class AiDialog(val skipDone: Boolean, val overwrite: Boolean, val mode: BatchMode)
+
+/** Daily AI allowance (LIMITS.dailyEnrich in functions/src/config.ts). */
+private const val DAILY_AI = 300
 private enum class Sort(val label: String) { RECENT("Mới thêm"), ALPHA("A → Z"), DUE("Sắp đến hạn") }
 
 private fun matches(f: Filter, n: Note, cs: List<Card>) = when (f) {
     Filter.ALL -> true
     Filter.NO_AI -> n.type == "vocab" && !hasAi(n.aiFields)
+    Filter.NO_PHRASES -> n.type == "vocab" && !hasPhrases(n.fields)
     Filter.NEW -> cs.any { it.state == CardState.NEW }
     Filter.LEARNING -> cs.any { it.state == CardState.LEARNING || it.state == CardState.RELEARNING }
     Filter.REVIEW -> cs.any { it.state == CardState.REVIEW }
@@ -112,8 +121,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
     var deckMenu by remember { mutableStateOf(false) }
     var selecting by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(emptySet<String>()) }
-    // The AI dialog: (skip words AI already filled, replace existing meanings).
-    var aiDialog by remember { mutableStateOf<Pair<Boolean, Boolean>?>(null) }
+    var aiDialog by remember { mutableStateOf<AiDialog?>(null) }
     // The "replace meanings?" question of a starting batch: title, message, answer.
     var overwriteAsk by remember { mutableStateOf<Triple<String, String, CompletableDeferred<Boolean>>?>(null) }
     val now = System.currentTimeMillis()
@@ -157,7 +165,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
             if (deck != null) TextButton(onClick = { deckDialog = deck to (decks.firstOrNull { it.id == deck }?.name ?: "") }) { Text("Sửa bộ thẻ") }
         }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (f in Filter.entries) if (f != Filter.NO_AI || aiAvailable) FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(f.label) })
+            for (f in Filter.entries) if ((f != Filter.NO_AI && f != Filter.NO_PHRASES) || aiAvailable) FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(f.label) })
         }
         batch?.let { BatchCard(it, onStop = app.aiBatch::stop, onClose = app.aiBatch::dismiss) }
         if (selecting) {
@@ -169,7 +177,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
                 Text("${selected.size} đã chọn", Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
                 val all = selected.size == rows.size && rows.isNotEmpty()
                 TextButton(onClick = { selected = if (all) emptySet() else rows.map { it.id }.toSet() }) { Text(if (all) "Bỏ chọn" else "Chọn hết ${rows.size}", maxLines = 1) }
-                Button(onClick = { aiDialog = true to false }, enabled = vocab > 0 && batch?.running != true, modifier = Modifier.testTag("bulk-ai")) {
+                Button(onClick = { aiDialog = AiDialog(true, false, if (filter == Filter.NO_PHRASES) BatchMode.PHRASES else BatchMode.FULL) }, enabled = vocab > 0 && batch?.running != true, modifier = Modifier.testTag("bulk-ai")) {
                     Icon(Icons.Filled.AutoAwesome, null); Text(" AI", maxLines = 1)
                 }
             }
@@ -212,23 +220,41 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
         }
     }
 
-    editing?.let { id -> notes.firstOrNull { it.id == id }?.let { NoteEditor(data, it) { editing = null } } }
+    editing?.let { id -> notes.firstOrNull { it.id == id }?.let { NoteEditor(data, it, aiAvailable = aiAvailable, askPhrases = { w, pos, en, vi -> app.cloud.enrichPhrases(w, pos, en, vi) }) { editing = null } } }
 
-    aiDialog?.let { (skipDone, overwrite) ->
-        val ids = notes.filter { it.id in selected && it.type == "vocab" && (!skipDone || !hasAi(it.aiFields)) }.map { it.id }
+    aiDialog?.let { dlg ->
+        val phrases = dlg.mode == BatchMode.PHRASES
+        val ids = notes.filter { it.id in selected && it.type == "vocab" && (!dlg.skipDone || !(if (phrases) hasPhrases(it.fields) else hasAi(it.aiFields))) }.map { it.id }
+        val days = maxOf(1, (ids.size + DAILY_AI - 1) / DAILY_AI)
         AlertDialog(
             onDismissRequest = { aiDialog = null },
-            title = { Text("Điền bằng AI cho ${ids.size} từ") },
+            title = { Text(if (phrases) "Thêm cụm ngắn cho ${ids.size} từ" else "Điền bằng AI cho ${ids.size} từ") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Mỗi từ có tối đa 3 nghĩa theo ngữ cảnh, câu ví dụ kèm bản dịch và một mẹo nhớ ngắn. AI chạy nền, bạn có thể ôn bài trong lúc chờ. Mỗi từ dùng 1 lượt AI, tối đa 300 lượt mỗi ngày.")
-                    Row(Modifier.fillMaxWidth().clickable { aiDialog = !skipDone to overwrite }, verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = skipDone, onCheckedChange = null); Text(" Bỏ qua từ đã điền bằng AI")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = !phrases, onClick = { aiDialog = dlg.copy(mode = BatchMode.FULL) }, label = { Text("Điền đầy đủ") })
+                        FilterChip(selected = phrases, onClick = { aiDialog = dlg.copy(mode = BatchMode.PHRASES) }, label = { Text("Chỉ cụm ngắn") }, modifier = Modifier.testTag("bulk-mode-phrases"))
                     }
-                    Row(Modifier.fillMaxWidth().clickable { aiDialog = skipDone to !overwrite }.testTag("bulk-overwrite"), verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = overwrite, onCheckedChange = null); Text(" Thay nghĩa tiếng Việt đang có")
+                    if (phrases) {
+                        Text("Mỗi từ thêm tối đa 3 cụm 3–5 từ, mỗi cụm một nghĩa (ví dụ accommodate 200 guests: chứa được 200 khách). Thẻ điền từ sẽ hỏi lần lượt từng nghĩa. Nghĩa, ví dụ và mẹo bạn đã có không bị đổi, cụm bạn tự viết cũng được giữ nguyên.")
+                    } else {
+                        Text("Mỗi từ có tối đa 3 nghĩa theo ngữ cảnh, câu ví dụ kèm bản dịch và một mẹo nhớ ngắn.")
                     }
-                    Text("Tắt: chỉ điền chỗ trống, giữ nghĩa bạn đã ghi.", color = c.muted, fontSize = 13.sp)
+                    Text(
+                        "AI chạy nền, bạn có thể ôn bài trong lúc chờ. Mỗi từ dùng 1 lượt AI (tối đa $DAILY_AI lượt mỗi ngày" +
+                            (if (ids.size > DAILY_AI) ", nên khoảng $days ngày: hôm sau lọc “${if (phrases) "Chưa có cụm ngắn" else "Chưa có AI"}” để chạy tiếp" else "") +
+                            ") và 1 lần ghi dữ liệu, không tốn thêm lượt đọc.",
+                        color = c.muted, fontSize = 13.sp,
+                    )
+                    Row(Modifier.fillMaxWidth().clickable { aiDialog = dlg.copy(skipDone = !dlg.skipDone) }, verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = dlg.skipDone, onCheckedChange = null); Text(if (phrases) " Bỏ qua từ đã có cụm ngắn" else " Bỏ qua từ đã điền bằng AI")
+                    }
+                    if (!phrases) {
+                        Row(Modifier.fillMaxWidth().clickable { aiDialog = dlg.copy(overwrite = !dlg.overwrite) }.testTag("bulk-overwrite"), verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = dlg.overwrite, onCheckedChange = null); Text(" Thay nghĩa tiếng Việt đang có")
+                        }
+                        Text("Tắt: chỉ điền chỗ trống, giữ nghĩa bạn đã ghi.", color = c.muted, fontSize = 13.sp)
+                    }
                 }
             },
             dismissButton = { TextButton(onClick = { aiDialog = null }) { Text("Huỷ") } },
@@ -237,7 +263,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
                     aiDialog = null
                     // On the app scope, so the batch outlives this screen; on Main, because it updates Compose state.
                     app.scope.launch(Dispatchers.Main) {
-                        val res = app.aiBatch.confirmAndRun(ids, overwrite) { title, message -> CompletableDeferred<Boolean>().also { overwriteAsk = Triple(title, message, it) }.await() }
+                        val res = app.aiBatch.confirmAndRun(ids, dlg.overwrite, dlg.mode) { title, message -> CompletableDeferred<Boolean>().also { overwriteAsk = Triple(title, message, it) }.await() }
                         if (res != null) { selecting = false; selected = emptySet(); toast(batchSummary(res)) }
                     }
                 }) { Text("Bắt đầu") }
@@ -300,7 +326,7 @@ private fun BatchCard(b: BatchProgress, onStop: () -> Unit, onClose: () -> Unit)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(Icons.Filled.AutoAwesome, null, tint = c.accent)
             Text(
-                if (b.running) "Đang điền AI ${b.done + b.failed}/${b.total} từ" + (if (b.failed > 0) " · ${b.failed} lỗi" else "") else batchSummary(b),
+                if (b.running) "${if (b.mode == BatchMode.PHRASES) "Đang thêm cụm ngắn" else "Đang điền AI"} ${b.done + b.failed}/${b.total} từ" + (if (b.failed > 0) " · ${b.failed} lỗi" else "") else batchSummary(b),
                 Modifier.weight(1f), fontSize = 14.sp,
             )
             if (b.running) OutlinedButton(onClick = onStop, Modifier.testTag("batch-stop")) { Text("Dừng") } else TextButton(onClick = onClose) { Text("Đóng") }

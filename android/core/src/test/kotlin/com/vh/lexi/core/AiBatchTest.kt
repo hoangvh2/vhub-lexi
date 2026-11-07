@@ -17,7 +17,7 @@ class AiBatchTest {
         val db = ConcurrentHashMap<String, Note>()
         val ids = words.indices.map { "n$it" }
         val batch = AiBatch(
-            call = { w, _, _, _ -> call(w) },
+            call = { r -> call(r.word) },
             getNote = { db[it] },
             save = { n, f, ai -> db[n.id] = n.copy(fields = f, aiFields = ai.toList()) },
             concurrency = concurrency, retryDelayMs = 0,
@@ -105,5 +105,30 @@ class AiBatchTest {
         s.batch.confirmAndRun(s.ids, overwriteVi = false) { _, _ -> asked = true; true }
         assertEquals(false, asked)
         assertEquals("AI", s.db["n0"]!!.fields["vi"].str())
+    }
+
+    @Test
+    fun `a phrases batch sends the learner's meanings, writes only phrases, and never asks`() = runBlocking {
+        val sent = mutableListOf<EnrichRequest>()
+        val db = ConcurrentHashMap<String, Note>()
+        db["n0"] = note("n0", "accommodate", mapOf("vi" to FieldValue.Text("tạo điều kiện"), "pos" to FieldValue.Text("verb"), "examples" to FieldValue.Items(listOf("The hotel can accommodate us.")), "examplesVi" to FieldValue.Items(listOf("Khách sạn đáp ứng chúng tôi."))))
+        val phrases = listOf("accommodate 200 guests | chứa được 200 khách", "accommodate a request | đáp ứng một yêu cầu")
+        val batch = AiBatch(
+            call = { r -> sent += r; Enriched(vi = "", phrases = phrases) },
+            getNote = { db[it] },
+            save = { n, f, ai -> db[n.id] = n.copy(fields = f, aiFields = ai.toList()) },
+            concurrency = 1, retryDelayMs = 0,
+        )
+        var asked = false
+        val p = batch.confirmAndRun(listOf("n0"), overwriteVi = true, mode = BatchMode.PHRASES) { _, _ -> asked = true; true }!!
+        assertEquals(BatchProgress(running = false, total = 1, done = 1, mode = BatchMode.PHRASES), p)
+        assertEquals(false, asked)
+        assertEquals(listOf(EnrichRequest("accommodate", "verb", null, emptyList(), vi = "tạo điều kiện", only = "phrases")), sent)
+        val f = db["n0"]!!.fields
+        assertEquals(phrases, f["phrases"].items())
+        assertEquals("tạo điều kiện", f["vi"].str())
+        assertEquals(listOf("The hotel can accommodate us."), f["examples"].items())
+        assertEquals(listOf("Khách sạn đáp ứng chúng tôi."), f["examplesVi"].items())
+        assertEquals("Đã thêm cụm ngắn cho 1/1 từ.", batchSummary(p))
     }
 }

@@ -194,9 +194,13 @@ fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifie
                 Text(b.text, Modifier.padding(start = 12.dp), fontSize = 18.sp, lineHeight = 27.sp, color = c.ink)
             }
             // The sentence with the studied word highlighted like a marker pen, its translation underneath.
+            // A short phrase (one per meaning) is tighter and tinted, so the phrases read as a set above the full sentences.
             is Block.Example -> Column(
-                Modifier.fillMaxWidth().background(c.surface2, RoundedCornerShape(20.dp)).padding(horizontal = 16.dp, vertical = 13.dp).testTag("example"),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                Modifier.fillMaxWidth()
+                    .background(if (b.phrase) c.accentSoft else c.surface2, RoundedCornerShape(20.dp))
+                    .padding(horizontal = if (b.phrase) 14.dp else 16.dp, vertical = if (b.phrase) 9.dp else 13.dp)
+                    .testTag(if (b.phrase) "phrase" else "example"),
+                verticalArrangement = Arrangement.spacedBy(if (b.phrase) 1.dp else 4.dp),
             ) {
                 Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val text = buildAnnotatedString {
@@ -208,12 +212,12 @@ fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifie
                             append(b.text.substring(at.second))
                         }
                     }
-                    Text(text, Modifier.weight(1f), fontSize = 17.sp, lineHeight = 26.sp, color = c.ink)
+                    Text(text, Modifier.weight(1f), fontSize = if (b.phrase) 16.sp else 17.sp, lineHeight = if (b.phrase) 23.sp else 26.sp, fontWeight = if (b.phrase) FontWeight.Bold else null, color = c.ink)
                     Surface(onClick = { onSpeak(b.text) }, shape = CircleShape, color = c.surface, modifier = Modifier.size(32.dp)) {
                         Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.VolumeUp, contentDescription = "Nghe câu ví dụ", tint = c.muted, modifier = Modifier.size(16.dp)) }
                     }
                 }
-                b.vi?.let { Text(it, fontSize = 15.sp, lineHeight = 23.sp, color = c.muted) }
+                b.vi?.let { Text(it, fontSize = if (b.phrase) 14.5.sp else 15.sp, lineHeight = if (b.phrase) 21.sp else 23.sp, color = if (b.phrase) c.ink else c.muted) }
             }
             // Folded behind a chip so the answer stays short; one tap opens it when the word does not come back.
             is Block.Memo -> {

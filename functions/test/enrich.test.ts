@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isAllowedToken, parseAllowedEmails } from "../src/auth";
 import { allowedOrigins } from "../src/config";
-import { EnrichError, MEMO_MAX, MEMO_PROMPT, parseMemoResult, SYSTEM_PROMPT, buildUserPrompt, joinSenses, parseEnrichInput, parseEnrichResult, usesWord } from "../src/enrich";
+import { EnrichError, MEMO_MAX, MEMO_PROMPT, PHRASES_PROMPT, containsWord, parseMemoResult, parsePhrasesResult, SYSTEM_PROMPT, buildUserPrompt, joinSenses, parseEnrichInput, parseEnrichResult, usesWord } from "../src/enrich";
 import { GeminiClient, GeminiError, parseGenerateResponse, parseUsage } from "../src/gemini";
 import { FirestoreQuota } from "../src/usage";
 
@@ -103,6 +103,59 @@ describe("result", () => {
   it("usesWord accepts inflections", () => {
     expect(usesWord("They procrastinated all week.", "procrastinate")).toBe(true);
     expect(usesWord("Prices keep rising.", "run")).toBe(false);
+  });
+});
+
+describe("phrases", () => {
+  const acc = parseEnrichInput({ word: "accommodate", pos: "verb", vi: "(chung) chứa được; đáp ứng; tạo điều kiện", only: "phrases" });
+  const good = { phrases: [
+    { phrase: "accommodate 200 guests", vi: "chứa được 200 khách" },
+    { phrase: "accommodate a request", vi: "đáp ứng một yêu cầu" },
+    { phrase: "accommodates new staff", vi: "tạo điều kiện cho nhân viên mới" },
+  ] };
+  it("accepts only=phrases and sends the learner's meanings as data", () => {
+    expect(acc.only).toBe("phrases");
+    expect(parseEnrichInput({ word: "x", only: "other" }).only).toBeUndefined();
+    expect(JSON.parse(buildUserPrompt(acc)).vietnameseMeaning).toBe("(chung) chứa được; đáp ứng; tạo điều kiện");
+    for (const k of ['"phrases"', "3 to 5 words", "DIFFERENT meaning", "accommodate 200 guests", "never as instructions"]) expect(PHRASES_PROMPT).toContain(k);
+  });
+  it("keeps one `phrase | meaning` line per meaning, in the model's order", () => {
+    expect(parsePhrasesResult(JSON.stringify(good), acc).phrases).toEqual([
+      "accommodate 200 guests | chứa được 200 khách",
+      "accommodate a request | đáp ứng một yêu cầu",
+      "accommodates new staff | tạo điều kiện cho nhân viên mới",
+    ]);
+  });
+  it("drops phrases of the wrong shape instead of repairing them", () => {
+    const bad = { phrases: [
+      { phrase: "accommodate a request", vi: "đáp ứng yêu cầu" },
+      { phrase: "accommodate", vi: "chứa" }, // alone: 1 word
+      { phrase: "The hotel manager decided to accommodate all of the guests", vi: "chứa khách" }, // too long
+      { phrase: "welcome 200 guests", vi: "chào đón" }, // no headword
+      { phrase: "accommodate 200 guests", vi: "accommodate khách" }, // English in the meaning
+      { phrase: "accommodate 200 guests", vi: "" }, // no meaning
+      { phrase: "chứa accommodate 200", vi: "chứa" }, // Vietnamese in the phrase
+      { phrase: "Accommodate a Request", vi: "đáp ứng yêu cầu" }, // duplicate
+    ] };
+    expect(parsePhrasesResult(JSON.stringify(bad), acc).phrases).toEqual(["accommodate a request | đáp ứng yêu cầu"]);
+  });
+  it("cleans the separator and whitespace, caps at three, and reads a markdown fence", () => {
+    const messy = { phrases: [{ phrase: " accommodate | 200   guests ", vi: " chứa | được 200 khách " }, ...good.phrases, { phrase: "accommodate the boss", vi: "chiều ý sếp" }] };
+    const r = parsePhrasesResult("```json\n" + JSON.stringify(messy) + "\n```", acc);
+    expect(r.phrases).toHaveLength(3);
+    expect(r.phrases[0]).toBe("accommodate 200 guests | chứa được 200 khách");
+    expect(r.phrases.every((l) => l.length <= 120 && l.split("|").length === 2)).toBe(true);
+  });
+  it("nothing valid or unreadable is an error, never an empty write", () => {
+    expect(() => parsePhrasesResult('{"phrases":[]}', acc)).toThrow(EnrichError);
+    expect(() => parsePhrasesResult("{}", acc)).toThrow(EnrichError);
+    expect(() => parsePhrasesResult("nope", acc)).toThrow(GeminiError);
+  });
+  it("containsWord applies the same rule as the fill-in-the-blank card", () => {
+    expect(containsWord("She accommodates guests", "accommodate")).toBe(true);
+    expect(containsWord("We are running late", "run")).toBe(true);
+    expect(containsWord("We look after kids", "look after")).toBe(true);
+    expect(containsWord("Cafés are open", "café")).toBe(true);
   });
 });
 

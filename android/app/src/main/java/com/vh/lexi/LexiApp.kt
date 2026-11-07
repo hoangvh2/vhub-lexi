@@ -4,6 +4,7 @@ import android.app.Application
 import android.net.Uri
 import com.vh.lexi.cloud.Cloud
 import com.vh.lexi.core.AiBatch
+import com.vh.lexi.core.Enriched
 import com.vh.lexi.core.Dictionary
 import com.vh.lexi.core.ShardSource
 import com.vh.lexi.data.LexiData
@@ -28,7 +29,10 @@ class LexiApp : Application() {
     /** AI fill for a list of words. Lives here, not in a screen, so it keeps running while the learner switches tabs. */
     val aiBatch: AiBatch by lazy {
         AiBatch(
-            call = { w, pos, en, ex -> cloud.enrich(w, pos, en, ex) },
+            call = { r ->
+                if (r.only == "phrases") Enriched(vi = "", phrases = cloud.enrichPhrases(r.word, r.pos, r.en, r.vi))
+                else cloud.enrich(r.word, r.pos, r.en, r.examples)
+            },
             getNote = { id -> data.notes.value.firstOrNull { it.id == id } },
             save = { n, fields, ai -> data.updateNote(n, fields = fields, aiFields = ai.toList()) },
         )

@@ -6,7 +6,7 @@ import { HttpsError, onCall, type CallableRequest } from "firebase-functions/v2/
 import { createHash } from "node:crypto";
 import { isAllowedToken, parseAllowedEmails } from "./auth";
 import { LIMITS, REGION, allowedOrigins, DEFAULT_GEMINI_MODEL, GEMINI_BASE_URL } from "./config";
-import { EnrichError, MEMO_PROMPT, SYSTEM_PROMPT, buildUserPrompt, parseEnrichInput, parseEnrichResult, parseMemoResult } from "./enrich";
+import { EnrichError, MEMO_PROMPT, PHRASES_PROMPT, SYSTEM_PROMPT, buildUserPrompt, parseEnrichInput, parseEnrichResult, parseMemoResult, parsePhrasesResult } from "./enrich";
 import { ExtractError, EXTRACT_PROMPT, buildParts, extractCost, parseExtractInput, parseExtractResult } from "./extract";
 import { GeminiClient, GeminiError } from "./gemini";
 import { FirestoreQuota } from "./usage";
@@ -66,6 +66,13 @@ export const enrich = onCall(
         const memo = parseMemoResult(text, input);
         logger.info("enrich memo", { uid: shortHash(uid), tokensIn: usage.input, tokensOut: usage.output, tokensThinking: usage.thinking, ms: Date.now() - started });
         return memo;
+      }
+      if (input.only === "phrases") {
+        const { text, usage } = await gemini.generate(PHRASES_PROMPT, buildUserPrompt(input));
+        const result = parsePhrasesResult(text, input);
+        // Counts and tokens only, like the other operations: the words a person studies stay out of logs.
+        logger.info("enrich phrases", { uid: shortHash(uid), phrases: result.phrases.length, tokensIn: usage.input, tokensOut: usage.output, tokensThinking: usage.thinking, ms: Date.now() - started });
+        return result;
       }
       const { text, usage } = await gemini.generate(SYSTEM_PROMPT, buildUserPrompt(input));
       const result = parseEnrichResult(text, input);

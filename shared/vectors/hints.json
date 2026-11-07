@@ -504,6 +504,8 @@
    "reps": 0,
    "expect": [
     "nghĩa",
+    "P1",
+    "P2",
     "A",
     "m",
     "B",
@@ -514,6 +516,8 @@
    "reps": 1,
    "expect": [
     "nghĩa",
+    "P1",
+    "P2",
     "B",
     "m",
     "C",
@@ -524,6 +528,8 @@
    "reps": 2,
    "expect": [
     "nghĩa",
+    "P1",
+    "P2",
     "C",
     "m",
     "A",
@@ -534,6 +540,8 @@
    "reps": 3,
    "expect": [
     "nghĩa",
+    "P1",
+    "P2",
     "A",
     "m",
     "B",
@@ -544,6 +552,8 @@
    "reps": 4,
    "expect": [
     "nghĩa",
+    "P1",
+    "P2",
     "B",
     "m",
     "C",
@@ -554,6 +564,8 @@
    "reps": -1,
    "expect": [
     "nghĩa",
+    "P1",
+    "P2",
     "C",
     "m",
     "A",
@@ -563,6 +575,8 @@
  ],
  "rotateBlocks": [
   "nghĩa",
+  "P1",
+  "P2",
   "A",
   "m",
   "B",
@@ -570,6 +584,8 @@
  ],
  "rotateKinds": [
   "text",
+  "phrase",
+  "phrase",
   "example",
   "memo",
   "example",

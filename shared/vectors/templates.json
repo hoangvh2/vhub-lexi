@@ -2972,6 +2972,5272 @@
     "recognize",
     "cloze"
    ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "accommodate",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+     "en": "",
+     "examples": [
+      "The hotel can accommodate a large group of tourists."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "accommodate 200 guests | chứa được 200 khách",
+      "accommodate a request | đáp ứng một yêu cầu",
+      "She accommodates new staff | tạo điều kiện cho nhân viên mới"
+     ],
+     "examplesVi": [
+      "Khách sạn có thể chứa một đoàn du khách lớn."
+     ]
+    }
+   },
+   "layoutIndex": 0,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "accommodate"
+      },
+      {
+       "k": "speak",
+       "text": "accommodate"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+       "tone": "strong"
+      },
+      {
+       "k": "example",
+       "text": "accommodate 200 guests",
+       "at": [
+        0,
+        11
+       ],
+       "vi": "chứa được 200 khách",
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "accommodate a request",
+       "at": [
+        0,
+        11
+       ],
+       "vi": "đáp ứng một yêu cầu",
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "She accommodates new staff",
+       "at": [
+        4,
+        16
+       ],
+       "vi": "tạo điều kiện cho nhân viên mới",
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "The hotel can accommodate a large group of tourists.",
+       "at": [
+        14,
+        25
+       ],
+       "vi": "Khách sạn có thể chứa một đoàn du khách lớn."
+      }
+     ],
+     "expected": null,
+     "speakFront": "accommodate",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "accommodate"
+      },
+      {
+       "k": "speak",
+       "text": "accommodate"
+      },
+      {
+       "k": "example",
+       "text": "accommodate 200 guests",
+       "at": [
+        0,
+        11
+       ],
+       "vi": "chứa được 200 khách",
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "accommodate a request",
+       "at": [
+        0,
+        11
+       ],
+       "vi": "đáp ứng một yêu cầu",
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "She accommodates new staff",
+       "at": [
+        4,
+        16
+       ],
+       "vi": "tạo điều kiện cho nhân viên mới",
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "The hotel can accommodate a large group of tourists.",
+       "at": [
+        14,
+        25
+       ],
+       "vi": "Khách sạn có thể chứa một đoàn du khách lớn."
+      }
+     ],
+     "expected": [
+      "accommodate"
+     ],
+     "speakFront": null,
+     "speakBack": "accommodate"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "The hotel can _____ a large group of tourists."
+      },
+      {
+       "k": "text",
+       "text": "Khách sạn có thể chứa một đoàn du khách lớn."
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "accommodate"
+      },
+      {
+       "k": "speak",
+       "text": "accommodate"
+      },
+      {
+       "k": "text",
+       "text": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+       "tone": "strong"
+      },
+      {
+       "k": "example",
+       "text": "accommodate 200 guests",
+       "at": [
+        0,
+        11
+       ],
+       "vi": "chứa được 200 khách",
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "accommodate a request",
+       "at": [
+        0,
+        11
+       ],
+       "vi": "đáp ứng một yêu cầu",
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "She accommodates new staff",
+       "at": [
+        4,
+        16
+       ],
+       "vi": "tạo điều kiện cho nhân viên mới",
+       "phrase": true
+      }
+     ],
+     "expected": [
+      "accommodate"
+     ],
+     "speakFront": null,
+     "speakBack": "The hotel can accommodate a large group of tourists."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "The hotel can accommodate a large group of tourists."
+      },
+      {
+       "k": "quote",
+       "text": "The hotel can _____ a large group of tourists."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "accommodate"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "speak",
+       "text": "accommodate"
+      },
+      {
+       "k": "example",
+       "text": "The hotel can accommodate a large group of tourists.",
+       "at": [
+        14,
+        25
+       ],
+       "vi": "Khách sạn có thể chứa một đoàn du khách lớn."
+      },
+      {
+       "k": "text",
+       "text": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+       "tone": "strong"
+      },
+      {
+       "k": "example",
+       "text": "accommodate 200 guests",
+       "at": [
+        0,
+        11
+       ],
+       "vi": "chứa được 200 khách",
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "accommodate a request",
+       "at": [
+        0,
+        11
+       ],
+       "vi": "đáp ứng một yêu cầu",
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "She accommodates new staff",
+       "at": [
+        4,
+        16
+       ],
+       "vi": "tạo điều kiện cho nhân viên mới",
+       "phrase": true
+      }
+     ],
+     "expected": [
+      "accommodate"
+     ],
+     "speakFront": "The hotel can accommodate a large group of tourists.",
+     "speakBack": "accommodate"
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze",
+    "listen"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "accommodate",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+     "en": "",
+     "examples": [
+      "The hotel can accommodate a large group of tourists."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "accommodate 200 guests | chứa được 200 khách",
+      "accommodate a request | đáp ứng một yêu cầu",
+      "She accommodates new staff | tạo điều kiện cho nhân viên mới"
+     ],
+     "examplesVi": [
+      "Khách sạn có thể chứa một đoàn du khách lớn."
+     ]
+    }
+   },
+   "layoutIndex": 1,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "accommodate"
+      },
+      {
+       "k": "speak",
+       "text": "accommodate"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+       "tone": "strong"
+      }
+     ],
+     "expected": null,
+     "speakFront": "accommodate",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "accommodate"
+      },
+      {
+       "k": "speak",
+       "text": "accommodate"
+      }
+     ],
+     "expected": [
+      "accommodate"
+     ],
+     "speakFront": null,
+     "speakBack": "accommodate"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "The hotel can _____ a large group of tourists."
+      },
+      {
+       "k": "text",
+       "text": "Khách sạn có thể chứa một đoàn du khách lớn."
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "accommodate"
+      },
+      {
+       "k": "speak",
+       "text": "accommodate"
+      },
+      {
+       "k": "text",
+       "text": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+       "tone": "strong"
+      }
+     ],
+     "expected": [
+      "accommodate"
+     ],
+     "speakFront": null,
+     "speakBack": "The hotel can accommodate a large group of tourists."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "The hotel can accommodate a large group of tourists."
+      },
+      {
+       "k": "quote",
+       "text": "The hotel can _____ a large group of tourists."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "accommodate"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "speak",
+       "text": "accommodate"
+      },
+      {
+       "k": "example",
+       "text": "The hotel can accommodate a large group of tourists.",
+       "at": [
+        14,
+        25
+       ],
+       "vi": "Khách sạn có thể chứa một đoàn du khách lớn."
+      },
+      {
+       "k": "text",
+       "text": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+       "tone": "strong"
+      }
+     ],
+     "expected": [
+      "accommodate"
+     ],
+     "speakFront": "The hotel can accommodate a large group of tourists.",
+     "speakBack": "accommodate"
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze",
+    "listen"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "charge",
+     "ipa": "",
+     "pos": "noun",
+     "vi": "phí",
+     "en": "",
+     "examples": [
+      "There is no charge for delivery."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "a delivery charge",
+      "welcome to our shop | chào mừng",
+      "in charge of sales | phụ trách bán hàng"
+     ],
+     "examplesVi": []
+    }
+   },
+   "layoutIndex": 0,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "charge"
+      },
+      {
+       "k": "speak",
+       "text": "charge"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "noun"
+      },
+      {
+       "k": "text",
+       "text": "phí",
+       "tone": "strong"
+      },
+      {
+       "k": "example",
+       "text": "a delivery charge",
+       "at": [
+        11,
+        17
+       ],
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "in charge of sales",
+       "at": [
+        3,
+        9
+       ],
+       "vi": "phụ trách bán hàng",
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "There is no charge for delivery.",
+       "at": [
+        12,
+        18
+       ]
+      }
+     ],
+     "expected": null,
+     "speakFront": "charge",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "noun"
+      },
+      {
+       "k": "text",
+       "text": "phí",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "charge"
+      },
+      {
+       "k": "speak",
+       "text": "charge"
+      },
+      {
+       "k": "example",
+       "text": "a delivery charge",
+       "at": [
+        11,
+        17
+       ],
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "in charge of sales",
+       "at": [
+        3,
+        9
+       ],
+       "vi": "phụ trách bán hàng",
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "There is no charge for delivery.",
+       "at": [
+        12,
+        18
+       ]
+      }
+     ],
+     "expected": [
+      "charge"
+     ],
+     "speakFront": null,
+     "speakBack": "charge"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "There is no _____ for delivery."
+      },
+      {
+       "k": "text",
+       "text": "phí",
+       "tone": "muted"
+      },
+      {
+       "k": "badge",
+       "text": "noun"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "charge"
+      },
+      {
+       "k": "speak",
+       "text": "charge"
+      },
+      {
+       "k": "example",
+       "text": "a delivery charge",
+       "at": [
+        11,
+        17
+       ],
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "in charge of sales",
+       "at": [
+        3,
+        9
+       ],
+       "vi": "phụ trách bán hàng",
+       "phrase": true
+      }
+     ],
+     "expected": [
+      "charge"
+     ],
+     "speakFront": null,
+     "speakBack": "There is no charge for delivery."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "There is no charge for delivery."
+      },
+      {
+       "k": "quote",
+       "text": "There is no _____ for delivery."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "charge"
+      },
+      {
+       "k": "badge",
+       "text": "noun"
+      },
+      {
+       "k": "speak",
+       "text": "charge"
+      },
+      {
+       "k": "example",
+       "text": "There is no charge for delivery.",
+       "at": [
+        12,
+        18
+       ]
+      },
+      {
+       "k": "text",
+       "text": "phí",
+       "tone": "strong"
+      },
+      {
+       "k": "example",
+       "text": "a delivery charge",
+       "at": [
+        11,
+        17
+       ],
+       "phrase": true
+      },
+      {
+       "k": "example",
+       "text": "in charge of sales",
+       "at": [
+        3,
+        9
+       ],
+       "vi": "phụ trách bán hàng",
+       "phrase": true
+      }
+     ],
+     "expected": [
+      "charge"
+     ],
+     "speakFront": "There is no charge for delivery.",
+     "speakBack": "charge"
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze",
+    "listen"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "charge",
+     "ipa": "",
+     "pos": "noun",
+     "vi": "phí",
+     "en": "",
+     "examples": [
+      "There is no charge for delivery."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "a delivery charge",
+      "welcome to our shop | chào mừng",
+      "in charge of sales | phụ trách bán hàng"
+     ],
+     "examplesVi": []
+    }
+   },
+   "layoutIndex": 1,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "charge"
+      },
+      {
+       "k": "speak",
+       "text": "charge"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "noun"
+      },
+      {
+       "k": "text",
+       "text": "phí",
+       "tone": "strong"
+      }
+     ],
+     "expected": null,
+     "speakFront": "charge",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "noun"
+      },
+      {
+       "k": "text",
+       "text": "phí",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "charge"
+      },
+      {
+       "k": "speak",
+       "text": "charge"
+      }
+     ],
+     "expected": [
+      "charge"
+     ],
+     "speakFront": null,
+     "speakBack": "charge"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "quote",
+       "text": "There is no _____ for delivery."
+      },
+      {
+       "k": "text",
+       "text": "phí",
+       "tone": "muted"
+      },
+      {
+       "k": "badge",
+       "text": "noun"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "charge"
+      },
+      {
+       "k": "speak",
+       "text": "charge"
+      }
+     ],
+     "expected": [
+      "charge"
+     ],
+     "speakFront": null,
+     "speakBack": "There is no charge for delivery."
+    },
+    "listen": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "listen",
+       "text": "There is no charge for delivery."
+      },
+      {
+       "k": "quote",
+       "text": "There is no _____ for delivery."
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "charge"
+      },
+      {
+       "k": "badge",
+       "text": "noun"
+      },
+      {
+       "k": "speak",
+       "text": "charge"
+      },
+      {
+       "k": "example",
+       "text": "There is no charge for delivery.",
+       "at": [
+        12,
+        18
+       ]
+      },
+      {
+       "k": "text",
+       "text": "phí",
+       "tone": "strong"
+      }
+     ],
+     "expected": [
+      "charge"
+     ],
+     "speakFront": "There is no charge for delivery.",
+     "speakBack": "charge"
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze",
+    "listen"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "lend",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "cho vay",
+     "en": "",
+     "examples": [],
+     "mnemonic": "",
+     "phrases": [
+      "lend me a pen | cho tôi mượn cây bút"
+     ]
+    }
+   },
+   "layoutIndex": 0,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "lend"
+      },
+      {
+       "k": "speak",
+       "text": "lend"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "cho vay",
+       "tone": "strong"
+      },
+      {
+       "k": "example",
+       "text": "lend me a pen",
+       "at": [
+        0,
+        4
+       ],
+       "vi": "cho tôi mượn cây bút",
+       "phrase": true
+      }
+     ],
+     "expected": null,
+     "speakFront": "lend",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "cho vay",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "lend"
+      },
+      {
+       "k": "speak",
+       "text": "lend"
+      },
+      {
+       "k": "example",
+       "text": "lend me a pen",
+       "at": [
+        0,
+        4
+       ],
+       "vi": "cho tôi mượn cây bút",
+       "phrase": true
+      }
+     ],
+     "expected": [
+      "lend"
+     ],
+     "speakFront": null,
+     "speakBack": "lend"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "text",
+       "text": "cho vay",
+       "tone": "muted"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "lend"
+      },
+      {
+       "k": "speak",
+       "text": "lend"
+      },
+      {
+       "k": "example",
+       "text": "lend me a pen",
+       "at": [
+        0,
+        4
+       ],
+       "vi": "cho tôi mượn cây bút",
+       "phrase": true
+      }
+     ],
+     "expected": [
+      "lend"
+     ],
+     "speakFront": null,
+     "speakBack": null
+    },
+    "listen": {
+     "applies": false
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "lend",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "cho vay",
+     "en": "",
+     "examples": [],
+     "mnemonic": "",
+     "phrases": [
+      "lend me a pen | cho tôi mượn cây bút"
+     ]
+    }
+   },
+   "layoutIndex": 1,
+   "templates": {
+    "recognize": {
+     "applies": true,
+     "mode": "flip",
+     "front": [
+      {
+       "k": "title",
+       "text": "lend"
+      },
+      {
+       "k": "speak",
+       "text": "lend"
+      }
+     ],
+     "back": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "cho vay",
+       "tone": "strong"
+      }
+     ],
+     "expected": null,
+     "speakFront": "lend",
+     "speakBack": null
+    },
+    "recall": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "badge",
+       "text": "verb"
+      },
+      {
+       "k": "text",
+       "text": "cho vay",
+       "tone": "strong"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "lend"
+      },
+      {
+       "k": "speak",
+       "text": "lend"
+      }
+     ],
+     "expected": [
+      "lend"
+     ],
+     "speakFront": null,
+     "speakBack": "lend"
+    },
+    "cloze": {
+     "applies": true,
+     "mode": "type",
+     "front": [
+      {
+       "k": "text",
+       "text": "cho vay",
+       "tone": "muted"
+      },
+      {
+       "k": "badge",
+       "text": "verb"
+      }
+     ],
+     "back": [
+      {
+       "k": "title",
+       "text": "lend"
+      },
+      {
+       "k": "speak",
+       "text": "lend"
+      }
+     ],
+     "expected": [
+      "lend"
+     ],
+     "speakFront": null,
+     "speakBack": null
+    },
+    "listen": {
+     "applies": false
+    }
+   },
+   "wanted": [
+    "recognize",
+    "recall",
+    "cloze"
+   ],
+   "wantedDefault": [
+    "recognize",
+    "cloze"
+   ]
+  }
+ ],
+ "study": [
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 0,
+   "phrases": [],
+   "examples": [
+    "Children are often more resilient than adults.",
+    "The team stayed resilient."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "kiên cường",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "fold",
+     "label": "Định nghĩa Anh-Anh",
+     "text": "able to recover quickly"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 1,
+   "phrases": [],
+   "examples": [
+    "Children are often more resilient than adults.",
+    "The team stayed resilient."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "kiên cường",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "fold",
+     "label": "Định nghĩa Anh-Anh",
+     "text": "able to recover quickly"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 2,
+   "phrases": [],
+   "examples": [
+    "Children are often more resilient than adults.",
+    "The team stayed resilient."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "kiên cường",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "fold",
+     "label": "Định nghĩa Anh-Anh",
+     "text": "able to recover quickly"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 3,
+   "phrases": [],
+   "examples": [
+    "Children are often more resilient than adults.",
+    "The team stayed resilient."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "kiên cường",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "fold",
+     "label": "Định nghĩa Anh-Anh",
+     "text": "able to recover quickly"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 7,
+   "phrases": [],
+   "examples": [
+    "Children are often more resilient than adults.",
+    "The team stayed resilient."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "kiên cường",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "fold",
+     "label": "Định nghĩa Anh-Anh",
+     "text": "able to recover quickly"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [],
+     "mnemonic": ""
+    }
+   },
+   "reps": 0,
+   "phrases": [],
+   "examples": [],
+   "examplesVi": [],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [],
+     "mnemonic": ""
+    }
+   },
+   "reps": 1,
+   "phrases": [],
+   "examples": [],
+   "examplesVi": [],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [],
+     "mnemonic": ""
+    }
+   },
+   "reps": 2,
+   "phrases": [],
+   "examples": [],
+   "examplesVi": [],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [],
+     "mnemonic": ""
+    }
+   },
+   "reps": 3,
+   "phrases": [],
+   "examples": [],
+   "examplesVi": [],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [],
+     "mnemonic": ""
+    }
+   },
+   "reps": 7,
+   "phrases": [],
+   "examples": [],
+   "examplesVi": [],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "She is running fast."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 0,
+   "phrases": [],
+   "examples": [
+    "She is running fast."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "She is _____ fast."
+    },
+    {
+     "k": "text",
+     "text": "able to recover quickly",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "run"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "run"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    }
+   ],
+   "expected": [
+    "run",
+    "running"
+   ],
+   "speakBack": "She is running fast."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "She is running fast."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 1,
+   "phrases": [],
+   "examples": [
+    "She is running fast."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "She is _____ fast."
+    },
+    {
+     "k": "text",
+     "text": "able to recover quickly",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "run"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "run"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    }
+   ],
+   "expected": [
+    "run",
+    "running"
+   ],
+   "speakBack": "She is running fast."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "She is running fast."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 2,
+   "phrases": [],
+   "examples": [
+    "She is running fast."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "She is _____ fast."
+    },
+    {
+     "k": "text",
+     "text": "able to recover quickly",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "run"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "run"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    }
+   ],
+   "expected": [
+    "run",
+    "running"
+   ],
+   "speakBack": "She is running fast."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "She is running fast."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 3,
+   "phrases": [],
+   "examples": [
+    "She is running fast."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "She is _____ fast."
+    },
+    {
+     "k": "text",
+     "text": "able to recover quickly",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "run"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "run"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    }
+   ],
+   "expected": [
+    "run",
+    "running"
+   ],
+   "speakBack": "She is running fast."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "She is running fast."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 7,
+   "phrases": [],
+   "examples": [
+    "She is running fast."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "She is _____ fast."
+    },
+    {
+     "k": "text",
+     "text": "able to recover quickly",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "run"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "run"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    }
+   ],
+   "expected": [
+    "run",
+    "running"
+   ],
+   "speakBack": "She is running fast."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "look after",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "",
+     "vi": "",
+     "en": "",
+     "examples": [
+      "Please look after the kids."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 0,
+   "phrases": [],
+   "examples": [
+    "Please look after the kids."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Please _____ the kids."
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "look after"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "look after"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    }
+   ],
+   "expected": [
+    "look after"
+   ],
+   "speakBack": "Please look after the kids."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "look after",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "",
+     "vi": "",
+     "en": "",
+     "examples": [
+      "Please look after the kids."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 1,
+   "phrases": [],
+   "examples": [
+    "Please look after the kids."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Please _____ the kids."
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "look after"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "look after"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    }
+   ],
+   "expected": [
+    "look after"
+   ],
+   "speakBack": "Please look after the kids."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "look after",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "",
+     "vi": "",
+     "en": "",
+     "examples": [
+      "Please look after the kids."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 2,
+   "phrases": [],
+   "examples": [
+    "Please look after the kids."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Please _____ the kids."
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "look after"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "look after"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    }
+   ],
+   "expected": [
+    "look after"
+   ],
+   "speakBack": "Please look after the kids."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "look after",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "",
+     "vi": "",
+     "en": "",
+     "examples": [
+      "Please look after the kids."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 3,
+   "phrases": [],
+   "examples": [
+    "Please look after the kids."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Please _____ the kids."
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "look after"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "look after"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    }
+   ],
+   "expected": [
+    "look after"
+   ],
+   "speakBack": "Please look after the kids."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "look after",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "",
+     "vi": "",
+     "en": "",
+     "examples": [
+      "Please look after the kids."
+     ],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 7,
+   "phrases": [],
+   "examples": [
+    "Please look after the kids."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Please _____ the kids."
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "look after"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "look after"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    }
+   ],
+   "expected": [
+    "look after"
+   ],
+   "speakBack": "Please look after the kids."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "",
+     "examples": [],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 0,
+   "phrases": [],
+   "examples": [],
+   "examplesVi": [],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "",
+     "examples": [],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 1,
+   "phrases": [],
+   "examples": [],
+   "examplesVi": [],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "",
+     "examples": [],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 2,
+   "phrases": [],
+   "examples": [],
+   "examplesVi": [],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "",
+     "examples": [],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 3,
+   "phrases": [],
+   "examples": [],
+   "examplesVi": [],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "",
+     "examples": [],
+     "mnemonic": "re-silient: springs back"
+    }
+   },
+   "reps": 7,
+   "phrases": [],
+   "examples": [],
+   "examplesVi": [],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Kids are tough.",
+      "Children are often more resilient than adults."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Trẻ em thường kiên cường hơn người lớn."
+     ]
+    }
+   },
+   "reps": 0,
+   "phrases": [],
+   "examples": [
+    "Kids are tough.",
+    "Children are often more resilient than adults."
+   ],
+   "examplesVi": [
+    "Trẻ em thường kiên cường hơn người lớn."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "kiên cường",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "fold",
+     "label": "Định nghĩa Anh-Anh",
+     "text": "able to recover quickly"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Kids are tough.",
+      "Children are often more resilient than adults."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Trẻ em thường kiên cường hơn người lớn."
+     ]
+    }
+   },
+   "reps": 1,
+   "phrases": [],
+   "examples": [
+    "Kids are tough.",
+    "Children are often more resilient than adults."
+   ],
+   "examplesVi": [
+    "Trẻ em thường kiên cường hơn người lớn."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "kiên cường",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "fold",
+     "label": "Định nghĩa Anh-Anh",
+     "text": "able to recover quickly"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Kids are tough.",
+      "Children are often more resilient than adults."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Trẻ em thường kiên cường hơn người lớn."
+     ]
+    }
+   },
+   "reps": 2,
+   "phrases": [],
+   "examples": [
+    "Kids are tough.",
+    "Children are often more resilient than adults."
+   ],
+   "examplesVi": [
+    "Trẻ em thường kiên cường hơn người lớn."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "kiên cường",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "fold",
+     "label": "Định nghĩa Anh-Anh",
+     "text": "able to recover quickly"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Kids are tough.",
+      "Children are often more resilient than adults."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Trẻ em thường kiên cường hơn người lớn."
+     ]
+    }
+   },
+   "reps": 3,
+   "phrases": [],
+   "examples": [
+    "Kids are tough.",
+    "Children are often more resilient than adults."
+   ],
+   "examplesVi": [
+    "Trẻ em thường kiên cường hơn người lớn."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "kiên cường",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "fold",
+     "label": "Định nghĩa Anh-Anh",
+     "text": "able to recover quickly"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "kiên cường",
+     "en": "able to recover quickly",
+     "examples": [
+      "Kids are tough.",
+      "Children are often more resilient than adults."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Trẻ em thường kiên cường hơn người lớn."
+     ]
+    }
+   },
+   "reps": 7,
+   "phrases": [],
+   "examples": [
+    "Kids are tough.",
+    "Children are often more resilient than adults."
+   ],
+   "examplesVi": [
+    "Trẻ em thường kiên cường hơn người lớn."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "kiên cường",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "fold",
+     "label": "Định nghĩa Anh-Anh",
+     "text": "able to recover quickly"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "chạy",
+     "en": "",
+     "examples": [
+      "She is running fast.",
+      "They run every morning."
+     ],
+     "mnemonic": "",
+     "examplesVi": [
+      "Cô ấy chạy nhanh.",
+      "Họ chạy mỗi sáng."
+     ]
+    }
+   },
+   "reps": 0,
+   "phrases": [],
+   "examples": [
+    "She is running fast.",
+    "They run every morning."
+   ],
+   "examplesVi": [
+    "Cô ấy chạy nhanh.",
+    "Họ chạy mỗi sáng."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "She is _____ fast."
+    },
+    {
+     "k": "text",
+     "text": "Cô ấy chạy nhanh."
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "run"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "run"
+    },
+    {
+     "k": "text",
+     "text": "chạy",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "run",
+    "running"
+   ],
+   "speakBack": "She is running fast."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "chạy",
+     "en": "",
+     "examples": [
+      "She is running fast.",
+      "They run every morning."
+     ],
+     "mnemonic": "",
+     "examplesVi": [
+      "Cô ấy chạy nhanh.",
+      "Họ chạy mỗi sáng."
+     ]
+    }
+   },
+   "reps": 1,
+   "phrases": [],
+   "examples": [
+    "She is running fast.",
+    "They run every morning."
+   ],
+   "examplesVi": [
+    "Cô ấy chạy nhanh.",
+    "Họ chạy mỗi sáng."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "She is _____ fast."
+    },
+    {
+     "k": "text",
+     "text": "Cô ấy chạy nhanh."
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "run"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "run"
+    },
+    {
+     "k": "text",
+     "text": "chạy",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "run",
+    "running"
+   ],
+   "speakBack": "She is running fast."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "chạy",
+     "en": "",
+     "examples": [
+      "She is running fast.",
+      "They run every morning."
+     ],
+     "mnemonic": "",
+     "examplesVi": [
+      "Cô ấy chạy nhanh.",
+      "Họ chạy mỗi sáng."
+     ]
+    }
+   },
+   "reps": 2,
+   "phrases": [],
+   "examples": [
+    "She is running fast.",
+    "They run every morning."
+   ],
+   "examplesVi": [
+    "Cô ấy chạy nhanh.",
+    "Họ chạy mỗi sáng."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "She is _____ fast."
+    },
+    {
+     "k": "text",
+     "text": "Cô ấy chạy nhanh."
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "run"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "run"
+    },
+    {
+     "k": "text",
+     "text": "chạy",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "run",
+    "running"
+   ],
+   "speakBack": "She is running fast."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "chạy",
+     "en": "",
+     "examples": [
+      "She is running fast.",
+      "They run every morning."
+     ],
+     "mnemonic": "",
+     "examplesVi": [
+      "Cô ấy chạy nhanh.",
+      "Họ chạy mỗi sáng."
+     ]
+    }
+   },
+   "reps": 3,
+   "phrases": [],
+   "examples": [
+    "She is running fast.",
+    "They run every morning."
+   ],
+   "examplesVi": [
+    "Cô ấy chạy nhanh.",
+    "Họ chạy mỗi sáng."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "She is _____ fast."
+    },
+    {
+     "k": "text",
+     "text": "Cô ấy chạy nhanh."
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "run"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "run"
+    },
+    {
+     "k": "text",
+     "text": "chạy",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "run",
+    "running"
+   ],
+   "speakBack": "She is running fast."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "run",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "verb",
+     "vi": "chạy",
+     "en": "",
+     "examples": [
+      "She is running fast.",
+      "They run every morning."
+     ],
+     "mnemonic": "",
+     "examplesVi": [
+      "Cô ấy chạy nhanh.",
+      "Họ chạy mỗi sáng."
+     ]
+    }
+   },
+   "reps": 7,
+   "phrases": [],
+   "examples": [
+    "She is running fast.",
+    "They run every morning."
+   ],
+   "examplesVi": [
+    "Cô ấy chạy nhanh.",
+    "Họ chạy mỗi sáng."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "She is _____ fast."
+    },
+    {
+     "k": "text",
+     "text": "Cô ấy chạy nhanh."
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "run"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "run"
+    },
+    {
+     "k": "text",
+     "text": "chạy",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "run",
+    "running"
+   ],
+   "speakBack": "She is running fast."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Nhóm vẫn kiên cường."
+     ]
+    }
+   },
+   "reps": 0,
+   "phrases": [],
+   "examples": [
+    "Children are often more resilient than adults.",
+    "The team stayed resilient."
+   ],
+   "examplesVi": [
+    "Nhóm vẫn kiên cường."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "Nhóm vẫn kiên cường."
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "text",
+     "text": "able to recover quickly",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Nhóm vẫn kiên cường."
+     ]
+    }
+   },
+   "reps": 1,
+   "phrases": [],
+   "examples": [
+    "Children are often more resilient than adults.",
+    "The team stayed resilient."
+   ],
+   "examplesVi": [
+    "Nhóm vẫn kiên cường."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "Nhóm vẫn kiên cường."
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "text",
+     "text": "able to recover quickly",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Nhóm vẫn kiên cường."
+     ]
+    }
+   },
+   "reps": 2,
+   "phrases": [],
+   "examples": [
+    "Children are often more resilient than adults.",
+    "The team stayed resilient."
+   ],
+   "examplesVi": [
+    "Nhóm vẫn kiên cường."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "Nhóm vẫn kiên cường."
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "text",
+     "text": "able to recover quickly",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Nhóm vẫn kiên cường."
+     ]
+    }
+   },
+   "reps": 3,
+   "phrases": [],
+   "examples": [
+    "Children are often more resilient than adults.",
+    "The team stayed resilient."
+   ],
+   "examplesVi": [
+    "Nhóm vẫn kiên cường."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "Nhóm vẫn kiên cường."
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "text",
+     "text": "able to recover quickly",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "resilient",
+     "ipa": "rɪˈzɪljənt",
+     "pos": "adjective",
+     "vi": "",
+     "en": "able to recover quickly",
+     "examples": [
+      "Children are often more resilient than adults.",
+      "The team stayed resilient."
+     ],
+     "mnemonic": "re-silient: springs back",
+     "examplesVi": [
+      "Nhóm vẫn kiên cường."
+     ]
+    }
+   },
+   "reps": 7,
+   "phrases": [],
+   "examples": [
+    "Children are often more resilient than adults.",
+    "The team stayed resilient."
+   ],
+   "examplesVi": [
+    "Nhóm vẫn kiên cường."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "Children are often more _____ than adults."
+    },
+    {
+     "k": "text",
+     "text": "Nhóm vẫn kiên cường."
+    },
+    {
+     "k": "badge",
+     "text": "adjective"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "resilient"
+    },
+    {
+     "k": "ipa",
+     "text": "rɪˈzɪljənt"
+    },
+    {
+     "k": "speak",
+     "text": "resilient"
+    },
+    {
+     "k": "memo",
+     "text": "re-silient: springs back"
+    },
+    {
+     "k": "text",
+     "text": "able to recover quickly",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "resilient"
+   ],
+   "speakBack": "Children are often more resilient than adults."
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "sail",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "đi thuyền",
+     "en": "",
+     "examples": [
+      "We sailed the Atlantic"
+     ],
+     "mnemonic": ""
+    }
+   },
+   "reps": 0,
+   "phrases": [],
+   "examples": [
+    "We sailed the Atlantic"
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "We _____ the Atlantic"
+    },
+    {
+     "k": "text",
+     "text": "đi thuyền",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "sail"
+    },
+    {
+     "k": "speak",
+     "text": "sail"
+    }
+   ],
+   "expected": [
+    "sail",
+    "sailed"
+   ],
+   "speakBack": "We sailed the Atlantic"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "sail",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "đi thuyền",
+     "en": "",
+     "examples": [
+      "We sailed the Atlantic"
+     ],
+     "mnemonic": ""
+    }
+   },
+   "reps": 1,
+   "phrases": [],
+   "examples": [
+    "We sailed the Atlantic"
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "We _____ the Atlantic"
+    },
+    {
+     "k": "text",
+     "text": "đi thuyền",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "sail"
+    },
+    {
+     "k": "speak",
+     "text": "sail"
+    }
+   ],
+   "expected": [
+    "sail",
+    "sailed"
+   ],
+   "speakBack": "We sailed the Atlantic"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "sail",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "đi thuyền",
+     "en": "",
+     "examples": [
+      "We sailed the Atlantic"
+     ],
+     "mnemonic": ""
+    }
+   },
+   "reps": 2,
+   "phrases": [],
+   "examples": [
+    "We sailed the Atlantic"
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "We _____ the Atlantic"
+    },
+    {
+     "k": "text",
+     "text": "đi thuyền",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "sail"
+    },
+    {
+     "k": "speak",
+     "text": "sail"
+    }
+   ],
+   "expected": [
+    "sail",
+    "sailed"
+   ],
+   "speakBack": "We sailed the Atlantic"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "sail",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "đi thuyền",
+     "en": "",
+     "examples": [
+      "We sailed the Atlantic"
+     ],
+     "mnemonic": ""
+    }
+   },
+   "reps": 3,
+   "phrases": [],
+   "examples": [
+    "We sailed the Atlantic"
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "We _____ the Atlantic"
+    },
+    {
+     "k": "text",
+     "text": "đi thuyền",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "sail"
+    },
+    {
+     "k": "speak",
+     "text": "sail"
+    }
+   ],
+   "expected": [
+    "sail",
+    "sailed"
+   ],
+   "speakBack": "We sailed the Atlantic"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "sail",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "đi thuyền",
+     "en": "",
+     "examples": [
+      "We sailed the Atlantic"
+     ],
+     "mnemonic": ""
+    }
+   },
+   "reps": 7,
+   "phrases": [],
+   "examples": [
+    "We sailed the Atlantic"
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "We _____ the Atlantic"
+    },
+    {
+     "k": "text",
+     "text": "đi thuyền",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "sail"
+    },
+    {
+     "k": "speak",
+     "text": "sail"
+    }
+   ],
+   "expected": [
+    "sail",
+    "sailed"
+   ],
+   "speakBack": "We sailed the Atlantic"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "accommodate",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+     "en": "",
+     "examples": [
+      "The hotel can accommodate a large group of tourists."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "accommodate 200 guests | chứa được 200 khách",
+      "accommodate a request | đáp ứng một yêu cầu",
+      "She accommodates new staff | tạo điều kiện cho nhân viên mới"
+     ],
+     "examplesVi": [
+      "Khách sạn có thể chứa một đoàn du khách lớn."
+     ]
+    }
+   },
+   "reps": 0,
+   "phrases": [
+    {
+     "text": "accommodate 200 guests",
+     "vi": "chứa được 200 khách"
+    },
+    {
+     "text": "accommodate a request",
+     "vi": "đáp ứng một yêu cầu"
+    },
+    {
+     "text": "She accommodates new staff",
+     "vi": "tạo điều kiện cho nhân viên mới"
+    }
+   ],
+   "examples": [
+    "accommodate 200 guests",
+    "The hotel can accommodate a large group of tourists."
+   ],
+   "examplesVi": [
+    "chứa được 200 khách",
+    "Khách sạn có thể chứa một đoàn du khách lớn."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ 200 guests"
+    },
+    {
+     "k": "text",
+     "text": "chứa được 200 khách"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "accommodate"
+    },
+    {
+     "k": "speak",
+     "text": "accommodate"
+    },
+    {
+     "k": "text",
+     "text": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+     "tone": "strong"
+    },
+    {
+     "k": "example",
+     "text": "accommodate 200 guests",
+     "at": [
+      0,
+      11
+     ],
+     "vi": "chứa được 200 khách",
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "accommodate a request",
+     "at": [
+      0,
+      11
+     ],
+     "vi": "đáp ứng một yêu cầu",
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "She accommodates new staff",
+     "at": [
+      4,
+      16
+     ],
+     "vi": "tạo điều kiện cho nhân viên mới",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "accommodate"
+   ],
+   "speakBack": "accommodate 200 guests"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "accommodate",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+     "en": "",
+     "examples": [
+      "The hotel can accommodate a large group of tourists."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "accommodate 200 guests | chứa được 200 khách",
+      "accommodate a request | đáp ứng một yêu cầu",
+      "She accommodates new staff | tạo điều kiện cho nhân viên mới"
+     ],
+     "examplesVi": [
+      "Khách sạn có thể chứa một đoàn du khách lớn."
+     ]
+    }
+   },
+   "reps": 1,
+   "phrases": [
+    {
+     "text": "accommodate 200 guests",
+     "vi": "chứa được 200 khách"
+    },
+    {
+     "text": "accommodate a request",
+     "vi": "đáp ứng một yêu cầu"
+    },
+    {
+     "text": "She accommodates new staff",
+     "vi": "tạo điều kiện cho nhân viên mới"
+    }
+   ],
+   "examples": [
+    "accommodate a request",
+    "The hotel can accommodate a large group of tourists."
+   ],
+   "examplesVi": [
+    "đáp ứng một yêu cầu",
+    "Khách sạn có thể chứa một đoàn du khách lớn."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ a request"
+    },
+    {
+     "k": "text",
+     "text": "đáp ứng một yêu cầu"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "accommodate"
+    },
+    {
+     "k": "speak",
+     "text": "accommodate"
+    },
+    {
+     "k": "text",
+     "text": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+     "tone": "strong"
+    },
+    {
+     "k": "example",
+     "text": "accommodate 200 guests",
+     "at": [
+      0,
+      11
+     ],
+     "vi": "chứa được 200 khách",
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "accommodate a request",
+     "at": [
+      0,
+      11
+     ],
+     "vi": "đáp ứng một yêu cầu",
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "She accommodates new staff",
+     "at": [
+      4,
+      16
+     ],
+     "vi": "tạo điều kiện cho nhân viên mới",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "accommodate"
+   ],
+   "speakBack": "accommodate a request"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "accommodate",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+     "en": "",
+     "examples": [
+      "The hotel can accommodate a large group of tourists."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "accommodate 200 guests | chứa được 200 khách",
+      "accommodate a request | đáp ứng một yêu cầu",
+      "She accommodates new staff | tạo điều kiện cho nhân viên mới"
+     ],
+     "examplesVi": [
+      "Khách sạn có thể chứa một đoàn du khách lớn."
+     ]
+    }
+   },
+   "reps": 2,
+   "phrases": [
+    {
+     "text": "accommodate 200 guests",
+     "vi": "chứa được 200 khách"
+    },
+    {
+     "text": "accommodate a request",
+     "vi": "đáp ứng một yêu cầu"
+    },
+    {
+     "text": "She accommodates new staff",
+     "vi": "tạo điều kiện cho nhân viên mới"
+    }
+   ],
+   "examples": [
+    "She accommodates new staff",
+    "The hotel can accommodate a large group of tourists."
+   ],
+   "examplesVi": [
+    "tạo điều kiện cho nhân viên mới",
+    "Khách sạn có thể chứa một đoàn du khách lớn."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "She _____ new staff"
+    },
+    {
+     "k": "text",
+     "text": "tạo điều kiện cho nhân viên mới"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "accommodate"
+    },
+    {
+     "k": "speak",
+     "text": "accommodate"
+    },
+    {
+     "k": "text",
+     "text": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+     "tone": "strong"
+    },
+    {
+     "k": "example",
+     "text": "accommodate 200 guests",
+     "at": [
+      0,
+      11
+     ],
+     "vi": "chứa được 200 khách",
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "accommodate a request",
+     "at": [
+      0,
+      11
+     ],
+     "vi": "đáp ứng một yêu cầu",
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "She accommodates new staff",
+     "at": [
+      4,
+      16
+     ],
+     "vi": "tạo điều kiện cho nhân viên mới",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "accommodate",
+    "accommodates"
+   ],
+   "speakBack": "She accommodates new staff"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "accommodate",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+     "en": "",
+     "examples": [
+      "The hotel can accommodate a large group of tourists."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "accommodate 200 guests | chứa được 200 khách",
+      "accommodate a request | đáp ứng một yêu cầu",
+      "She accommodates new staff | tạo điều kiện cho nhân viên mới"
+     ],
+     "examplesVi": [
+      "Khách sạn có thể chứa một đoàn du khách lớn."
+     ]
+    }
+   },
+   "reps": 3,
+   "phrases": [
+    {
+     "text": "accommodate 200 guests",
+     "vi": "chứa được 200 khách"
+    },
+    {
+     "text": "accommodate a request",
+     "vi": "đáp ứng một yêu cầu"
+    },
+    {
+     "text": "She accommodates new staff",
+     "vi": "tạo điều kiện cho nhân viên mới"
+    }
+   ],
+   "examples": [
+    "accommodate 200 guests",
+    "The hotel can accommodate a large group of tourists."
+   ],
+   "examplesVi": [
+    "chứa được 200 khách",
+    "Khách sạn có thể chứa một đoàn du khách lớn."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ 200 guests"
+    },
+    {
+     "k": "text",
+     "text": "chứa được 200 khách"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "accommodate"
+    },
+    {
+     "k": "speak",
+     "text": "accommodate"
+    },
+    {
+     "k": "text",
+     "text": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+     "tone": "strong"
+    },
+    {
+     "k": "example",
+     "text": "accommodate 200 guests",
+     "at": [
+      0,
+      11
+     ],
+     "vi": "chứa được 200 khách",
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "accommodate a request",
+     "at": [
+      0,
+      11
+     ],
+     "vi": "đáp ứng một yêu cầu",
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "She accommodates new staff",
+     "at": [
+      4,
+      16
+     ],
+     "vi": "tạo điều kiện cho nhân viên mới",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "accommodate"
+   ],
+   "speakBack": "accommodate 200 guests"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "accommodate",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+     "en": "",
+     "examples": [
+      "The hotel can accommodate a large group of tourists."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "accommodate 200 guests | chứa được 200 khách",
+      "accommodate a request | đáp ứng một yêu cầu",
+      "She accommodates new staff | tạo điều kiện cho nhân viên mới"
+     ],
+     "examplesVi": [
+      "Khách sạn có thể chứa một đoàn du khách lớn."
+     ]
+    }
+   },
+   "reps": 7,
+   "phrases": [
+    {
+     "text": "accommodate 200 guests",
+     "vi": "chứa được 200 khách"
+    },
+    {
+     "text": "accommodate a request",
+     "vi": "đáp ứng một yêu cầu"
+    },
+    {
+     "text": "She accommodates new staff",
+     "vi": "tạo điều kiện cho nhân viên mới"
+    }
+   ],
+   "examples": [
+    "accommodate a request",
+    "The hotel can accommodate a large group of tourists."
+   ],
+   "examplesVi": [
+    "đáp ứng một yêu cầu",
+    "Khách sạn có thể chứa một đoàn du khách lớn."
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ a request"
+    },
+    {
+     "k": "text",
+     "text": "đáp ứng một yêu cầu"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "accommodate"
+    },
+    {
+     "k": "speak",
+     "text": "accommodate"
+    },
+    {
+     "k": "text",
+     "text": "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+     "tone": "strong"
+    },
+    {
+     "k": "example",
+     "text": "accommodate 200 guests",
+     "at": [
+      0,
+      11
+     ],
+     "vi": "chứa được 200 khách",
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "accommodate a request",
+     "at": [
+      0,
+      11
+     ],
+     "vi": "đáp ứng một yêu cầu",
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "She accommodates new staff",
+     "at": [
+      4,
+      16
+     ],
+     "vi": "tạo điều kiện cho nhân viên mới",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "accommodate"
+   ],
+   "speakBack": "accommodate a request"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "charge",
+     "ipa": "",
+     "pos": "noun",
+     "vi": "phí",
+     "en": "",
+     "examples": [
+      "There is no charge for delivery."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "a delivery charge",
+      "welcome to our shop | chào mừng",
+      "in charge of sales | phụ trách bán hàng"
+     ],
+     "examplesVi": []
+    }
+   },
+   "reps": 0,
+   "phrases": [
+    {
+     "text": "a delivery charge",
+     "vi": ""
+    },
+    {
+     "text": "in charge of sales",
+     "vi": "phụ trách bán hàng"
+    }
+   ],
+   "examples": [
+    "a delivery charge",
+    "There is no charge for delivery."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "a delivery _____"
+    },
+    {
+     "k": "text",
+     "text": "phí",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "noun"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "charge"
+    },
+    {
+     "k": "speak",
+     "text": "charge"
+    },
+    {
+     "k": "example",
+     "text": "a delivery charge",
+     "at": [
+      11,
+      17
+     ],
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "in charge of sales",
+     "at": [
+      3,
+      9
+     ],
+     "vi": "phụ trách bán hàng",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "charge"
+   ],
+   "speakBack": "a delivery charge"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "charge",
+     "ipa": "",
+     "pos": "noun",
+     "vi": "phí",
+     "en": "",
+     "examples": [
+      "There is no charge for delivery."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "a delivery charge",
+      "welcome to our shop | chào mừng",
+      "in charge of sales | phụ trách bán hàng"
+     ],
+     "examplesVi": []
+    }
+   },
+   "reps": 1,
+   "phrases": [
+    {
+     "text": "a delivery charge",
+     "vi": ""
+    },
+    {
+     "text": "in charge of sales",
+     "vi": "phụ trách bán hàng"
+    }
+   ],
+   "examples": [
+    "in charge of sales",
+    "There is no charge for delivery."
+   ],
+   "examplesVi": [
+    "phụ trách bán hàng"
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "in _____ of sales"
+    },
+    {
+     "k": "text",
+     "text": "phụ trách bán hàng"
+    },
+    {
+     "k": "badge",
+     "text": "noun"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "charge"
+    },
+    {
+     "k": "speak",
+     "text": "charge"
+    },
+    {
+     "k": "text",
+     "text": "phí",
+     "tone": "strong"
+    },
+    {
+     "k": "example",
+     "text": "a delivery charge",
+     "at": [
+      11,
+      17
+     ],
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "in charge of sales",
+     "at": [
+      3,
+      9
+     ],
+     "vi": "phụ trách bán hàng",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "charge"
+   ],
+   "speakBack": "in charge of sales"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "charge",
+     "ipa": "",
+     "pos": "noun",
+     "vi": "phí",
+     "en": "",
+     "examples": [
+      "There is no charge for delivery."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "a delivery charge",
+      "welcome to our shop | chào mừng",
+      "in charge of sales | phụ trách bán hàng"
+     ],
+     "examplesVi": []
+    }
+   },
+   "reps": 2,
+   "phrases": [
+    {
+     "text": "a delivery charge",
+     "vi": ""
+    },
+    {
+     "text": "in charge of sales",
+     "vi": "phụ trách bán hàng"
+    }
+   ],
+   "examples": [
+    "a delivery charge",
+    "There is no charge for delivery."
+   ],
+   "examplesVi": [],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "a delivery _____"
+    },
+    {
+     "k": "text",
+     "text": "phí",
+     "tone": "muted"
+    },
+    {
+     "k": "badge",
+     "text": "noun"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "charge"
+    },
+    {
+     "k": "speak",
+     "text": "charge"
+    },
+    {
+     "k": "example",
+     "text": "a delivery charge",
+     "at": [
+      11,
+      17
+     ],
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "in charge of sales",
+     "at": [
+      3,
+      9
+     ],
+     "vi": "phụ trách bán hàng",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "charge"
+   ],
+   "speakBack": "a delivery charge"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "charge",
+     "ipa": "",
+     "pos": "noun",
+     "vi": "phí",
+     "en": "",
+     "examples": [
+      "There is no charge for delivery."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "a delivery charge",
+      "welcome to our shop | chào mừng",
+      "in charge of sales | phụ trách bán hàng"
+     ],
+     "examplesVi": []
+    }
+   },
+   "reps": 3,
+   "phrases": [
+    {
+     "text": "a delivery charge",
+     "vi": ""
+    },
+    {
+     "text": "in charge of sales",
+     "vi": "phụ trách bán hàng"
+    }
+   ],
+   "examples": [
+    "in charge of sales",
+    "There is no charge for delivery."
+   ],
+   "examplesVi": [
+    "phụ trách bán hàng"
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "in _____ of sales"
+    },
+    {
+     "k": "text",
+     "text": "phụ trách bán hàng"
+    },
+    {
+     "k": "badge",
+     "text": "noun"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "charge"
+    },
+    {
+     "k": "speak",
+     "text": "charge"
+    },
+    {
+     "k": "text",
+     "text": "phí",
+     "tone": "strong"
+    },
+    {
+     "k": "example",
+     "text": "a delivery charge",
+     "at": [
+      11,
+      17
+     ],
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "in charge of sales",
+     "at": [
+      3,
+      9
+     ],
+     "vi": "phụ trách bán hàng",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "charge"
+   ],
+   "speakBack": "in charge of sales"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "charge",
+     "ipa": "",
+     "pos": "noun",
+     "vi": "phí",
+     "en": "",
+     "examples": [
+      "There is no charge for delivery."
+     ],
+     "mnemonic": "",
+     "phrases": [
+      "a delivery charge",
+      "welcome to our shop | chào mừng",
+      "in charge of sales | phụ trách bán hàng"
+     ],
+     "examplesVi": []
+    }
+   },
+   "reps": 7,
+   "phrases": [
+    {
+     "text": "a delivery charge",
+     "vi": ""
+    },
+    {
+     "text": "in charge of sales",
+     "vi": "phụ trách bán hàng"
+    }
+   ],
+   "examples": [
+    "in charge of sales",
+    "There is no charge for delivery."
+   ],
+   "examplesVi": [
+    "phụ trách bán hàng"
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "in _____ of sales"
+    },
+    {
+     "k": "text",
+     "text": "phụ trách bán hàng"
+    },
+    {
+     "k": "badge",
+     "text": "noun"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "charge"
+    },
+    {
+     "k": "speak",
+     "text": "charge"
+    },
+    {
+     "k": "text",
+     "text": "phí",
+     "tone": "strong"
+    },
+    {
+     "k": "example",
+     "text": "a delivery charge",
+     "at": [
+      11,
+      17
+     ],
+     "phrase": true
+    },
+    {
+     "k": "example",
+     "text": "in charge of sales",
+     "at": [
+      3,
+      9
+     ],
+     "vi": "phụ trách bán hàng",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "charge"
+   ],
+   "speakBack": "in charge of sales"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "lend",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "cho vay",
+     "en": "",
+     "examples": [],
+     "mnemonic": "",
+     "phrases": [
+      "lend me a pen | cho tôi mượn cây bút"
+     ]
+    }
+   },
+   "reps": 0,
+   "phrases": [
+    {
+     "text": "lend me a pen",
+     "vi": "cho tôi mượn cây bút"
+    }
+   ],
+   "examples": [
+    "lend me a pen"
+   ],
+   "examplesVi": [
+    "cho tôi mượn cây bút"
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ me a pen"
+    },
+    {
+     "k": "text",
+     "text": "cho tôi mượn cây bút"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "lend"
+    },
+    {
+     "k": "speak",
+     "text": "lend"
+    },
+    {
+     "k": "text",
+     "text": "cho vay",
+     "tone": "strong"
+    },
+    {
+     "k": "example",
+     "text": "lend me a pen",
+     "at": [
+      0,
+      4
+     ],
+     "vi": "cho tôi mượn cây bút",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "lend"
+   ],
+   "speakBack": "lend me a pen"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "lend",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "cho vay",
+     "en": "",
+     "examples": [],
+     "mnemonic": "",
+     "phrases": [
+      "lend me a pen | cho tôi mượn cây bút"
+     ]
+    }
+   },
+   "reps": 1,
+   "phrases": [
+    {
+     "text": "lend me a pen",
+     "vi": "cho tôi mượn cây bút"
+    }
+   ],
+   "examples": [
+    "lend me a pen"
+   ],
+   "examplesVi": [
+    "cho tôi mượn cây bút"
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ me a pen"
+    },
+    {
+     "k": "text",
+     "text": "cho tôi mượn cây bút"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "lend"
+    },
+    {
+     "k": "speak",
+     "text": "lend"
+    },
+    {
+     "k": "text",
+     "text": "cho vay",
+     "tone": "strong"
+    },
+    {
+     "k": "example",
+     "text": "lend me a pen",
+     "at": [
+      0,
+      4
+     ],
+     "vi": "cho tôi mượn cây bút",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "lend"
+   ],
+   "speakBack": "lend me a pen"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "lend",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "cho vay",
+     "en": "",
+     "examples": [],
+     "mnemonic": "",
+     "phrases": [
+      "lend me a pen | cho tôi mượn cây bút"
+     ]
+    }
+   },
+   "reps": 2,
+   "phrases": [
+    {
+     "text": "lend me a pen",
+     "vi": "cho tôi mượn cây bút"
+    }
+   ],
+   "examples": [
+    "lend me a pen"
+   ],
+   "examplesVi": [
+    "cho tôi mượn cây bút"
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ me a pen"
+    },
+    {
+     "k": "text",
+     "text": "cho tôi mượn cây bút"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "lend"
+    },
+    {
+     "k": "speak",
+     "text": "lend"
+    },
+    {
+     "k": "text",
+     "text": "cho vay",
+     "tone": "strong"
+    },
+    {
+     "k": "example",
+     "text": "lend me a pen",
+     "at": [
+      0,
+      4
+     ],
+     "vi": "cho tôi mượn cây bút",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "lend"
+   ],
+   "speakBack": "lend me a pen"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "lend",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "cho vay",
+     "en": "",
+     "examples": [],
+     "mnemonic": "",
+     "phrases": [
+      "lend me a pen | cho tôi mượn cây bút"
+     ]
+    }
+   },
+   "reps": 3,
+   "phrases": [
+    {
+     "text": "lend me a pen",
+     "vi": "cho tôi mượn cây bút"
+    }
+   ],
+   "examples": [
+    "lend me a pen"
+   ],
+   "examplesVi": [
+    "cho tôi mượn cây bút"
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ me a pen"
+    },
+    {
+     "k": "text",
+     "text": "cho tôi mượn cây bút"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "lend"
+    },
+    {
+     "k": "speak",
+     "text": "lend"
+    },
+    {
+     "k": "text",
+     "text": "cho vay",
+     "tone": "strong"
+    },
+    {
+     "k": "example",
+     "text": "lend me a pen",
+     "at": [
+      0,
+      4
+     ],
+     "vi": "cho tôi mượn cây bút",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "lend"
+   ],
+   "speakBack": "lend me a pen"
+  },
+  {
+   "note": {
+    "id": "n1",
+    "type": "vocab",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "word": "lend",
+     "ipa": "",
+     "pos": "verb",
+     "vi": "cho vay",
+     "en": "",
+     "examples": [],
+     "mnemonic": "",
+     "phrases": [
+      "lend me a pen | cho tôi mượn cây bút"
+     ]
+    }
+   },
+   "reps": 7,
+   "phrases": [
+    {
+     "text": "lend me a pen",
+     "vi": "cho tôi mượn cây bút"
+    }
+   ],
+   "examples": [
+    "lend me a pen"
+   ],
+   "examplesVi": [
+    "cho tôi mượn cây bút"
+   ],
+   "applies": true,
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ me a pen"
+    },
+    {
+     "k": "text",
+     "text": "cho tôi mượn cây bút"
+    },
+    {
+     "k": "badge",
+     "text": "verb"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "lend"
+    },
+    {
+     "k": "speak",
+     "text": "lend"
+    },
+    {
+     "k": "text",
+     "text": "cho vay",
+     "tone": "strong"
+    },
+    {
+     "k": "example",
+     "text": "lend me a pen",
+     "at": [
+      0,
+      4
+     ],
+     "vi": "cho tôi mượn cây bút",
+     "phrase": true
+    }
+   ],
+   "expected": [
+    "lend"
+   ],
+   "speakBack": "lend me a pen"
   }
  ],
  "clozes": [

@@ -9,10 +9,14 @@ export interface Enriched {
   examplesVi?: string[];
   existingVi?: string[];
   mnemonic?: string;
+  /** "phrase | meaning" lines from the phrases-only call (functions/src/enrich.ts). */
+  phrases?: string[];
 }
 
 /** The field holds at most 8 sentences (Firestore rules). */
 const MAX_EXAMPLES = 8;
+/** AI writes at most this many short phrases (the field holds 8, so the learner can add a few by hand). */
+const MAX_AI_PHRASES = 3;
 
 export interface MergeOptions {
   /** Replace a Vietnamese meaning the learner (or a dictionary) wrote. Off by default. */
@@ -40,6 +44,9 @@ export function mergeEnrich(
   if (r.en?.trim() && !str(fields.en)) (next.en = r.en.trim(), ai.add("en"));
   const mn = (r.mnemonic ?? "").trim();
   if (mn && (!str(fields.mnemonic) || ai.has("mnemonic"))) (next.mnemonic = mn, ai.add("mnemonic"));
+  // Phrases the learner wrote or edited are never replaced; AI-written ones are refreshed.
+  const phrases = (r.phrases ?? []).map((x) => x.trim()).filter(Boolean).slice(0, MAX_AI_PHRASES);
+  if (phrases.length && (!list(fields.phrases).length || ai.has("phrases"))) (next.phrases = phrases, ai.add("phrases"));
 
   const existing = list(fields.examples);
   const oldVi = list(fields.examplesVi);
@@ -66,4 +73,9 @@ export function mergeEnrich(
 /** Has AI already filled this note's meaning? Used to skip or filter notes in a batch. */
 export function hasAi(aiFields: readonly string[] | undefined): boolean {
   return !!aiFields?.includes("vi");
+}
+
+/** Does the note have short phrases (by AI or by hand)? Used to skip or filter notes in a phrases batch. */
+export function hasPhrases(fields: Record<string, FieldValue>): boolean {
+  return list(fields.phrases).length > 0;
 }

@@ -8,11 +8,15 @@ data class Enriched(
     val examplesVi: List<String> = emptyList(),
     val existingVi: List<String> = emptyList(),
     val mnemonic: String? = null,
+    /** "phrase | meaning" lines from the phrases-only call (functions/src/enrich.ts). */
+    val phrases: List<String> = emptyList(),
 )
 
 data class Merged(val fields: Map<String, FieldValue>, val aiFields: Set<String>)
 
 private const val MAX_EXAMPLES = 8
+/** AI writes at most this many short phrases (the field holds 8, so the learner can add a few by hand). */
+private const val MAX_AI_PHRASES = 3
 
 /**
  * Port of web/src/lib/enrich.ts `mergeEnrich`: folds an AI answer into a vocab note's fields without losing what the
@@ -30,6 +34,10 @@ fun mergeEnrich(fields: Map<String, FieldValue>, aiFields: Set<String>, r: Enric
     if (en.isNotEmpty() && fields["en"].str().isEmpty()) { next["en"] = FieldValue.Text(en); ai += "en" }
     val mn = r.mnemonic?.trim().orEmpty()
     if (mn.isNotEmpty() && (fields["mnemonic"].str().isEmpty() || "mnemonic" in ai)) { next["mnemonic"] = FieldValue.Text(mn); ai += "mnemonic" }
+
+    // Phrases the learner wrote or edited are never replaced; AI-written ones are refreshed.
+    val phrases = r.phrases.map { it.trim() }.filter { it.isNotEmpty() }.take(MAX_AI_PHRASES)
+    if (phrases.isNotEmpty() && (fields["phrases"].items().isEmpty() || "phrases" in ai)) { next["phrases"] = FieldValue.Items(phrases); ai += "phrases" }
 
     val existing = fields["examples"].items()
     val oldVi = fields["examplesVi"].items()
@@ -52,3 +60,6 @@ fun mergeEnrich(fields: Map<String, FieldValue>, aiFields: Set<String>, r: Enric
     if (aligned.size > oldVi.size && (filled || added)) { next["examplesVi"] = FieldValue.Items(aligned); ai += "examplesVi" }
     return Merged(next, ai)
 }
+
+/** Does the note have short phrases (by AI or by hand)? Used to skip or filter notes in a phrases batch. */
+fun hasPhrases(fields: Map<String, FieldValue>): Boolean = fields["phrases"].items().isNotEmpty()

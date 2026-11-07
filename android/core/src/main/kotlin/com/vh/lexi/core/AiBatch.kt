@@ -14,7 +14,13 @@ class AiError(val kind: Kind, message: String) : Exception(message) {
 /** Why a batch ended early. */
 enum class StopReason { CANCEL, QUOTA, AUTH }
 
-data class BatchProgress(val running: Boolean, val total: Int, val done: Int = 0, val failed: Int = 0, val stopped: StopReason? = null)
+/** "full": meanings, examples and tip; "phrases": only the short phrases, one per meaning (a third of the tokens). */
+enum class BatchMode { FULL, PHRASES }
+
+data class BatchProgress(val running: Boolean, val total: Int, val done: Int = 0, val failed: Int = 0, val stopped: StopReason? = null, val mode: BatchMode = BatchMode.FULL)
+
+/** One `enrich` call. [only] = "phrases" asks for the short phrases alone; [vi] carries the meanings the learner already studies. */
+data class EnrichRequest(val word: String, val pos: String?, val en: String?, val examples: List<String>, val vi: String? = null, val only: String? = null)
 
 /** Has AI already filled this note's meaning? Used to skip or filter notes in a batch. */
 fun hasAi(aiFields: Collection<String>): Boolean = "vi" in aiFields
@@ -25,7 +31,7 @@ fun hasAi(aiFields: Collection<String>): Boolean = "vi" in aiFields
  * when the account is refused. A note that fails twice (or once with an invalid word) is counted and skipped.
  */
 class AiBatch(
-    private val call: suspend (word: String, pos: String?, en: String?, examples: List<String>) -> Enriched,
+    private val call: suspend (EnrichRequest) -> Enriched,
     /** The note as it is now: the learner may edit it while the batch runs. */
     private val getNote: (Id) -> Note?,
     private val save: suspend (Note, Map<String, FieldValue>, Set<String>) -> Unit,
@@ -46,11 +52,11 @@ class AiBatch(
 
     private fun update(f: (BatchProgress) -> BatchProgress) = synchronized(lock) { state.value = f(state.value!!) }
 
-    suspend fun run(ids: List<Id>, overwriteVi: Boolean = false): BatchProgress {
+    suspend fun run(ids: List<Id>, overwriteVi: Boolean = false, mode: BatchMode = BatchMode.FULL): BatchProgress {
         synchronized(lock) {
             check(state.value?.running != true) { "A batch is already running" }
             cancelled = false
-            state.value = BatchProgress(running = true, total = ids.size)
+            state.value = BatchProgress(running = true, total = ids.size, mode = mode)
         }
         val queue = ArrayDeque(ids)
         fun next(): Id? = synchronized(lock) { if (cancelled || state.value!!.stopped != null) null else queue.removeFirstOrNull() }
@@ -62,7 +68,13 @@ class AiBatch(
             var attempt = 0
             while (true) {
                 try {
-                    val r = call(word, before.fields["pos"].str().ifEmpty { null }, before.fields["en"].str().ifEmpty { null }, before.fields["examples"].items())
+                    val pos = before.fields["pos"].str().ifEmpty { null }
+                    val en = before.fields["en"].str().ifEmpty { null }
+                    // Phrases: the call carries the meanings the learner already studies, so each phrase matches one of them.
+                    val r = call(
+                        if (mode == BatchMode.PHRASES) EnrichRequest(word, pos, en, emptyList(), vi = before.fields["vi"].str().ifEmpty { null }, only = "phrases")
+                        else EnrichRequest(word, pos, en, before.fields["examples"].items()),
+                    )
                     val now = getNote(id) ?: return update { it.copy(failed = it.failed + 1) }
                     val m = mergeEnrich(now.fields, now.aiFields.toSet(), r, overwriteVi)
                     save(now, m.fields, m.aiFields)
@@ -96,23 +108,25 @@ class AiBatch(
      * Replacing meanings the learner or a dictionary wrote cannot be undone, so that choice asks first (CLAUDE.md);
      * filling only empty or AI-written fields starts straight away. Null when the learner says no.
      */
-    suspend fun confirmAndRun(ids: List<Id>, overwriteVi: Boolean, confirm: suspend (title: String, message: String) -> Boolean): BatchProgress? {
-        if (overwriteVi && !confirm(
+    suspend fun confirmAndRun(ids: List<Id>, overwriteVi: Boolean, mode: BatchMode = BatchMode.FULL, confirm: suspend (title: String, message: String) -> Boolean): BatchProgress? {
+        if (overwriteVi && mode == BatchMode.FULL && !confirm(
                 "Thay nghĩa tiếng Việt của ${ids.size} từ?",
                 "Nghĩa bạn hoặc từ điển đã ghi sẽ bị thay bằng nghĩa theo ngữ cảnh do AI viết. Không hoàn tác được.",
             )
         ) return null
-        return run(ids, overwriteVi)
+        return run(ids, overwriteVi, mode)
     }
 }
 
 /** One line for a toast or the progress card once a batch has ended. */
 fun batchSummary(b: BatchProgress): String {
     val tail = if (b.failed > 0) ", ${b.failed} từ lỗi" else ""
+    val phrases = b.mode == BatchMode.PHRASES
+    val filter = if (phrases) "Chưa có cụm ngắn" else "Chưa có AI"
     return when (b.stopped) {
-        StopReason.QUOTA -> "Hết lượt AI hôm nay: đã điền ${b.done}/${b.total} từ$tail. Mai lọc “Chưa có AI” để chạy tiếp."
+        StopReason.QUOTA -> "Hết lượt AI hôm nay: đã ${if (phrases) "thêm cụm ngắn cho" else "điền"} ${b.done}/${b.total} từ$tail. Mai lọc “$filter” để chạy tiếp."
         StopReason.AUTH -> "AI cần đăng nhập Google bằng tài khoản được cấp quyền."
-        StopReason.CANCEL -> "Đã dừng: điền xong ${b.done}/${b.total} từ$tail."
-        null -> "Đã điền AI cho ${b.done}/${b.total} từ$tail."
+        StopReason.CANCEL -> "Đã dừng: ${if (phrases) "thêm cụm ngắn xong" else "điền xong"} ${b.done}/${b.total} từ$tail."
+        null -> if (phrases) "Đã thêm cụm ngắn cho ${b.done}/${b.total} từ$tail." else "Đã điền AI cho ${b.done}/${b.total} từ$tail."
     }
 }

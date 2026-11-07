@@ -10,7 +10,7 @@ import { expect, it } from "vitest";
 import { CardState, DEFAULT_PREFS, normalizePrefs, type Card, type Note, type Rating } from "@shared/model.ts";
 import { IRREGULAR } from "@shared/irregular.ts";
 import { baseForms } from "@shared/morphy.ts";
-import { type Block, checkTyped, clozeSentence, findExact, findWord, normalizeAnswer, template, wantedTemplates } from "@shared/notetypes.ts";
+import { type Block, checkTyped, clozeSentence, findExact, findWord, normalizeAnswer, phrasesOf, studyNote, template, wantedTemplates } from "@shared/notetypes.ts";
 import { answerHint, confusables, hintNote, letterCount, matchConfusable, meaningPhrases, suggestedRatingWith, typingTarget } from "@shared/confusables.ts";
 import { buildQueue, pickNext } from "../src/lib/queue.ts";
 import { answer, makeScheduler, newCard } from "../src/lib/scheduler.ts";
@@ -80,6 +80,17 @@ function templateVectors() {
     sampleNote({ vi: "", examplesVi: ["Nhóm vẫn kiên cường."] }),
     // The sentence uses an inflected form: the hint must still describe "sail" (4 letters), not "sailed".
     sampleNote({ word: "sail", pos: "verb", vi: "đi thuyền", en: "", ipa: "", mnemonic: "", examples: ["We sailed the Atlantic"] }),
+    // Short phrases, one per meaning: the cloze card turns them by review count; every answer side lists them.
+    sampleNote({
+      word: "accommodate", pos: "verb", ipa: "", mnemonic: "", en: "",
+      vi: "(chứa) chứa được; (dịch vụ) đáp ứng; (công việc) tạo điều kiện",
+      phrases: ["accommodate 200 guests | chứa được 200 khách", "accommodate a request | đáp ứng một yêu cầu", "She accommodates new staff | tạo điều kiện cho nhân viên mới"],
+      examples: ["The hotel can accommodate a large group of tourists."], examplesVi: ["Khách sạn có thể chứa một đoàn du khách lớn."],
+    }),
+    // A phrase with no meaning, one that lacks the word (ignored), and no translation for the full example.
+    sampleNote({ word: "charge", pos: "noun", ipa: "", mnemonic: "", en: "", vi: "phí", phrases: ["a delivery charge", "welcome to our shop | chào mừng", "in charge of sales | phụ trách bán hàng"], examples: ["There is no charge for delivery."], examplesVi: [] }),
+    // Phrases but no example sentence at all: recognize and recall work, cloze and listen do not apply.
+    sampleNote({ word: "lend", pos: "verb", ipa: "", mnemonic: "", en: "", vi: "cho vay", phrases: ["lend me a pen | cho tôi mượn cây bút"], examples: [] }),
   ];
   const cases = [];
   for (const n of notes) {
@@ -94,6 +105,17 @@ function templateVectors() {
       cases.push({ note: n, layoutIndex: li, templates: per, wanted: wantedTemplates(n, { vocab: ["recognize", "recall", "cloze", "listen"] }), wantedDefault: wantedTemplates(n, DEFAULT_PREFS.templates) });
     }
   }
+  // What one fill-in-the-blank card shows, by review count (studyNote): the phrase it asks, its accepted forms, the answer side.
+  const study = notes.flatMap((n) =>
+    [0, 1, 2, 3, 7].map((reps) => {
+      const v = studyNote(n, "cloze", reps);
+      const t = template("vocab", "cloze")!;
+      return {
+        note: n, reps, phrases: phrasesOf(n), examples: v.fields.examples ?? [], examplesVi: v.fields.examplesVi ?? [],
+        applies: t.applies(v), ...(t.applies(v) ? { front: t.front(v, layouts[0]), back: t.back(v, layouts[0]), expected: t.expected!(v), speakBack: t.speak?.back?.(v) ?? null } : {}),
+      };
+    }),
+  );
   const clozes = [
     ["She is running fast.", "run"], ["They studied hard.", "study"], ["Please look after the kids.", "look after"], ["Nothing here.", "resilient"],
     ["Children are often more resilient than adults.", "resilient"], ["He put it away, putting it back later.", "put"], ["Cats are cute.", "cat"], ["The bigger one.", "big"],
@@ -124,7 +146,7 @@ function templateVectors() {
   });
   const testNote: Note = { id: "t1", type: "test", deckId: "d1", createdAt: T0, updatedAt: T0, fields: { name: "Test 1", p5: "20/30" } };
   const noCards = { type: testNote.type, wanted: wantedTemplates(testNote, undefined) };
-  return { layouts, cases, clozes, typed, grammar, noCards };
+  return { layouts, cases, study, clozes, typed, grammar, noCards };
 }
 
 function confusableVectors() {
@@ -360,7 +382,9 @@ function hintVectors() {
     [],
   ];
   const ex = (t: string): Block => ({ k: "example", text: t });
-  const rot: Block[] = [{ k: "text", text: "nghĩa" }, ex("A"), { k: "memo", text: "m" }, ex("B"), ex("C")];
+  // Short phrases (kind "phrase") keep their place; only the full example sentences turn.
+  const ph = (t: string): Block => ({ k: "example", text: t, phrase: true });
+  const rot: Block[] = [{ k: "text", text: "nghĩa" }, ph("P1"), ph("P2"), ex("A"), { k: "memo", text: "m" }, ex("B"), ex("C")];
   return {
     gate: [[0, 0], [1, 0.4], [3, 30], [2, 5], [2, 20.99], [2, 21]].map(([state, stability]) => ({ state, stability, expect: hintGateMs({ state, stability }) })),
     maxRating: [0, 1, 2].map((l) => maxRating(l as 0 | 1 | 2)),
@@ -370,7 +394,7 @@ function hintVectors() {
     dependent: logs.map((l) => ({ logs: l, expect: hintDependent(l) })),
     rotate: [0, 1, 2, 3, 4, -1].map((reps) => ({ reps, expect: rotateExamples(rot, reps).map((b) => (b as { text: string }).text) })),
     rotateBlocks: rot.map((b) => (b as { text: string }).text),
-    rotateKinds: rot.map((b) => b.k),
+    rotateKinds: rot.map((b) => (b.k === "example" && b.phrase ? "phrase" : b.k)),
   };
 }
 

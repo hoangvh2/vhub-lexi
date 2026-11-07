@@ -62,7 +62,7 @@ export async function signOutUser(): Promise<void> {
 }
 
 /** The AI enrichment Cloud Function. Throws with a readable code when the daily allowance is spent. */
-export async function callEnrich(word: string, hints: { pos?: string; en?: string; examples?: string[]; vi?: string; only?: "memo" }): Promise<unknown> {
+export async function callEnrich(word: string, hints: { pos?: string; en?: string; examples?: string[]; vi?: string; only?: "memo" | "phrases" }): Promise<unknown> {
   const { app } = firebase();
   const fn = httpsCallable(getFunctions(app, env.VITE_FUNCTIONS_REGION || "asia-southeast1"), "enrich");
   const res = await fn({ word, ...hints });
