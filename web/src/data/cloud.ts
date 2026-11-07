@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import type { Firestore as LiteFirestore } from "firebase/firestore/lite";
 import { RATING_FIELD, type Card, type Daily, type DailyDelta, type Deck, type Note, type Prefs, type ReviewLog } from "@shared/model.ts";
+import { snapshotHandled } from "../lib/perf.ts";
 import { firebase } from "./fbimpl.ts";
 import type { ExportFile, Repo, RepoEvents, SyncState } from "./repo.ts";
 
@@ -74,13 +75,30 @@ export class CloudRepo implements Repo {
   async start(ev: RepoEvents): Promise<void> {
     this.ev = ev;
     ev.sync("loading");
+    // Each snapshot converts only the documents that changed (`docChanges`); the others keep their objects. A rating
+    // brings two or three snapshots of the cards list (local write, server echo, acknowledgement) and converting all
+    // ~1,200 cards each time was work for nothing. A snapshot where only metadata changed (pending -> synced) carries
+    // no data change and is not passed on, so the screens do not re-render for it.
     const watch = <T>(name: string, q: Query<DocumentData>, apply: (items: T[]) => void, meta = false) => {
+      const byId = new Map<string, T>();
+      let first = true;
       this.unsubs.push(
         onSnapshot(
           q,
           { includeMetadataChanges: meta },
           (snap: QuerySnapshot<DocumentData>) => {
-            apply(snap.docs.map((d) => d.data() as T));
+            const t0 = performance.now();
+            const changes = snap.docChanges();
+            if (first || changes.length) {
+              first = false;
+              for (const ch of changes) {
+                if (ch.type === "removed") byId.delete(ch.doc.id);
+                else byId.set(ch.doc.id, ch.doc.data() as T);
+              }
+              // The query's own order (document id, or the orderBy of the query).
+              apply(snap.docs.map((d) => byId.get(d.id)!));
+            }
+            snapshotHandled({ name, docs: snap.size, changes: changes.length, ms: performance.now() - t0 });
             if (meta) {
               this.pending = snap.metadata.hasPendingWrites;
               if (!snap.metadata.fromCache) {

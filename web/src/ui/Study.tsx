@@ -7,6 +7,7 @@ import { reviewCard, setSuspended, undoReview, type Reviewed } from "../data/act
 import { cards, currentRepo, daily, decks, loaded, notes, prefs } from "../data/state.ts";
 import { LEARN_AHEAD_MS, answeredToday, buildQueue, dueWithin, isLeech, pickNext, tagCounts, type Queue } from "../lib/queue.ts";
 import { celebrate } from "../lib/motion.ts";
+import { cardShown, rateStarted } from "../lib/perf.ts";
 import { streak } from "../lib/stats.ts";
 import { isLesson, lessonTitle } from "../lib/lessons.ts";
 import { formatInterval, makeScheduler, preview } from "../lib/scheduler.ts";
@@ -142,6 +143,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
     setMixedUp(null);
     setLevels({ memo: 0, notes: 0 });
     shownAt.current = Date.now();
+    cardShown();
   }, [turn]);
 
   // A word that leaned on hints in its last answers gets them locked. Its review history is read only when a hint is
@@ -196,6 +198,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
       return;
     }
     busy.current = true;
+    rateStarted();
     const dur = Date.now() - shownAt.current;
     const wasNew = card.state === 0;
     const answered: Answered | null = note ? { noteId: note.id, word: str(note.fields.word) || str(note.fields.answer) || tpl?.label || "", vi: str(note.fields.vi), rating: r } : null;

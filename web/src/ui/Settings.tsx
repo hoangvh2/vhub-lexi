@@ -10,6 +10,8 @@ import type { AnkiCollection } from "../lib/anki/read.ts";
 import type { FitResult } from "../lib/optimizer.ts";
 import { dictionary } from "../lib/dict.ts";
 import { useStore } from "../lib/store.ts";
+import { rateTraces, traceReport } from "../lib/perf.ts";
+import { BUILD } from "../build.ts";
 import { Icon, confirmDialog, syncLabel, toast } from "./common.tsx";
 
 /** Stored keys are kept; the colours are the ones styles.css draws (teal is the default jade, violet the earlier lavender). */
@@ -205,8 +207,11 @@ export function Settings({ email }: { email: string | null }) {
 
       {anki && <anki.View col={anki.col} name={anki.name} onClose={() => setAnki(null)} />}
 
+      <LatencyPanel />
+
       <section class="panel col">
         <h2>Về VH Lexi</h2>
+        <p class="muted" style={{ fontSize: "13px" }} data-testid="build-id">Phiên bản: {BUILD}</p>
         <p class="muted" style={{ fontSize: "13px" }}>
           Từ điển offline: {meta ? `${meta.words.toLocaleString("vi-VN")} mục, ${meta.withIpa.toLocaleString("vi-VN")} có phiên âm${meta.withVi ? `, ${meta.withVi.toLocaleString("vi-VN")} có nghĩa tiếng Việt` : ""} (${meta.version})` : "chưa tải"}.
           Phiên âm từ CMU Pronouncing Dictionary; loại từ, định nghĩa và ví dụ từ Princeton WordNet 3.1 (© Princeton University, WordNet License); nghĩa tiếng Việt gợi ý từ Wiktionary (CC BY-SA 4.0).
@@ -214,6 +219,46 @@ export function Settings({ email }: { email: string | null }) {
         </p>
       </section>
     </div>
+  );
+}
+
+/** What the last ratings cost on this device (lib/perf.ts), with a copy button for sending it. */
+function LatencyPanel() {
+  const [, redraw] = useState(0);
+  const traces = rateTraces();
+  const shown = traces.filter((t) => t.toCardMs !== null).map((t) => t.toCardMs!);
+  const sorted = [...shown].sort((a, b) => a - b);
+  const median = sorted.length ? sorted[Math.floor(sorted.length / 2)] : null;
+  const frozen = traces.map((t) => t.longTasks.reduce((a, b) => a + b, 0));
+  const copy = async () => {
+    const text = traceReport(BUILD, navigator.userAgent);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast("Đã chép số liệu, dán vào tin nhắn gửi đi");
+    } catch {
+      toast("Không chép được, hãy chụp màn hình phần này");
+    }
+  };
+  return (
+    <section class="panel col" data-testid="latency">
+      <h2>Chẩn đoán độ trễ</h2>
+      <p class="muted" style={{ fontSize: "13px" }}>
+        Đo trên chính máy này, chỉ trong bộ nhớ: từ lúc bấm chấm đến khi thẻ sau hiện ra, và thời gian trang bị đứng (tác vụ dài) trong 5 giây sau đó.
+      </p>
+      {traces.length === 0 ? (
+        <p class="muted" style={{ fontSize: "13px" }}>Chưa có số liệu: ôn vài thẻ rồi mở lại mục này.</p>
+      ) : (
+        <p data-testid="latency-summary">
+          {traces.length} lần chấm · chuyển thẻ trung vị <b>{median ?? "-"} ms</b>, lâu nhất <b>{sorted.length ? sorted[sorted.length - 1] : "-"} ms</b> · trang đứng lâu nhất <b>{Math.max(0, ...frozen)} ms</b>
+        </p>
+      )}
+      <div class="row">
+        <button type="button" class="btn" onClick={() => void copy()} disabled={traces.length === 0} data-testid="latency-copy">
+          <Icon n="download" /> Chép số liệu
+        </button>
+        <button type="button" class="btn ghost" onClick={() => redraw((n) => n + 1)}>Làm mới</button>
+      </div>
+    </section>
   );
 }
 
