@@ -57,7 +57,7 @@ class HintsTest {
     fun `rotating examples`() {
         val texts = v.getJSONArray("rotateBlocks").strings()
         val kinds = v.getJSONArray("rotateKinds").strings()
-        val blocks: List<Block> = texts.zip(kinds).map { (t, k) -> when (k) { "example" -> Block.Example(t); "memo" -> Block.Memo(t); else -> Block.Text(t) } }
+        val blocks: List<Block> = texts.zip(kinds).map { (t, k) -> when (k) { "example" -> Block.Example(t); "phrase" -> Block.Example(t, phrase = true); "memo" -> Block.Memo(t); else -> Block.Text(t) } }
         fun text(b: Block) = when (b) { is Block.Example -> b.text; is Block.Memo -> b.text; is Block.Text -> b.text; else -> "" }
         for (r in v.getJSONArray("rotate").objects()) {
             assertEquals(r.getJSONArray("expect").strings(), rotateExamples(blocks, r.getInt("reps")).map(::text), "reps ${r.getInt("reps")}")

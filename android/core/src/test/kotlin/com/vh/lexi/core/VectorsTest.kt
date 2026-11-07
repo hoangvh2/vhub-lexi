@@ -75,6 +75,30 @@ class TemplateVectorsTest {
     }
 
     @Test
+    fun `the fill-in-the-blank card asks one phrase per review like the web app`() {
+        val root = JSONObject(vectors("templates.json"))
+        val layout = layoutFromJson(root.getJSONArray("layouts").getJSONObject(0))
+        val t = template("vocab", "cloze")!!
+        val cases = root.getJSONArray("study").objects()
+        assertTrue(cases.any { it.getJSONArray("phrases").length() > 0 }, "the vectors cover notes with phrases")
+        for ((n, c) in cases.withIndex()) {
+            val note = noteFromJson(c.getJSONObject("note"))
+            val where = "study case $n (${note.fields["word"].str()}, reps ${c.getInt("reps")})"
+            val phrases = c.getJSONArray("phrases").objects().map { it.getString("text") to it.getString("vi") }
+            assertEquals(phrases, phrasesOf(note).map { it.text to it.vi }, "$where phrases")
+            val v = studyNote(note, "cloze", c.getInt("reps"))
+            assertEquals(c.getJSONArray("examples").strings(), v.fields["examples"].items(), "$where examples")
+            assertEquals(c.getJSONArray("examplesVi").strings(), v.fields["examplesVi"].items(), "$where examplesVi")
+            assertEquals(c.getBoolean("applies"), t.applies(v), "$where applies")
+            if (!c.getBoolean("applies")) continue
+            assertEquals(JSONArray(c.getJSONArray("front").objects().map { it.canon() }).toString(), JSONArray(t.front(v, layout).map { it.toJson().canon() }).toString(), "$where front")
+            assertEquals(JSONArray(c.getJSONArray("back").objects().map { it.canon() }).toString(), JSONArray(t.back(v, layout).map { it.toJson().canon() }).toString(), "$where back")
+            assertEquals(c.getJSONArray("expected").strings(), t.expected(v), "$where expected")
+            assertEquals(if (c.isNull("speakBack")) null else c.getString("speakBack"), t.speakBack(v), "$where speakBack")
+        }
+    }
+
+    @Test
     fun `grammar fill cards and result notes match the web app`() {
         val root = JSONObject(vectors("templates.json"))
         val layout = layoutFromJson(root.getJSONArray("layouts").getJSONObject(0))

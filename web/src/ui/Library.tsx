@@ -4,24 +4,28 @@ import { isMaterial, noteType } from "@shared/notetypes.ts";
 import { createDeck, deleteDeckAndContents, renameDeck, updateNote } from "../data/actions.ts";
 import { callEnrich, firebaseConfigured } from "../data/firebase.ts";
 import { cards, decks, loaded, notes, prefs } from "../data/state.ts";
-import { aiBatch, confirmAndRun, stopBatch, type BatchProgress } from "../lib/batch.ts";
-import { hasAi, type Enriched } from "../lib/enrich.ts";
+import { aiBatch, confirmAndRun, stopBatch, type BatchMode, type BatchProgress } from "../lib/batch.ts";
+import { hasAi, hasPhrases, type Enriched } from "../lib/enrich.ts";
 import { dueLabel } from "../lib/format.ts";
 import { isLeech } from "../lib/queue.ts";
 import { useStore } from "../lib/store.ts";
 import { Icon, Modal, confirmDialog, go, toast } from "./common.tsx";
 import { NoteEditor } from "./NoteEditor.tsx";
 
-type Filter = "all" | "new" | "learning" | "review" | "suspended" | "leech" | "noai";
+/** Daily AI allowance (LIMITS.dailyEnrich in functions/src/config.ts). */
+const DAILY_AI = 300;
+
+type Filter = "all" | "new" | "learning" | "review" | "suspended" | "leech" | "noai" | "nophrase";
 type Sort = "recent" | "alpha" | "due";
 
 const FILTERS: Array<[Filter, string]> = [
-  ["all", "Tất cả"], ["new", "Mới"], ["learning", "Đang học"], ["review", "Ôn tập"], ["suspended", "Đã ẩn"], ["leech", "Thẻ khó"], ["noai", "Chưa có AI"],
+  ["all", "Tất cả"], ["new", "Mới"], ["learning", "Đang học"], ["review", "Ôn tập"], ["suspended", "Đã ẩn"], ["leech", "Thẻ khó"], ["noai", "Chưa có AI"], ["nophrase", "Chưa có cụm ngắn"],
 ];
 
 function matches(f: Filter, n: Note, cs: Card[]): boolean {
   if (f === "all") return true;
   if (f === "noai") return n.type === "vocab" && !hasAi(n.aiFields);
+  if (f === "nophrase") return n.type === "vocab" && !hasPhrases(n.fields);
   if (f === "new") return cs.some((c) => c.state === CardState.New);
   if (f === "learning") return cs.some((c) => c.state === CardState.Learning || c.state === CardState.Relearning);
   if (f === "review") return cs.some((c) => c.state === CardState.Review);
@@ -42,7 +46,7 @@ export function Library() {
   const [deckDlg, setDeckDlg] = useState<{ id?: Id; name: string } | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<Id>>(new Set());
-  const [aiDlg, setAiDlg] = useState<{ skipDone: boolean; overwriteVi: boolean } | null>(null);
+  const [aiDlg, setAiDlg] = useState<{ skipDone: boolean; overwriteVi: boolean; mode: BatchMode } | null>(null);
   const batch = useStore(aiBatch);
   const p = useStore(prefs);
   const aiAvailable = firebaseConfigured && p.aiEnabled;
@@ -105,14 +109,15 @@ export function Library() {
       return next;
     });
   const selectedNotes = allNotes.filter((n) => selected.has(n.id) && n.type === "vocab");
-  const runIds = (skipDone: boolean) => selectedNotes.filter((n) => !skipDone || !hasAi(n.aiFields)).map((n) => n.id);
+  const runIds = (skipDone: boolean, mode: BatchMode) =>
+    selectedNotes.filter((n) => !skipDone || !(mode === "phrases" ? hasPhrases(n.fields) : hasAi(n.aiFields))).map((n) => n.id);
 
   async function startAi() {
     if (!aiDlg) return;
-    const ids = runIds(aiDlg.skipDone);
-    const opts = { overwriteVi: aiDlg.overwriteVi };
+    const ids = runIds(aiDlg.skipDone, aiDlg.mode);
+    const opts = { overwriteVi: aiDlg.overwriteVi, mode: aiDlg.mode };
     setAiDlg(null);
-    if (!ids.length) return toast("Các từ đã chọn đều đã có AI");
+    if (!ids.length) return toast(opts.mode === "phrases" ? "Các từ đã chọn đều đã có cụm ngắn" : "Các từ đã chọn đều đã có AI");
     const res = await confirmAndRun(ids, opts, {
       call: async (word, hints) => (await callEnrich(word, hints)) as Enriched,
       getNote: (id) => notes.get().find((n) => n.id === id),
@@ -159,7 +164,7 @@ export function Library() {
         {deck && <button type="button" class="btn sm" onClick={() => setDeckDlg({ id: deck, name: deckName(deck) })}>Sửa bộ thẻ</button>}
       </div>
       <div class="seg" role="group" aria-label="Lọc theo trạng thái">
-        {FILTERS.filter(([k]) => k !== "noai" || aiAvailable).map(([k, label]) => <button type="button" key={k} aria-pressed={filter === k} onClick={() => setFilter(k)}>{label}</button>)}
+        {FILTERS.filter(([k]) => (k !== "noai" && k !== "nophrase") || aiAvailable).map(([k, label]) => <button type="button" key={k} aria-pressed={filter === k} onClick={() => setFilter(k)}>{label}</button>)}
       </div>
 
       {batch && <BatchCard b={batch} />}
@@ -174,7 +179,7 @@ export function Library() {
             type="button"
             class="btn primary sm"
             disabled={!selectedNotes.length || !!batch?.running}
-            onClick={() => setAiDlg({ skipDone: true, overwriteVi: false })}
+            onClick={() => setAiDlg({ skipDone: true, overwriteVi: false, mode: filter === "nophrase" ? "phrases" : "full" })}
             data-testid="bulk-ai"
           >
             <Icon n="sparkle" size={16} /> Điền bằng AI
@@ -219,27 +224,50 @@ export function Library() {
         </div>
       )}
 
-      {aiDlg && (
-        <Modal title={`Điền bằng AI cho ${runIds(aiDlg.skipDone).length} từ`} onClose={() => setAiDlg(null)}>
-          <p>Mỗi từ có tối đa 3 nghĩa theo ngữ cảnh, câu ví dụ kèm bản dịch và một mẹo nhớ ngắn. AI chạy nền, bạn có thể ôn bài hay thêm từ trong lúc chờ. Mỗi từ dùng 1 lượt AI, tối đa 300 lượt mỗi ngày.</p>
-          <label class="switch">
-            <span>Bỏ qua từ đã điền bằng AI</span>
-            <input type="checkbox" checked={aiDlg.skipDone} onChange={(e) => setAiDlg({ ...aiDlg, skipDone: e.currentTarget.checked })} />
-          </label>
-          <label class="switch">
-            <span>
-              Thay nghĩa tiếng Việt đang có
-              <br />
-              <span class="muted" style={{ fontSize: "13px" }}>Tắt: chỉ điền chỗ trống, giữ nghĩa bạn đã ghi.</span>
-            </span>
-            <input type="checkbox" checked={aiDlg.overwriteVi} onChange={(e) => setAiDlg({ ...aiDlg, overwriteVi: e.currentTarget.checked })} data-testid="bulk-overwrite" />
-          </label>
-          <div class="modal-actions">
-            <button type="button" class="btn" onClick={() => setAiDlg(null)}>Huỷ</button>
-            <button type="button" class="btn primary" onClick={() => void startAi()} disabled={!runIds(aiDlg.skipDone).length} data-testid="bulk-start">Bắt đầu</button>
-          </div>
-        </Modal>
-      )}
+      {aiDlg && (() => {
+        const phrases = aiDlg.mode === "phrases";
+        const count = runIds(aiDlg.skipDone, aiDlg.mode).length;
+        const days = Math.max(1, Math.ceil(count / DAILY_AI));
+        return (
+          <Modal title={phrases ? `Thêm cụm ngắn cho ${count} từ` : `Điền bằng AI cho ${count} từ`} onClose={() => setAiDlg(null)}>
+            <div class="seg" role="group" aria-label="Việc AI sẽ làm">
+              <button type="button" aria-pressed={!phrases} onClick={() => setAiDlg({ ...aiDlg, mode: "full" })}>Điền đầy đủ</button>
+              <button type="button" aria-pressed={phrases} onClick={() => setAiDlg({ ...aiDlg, mode: "phrases" })} data-testid="bulk-mode-phrases">Chỉ cụm ngắn</button>
+            </div>
+            {phrases ? (
+              <p>
+                Mỗi từ thêm tối đa 3 cụm 3–5 từ, mỗi cụm một nghĩa (ví dụ <b>accommodate 200 guests</b>: chứa được 200 khách). Thẻ điền từ sẽ hỏi lần lượt từng nghĩa.
+                Nghĩa, ví dụ và mẹo bạn đã có không bị đổi, cụm bạn tự viết cũng được giữ nguyên.
+              </p>
+            ) : (
+              <p>Mỗi từ có tối đa 3 nghĩa theo ngữ cảnh, câu ví dụ kèm bản dịch và một mẹo nhớ ngắn.</p>
+            )}
+            <p class="muted" style={{ fontSize: "13px" }}>
+              AI chạy nền, bạn có thể ôn bài hay thêm từ trong lúc chờ. Mỗi từ dùng 1 lượt AI (tối đa {DAILY_AI} lượt mỗi ngày
+              {count > DAILY_AI ? `, nên khoảng ${days} ngày: hôm sau lọc “${phrases ? "Chưa có cụm ngắn" : "Chưa có AI"}” để chạy tiếp` : ""})
+              và 1 lần ghi dữ liệu, không tốn thêm lượt đọc.
+            </p>
+            <label class="switch">
+              <span>{phrases ? "Bỏ qua từ đã có cụm ngắn" : "Bỏ qua từ đã điền bằng AI"}</span>
+              <input type="checkbox" checked={aiDlg.skipDone} onChange={(e) => setAiDlg({ ...aiDlg, skipDone: e.currentTarget.checked })} />
+            </label>
+            {!phrases && (
+              <label class="switch">
+                <span>
+                  Thay nghĩa tiếng Việt đang có
+                  <br />
+                  <span class="muted" style={{ fontSize: "13px" }}>Tắt: chỉ điền chỗ trống, giữ nghĩa bạn đã ghi.</span>
+                </span>
+                <input type="checkbox" checked={aiDlg.overwriteVi} onChange={(e) => setAiDlg({ ...aiDlg, overwriteVi: e.currentTarget.checked })} data-testid="bulk-overwrite" />
+              </label>
+            )}
+            <div class="modal-actions">
+              <button type="button" class="btn" onClick={() => setAiDlg(null)}>Huỷ</button>
+              <button type="button" class="btn primary" onClick={() => void startAi()} disabled={!count} data-testid="bulk-start">Bắt đầu</button>
+            </div>
+          </Modal>
+        );
+      })()}
       {editingNote && <NoteEditor note={editingNote} onClose={() => setEditing(null)} />}
       {deckDlg && (
         <Modal title={deckDlg.id ? "Sửa bộ thẻ" : "Bộ thẻ mới"} onClose={() => setDeckDlg(null)}>
@@ -262,10 +290,12 @@ export function Library() {
 
 function batchSummary(b: BatchProgress): string {
   const tail = b.failed ? `, ${b.failed} từ lỗi` : "";
-  if (b.stopped === "quota") return `Hết lượt AI hôm nay: đã điền ${b.done}/${b.total} từ${tail}. Mai lọc “Chưa có AI” để chạy tiếp.`;
+  const phrases = b.mode === "phrases";
+  const noun = phrases ? "Chưa có cụm ngắn" : "Chưa có AI";
+  if (b.stopped === "quota") return `Hết lượt AI hôm nay: đã ${phrases ? "thêm cụm ngắn cho" : "điền"} ${b.done}/${b.total} từ${tail}. Mai lọc “${noun}” để chạy tiếp.`;
   if (b.stopped === "auth") return "AI cần đăng nhập Google bằng tài khoản được cấp quyền.";
-  if (b.stopped === "cancel") return `Đã dừng: điền xong ${b.done}/${b.total} từ${tail}.`;
-  return `Đã điền AI cho ${b.done}/${b.total} từ${tail}.`;
+  if (b.stopped === "cancel") return `Đã dừng: ${phrases ? "thêm cụm ngắn xong" : "điền xong"} ${b.done}/${b.total} từ${tail}.`;
+  return phrases ? `Đã thêm cụm ngắn cho ${b.done}/${b.total} từ${tail}.` : `Đã điền AI cho ${b.done}/${b.total} từ${tail}.`;
 }
 
 /** Progress of the AI batch, shown while it runs and until dismissed. */
@@ -275,7 +305,7 @@ function BatchCard({ b }: { b: BatchProgress }) {
     <div class="batch" role="status" data-testid="batch">
       <div class="row" style={{ flexWrap: "nowrap" }}>
         <Icon n="sparkle" size={18} />
-        <span class="grow">{b.running ? `Đang điền AI ${b.done + b.failed}/${b.total} từ${b.failed ? ` · ${b.failed} lỗi` : ""}` : batchSummary(b)}</span>
+        <span class="grow">{b.running ? `${b.mode === "phrases" ? "Đang thêm cụm ngắn" : "Đang điền AI"} ${b.done + b.failed}/${b.total} từ${b.failed ? ` · ${b.failed} lỗi` : ""}` : batchSummary(b)}</span>
         {b.running ? (
           <button type="button" class="btn sm" onClick={stopBatch} data-testid="batch-stop">Dừng</button>
         ) : (

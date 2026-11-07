@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { dayId, type Card, type Id, type Rating } from "@shared/model.ts";
 import { answerHint, confusables, hintNote, letterCount, matchConfusable, meaningsByNote, suggestedRatingWith, typingTarget, type Confusable } from "@shared/confusables.ts";
-import { checkTyped, str, template, type AnswerVerdict } from "@shared/notetypes.ts";
+import { checkTyped, str, studyNote, template, type AnswerVerdict } from "@shared/notetypes.ts";
 import { hintDependent, hintGateMs, maxRating, rotateExamples, type HintLevel } from "@shared/hints.ts";
 import { reviewCard, setSuspended, undoReview, type Reviewed } from "../data/actions.ts";
 import { cards, currentRepo, daily, decks, loaded, notes, prefs } from "../data/state.ts";
@@ -132,6 +132,10 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
   // learner revealed before the effect ran.
   // Keyed by card and turn: a learning card can come straight back (learn-ahead) and must start unanswered again.
   const turn = card ? `${card.id}#${session.shown}` : null;
+  // The card as shown: a fill-in-the-blank card asks the next meaning's phrase each review (studyNote). The review count is
+  // read once per turn, so rating the card (which raises it) cannot swap the phrase under the answer on screen.
+  const repsShown = useMemo(() => card?.reps ?? 0, [turn]);
+  const shown = useMemo(() => (note && tpl ? studyNote(note, tpl.id, repsShown) : note), [note, tpl?.id, repsShown]);
   const shownId = useRef<string | null>(turn);
   useEffect(() => {
     if (shownId.current === turn) return;
@@ -160,7 +164,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
   // Read the front aloud when a card appears: always on listening cards, otherwise if the learner chose that.
   useEffect(() => {
     if (card && note && tpl && (p.autoSpeak === "front" || tpl.id === "listen")) {
-      const t = tpl.speak?.front?.(note);
+      const t = tpl.speak?.front?.(shown ?? note);
       if (t) speak(t);
     }
     return () => stopSpeaking();
@@ -171,14 +175,14 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
     setRevealed(true);
     if (v) setVerdict(v);
     if (p.autoSpeak !== "off") {
-      const t = tpl.speak?.back?.(note);
+      const t = tpl.speak?.back?.(shown ?? note);
       if (t) speak(t);
     }
   };
 
   const submitTyped = () => {
     if (!note || !tpl?.expected) return;
-    const v = checkTyped(typed, tpl.expected(note));
+    const v = checkTyped(typed, tpl.expected(shown ?? note));
     // Another word of the learner's with this meaning: not a lapse. Say which word it was and allow one more try.
     const other = v === "wrong" && !mixedUp ? matchConfusable(typed, similar) : null;
     if (other) {
@@ -283,7 +287,8 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
         e.preventDefault();
         void rate(Math.min(suggested ?? 3, cap) as Rating);
       } else if (e.key === "r") {
-        const t = revealed ? tpl.speak?.back?.(note) ?? tpl.speak?.front?.(note) : tpl.speak?.front?.(note);
+        const sn = shown ?? note;
+        const t = revealed ? tpl.speak?.back?.(sn) ?? tpl.speak?.front?.(sn) : tpl.speak?.front?.(sn);
         if (t) speak(t);
       }
     };
@@ -322,7 +327,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
   const doneFrac = session.answered + total === 0 ? 1 : session.answered / (session.answered + total);
   const kind = card ? (card.state === 0 ? "new" : card.state === 2 ? "review" : "learn") : null;
   // The hint spells out the word being learned, not the inflected form a cloze sentence uses (sail, not sailed).
-  const target = typingTarget(note && tpl?.expected ? tpl.expected(note) : []);
+  const target = typingTarget(shown && tpl?.expected ? tpl.expected(shown) : []);
   const answer = target.word;
   const letters = letterCount(answer);
 
@@ -383,7 +388,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
             )}
             {!revealed && MODE_Q[tpl.id] && <div class="mode-q">{MODE_Q[tpl.id]}</div>}
             {hintable && <HintButtons key={turn} note={note} levels={levels} gateMs={gateMs} readLocked={readLocked} onOpen={openHint} />}
-            <Blocks blocks={tpl.front(note, p.layout)} cloze={tpl.id === "cloze"} />
+            <Blocks blocks={tpl.front(shown ?? note, p.layout)} cloze={tpl.id === "cloze"} />
             {hintable && <HintBoxes note={note} templateId={tpl.id} levels={levels} />}
             {tpl.mode === "type" && !revealed && answer && (
               <div class="target" data-testid="target">
@@ -453,7 +458,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
                   )}
                   {/* The tip and notes get their own panel (with an edit button) below the meaning and examples; the examples
                       start at a different one each review so the word is met in several contexts. */}
-                  <Blocks blocks={rotateExamples(tpl.back(note, p.layout).filter((b) => note.type !== "vocab" || b.k !== "memo"), card.reps)} />
+                  <Blocks blocks={rotateExamples(tpl.back(shown ?? note, p.layout).filter((b) => note.type !== "vocab" || b.k !== "memo"), card.reps)} />
                   {note.type === "vocab" && <MemoryPanel note={note} showMemo={p.layout.showMnemonic} onEdit={() => setMemoryEdit(note.id)} />}
                 </div>
               </>

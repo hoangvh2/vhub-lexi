@@ -1,6 +1,15 @@
 package com.vh.lexi.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import com.vh.lexi.core.parsePhrase
+import androidx.compose.ui.unit.sp
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,7 +50,14 @@ import java.time.format.DateTimeFormatter
 
 /** Edits any note through its registered field list, so new note types need no new editor. */
 @Composable
-fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
+fun NoteEditor(
+    data: LexiData, note: Note,
+    /** AI is on and signed in: show "AI thêm cụm ngắn" under the phrases field. */
+    aiAvailable: Boolean = false,
+    /** Asks the `enrich` function for short phrases (word, part of speech, English meaning, Vietnamese meanings): one AI use. */
+    askPhrases: suspend (String, String?, String?, String?) -> List<String> = { _, _, _, _ -> emptyList() },
+    onClose: () -> Unit,
+) {
     val def = noteType(note.type) ?: return
     val scope = rememberCoroutineScope()
     val toast = LocalToaster.current
@@ -54,6 +70,10 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
     var deckId by remember { mutableStateOf(note.deckId) }
     var tags by remember { mutableStateOf(note.tags.joinToString(", ")) }
     var confirmDelete by remember { mutableStateOf(false) }
+    // Short phrases from AI: shown for review first, written into the field only when the learner takes them.
+    var proposal by remember { mutableStateOf<List<String>?>(null) }
+    var aiPhrases by remember { mutableStateOf<List<String>?>(null) }
+    var aiBusy by remember { mutableStateOf(false) }
 
     fun value(key: String): FieldValue {
         val f = def.fields.first { it.key == key }
@@ -82,6 +102,37 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
                         minLines = if (f.kind == "list") 2 else 1,
                         modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping(),
                     )
+                    if (f.key == "phrases" && aiAvailable && note.type == "vocab") {
+                        val offer = proposal
+                        if (offer != null) {
+                            Column(Modifier.fillMaxWidth().background(Lexi.colors.accentSoft, RoundedCornerShape(14.dp)).padding(12.dp).testTag("phrases-proposal"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("AI đề xuất · xem trước khi dùng", style = MaterialTheme.typography.labelMedium, color = Lexi.colors.accent)
+                                for (l in offer) Text(l, color = Lexi.colors.ink)
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                    TextButton(onClick = { proposal = null }) { Text("Bỏ") }
+                                    Button(modifier = Modifier.testTag("phrases-use"), onClick = {
+                                        texts = texts + ("phrases" to offer.joinToString("\n")); aiPhrases = offer; proposal = null
+                                    }) { Text("Dùng ${offer.size} cụm") }
+                                }
+                            }
+                        } else {
+                            OutlinedButton(enabled = !aiBusy && texts["word"].orEmpty().isNotBlank(), modifier = Modifier.testTag("ai-phrases"), onClick = {
+                                aiBusy = true
+                                scope.launch {
+                                    try {
+                                        val lines = askPhrases(texts["word"].orEmpty().trim(), texts["pos"].orEmpty().trim().ifEmpty { null }, texts["en"].orEmpty().trim().ifEmpty { null }, texts["vi"].orEmpty().trim().ifEmpty { null })
+                                            .filter { parsePhrase(it) != null }
+                                        if (lines.isEmpty()) toast("AI chưa tạo được cụm ngắn hợp lệ. Hãy thử lại hoặc tự viết.") else proposal = lines
+                                    } catch (e: Exception) {
+                                        toast(e.message ?: "Không gọi được AI, thử lại sau")
+                                    } finally {
+                                        aiBusy = false
+                                    }
+                                }
+                            }) { Icon(Icons.Filled.AutoAwesome, null, Modifier.size(16.dp)); Text(if (aiBusy) "  AI đang nghĩ…" else "  AI thêm cụm ngắn (1 lượt)", fontSize = 13.sp) }
+                        }
+                        Text("Chỉ đổi ô này. Nghĩa, ví dụ và mẹo của bạn không bị đổi, và chưa lưu cho đến khi bạn bấm Lưu.", color = Lexi.colors.muted, fontSize = 13.sp)
+                    }
                 }
                 if (decks.size > 1) {
                     Text("Bộ thẻ", style = MaterialTheme.typography.labelMedium, color = Lexi.colors.muted)
@@ -117,7 +168,8 @@ fun NoteEditor(data: LexiData, note: Note, onClose: () -> Unit) {
         confirmButton = {
             Button(enabled = valid, modifier = Modifier.testTag("note-editor-save"), onClick = {
                 // A field the user edited is no longer "AI": keep the label only on untouched values.
-                val untouched = note.aiFields.filter { k -> value(k) == note.fields[k] || (value(k) is FieldValue.Items && note.fields[k] is FieldValue.Items && (value(k) as FieldValue.Items).value.map { it.trim() }.filter { it.isNotEmpty() } == (note.fields[k] as FieldValue.Items).value) }
+                val untouched = note.aiFields.filter { k -> value(k) == note.fields[k] || (value(k) is FieldValue.Items && note.fields[k] is FieldValue.Items && (value(k) as FieldValue.Items).value.map { it.trim() }.filter { it.isNotEmpty() } == (note.fields[k] as FieldValue.Items).value) }.toMutableList()
+                if (aiPhrases != null && (value("phrases") as FieldValue.Items).value.map { it.trim() }.filter { it.isNotEmpty() } == aiPhrases && "phrases" !in untouched) untouched += "phrases"
                 scope.launch {
                     data.updateNote(
                         note, fields = def.fields.associate { it.key to value(it.key) }, deckId = deckId, aiFields = untouched,

@@ -6,8 +6,16 @@ import { createStore } from "./store.ts";
 /** Why a batch ended early. */
 export type StopReason = "cancel" | "quota" | "auth";
 
+/** "full": meanings, examples and tip; "phrases": only the short phrases, one per meaning (a third of the tokens). */
+export type BatchMode = "full" | "phrases";
+
+export interface BatchOptions extends MergeOptions {
+  mode?: BatchMode;
+}
+
 export interface BatchProgress {
   running: boolean;
+  mode?: BatchMode;
   total: number;
   /** Notes filled. */
   done: number;
@@ -20,7 +28,7 @@ export interface BatchProgress {
 export const aiBatch = createStore<BatchProgress | null>(null);
 
 export interface BatchDeps {
-  call(word: string, hints: { pos?: string; en?: string; examples?: string[] }): Promise<Enriched>;
+  call(word: string, hints: { pos?: string; en?: string; examples?: string[]; vi?: string; only?: "phrases" }): Promise<Enriched>;
   /** The note as it is now (the learner may have edited it while the batch ran). */
   getNote(id: Id): Note | undefined;
   save(note: Note, fields: Record<string, FieldValue>, aiFields: string[]): Promise<void>;
@@ -43,10 +51,11 @@ const codeOf = (e: unknown) => String((e as { code?: string })?.code ?? "");
  * Ends early, keeping what was saved, when the learner stops it, the daily allowance runs out, or the
  * account is refused. A note that fails twice is counted and skipped.
  */
-export async function runBatch(ids: readonly Id[], deps: BatchDeps, opts: MergeOptions = {}): Promise<BatchProgress> {
+export async function runBatch(ids: readonly Id[], deps: BatchDeps, opts: BatchOptions = {}): Promise<BatchProgress> {
   if (aiBatch.get()?.running) throw new Error("A batch is already running");
   cancelled = false;
-  let p: BatchProgress = { running: true, total: ids.length, done: 0, failed: 0 };
+  const mode = opts.mode ?? "full";
+  let p: BatchProgress = { running: true, mode, total: ids.length, done: 0, failed: 0 };
   const publish = (patch: Partial<BatchProgress>) => aiBatch.set((p = { ...p, ...patch }));
   publish({});
   const queue = [...ids];
@@ -58,7 +67,13 @@ export async function runBatch(ids: readonly Id[], deps: BatchDeps, opts: MergeO
     if (!before || !word) return publish({ failed: p.failed + 1 });
     for (let attempt = 0; ; attempt++) {
       try {
-        const r = await deps.call(word, { pos: str(before.fields.pos) || undefined, en: str(before.fields.en) || undefined, examples: list(before.fields.examples) });
+        // Phrases: the call carries the meanings the learner already studies, so each phrase matches one of them.
+        const r = await deps.call(
+          word,
+          mode === "phrases"
+            ? { pos: str(before.fields.pos) || undefined, en: str(before.fields.en) || undefined, vi: str(before.fields.vi) || undefined, only: "phrases" }
+            : { pos: str(before.fields.pos) || undefined, en: str(before.fields.en) || undefined, examples: list(before.fields.examples) },
+        );
         const now = deps.getNote(id);
         if (!now) return publish({ failed: p.failed + 1 });
         const m = mergeEnrich(now.fields, now.aiFields ?? [], r, opts);
@@ -88,10 +103,10 @@ export async function runBatch(ids: readonly Id[], deps: BatchDeps, opts: MergeO
  */
 export async function confirmAndRun(
   ids: readonly Id[],
-  opts: MergeOptions,
+  opts: BatchOptions,
   deps: BatchDeps & { confirm(o: { title: string; message: string; confirm: string; danger: boolean }): Promise<boolean> },
 ): Promise<BatchProgress | null> {
-  if (opts.overwriteVi) {
+  if (opts.overwriteVi && opts.mode !== "phrases") {
     const ok = await deps.confirm({
       title: `Thay nghĩa tiếng Việt của ${ids.length} từ?`,
       message: "Nghĩa bạn hoặc từ điển đã ghi sẽ bị thay bằng nghĩa theo ngữ cảnh do AI viết. Không hoàn tác được.",

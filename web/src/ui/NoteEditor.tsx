@@ -1,13 +1,14 @@
 import { useEffect, useState } from "preact/hooks";
 import { CardState, type Card, type FieldValue, type Note, type ReviewLog } from "@shared/model.ts";
-import { noteType, template } from "@shared/notetypes.ts";
+import { noteType, parsePhrase, str, template } from "@shared/notetypes.ts";
 import { removeNote, setSuspended, updateNote } from "../data/actions.ts";
+import { callEnrich, firebaseConfigured } from "../data/firebase.ts";
 import { cards, currentRepo, decks, prefs } from "../data/state.ts";
 import { STATE_LABEL, dateLabel, dueLabel } from "../lib/format.ts";
 import { isLeech } from "../lib/queue.ts";
 import { formatInterval, makeScheduler, retrievability } from "../lib/scheduler.ts";
 import { useStore } from "../lib/store.ts";
-import { Modal, confirmDialog, toast } from "./common.tsx";
+import { Icon, Modal, confirmDialog, toast } from "./common.tsx";
 
 /** Edits any note through its registered field list, so new note types need no new editor. */
 export function NoteEditor({ note, onClose }: { note: Note; onClose: () => void }) {
@@ -18,7 +19,12 @@ export function NoteEditor({ note, onClose }: { note: Note; onClose: () => void 
   const [deckId, setDeckId] = useState(note.deckId);
   const [tags, setTags] = useState((note.tags ?? []).join(", "));
   const [history, setHistory] = useState<ReviewLog[] | null>(null);
+  // Short phrases from AI: shown for review first, written into the field only when the learner takes them.
+  const [proposal, setProposal] = useState<string[] | null>(null);
+  const [aiPhrases, setAiPhrases] = useState<string[] | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
   const p = useStore(prefs);
+  const aiAvailable = firebaseConfigured && p.aiEnabled;
   useEffect(() => {
     let live = true;
     currentRepo().reviewsOfNote(note.id).then((h) => live && setHistory(h), () => live && setHistory([]));
@@ -34,6 +40,7 @@ export function NoteEditor({ note, onClose }: { note: Note; onClose: () => void 
   const save = async () => {
     // A field the user edited is no longer "AI": keep the label only on untouched values.
     const stillAi = (note.aiFields ?? []).filter((k) => JSON.stringify(fields[k]) === JSON.stringify(note.fields[k]));
+    if (aiPhrases && JSON.stringify(fields.phrases) === JSON.stringify(aiPhrases) && !stillAi.includes("phrases")) stillAi.push("phrases");
     await updateNote(note, {
       fields,
       deckId,
@@ -42,6 +49,21 @@ export function NoteEditor({ note, onClose }: { note: Note; onClose: () => void 
     });
     toast("Đã lưu");
     onClose();
+  };
+
+  /** One AI use: phrases for this word only, using the meanings written in the form right now. */
+  const askPhrases = async () => {
+    setAiBusy(true);
+    try {
+      const r = (await callEnrich(str(fields.word), { pos: str(fields.pos) || undefined, en: str(fields.en) || undefined, vi: str(fields.vi) || undefined, only: "phrases" })) as { phrases?: string[] };
+      const lines = (r.phrases ?? []).filter((l) => parsePhrase(l));
+      if (!lines.length) return toast("AI chưa tạo được cụm ngắn hợp lệ. Hãy thử lại hoặc tự viết.");
+      setProposal(lines);
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "Không gọi được AI, thử lại sau");
+    } finally {
+      setAiBusy(false);
+    }
   };
 
   const del = async () => {
@@ -84,6 +106,32 @@ export function NoteEditor({ note, onClose }: { note: Note; onClose: () => void 
                   setFields({ ...fields, [f.key]: f.kind === "list" ? e.currentTarget.value.split("\n") : e.currentTarget.value })
                 }
               />
+            )}
+            {f.key === "phrases" && aiAvailable && note.type === "vocab" && (
+              <div class="col" style={{ gap: "8px" }}>
+                {proposal ? (
+                  <div class="hint-box notes" data-testid="phrases-proposal">
+                    <span class="hint-lbl">AI đề xuất · xem trước khi dùng</span>
+                    {proposal.map((l) => <p key={l}>{l}</p>)}
+                    <div class="row" style={{ justifyContent: "flex-end" }}>
+                      <button type="button" class="btn ghost sm" onClick={() => setProposal(null)}>Bỏ</button>
+                      <button
+                        type="button"
+                        class="btn primary sm"
+                        onClick={() => (setFields({ ...fields, phrases: proposal }), setAiPhrases(proposal), setProposal(null))}
+                        data-testid="phrases-use"
+                      >
+                        Dùng {proposal.length} cụm
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" class="btn ghost sm ai-memo" onClick={() => void askPhrases()} disabled={aiBusy || !str(fields.word)} data-testid="ai-phrases">
+                    <Icon n="sparkle" size={15} /> {aiBusy ? "AI đang nghĩ…" : "AI thêm cụm ngắn (1 lượt)"}
+                  </button>
+                )}
+                <span class="muted" style={{ fontSize: "13px" }}>Chỉ đổi ô này. Nghĩa, ví dụ và mẹo của bạn không bị đổi, và chưa lưu cho đến khi bạn bấm Lưu.</span>
+              </div>
             )}
           </div>
         ))}

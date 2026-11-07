@@ -117,6 +117,7 @@ import com.vh.lexi.core.hintDependent
 import com.vh.lexi.core.hintGateMs
 import com.vh.lexi.core.maxRating
 import com.vh.lexi.core.rotateExamples
+import com.vh.lexi.core.studyNote
 import com.vh.lexi.core.Block
 import com.vh.lexi.cloud.Account
 import com.vh.lexi.data.Reviewed
@@ -218,6 +219,10 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
     val note = card?.let { notesById[it.noteId] }
     val tpl = if (card != null && note != null) template(note.type, card.template) else null
     val similar = remember(note, notes) { note?.let { confusables(it, notes) } ?: emptyList() }
+    // The card as shown: a fill-in-the-blank card asks the next meaning's phrase each review (studyNote). The review count is
+    // read once per turn, so rating the card (which raises it) cannot swap the phrase under the answer on screen.
+    val repsShown = remember(card?.id, session.shown) { card?.reps ?: 0 }
+    val shown = remember(note, tpl?.id, repsShown) { if (note != null && tpl != null) studyNote(note, tpl.id, repsShown) else note }
 
     // Keyed by card and turn: a learning card can come straight back (learn-ahead) and must start unanswered again.
     LaunchedEffect(card?.id, session.shown) {
@@ -229,19 +234,19 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
             leaning = hintDependent(data.hintLogsOfNote(note.id))
         }
         // Listening cards always play the sentence; others read the front aloud if the learner chose that.
-        if (tpl != null && note != null && (prefs.autoSpeak == "front" || tpl.id == "listen")) tpl.speakFront(note)?.let { app.speech.speak(it) }
+        if (tpl != null && note != null && (prefs.autoSpeak == "front" || tpl.id == "listen")) tpl.speakFront(shown ?: note)?.let { app.speech.speak(it) }
     }
 
     fun reveal(v: Verdict? = null) {
         if (revealed || tpl == null || note == null) return
         revealed = true
         if (v != null) verdict = v
-        if (prefs.autoSpeak != "off") tpl.speakBack(note)?.let { app.speech.speak(it) }
+        if (prefs.autoSpeak != "off") tpl.speakBack(shown ?: note)?.let { app.speech.speak(it) }
     }
 
     fun submitTyped() {
         if (tpl == null || note == null) return
-        val v = checkTyped(typed, tpl.expected(note))
+        val v = checkTyped(typed, tpl.expected(shown ?: note))
         // Another word of the learner's with this meaning: not a lapse. Say which word it was and allow one more try.
         val other = if (v == Verdict.WRONG && mixedUp == null) matchConfusable(typed, similar) else null
         if (other != null) {
@@ -321,7 +326,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
     val doneFrac = if (session.answered + total == 0) 1f else session.answered.toFloat() / (session.answered + total)
     val kind = card?.let { if (it.state == CardState.NEW) "new" else if (it.state == CardState.REVIEW) "review" else "learn" }
     // The hint spells out the word being learned, not the inflected form a cloze sentence uses (sail, not sailed).
-    val target = typingTarget(if (note != null && tpl != null) tpl.expected(note) else emptyList())
+    val target = typingTarget(if (shown != null && tpl != null) tpl.expected(shown) else emptyList())
     val answer = target.word
     val letters = letterCount(answer)
 
@@ -394,7 +399,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
                     Column(Modifier.padding(start = 20.dp, end = 20.dp, top = if (hintable) 4.dp else 24.dp, bottom = 24.dp).animateContentSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
                         // What the card asks for; once answered, the space goes to the answer so the rating row stays in view.
                         if (!revealed) ModeHeader(tpl.id, tpl.label, mode)
-                        BlocksView(tpl.front(note, prefs.layout), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
+                        BlocksView(tpl.front(shown ?: note, prefs.layout), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
                         if (hintable) HintBoxes(note, tpl.id, levels)
                         if (tpl.mode == AnswerMode.TYPE && !revealed && answer.isNotEmpty()) {
                             AnswerHint(answerHint(answer, 1 + extraHints), hintNote(target), mode)
@@ -432,7 +437,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
                             }
                             // The tip and notes get their own panel (with an edit button) below the meaning and examples; the examples
                             // start at a different one each review so the word is met in several contexts.
-                            val back = tpl.back(note, prefs.layout).filter { note.type != "vocab" || it !is Block.Memo }
+                            val back = tpl.back(shown ?: note, prefs.layout).filter { note.type != "vocab" || it !is Block.Memo }
                             BlocksView(rotateExamples(back, card.reps), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
                             if (note.type == "vocab") MemoryPanel(note, prefs.layout.showMnemonic) { memoryEdit = note.id }
                         } else if (tpl.mode == AnswerMode.FLIP) {
@@ -495,7 +500,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
         }
     }
 
-    editing?.let { id -> notesById[id]?.let { NoteEditor(data, it) { editing = null } } }
+    editing?.let { id -> notesById[id]?.let { NoteEditor(data, it, aiAvailable = account is Account.SignedIn && prefs.aiEnabled, askPhrases = { w, pos, en, vi -> app.cloud.enrichPhrases(w, pos, en, vi) }) { editing = null } } }
     memoryEdit?.let { id ->
         notesById[id]?.let { n ->
             MemoryEditor(data, n, aiAvailable = account is Account.SignedIn && prefs.aiEnabled, askAi = { x -> app.cloud.enrichMemo(x.fields["word"].str(), x.fields["pos"].str().ifEmpty { null }, x.fields["vi"].str().ifEmpty { null }) }) { memoryEdit = null }

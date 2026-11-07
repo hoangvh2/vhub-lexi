@@ -27,7 +27,7 @@ export function Blocks({ blocks, cloze }: { blocks: Block[]; cloze?: boolean }) 
             return <div class={b.tone === "strong" ? "b-strong" : b.tone === "muted" ? "b-muted" : "b-plain"} key={i}>{b.text}</div>;
           case "example":
             return (
-              <div class="b-ex" key={i} data-testid="example">
+              <div class={`b-ex${b.phrase ? " phrase" : ""}`} key={i} data-testid={b.phrase ? "phrase" : "example"}>
                 <div class="b-ex-en">
                   <span>
                     {b.at ? (

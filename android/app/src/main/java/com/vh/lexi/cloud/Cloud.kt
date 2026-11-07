@@ -161,6 +161,22 @@ class Cloud(private val context: Context, private val data: LexiData, private va
     }
 
     /**
+     * Short phrases for one word, one per meaning ("accommodate 200 guests | chứa được 200 khách"), from the `enrich`
+     * function's phrases-only call: one cheap use, nothing else is written. [vi] carries the meanings the learner
+     * already studies so each phrase matches one. Throws [AiError].
+     */
+    suspend fun enrichPhrases(word: String, pos: String?, en: String?, vi: String?): List<String> {
+        val fn = functions ?: throw AiError(AiError.Kind.AUTH, "Chưa kết nối tài khoản")
+        try {
+            val payload = hashMapOf<String, Any?>("word" to word, "pos" to pos, "en" to en, "vi" to vi, "only" to "phrases")
+            val res = fn.getHttpsCallable("enrich").call(payload).await().getData() as? Map<*, *> ?: throw AiError(AiError.Kind.TEMPORARY, "Phản hồi không hợp lệ")
+            return (res["phrases"] as? List<*>)?.filterIsInstance<String>()?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
+        } catch (e: com.google.firebase.functions.FirebaseFunctionsException) {
+            throw aiError(e, "Từ không hợp lệ")
+        }
+    }
+
+    /**
      * Questions and passages read from screenshots (base64 JPEG) and/or pasted text by the `extract-questions` function.
      * Nothing is saved by the function; the caller shows the rows for review. Throws [AiError] with a readable message.
      */

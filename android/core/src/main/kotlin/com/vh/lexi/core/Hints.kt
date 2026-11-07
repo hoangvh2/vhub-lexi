@@ -104,7 +104,8 @@ fun hintDependent(logs: List<HintLog>): Boolean {
 
 /** Start the answer side's example list at a different example each review (by the card's review count). */
 fun rotateExamples(blocks: List<Block>, reps: Int): List<Block> {
-    val at = blocks.indices.filter { blocks[it] is Block.Example }
+    // The short phrases (one per meaning) keep their place; only the full example sentences take turns.
+    val at = blocks.indices.filter { (blocks[it] as? Block.Example)?.phrase == false }
     if (at.size < 2) return blocks
     val shift = ((reps % at.size) + at.size) % at.size
     if (shift == 0) return blocks

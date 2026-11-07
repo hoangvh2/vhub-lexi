@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { FieldValue, Note } from "@shared/model.ts";
 import { aiBatch, confirmAndRun, runBatch, stopBatch, type BatchDeps } from "../src/lib/batch.ts";
-import { mergeEnrich, type Enriched } from "../src/lib/enrich.ts";
+import { hasPhrases, mergeEnrich, type Enriched } from "../src/lib/enrich.ts";
 
 const AI: Enriched = {
   vi: "(công việc) trình diễn; (chung) chứng minh",
@@ -148,5 +148,57 @@ describe("runBatch", () => {
     await confirmAndRun(a.ids, {}, { ...a.deps, confirm: async () => (asked = true) });
     expect(asked).toBe(false);
     expect(a.db.get("n0")!.fields.vi).toBe("AI");
+  });
+});
+
+describe("short phrases", () => {
+  const P = ["accommodate 200 guests | chứa được 200 khách", "accommodate a request | đáp ứng một yêu cầu", "accommodate new staff | tạo điều kiện cho nhân viên mới", "accommodate the boss | chiều ý sếp"];
+  const note = (id: string, word: string, fields: Record<string, FieldValue> = {}): Note => ({ id, type: "vocab", deckId: "d", fields: { word, ...fields }, createdAt: 0, updatedAt: 0 });
+
+  it("merge fills an empty field with at most 3 lines and marks it AI", () => {
+    const m = mergeEnrich({ word: "accommodate", vi: "tạo điều kiện" }, [], { phrases: P });
+    expect(m.fields.phrases).toEqual(P.slice(0, 3));
+    expect(m.aiFields).toContain("phrases");
+    expect(m.fields.vi).toBe("tạo điều kiện"); // nothing else touched
+    expect(m.fields).not.toHaveProperty("examples");
+  });
+  it("merge never replaces phrases the learner wrote, but refreshes AI-written ones", () => {
+    const mine = mergeEnrich({ word: "accommodate", phrases: ["accommodate my boss | chiều sếp"] }, [], { phrases: P });
+    expect(mine.fields.phrases).toEqual(["accommodate my boss | chiều sếp"]);
+    expect(mine.aiFields).not.toContain("phrases");
+    const ai = mergeEnrich({ word: "accommodate", phrases: ["old one | cũ"] }, ["phrases"], { phrases: P });
+    expect(ai.fields.phrases).toEqual(P.slice(0, 3));
+  });
+  it("an answer without phrases changes nothing", () => {
+    const m = mergeEnrich({ word: "x", phrases: ["a b c | d"] }, [], { vi: "nghĩa" });
+    expect(m.fields.phrases).toEqual(["a b c | d"]);
+    expect(hasPhrases(m.fields)).toBe(true);
+    expect(hasPhrases({ word: "x", phrases: ["", "  "] })).toBe(false);
+  });
+
+  it("a phrases batch sends the learner's meanings, writes only phrases, and skips nothing it was given", async () => {
+    const sent: Array<Record<string, unknown>> = [];
+    const db = new Map([["n0", note("n0", "accommodate", { vi: "tạo điều kiện", pos: "verb", examples: ["The hotel can accommodate us."], examplesVi: ["Khách sạn đáp ứng chúng tôi."] })]]);
+    const deps: BatchDeps = {
+      call: async (_w, hints) => (sent.push(hints), { phrases: P }),
+      getNote: (id) => db.get(id),
+      save: async (n, fields, aiFields) => void db.set(n.id, { ...n, fields, aiFields }),
+      retryDelayMs: 0,
+    };
+    const p = await runBatch(["n0"], deps, { mode: "phrases" });
+    expect(p).toMatchObject({ mode: "phrases", done: 1, failed: 0 });
+    expect(sent).toEqual([{ pos: "verb", en: undefined, vi: "tạo điều kiện", only: "phrases" }]);
+    const f = db.get("n0")!.fields;
+    expect(f.phrases).toEqual(P.slice(0, 3));
+    expect(f.vi).toBe("tạo điều kiện");
+    expect(f.examples).toEqual(["The hotel can accommodate us."]);
+    expect(f.examplesVi).toEqual(["Khách sạn đáp ứng chúng tôi."]);
+  });
+  it("overwriteVi never asks in phrases mode (nothing is replaced)", async () => {
+    let asked = false;
+    const db = new Map([["n0", note("n0", "accommodate", { vi: "x" })]]);
+    const deps = { call: async () => ({ phrases: P }), getNote: (id: string) => db.get(id), save: async () => undefined, retryDelayMs: 0, confirm: async () => (asked = true) };
+    await confirmAndRun(["n0"], { overwriteVi: true, mode: "phrases" }, deps);
+    expect(asked).toBe(false);
   });
 });

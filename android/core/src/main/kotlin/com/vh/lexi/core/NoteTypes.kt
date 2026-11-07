@@ -14,8 +14,11 @@ sealed interface Block {
     data class Badge(val text: String) : Block
     data class Text(val text: String, val tone: String? = null) : Block // tone: strong | muted
     data class Quote(val text: String) : Block
-    /** An example sentence; [at] = start until end (exclusive) of the studied word in it, [vi] = its translation. */
-    data class Example(val text: String, val at: Pair<Int, Int>? = null, val vi: String? = null) : Block
+    /**
+     * An example sentence; [at] = start until end (exclusive) of the studied word in it, [vi] = its translation.
+     * [phrase] marks a short phrase (3-5 words, one per meaning) rather than a full sentence; it stays out of [rotateExamples].
+     */
+    data class Example(val text: String, val at: Pair<Int, Int>? = null, val vi: String? = null, val phrase: Boolean = false) : Block
     /** The learner's memory tip (sound-alike pun or short hook), shown in its own box. */
     data class Memo(val text: String) : Block
     /** Secondary text, collapsed under [label] until the learner opens it. */
@@ -133,6 +136,53 @@ fun checkTyped(typed: String, expected: List<String>): Verdict {
 /** Suggested rating for a typed verdict (the learner can still choose another). */
 fun suggestedRating(v: Verdict): Int = when (v) { Verdict.CORRECT -> 3; Verdict.CLOSE -> 2; Verdict.WRONG -> 1 }
 
+// ------------------------------------------------------------------ short phrases (one per meaning)
+
+/** One short phrase of a word: "accommodate 200 guests" and what it means in that setting. */
+data class Phrase(val text: String, val vi: String)
+
+/** Longest phrase line kept (`text | vi`), also the field's per-line limit. */
+const val PHRASE_LINE_MAX = 120
+
+private val SPACES = Regex("\\s+")
+
+/** "accommodate 200 guests | chứa được 200 khách" -> Phrase. The translation is optional. */
+fun parsePhrase(line: String): Phrase? {
+    val bar = line.indexOf('|')
+    val text = (if (bar < 0) line else line.substring(0, bar)).replace(SPACES, " ").trim()
+    val vi = if (bar < 0) "" else line.substring(bar + 1).replace(SPACES, " ").trim()
+    return if (text.isEmpty()) null else Phrase(text, vi)
+}
+
+/** The phrases of a vocab note that contain the word (a phrase without it could not be blanked out). */
+fun phrasesOf(note: Note): List<Phrase> {
+    val word = note.fields["word"].str()
+    if (word.isEmpty()) return emptyList()
+    return note.fields["phrases"].items().mapNotNull(::parsePhrase).filter { findWord(it.text, word) != null }
+}
+
+/** The phrases as answer-side blocks: the word highlighted, its meaning underneath. */
+fun phraseBlocks(note: Note): List<Block> {
+    val word = note.fields["word"].str()
+    return phrasesOf(note).map { Block.Example(it.text, findWord(it.text, word), it.vi.ifEmpty { null }, phrase = true) }
+}
+
+/**
+ * The note as one card shows it (port of shared/notetypes.ts `studyNote`). A fill-in-the-blank card asks a different
+ * meaning each review: the phrase at [reps] mod (number of phrases) goes in front of the examples, so every part of the
+ * template (blank, hint, accepted forms, read-aloud) follows it. Other templates, and notes without phrases, are
+ * shown as they are.
+ */
+fun studyNote(note: Note, templateId: String, reps: Int): Note {
+    if (note.type != "vocab" || templateId != "cloze") return note
+    val ps = phrasesOf(note)
+    if (ps.isEmpty()) return note
+    val p = ps[((reps % ps.size) + ps.size) % ps.size]
+    // Translations stay aligned with their sentences: without one for the phrase, the old ones would slide onto it.
+    val examplesVi = if (p.vi.isNotEmpty()) listOf(p.vi) + note.fields["examplesVi"].items() else emptyList()
+    return note.copy(fields = note.fields + mapOf("examples" to FieldValue.Items(listOf(p.text) + note.fields["examples"].items()), "examplesVi" to FieldValue.Items(examplesVi)))
+}
+
 // ------------------------------------------------------------------ vocab
 
 private fun Note.f(key: String) = fields[key]
@@ -164,6 +214,8 @@ private fun detailBlocks(n: Note, l: CardLayout, skipExamples: Boolean = false, 
     val vi = if (skipVi) "" else n.f("vi").str()
     val en = if (skipEn) "" else n.f("en").str()
     if (l.showVi && vi.isNotEmpty()) add(Block.Text(vi, "strong"))
+    // The short phrases, one per meaning, sit next to the meanings: they are what ties each meaning to a use.
+    if (l.showExamples) addAll(phraseBlocks(n))
     if (l.showExamples && !skipExamples) n.f("examples").items().forEachIndexed { i, e -> add(exampleBlock(n, e, i)) }
     if (l.showMnemonic && n.f("mnemonic").str().isNotEmpty()) add(Block.Memo(n.f("mnemonic").str()))
     if (l.showEn && en.isNotEmpty()) add(if ((l.showVi && vi.isNotEmpty()) || skipVi) Block.Fold(EN_LABEL, en) else Block.Text(en, "strong"))
@@ -210,7 +262,10 @@ private object Recall : TemplateDef {
     // The front stays on screen above the back once revealed; its badge is not repeated.
     override fun back(note: Note, layout: CardLayout) = buildList<Block> {
         addAll(wordHeader(note, layout, skipPos = true))
-        if (layout.showExamples) note.f("examples").items().forEachIndexed { i, e -> add(exampleBlock(note, e, i)) }
+        if (layout.showExamples) {
+            addAll(phraseBlocks(note))
+            note.f("examples").items().forEachIndexed { i, e -> add(exampleBlock(note, e, i)) }
+        }
     }
     override fun expected(note: Note) = listOf(note.f("word").str())
     override fun speakBack(note: Note) = note.f("word").str()
@@ -229,9 +284,9 @@ private fun clozeExpected(note: Note): List<String> {
 private object ClozeTemplate : TemplateDef {
     override val id = "cloze"
     override val label = "Điền vào chỗ trống"
-    override val description = "Câu ví dụ che mất từ; gợi ý bằng bản dịch của câu (nếu có) hoặc nghĩa của từ."
+    override val description = "Cụm hoặc câu ví dụ che mất từ, mỗi lần hỏi một nghĩa; gợi ý bằng bản dịch (nếu có) hoặc nghĩa của từ."
     override val mode = AnswerMode.TYPE
-    override fun applies(note: Note) = note.f("word").str().isNotEmpty() && firstExampleWith(note) != null
+    override fun applies(note: Note) = note.f("word").str().isNotEmpty() && (firstExampleWith(note) != null || phrasesOf(note).isNotEmpty())
     override fun front(note: Note, layout: CardLayout) = buildList<Block> {
         val c = firstExampleWith(note)
         c?.let { add(Block.Quote(it.cloze.text)) }
@@ -286,6 +341,7 @@ object Vocab : NoteTypeDef {
         FieldDef("ipa", "Phiên âm IPA", "text", maxLength = 80),
         FieldDef("pos", "Loại từ", "text", maxLength = 30),
         FieldDef("vi", "Nghĩa tiếng Việt", "text", maxLength = 300),
+        FieldDef("phrases", "Cụm ngắn theo nghĩa", "list", maxLength = PHRASE_LINE_MAX, placeholder = "Mỗi dòng một cụm 3-5 từ: cụm tiếng Anh | nghĩa\nví dụ: accommodate 200 guests | chứa được 200 khách"),
         FieldDef("en", "Định nghĩa tiếng Anh", "longtext", maxLength = 400),
         FieldDef("examples", "Ví dụ", "list", maxLength = 300),
         FieldDef("examplesVi", "Dịch ví dụ", "list", maxLength = 300, placeholder = "Mỗi dòng dịch một ví dụ, cùng thứ tự"),
@@ -296,7 +352,7 @@ object Vocab : NoteTypeDef {
     override fun title(note: Note) = note.f("word").str()
     override fun subtitle(note: Note) = note.f("vi").str().ifEmpty { note.f("en").str() }
     override fun searchText(note: Note) =
-        (listOf(note.f("word").str(), note.f("vi").str(), note.f("en").str()) + note.f("examples").items() + note.f("examplesVi").items() + note.f("notes").str() + note.tags).joinToString(" ").lowercase()
+        (listOf(note.f("word").str(), note.f("vi").str(), note.f("en").str()) + note.f("phrases").items() + note.f("examples").items() + note.f("examplesVi").items() + note.f("notes").str() + note.tags).joinToString(" ").lowercase()
 }
 
 // ------------------------------------------------------------------ grammar (TOEIC Part 5/6 patterns)

@@ -54,4 +54,32 @@ class EnrichTest {
         assertEquals(listOf(ai.examples[1], ai.examples[0].uppercase()), dup.fields["examples"].items())
         assertEquals(listOf(ai.examplesVi[1]), dup.fields["examplesVi"].items())
     }
+
+    private val phrases = listOf("accommodate 200 guests | chứa được 200 khách", "accommodate a request | đáp ứng một yêu cầu", "accommodate new staff | tạo điều kiện cho nhân viên mới", "accommodate the boss | chiều ý sếp")
+
+    @Test
+    fun `phrases fill an empty field with at most 3 lines and mark it AI, touching nothing else`() {
+        val m = mergeEnrich(mapOf("word" to t("accommodate"), "vi" to t("tạo điều kiện")), emptySet(), Enriched(vi = "", phrases = phrases))
+        assertEquals(phrases.take(3), m.fields["phrases"].items())
+        assertEquals(true, "phrases" in m.aiFields)
+        assertEquals("tạo điều kiện", m.fields["vi"].str())
+        assertEquals(false, m.fields.containsKey("examples"))
+    }
+
+    @Test
+    fun `phrases the learner wrote are never replaced, AI-written ones are refreshed`() {
+        val mine = mergeEnrich(mapOf("word" to t("accommodate"), "phrases" to FieldValue.Items(listOf("accommodate my boss | chiều sếp"))), emptySet(), Enriched(vi = "", phrases = phrases))
+        assertEquals(listOf("accommodate my boss | chiều sếp"), mine.fields["phrases"].items())
+        assertEquals(false, "phrases" in mine.aiFields)
+        val ai = mergeEnrich(mapOf("word" to t("accommodate"), "phrases" to FieldValue.Items(listOf("old one | cũ"))), setOf("phrases"), Enriched(vi = "", phrases = phrases))
+        assertEquals(phrases.take(3), ai.fields["phrases"].items())
+    }
+
+    @Test
+    fun `an answer without phrases changes nothing, and hasPhrases ignores blank lines`() {
+        val m = mergeEnrich(mapOf("word" to t("x"), "phrases" to FieldValue.Items(listOf("a b c | d"))), emptySet(), Enriched(vi = "nghĩa"))
+        assertEquals(listOf("a b c | d"), m.fields["phrases"].items())
+        assertEquals(true, hasPhrases(m.fields))
+        assertEquals(false, hasPhrases(mapOf("phrases" to FieldValue.Items(listOf("", "  ")))))
+    }
 }

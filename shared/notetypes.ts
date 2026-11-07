@@ -21,8 +21,11 @@ export type Block =
   | { k: "badge"; text: string }
   | { k: "text"; text: string; tone?: "strong" | "muted" }
   | { k: "quote"; text: string }
-  /** An example sentence; `at` = [start, end) of the studied word in it (highlighted), `vi` = its translation. */
-  | { k: "example"; text: string; at?: [number, number]; vi?: string }
+  /**
+   * An example sentence; `at` = [start, end) of the studied word in it (highlighted), `vi` = its translation.
+   * `phrase` marks a short phrase (3-5 words, one per meaning) rather than a full sentence; it stays out of rotateExamples.
+   */
+  | { k: "example"; text: string; at?: [number, number]; vi?: string; phrase?: true }
   /** The memory tip (sound-alike pun or short hook), shown in its own box. */
   | { k: "memo"; text: string }
   /** Secondary text, collapsed under `label` until the learner opens it. */
@@ -145,6 +148,59 @@ export function checkTyped(typed: string, expected: string[]): AnswerVerdict {
 /** Suggested rating for a typed verdict (the learner can still choose another). */
 export const suggestedRating = (v: AnswerVerdict): 1 | 2 | 3 => (v === "correct" ? 3 : v === "close" ? 2 : 1);
 
+// ------------------------------------------------------------------ short phrases (one per meaning)
+
+/** One short phrase of a word: "accommodate 200 guests" and what it means in that setting. */
+export interface Phrase {
+  text: string;
+  vi: string;
+}
+
+/** Longest phrase line kept (`text | vi`), also the field's per-line limit. */
+export const PHRASE_LINE_MAX = 120;
+
+/** "accommodate 200 guests | chứa được 200 khách" -> {text, vi}. The translation is optional. */
+export function parsePhrase(line: string): Phrase | null {
+  const bar = line.indexOf("|");
+  const text = (bar < 0 ? line : line.slice(0, bar)).replace(/\s+/g, " ").trim();
+  const vi = bar < 0 ? "" : line.slice(bar + 1).replace(/\s+/g, " ").trim();
+  return text ? { text, vi } : null;
+}
+
+/** The phrases of a vocab note that contain the word (a phrase without it could not be blanked out). */
+export function phrasesOf(note: Note): Phrase[] {
+  const word = str(note.fields.word);
+  if (!word) return [];
+  return list(note.fields.phrases)
+    .map(parsePhrase)
+    .filter((p): p is Phrase => p !== null && findWord(p.text, word) !== null);
+}
+
+/** The phrases as answer-side blocks: the word highlighted, its meaning underneath. */
+export function phraseBlocks(note: Note): Block[] {
+  const word = str(note.fields.word);
+  return phrasesOf(note).map((p): Block => {
+    const at = findWord(p.text, word);
+    return { k: "example", text: p.text, ...(at ? { at } : {}), ...(p.vi ? { vi: p.vi } : {}), phrase: true };
+  });
+}
+
+/**
+ * The note as one card shows it. A fill-in-the-blank card asks a different meaning each review: the phrase at
+ * `reps` mod (number of phrases) goes in front of the examples, so every part of the template (blank, hint, accepted
+ * forms, read-aloud) follows it. Other templates, and notes without phrases, are shown as they are.
+ * Both platforms pick the same phrase because the choice depends only on the card's review count.
+ */
+export function studyNote(note: Note, templateId: string, reps: number): Note {
+  if (note.type !== "vocab" || templateId !== "cloze") return note;
+  const ps = phrasesOf(note);
+  if (!ps.length) return note;
+  const p = ps[((reps % ps.length) + ps.length) % ps.length];
+  // Translations stay aligned with their sentences: without one for the phrase, the old ones would slide onto it.
+  const examplesVi = p.vi ? [p.vi, ...list(note.fields.examplesVi)] : [];
+  return { ...note, fields: { ...note.fields, examples: [p.text, ...list(note.fields.examples)], examplesVi } };
+}
+
 // ------------------------------------------------------------------ vocab
 
 const POS_LABEL: Record<string, string> = { n: "noun", v: "verb", a: "adjective", r: "adverb" };
@@ -187,6 +243,8 @@ function detailBlocks(note: Note, l: CardLayout, opts: { skipExamples?: boolean;
   const vi = opts.skipVi ? "" : str(note.fields.vi);
   const en = opts.skipEn ? "" : str(note.fields.en);
   if (l.showVi && vi) out.push({ k: "text", text: vi, tone: "strong" });
+  // The short phrases, one per meaning, sit next to the meanings: they are what ties each meaning to a use.
+  if (l.showExamples) out.push(...phraseBlocks(note));
   if (l.showExamples && !opts.skipExamples) list(note.fields.examples).forEach((e, i) => out.push(exampleBlock(note, e, i)));
   if (l.showMnemonic && str(note.fields.mnemonic)) out.push({ k: "memo", text: str(note.fields.mnemonic) });
   if (l.showEn && en) out.push((l.showVi && vi) || opts.skipVi ? { k: "fold", label: EN_LABEL, text: en } : { k: "text", text: en, tone: "strong" });
@@ -234,7 +292,7 @@ const recall: TemplateDef = {
   },
   // The front stays on screen above the back once revealed, so the back adds only what is new:
   // the part-of-speech badge is already on the front.
-  back: (n, l) => [...wordHeader(n, l, { skipPos: true }), ...(l.showExamples ? list(n.fields.examples).map((e, i) => exampleBlock(n, e, i)) : [])],
+  back: (n, l) => [...wordHeader(n, l, { skipPos: true }), ...(l.showExamples ? [...phraseBlocks(n), ...list(n.fields.examples).map((e, i) => exampleBlock(n, e, i))] : [])],
   expected: (n) => [str(n.fields.word)],
   speak: { back: (n) => str(n.fields.word) },
 };
@@ -252,9 +310,9 @@ function clozeExpected(n: Note): string[] {
 const cloze: TemplateDef = {
   id: "cloze",
   label: "Điền vào chỗ trống",
-  description: "Câu ví dụ che mất từ; gợi ý bằng bản dịch của câu (nếu có) hoặc nghĩa của từ.",
+  description: "Cụm hoặc câu ví dụ che mất từ, mỗi lần hỏi một nghĩa; gợi ý bằng bản dịch (nếu có) hoặc nghĩa của từ.",
   mode: "type",
-  applies: (n) => !!str(n.fields.word) && firstExampleWith(n) !== null,
+  applies: (n) => !!str(n.fields.word) && (firstExampleWith(n) !== null || phrasesOf(n).length > 0),
   front: (n, l) => {
     const c = firstExampleWith(n);
     const out: Block[] = [];
@@ -309,6 +367,7 @@ export const VOCAB: NoteTypeDef = {
     { key: "ipa", label: "Phiên âm IPA", kind: "text", maxLength: 80 },
     { key: "pos", label: "Loại từ", kind: "text", maxLength: 30 },
     { key: "vi", label: "Nghĩa tiếng Việt", kind: "text", maxLength: 300 },
+    { key: "phrases", label: "Cụm ngắn theo nghĩa", kind: "list", maxLength: PHRASE_LINE_MAX, placeholder: "Mỗi dòng một cụm 3-5 từ: cụm tiếng Anh | nghĩa\nví dụ: accommodate 200 guests | chứa được 200 khách" },
     { key: "en", label: "Định nghĩa tiếng Anh", kind: "longtext", maxLength: 400 },
     { key: "examples", label: "Ví dụ", kind: "list", maxLength: 300 },
     { key: "examplesVi", label: "Dịch ví dụ", kind: "list", maxLength: 300, placeholder: "Mỗi dòng dịch một ví dụ, cùng thứ tự" },
@@ -319,7 +378,7 @@ export const VOCAB: NoteTypeDef = {
   title: (n) => str(n.fields.word),
   subtitle: (n) => str(n.fields.vi) || str(n.fields.en),
   searchText: (n) =>
-    [str(n.fields.word), str(n.fields.vi), str(n.fields.en), ...list(n.fields.examples), ...list(n.fields.examplesVi), str(n.fields.notes), ...(n.tags ?? [])].join(" ").toLowerCase(),
+    [str(n.fields.word), str(n.fields.vi), str(n.fields.en), ...list(n.fields.phrases), ...list(n.fields.examples), ...list(n.fields.examplesVi), str(n.fields.notes), ...(n.tags ?? [])].join(" ").toLowerCase(),
 };
 
 // ------------------------------------------------------------------ grammar (TOEIC Part 5/6 patterns)

@@ -128,7 +128,8 @@ export function hintDependent(logs: readonly HintLog[]): boolean {
  * so the word is met in several contexts instead of always the same sentence.
  */
 export function rotateExamples(blocks: Block[], reps: number): Block[] {
-  const at = blocks.flatMap((b, i) => (b.k === "example" ? [i] : []));
+  // The short phrases (one per meaning) keep their place; only the full example sentences take turns.
+  const at = blocks.flatMap((b, i) => (b.k === "example" && !b.phrase ? [i] : []));
   if (at.length < 2) return blocks;
   const shift = ((reps % at.length) + at.length) % at.length;
   if (!shift) return blocks;

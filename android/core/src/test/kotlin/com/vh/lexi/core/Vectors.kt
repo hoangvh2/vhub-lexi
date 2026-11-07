@@ -46,6 +46,7 @@ fun Block.toJson(): JSONObject = when (this) {
     is Block.Example -> JSONObject().put("k", "example").put("text", text).also { o ->
         at?.let { o.put("at", JSONArray(listOf(it.first, it.second))) }
         vi?.let { o.put("vi", it) }
+        if (phrase) o.put("phrase", true)
     }
     is Block.Memo -> JSONObject().put("k", "memo").put("text", text)
     is Block.Fold -> JSONObject().put("k", "fold").put("label", label).put("text", text)
