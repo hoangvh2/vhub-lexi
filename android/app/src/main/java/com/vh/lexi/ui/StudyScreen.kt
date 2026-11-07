@@ -198,7 +198,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
         m
     }
     val tagNotes = remember(notes, tag) { tag?.let { t -> notes.filter { t in it.tags }.map { it.id }.toSet() } }
-    val eligible: (Card) -> Boolean = { c -> notesById[c.noteId]?.let { n -> template(n.type, c.template)?.applies(n) == true } == true }
+    val eligible = remember(notesById) { eligibility(notesById) }
     val queue = remember(cards, notesById, meanings, daily, prefs, now, deckId, buried, extraNew, ahead, tagNotes, aheadDays) {
         buildQueue(
             QueueInput(
@@ -721,4 +721,13 @@ private fun StreakBubble(streak: Int) {
             } else Icon(Icons.Filled.Check, null, Modifier.size(54.dp), tint = c.onAccent)
         }
     }
+}
+
+/**
+ * Whether a card's template applies to its note (a cloze needs an example containing the word), remembered per card
+ * for one version of the notes: the queue asks for every card on each rebuild, several times per rating.
+ */
+internal fun eligibility(notesById: Map<String, com.vh.lexi.core.Note>): (Card) -> Boolean {
+    val known = HashMap<String, Boolean>()
+    return { c -> known.getOrPut(c.id) { notesById[c.noteId]?.let { n -> template(n.type, c.template)?.applies(n) == true } == true } }
 }

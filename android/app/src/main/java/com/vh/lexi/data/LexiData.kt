@@ -22,14 +22,17 @@ import com.vh.lexi.core.reviewIdRange
 import com.vh.lexi.core.wantedTemplates
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.TreeMap
 import java.util.UUID
 
 data class Reviewed(val prev: Card, val next: Card, val logId: Id, val delta: DailyDelta)
@@ -47,13 +50,68 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
     @Volatile
     var cloud: CloudSync? = null
 
-    private fun <T> observe(col: String, decode: (Doc) -> T): StateFlow<List<T>?> =
-        dao.observe(col).map { rows -> rows.map { decode(parseDoc(it.json)) } }.flowOn(Dispatchers.Default).stateIn(scope, SharingStarted.Eagerly, null)
+    /**
+     * One collection held in memory, in id order like the table, and updated by the writes themselves.
+     *
+     * It used to be a Room Flow per collection. Room invalidates by table and every collection lives in the one `docs`
+     * table, so each write (a rating writes a card, a review log and the day's counters; the server's echo writes them
+     * again) re-read and re-parsed every row of decks, notes and cards: ~2,000 JSON documents two or three times per
+     * rating, which kept the phone busy for seconds after each answer (StudyLatencyTest). Now a write re-parses only
+     * the rows it wrote.
+     */
+    private class Live<T>(private val decode: (Doc) -> T) {
+        private val byId = TreeMap<String, T>()
+        private var loaded = false
+        /** Writes made before the first load finished, replayed on top of it (it may or may not contain them). */
+        private val early = ArrayList<Pair<List<DocRow>, List<String>>>()
+        val state = MutableStateFlow<List<T>?>(null)
 
-    private val decksN = observe(Col.DECKS, ::deckFromDoc)
-    private val notesN = observe(Col.NOTES, ::noteFromDoc)
-    private val cardsN = observe(Col.CARDS, ::cardFromDoc)
-    private val dailyN = observe(Col.DAILY, ::dailyFromDoc)
+        @Synchronized fun load(rows: List<DocRow>) {
+            byId.clear()
+            for (r in rows) byId[r.id] = decode(parseDoc(r.json))
+            loaded = true
+            for ((up, rm) in early) apply(up, rm)
+            early.clear()
+            state.value = ArrayList(byId.values)
+        }
+
+        @Synchronized fun changed(upserts: List<DocRow>, removes: List<String>) {
+            if (upserts.isEmpty() && removes.isEmpty()) return
+            if (!loaded) { early += upserts to removes; return }
+            apply(upserts, removes)
+            state.value = ArrayList(byId.values)
+        }
+
+        private fun apply(upserts: List<DocRow>, removes: List<String>) {
+            for (r in upserts) byId[r.id] = decode(parseDoc(r.json))
+            for (id in removes) byId.remove(id)
+        }
+    }
+
+    private val live: Map<String, Live<*>> = mapOf(
+        Col.DECKS to Live(::deckFromDoc), Col.NOTES to Live(::noteFromDoc), Col.CARDS to Live(::cardFromDoc), Col.DAILY to Live(::dailyFromDoc),
+    )
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> liveState(col: String) = (live.getValue(col) as Live<T>).state
+
+    private val decksN: StateFlow<List<Deck>?> = liveState<Deck>(Col.DECKS)
+    private val notesN: StateFlow<List<Note>?> = liveState<Note>(Col.NOTES)
+    private val cardsN: StateFlow<List<Card>?> = liveState<Card>(Col.CARDS)
+    private val dailyN: StateFlow<List<Daily>?> = liveState<Daily>(Col.DAILY)
+
+    init {
+        scope.launch(Dispatchers.Default) { for ((col, l) in live) l.load(dao.all(col)) }
+    }
+
+    /** Every write to Room goes through here, so the in-memory collections follow it (rows grouped by collection). */
+    private suspend fun write(upserts: List<DocRow>, removes: List<Pair<String, List<String>>> = emptyList()) {
+        if (upserts.isNotEmpty()) dao.upsert(upserts)
+        for ((col, ids) in removes) ids.chunked(500).forEach { dao.delete(col, it) }
+        val upBy = upserts.groupBy { it.col }
+        val rmBy = removes.groupBy({ it.first }, { it.second }).mapValues { (_, v) -> v.flatten() }
+        for (col in upBy.keys + rmBy.keys) live[col]?.changed(upBy[col].orEmpty(), rmBy[col].orEmpty())
+    }
 
     val decks: StateFlow<List<Deck>> = decksN.map { it.orEmpty() }.stateIn(scope, SharingStarted.Eagerly, emptyList())
     val notes: StateFlow<List<Note>> = notesN.map { it.orEmpty() }.stateIn(scope, SharingStarted.Eagerly, emptyList())
@@ -68,19 +126,19 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
     private fun newId() = UUID.randomUUID().toString().replace("-", "").take(20)
 
     private suspend fun put(col: String, doc: Doc, id: String = doc["id"] as String) {
-        dao.upsert(listOf(DocRow(col, id, doc.toJsonString())))
+        write(listOf(DocRow(col, id, doc.toJsonString())))
         cloud?.set(col, id, doc)
     }
 
     private suspend fun putAll(col: String, docs: List<Doc>) {
         if (docs.isEmpty()) return
-        dao.upsert(docs.map { DocRow(col, it["id"] as String, it.toJsonString()) })
+        write(docs.map { DocRow(col, it["id"] as String, it.toJsonString()) })
         cloud?.setAll(col, docs)
     }
 
     private suspend fun remove(col: String, ids: List<String>) {
         if (ids.isEmpty()) return
-        ids.chunked(500).forEach { dao.delete(col, it) }
+        write(emptyList(), listOf(col to ids))
         cloud?.delete(col, ids)
     }
 
@@ -214,7 +272,7 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
         val delta = DailyDelta(dayId(now, p.dayStartHour), if (wasNew) 1 else 0, if (wasNew) 0 else 1, rating, dur)
         db.withTransaction {
             val day = (dao.get(Col.DAILY, delta.id)?.let { dailyFromDoc(parseDoc(it.json)) } ?: Daily(delta.id)).apply(delta, 1, now)
-            dao.upsert(listOf(DocRow(Col.CARDS, next.id, next.toDoc().toJsonString()), DocRow(Col.REVIEWS, log.id, log.toDoc().toJsonString()), DocRow(Col.DAILY, day.id, day.toDoc().toJsonString())))
+            write(listOf(DocRow(Col.CARDS, next.id, next.toDoc().toJsonString()), DocRow(Col.REVIEWS, log.id, log.toDoc().toJsonString()), DocRow(Col.DAILY, day.id, day.toDoc().toJsonString())))
         }
         cloud?.commitReview(next, log, delta)
         return Reviewed(card, next, log.id, delta)
@@ -232,8 +290,7 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
         val now = System.currentTimeMillis()
         db.withTransaction {
             val day = (dao.get(Col.DAILY, r.delta.id)?.let { dailyFromDoc(parseDoc(it.json)) } ?: Daily(r.delta.id)).apply(r.delta, -1, now)
-            dao.upsert(listOf(DocRow(Col.CARDS, r.prev.id, r.prev.toDoc().toJsonString()), DocRow(Col.DAILY, day.id, day.toDoc().toJsonString())))
-            dao.delete(Col.REVIEWS, listOf(r.logId))
+            write(listOf(DocRow(Col.CARDS, r.prev.id, r.prev.toDoc().toJsonString()), DocRow(Col.DAILY, day.id, day.toDoc().toJsonString())), listOf(Col.REVIEWS to listOf(r.logId)))
         }
         cloud?.undoReview(r.prev, r.logId, r.delta)
     }
@@ -243,8 +300,7 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
     /** Changes that came from the server: written to Room only (no echo back). */
     suspend fun applyRemote(col: String, upserts: List<Doc>, removes: List<String>) {
         db.withTransaction {
-            if (upserts.isNotEmpty()) dao.upsert(upserts.map { DocRow(col, (it["id"] as? String) ?: Col.PREFS_ID, it.toJsonString()) })
-            removes.chunked(500).forEach { dao.delete(col, it) }
+            write(upserts.map { DocRow(col, (it["id"] as? String) ?: Col.PREFS_ID, it.toJsonString()) }, if (removes.isEmpty()) emptyList() else listOf(col to removes))
         }
     }
 
