@@ -68,7 +68,6 @@ import com.vh.lexi.core.QueueInput
 import com.vh.lexi.core.buildQueue
 import com.vh.lexi.core.meaningsByNote
 import com.vh.lexi.core.dayId
-import com.vh.lexi.core.template
 import com.vh.lexi.data.SyncState
 import com.vh.lexi.ui.theme.Lexi
 import com.vh.lexi.ui.theme.LexiTheme
@@ -151,14 +150,16 @@ private fun Main(app: LexiApp) {
     val account by app.cloud.account.collectAsState()
     val sync by (app.cloud.sync?.state ?: remember { MutableStateFlow(SyncState.OFF) }).collectAsState()
 
+    // Per version of the notes, not per rating: the badge's queue is rebuilt each time a card changes.
+    val eligible = remember(notes) { eligibility(notes.associateBy { it.id }) }
+    val meanings = remember(notes) { meaningsByNote(notes) }
     val due = remember(cards, notes, daily, prefs) {
         val now = System.currentTimeMillis()
-        val byId = notes.associateBy { it.id }
         val q = buildQueue(
             QueueInput(
-                cards = cards, eligible = { c -> byId[c.noteId]?.let { n -> template(n.type, c.template)?.applies(n) == true } == true },
+                cards = cards, eligible = eligible,
                 today = daily.firstOrNull { it.id == dayId(now, prefs.dayStartHour) }, prefs = prefs, now = now,
-                meanings = meaningsByNote(notes),
+                meanings = meanings,
             ),
         )
         q.counts.new + q.counts.learning + q.counts.review

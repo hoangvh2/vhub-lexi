@@ -67,6 +67,25 @@ fun clozeSentence(sentence: String, word: String): Cloze? {
 
 /** Where [word] (or an inflection of its first word) occurs in [sentence]: start until end (exclusive), or null. */
 fun findWord(sentence: String, word: String): Pair<Int, Int>? {
+    val re = wordRegex(word) ?: return null
+    val m = re.find(sentence) ?: return null
+    return m.range.first to m.range.last + 1
+}
+
+/**
+ * Compiled patterns of [findWord], by word. Java compiles a Regex on every construction (JavaScript engines cache
+ * them), and the study queue asks every cloze card whether its example contains the word: ~600 compilations per queue
+ * build, several builds per rating, on the main thread.
+ */
+private val wordRegexes = object : LinkedHashMap<String, Regex?>(256, 0.75f, true) {
+    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Regex?>?) = size > 4096
+}
+
+private fun wordRegex(word: String): Regex? = synchronized(wordRegexes) {
+    if (wordRegexes.containsKey(word)) wordRegexes[word] else buildWordRegex(word).also { wordRegexes[word] = it }
+}
+
+private fun buildWordRegex(word: String): Regex? {
     val parts = word.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
     if (parts.isEmpty()) return null
     val h = parts[0].lowercase()
@@ -76,9 +95,7 @@ fun findWord(sentence: String, word: String): Pair<Int, Int>? {
     val last = escapeRe(h.last().toString())
     // Letters are any Unicode letter, so "cafés" is one word and never cut to "caf" + "és"; (?iu) = the TS "iu" flags.
     val headRe = if (h.length >= 4) "${escapeRe(stem)}\\p{L}*" else "${escapeRe(h)}$last?(?:s|es|ed|d|ing)?"
-    val re = Regex("(?iu)(?<!\\p{L})(${(listOf(headRe) + rest.map { escapeRe(it) }).joinToString("\\s+")})(?!\\p{L})")
-    val m = re.find(sentence) ?: return null
-    return m.range.first to m.range.last + 1
+    return Regex("(?iu)(?<!\\p{L})(${(listOf(headRe) + rest.map { escapeRe(it) }).joinToString("\\s+")})(?!\\p{L})")
 }
 
 fun normalizeAnswer(s: String): String =
