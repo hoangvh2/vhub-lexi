@@ -25,6 +25,10 @@ interface DocDao {
     @Query("SELECT * FROM docs WHERE col = :col")
     suspend fun all(col: String): List<DocRow>
 
+    /** Ids in [from, to): a range on the primary key (col, id), so it reads only those rows. */
+    @Query("SELECT * FROM docs WHERE col = :col AND id >= :from AND id < :to")
+    suspend fun range(col: String, from: String, to: String): List<DocRow>
+
     @Query("SELECT * FROM docs WHERE col = :col AND id = :id")
     suspend fun get(col: String, id: String): DocRow?
 

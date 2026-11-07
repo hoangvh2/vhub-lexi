@@ -18,6 +18,7 @@ import com.vh.lexi.core.dayId
 import com.vh.lexi.core.hintLog
 import com.vh.lexi.core.noteType
 import com.vh.lexi.core.reviewId
+import com.vh.lexi.core.reviewIdRange
 import com.vh.lexi.core.wantedTemplates
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -219,10 +220,13 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
         return Reviewed(card, next, log.id, delta)
     }
 
-    /** Past answers of one note, for the "leans on hints" check. Review ids start with the card id ("noteId.template@…"). */
+    /**
+     * Past answers of one note, for the "leans on hints" check: a primary-key range read ([reviewIdRange]). Reading the
+     * whole reviews table instead (~20,000 rows with an Anki history) ran on every new study card.
+     */
     suspend fun hintLogsOfNote(noteId: Id): List<HintLog> =
-        dao.all(Col.REVIEWS).asSequence().filter { it.id.startsWith("$noteId.") }.map { reviewFromDoc(parseDoc(it.json)) }
-            .filter { it.noteId == noteId }.map { it.hintLog() }.toList()
+        reviewIdRange(noteId).let { (from, to) -> dao.range(Col.REVIEWS, from, to) }.map { reviewFromDoc(parseDoc(it.json)) }
+            .filter { it.noteId == noteId }.map { it.hintLog() }
 
     suspend fun undo(r: Reviewed) {
         val now = System.currentTimeMillis()

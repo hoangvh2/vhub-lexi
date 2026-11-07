@@ -51,8 +51,11 @@ export interface Repo {
   /** Reverts commitReview: restores the card, removes the log, subtracts the counters. */
   undoReview(prev: Card, logId: string, delta: DailyDelta): Promise<void>;
   savePrefs(p: Prefs): Promise<void>;
-  /** Answer history of one note (all its cards), oldest first: the "card info" view. */
-  reviewsOfNote(noteId: string): Promise<ReviewLog[]>;
+  /**
+   * Answer history of one note (all its cards), oldest first: the "card info" view and the study screen's hint lock.
+   * `cache: false` (cloud): fail when the server cannot be asked instead of scanning the local cache.
+   */
+  reviewsOfNote(noteId: string, opts?: { cache?: boolean }): Promise<ReviewLog[]>;
   /** Every answer on record (up to the review limit): the FSRS optimizer's training data. */
   allReviews(): Promise<ReviewLog[]>;
   exportAll(): Promise<ExportFile>;

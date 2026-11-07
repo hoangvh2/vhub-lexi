@@ -5,6 +5,7 @@
 import { initializeApp, deleteApp, type FirebaseApp } from "firebase/app";
 import { GoogleAuthProvider, connectAuthEmulator, getAuth, signInWithCredential } from "firebase/auth";
 import { connectFirestoreEmulator, initializeFirestore, memoryLocalCache, terminate } from "firebase/firestore";
+import { connectFirestoreEmulator as connectLiteEmulator, getFirestore as getLite } from "firebase/firestore/lite";
 import { afterAll, describe, expect, it } from "vitest";
 import { CardState, DEFAULT_PREFS, dayId, type Card, type Daily, type DailyDelta, type Note, type Prefs, type ReviewLog } from "@shared/model.ts";
 import { CloudRepo } from "../src/data/cloud.ts";
@@ -22,7 +23,9 @@ async function device(email: string, sub: string) {
   const cred = await signInWithCredential(auth, GoogleAuthProvider.credential(JSON.stringify({ sub, email, email_verified: true })));
   const db = initializeFirestore(app, { localCache: memoryLocalCache(), ignoreUndefinedProperties: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
-  const repo = new CloudRepo(cred.user.uid, db);
+  const lite = getLite(app);
+  connectLiteEmulator(lite, "127.0.0.1", 8080);
+  const repo = new CloudRepo(cred.user.uid, db, lite);
   const state: Snapshot & { sync: SyncState } = { decks: [], notes: [], cards: [], daily: [], prefs: null, sync: "loading" };
   await repo.start({ data: (p) => Object.assign(state, p), sync: (s) => (state.sync = s), warn: (m, e) => console.log("WARN", email, m, (e as Error)?.message) });
   return { repo, state, uid: cred.user.uid, db };
@@ -96,6 +99,8 @@ describe("CloudRepo on the emulator", () => {
     expect(exp.reviews.map((r) => r.id)).toEqual([`${cards[0].id}@${T}`]);
     // Card info reads one note's history with an equality query the rules allow.
     expect((await b.repo.reviewsOfNote("n1")).map((r) => r.id)).toEqual([`${cards[0].id}@${T}`]);
+    // The study screen's read (server only, through Firestore Lite with the same sign-in and rules).
+    expect((await b.repo.reviewsOfNote("n1", { cache: false })).map((r) => r.id)).toEqual([`${cards[0].id}@${T}`]);
     expect(exp.prefs?.newPerDay).toBe(9);
     expect(a.state.sync === "synced" || a.state.sync === "pending").toBe(true);
   });

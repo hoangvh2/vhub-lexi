@@ -15,25 +15,38 @@ const LABEL: Record<HintKind, string> = { memo: "Mẹo", notes: "Ghi chú" };
 /**
  * The two hint buttons in the corner of the front. They sleep for `gateMs` (a ring fills meanwhile), and stay locked
  * on a word that leaned on hints lately; tapping a sleeping or locked button says why instead of opening.
+ * Whether the word is locked is asked once (`readLocked`), on the first tap that would open a hint: most cards never
+ * open one, so they cost no read of the review history. Keyed by card, so the answer lasts one card.
  */
 export function HintButtons(props: {
   note: Note;
   levels: Record<HintKind, HintLevel>;
   gateMs: number;
-  locked: boolean;
+  readLocked(): Promise<boolean>;
   onOpen(kind: HintKind): void;
 }) {
-  const { note, levels, gateMs, locked, onOpen } = props;
+  const { note, levels, gateMs, readLocked, onOpen } = props;
   const [awake, setAwake] = useState(gateMs === 0);
+  const [locked, setLocked] = useState<boolean | null>(null);
+  const [asking, setAsking] = useState(false);
   useEffect(() => {
     if (gateMs === 0) return;
     const t = setTimeout(() => setAwake(true), gateMs);
     return () => clearTimeout(t);
   }, []);
-  const tap = (kind: HintKind) => {
-    if (locked) return toast("Từ này bạn hay cần gợi ý. Lần này hãy tự nhớ, mẹo và ghi chú có ở mặt sau.");
+  const lockedToast = () => toast("Từ này bạn hay cần gợi ý. Lần này hãy tự nhớ, mẹo và ghi chú có ở mặt sau.");
+  const tap = async (kind: HintKind) => {
+    if (locked) return lockedToast();
     if (!awake) return toast("Thử tự nhớ thêm vài giây nhé");
     if (!str(note.fields[HINT_FIELD[kind]])) return toast(kind === "memo" ? "Từ này chưa có mẹo. Lật đáp án rồi bấm Sửa mẹo để thêm." : "Chưa có ghi chú. Lật đáp án rồi bấm Sửa để thêm.");
+    if (locked === null) {
+      if (asking) return;
+      setAsking(true);
+      const l = await readLocked();
+      setLocked(l);
+      setAsking(false);
+      if (l) return lockedToast();
+    }
     onOpen(kind);
   };
   return (
@@ -46,7 +59,8 @@ export function HintButtons(props: {
             type="button"
             key={kind}
             class={`hint-btn${lvl ? " on" : ""}${has ? "" : " empty"}`}
-            onClick={() => tap(kind)}
+            onClick={() => void tap(kind)}
+            aria-busy={asking}
             aria-label={`${LABEL[kind]}${lvl === 1 ? ": xem đầy đủ" : lvl === 2 ? ": đang mở" : ": gợi ý"}`}
             title={`${LABEL[kind]} (${kind === "memo" ? "H" : "G"})`}
             data-testid={`hint-${kind}`}
