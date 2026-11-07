@@ -5,7 +5,9 @@ import android.view.Choreographer
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.printToString
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.data.Col
 import com.vh.lexi.data.toDoc
@@ -70,12 +72,21 @@ class StudyLatencyTest {
             .put("decks", JSONArray().put(JSONObject().put("id", "d1").put("name", "TOEIC 600").put("createdAt", now).put("updatedAt", now)))
             .put("notes", notes).put("cards", cards).put("reviews", reviews).put("daily", daily).put("prefs", JSONObject.NULL)
         runBlocking { app.data.importJson(backup.toString()) }
-        // Flip cards only, so the loop reveals with one tap (typing cards take the same path once answered).
-        runBlocking { app.data.savePrefs(app.data.prefs.value.copy(templates = mapOf("vocab" to listOf("recognize")))) }
-        rule.waitUntil(60_000) { app.data.cards.value.size >= 1200 && app.data.notes.value.size >= 600 && app.data.prefs.value.templates["vocab"] == listOf("recognize") }
+        rule.waitUntil(60_000) { app.data.cards.value.size >= 1200 && app.data.notes.value.size >= 600 }
     }
 
     private fun exists(tag: String) = rule.onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty()
+
+    /** Front of a card: flip ("Hiện đáp án") or typing ("Kiểm tra"). */
+    private fun front() = exists("show-answer") || exists("type-check")
+
+    private fun waitFor(label: String, ms: Long, cond: () -> Boolean) {
+        try {
+            rule.waitUntil(ms, cond)
+        } catch (e: Throwable) {
+            throw AssertionError("timeout waiting for $label\n" + rule.onRoot().printToString(maxDepth = 10).take(5000), e)
+        }
+    }
 
     /** Longest gap between frames while [block] runs and for [tailMs] after. */
     private class FrameGaps {
@@ -103,16 +114,17 @@ class StudyLatencyTest {
         seed(app)
         rule.onNodeWithTag("nav-library").performClick()
         rule.onNodeWithTag("nav-study").performClick()
-        rule.waitUntil(20_000) { exists("start-study") }
+        waitFor("start-study", 20_000) { exists("start-study") }
         rule.onNodeWithTag("start-study").performClick()
-        rule.waitUntil(20_000) { exists("show-answer") }
+        waitFor("first card", 20_000) { front() }
 
         val toCard = ArrayList<Long>()
         val gaps = ArrayList<Long>()
         val frames = FrameGaps()
         repeat(12) { k ->
-            rule.onNodeWithTag("show-answer").performClick()
-            rule.waitUntil(10_000) { exists("rate-3") }
+            // A typing card checked empty is revealed as "not remembered"; the rating path is the same.
+            rule.onNodeWithTag(if (exists("show-answer")) "show-answer" else "type-check").performClick()
+            waitFor("rating buttons $k", 10_000) { exists("rate-3") }
             rule.waitForIdle()
             Thread.sleep(400)
             frames.start()
@@ -128,7 +140,7 @@ class StudyLatencyTest {
                     if (d != null) app.data.applyRemote(Col.DAILY, listOf(d.toDoc()), emptyList())
                 }
             }
-            rule.waitUntil(15_000) { !exists("rate-3") && (exists("show-answer") || exists("session-done")) }
+            waitFor("next card $k", 15_000) { !exists("rate-3") && (front() || exists("session-done")) }
             toCard += (System.nanoTime() - t0) / 1_000_000
             Thread.sleep(2500)
             gaps += frames.stop()
