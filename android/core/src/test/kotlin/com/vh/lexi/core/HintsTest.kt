@@ -22,7 +22,7 @@ class HintsTest {
             assertEquals(g.getLong("expect"), hintGateMs(g.getInt("state"), g.getDouble("stability")), g.toString())
         }
         val caps = v.getJSONArray("maxRating")
-        for (l in 0..2) assertEquals(caps.getInt(l), maxRating(l))
+        for (l in 0..3) assertEquals(caps.getInt(l), maxRating(l))
     }
 
     @Test
@@ -61,6 +61,36 @@ class HintsTest {
         fun text(b: Block) = when (b) { is Block.Example -> b.text; is Block.Memo -> b.text; is Block.Text -> b.text; else -> "" }
         for (r in v.getJSONArray("rotate").objects()) {
             assertEquals(r.getJSONArray("expect").strings(), rotateExamples(blocks, r.getInt("reps")).map(::text), "reps ${r.getInt("reps")}")
+        }
+    }
+
+    @Test
+    fun `recall ladder`() {
+        val l = v.getJSONObject("ladder")
+        val hints = l.getJSONArray("rungHint")
+        for (r in 0..4) assertEquals(hints.getInt(r), rungHint(r))
+        for (n in l.getJSONArray("next").objects()) {
+            val want = if (n.isNull("expect")) null else n.getInt("expect")
+            assertEquals(want, nextRung(n.getInt("rung"), n.getBoolean("has")), n.toString())
+        }
+        for (x in l.getJSONArray("letters").objects()) assertEquals(x.getInt("expect"), lettersShown(x.getLong("ms"), x.getInt("n")), x.toString())
+        fun withPhrases(word: String, key: String) = Note(
+            id = "n", type = "vocab", deckId = "d", createdAt = 0, updatedAt = 0,
+            fields = mapOf("word" to FieldValue.Text(word), "phrases" to FieldValue.Items(l.getJSONArray(key).strings())),
+        )
+        val acc = withPhrases(l.getString("otherWord"), "otherPhrases")
+        for (o in l.getJSONArray("other").objects()) {
+            val got = otherPhrase(acc, o.getInt("reps"))!!
+            val want = o.getJSONObject("expect")
+            assertEquals(want.getString("vi"), got.vi)
+            val segs = want.getJSONArray("segs").objects().map { Seg(it.getString("text"), it.getBoolean("masked")) }
+            assertEquals(segs, got.segs, o.toString())
+        }
+        assertTrue(l.isNull("otherNone"))
+        assertEquals(null, otherPhrase(withPhrases(l.getString("singleWord"), "singlePhrases"), 0))
+        for (f in l.getJSONArray("flash").objects()) {
+            val want = if (f.isNull("expect")) null else f.getJSONArray("expect").strings()
+            assertEquals(want, flashWords(f.getString("word"), f.getJSONArray("pool").strings(), f.getString("seed")), f.toString())
         }
     }
 }

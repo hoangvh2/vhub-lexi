@@ -116,6 +116,7 @@ import com.vh.lexi.core.template
 import com.vh.lexi.core.hintDependent
 import com.vh.lexi.core.hintGateMs
 import com.vh.lexi.core.maxRating
+import com.vh.lexi.core.rungHint
 import com.vh.lexi.core.rotateExamples
 import com.vh.lexi.core.studyNote
 import com.vh.lexi.core.Block
@@ -168,6 +169,8 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
     var verdict by remember { mutableStateOf<Verdict?>(null) }
     // Typing cards: hint letters shown beyond the first, and the confusable word typed on the first try (one retry).
     var extraHints by remember { mutableStateOf(0) }
+    // The recall ladder rung reached on this card (core Ladder.kt); it caps the rating like the tip and notes do.
+    var rung by remember { mutableStateOf(0) }
     var mixedUp by remember { mutableStateOf<Confusable?>(null) }
     var editing by remember { mutableStateOf<String?>(null) }
     // Hints opened on the front of this card (core/Hints.kt), the tip/notes editor, and whether the word leans on hints.
@@ -226,7 +229,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
 
     // Keyed by card and turn: a learning card can come straight back (learn-ahead) and must start unanswered again.
     LaunchedEffect(card?.id, session.shown) {
-        revealed = false; typed = ""; verdict = null; extraHints = 0; mixedUp = null; shownAt = System.currentTimeMillis()
+        revealed = false; typed = ""; verdict = null; extraHints = 0; rung = 0; mixedUp = null; shownAt = System.currentTimeMillis()
         levels = mapOf(HintKind.MEMO to 0, HintKind.NOTES to 0)
         // A word that leaned on hints in its last answers gets them locked (read from its review history).
         leaning = false
@@ -257,7 +260,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
         reveal(v)
     }
 
-    val hint = maxOf(levels[HintKind.MEMO] ?: 0, levels[HintKind.NOTES] ?: 0)
+    val hint = maxOf(levels[HintKind.MEMO] ?: 0, levels[HintKind.NOTES] ?: 0, rungHint(rung))
     val cap = maxRating(hint)
     val hintable = note != null && note.type == "vocab" && !revealed
 
@@ -419,8 +422,17 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
                                 Button(onClick = { submitTyped() }, Modifier.testTag("type-check")) { Text("Kiểm tra") }
                                 TextButton(onClick = { reveal(Verdict.WRONG) }) { Text("Không nhớ") }
                             }
-                            if (letters - 1 - extraHints > 1) {
-                                OutlinedButton(onClick = { extraHints++ }, Modifier.testTag("more-hint")) { Text("Gợi ý thêm chữ") }
+                            if (note.type == "vocab" && answer.isNotEmpty()) {
+                                val ladderPool = {
+                                    val pos = note.fields["pos"].str()
+                                    val rest = notes.filter { it.type == "vocab" && it.id != note.id && (pos.isEmpty() || it.fields["pos"].str() == pos) }.map { it.fields["word"].str() }
+                                    val at = if (rest.isEmpty()) 0 else (repsShown * 7 + note.fields["word"].str().length) % rest.size
+                                    (similar.map { it.word } + rest.drop(at) + rest.take(at)).filter { it.isNotEmpty() && !it.contains(' ') }
+                                }
+                                androidx.compose.runtime.key(card.id, session.shown) { Ladder(
+                                    note, repsShown, target.word, ladderPool, card.id, hintGateMs(card.state, card.stability), leaning, mode,
+                                    onChange = { r, extra -> rung = r; extraHints = extra },
+                                ) }
                             }
                         }
                         if (revealed) {

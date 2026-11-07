@@ -17,6 +17,7 @@ import { answer, makeScheduler, newCard } from "../src/lib/scheduler.ts";
 import { aiFieldsOf, draftsFrom, grammarFields, problems, type ExtractedQuestion } from "../src/lib/import.ts";
 import { analyze, sentenceAround } from "../src/lib/readcheck.ts";
 import { testTag } from "../src/lib/practice.ts";
+import { flashWords, lettersShown, nextRung, otherPhrase, rungHint, type Rung } from "@shared/ladder.ts";
 import { hintCue, hintDependent, hintGateMs, maskHint, maxRating, meaningTerms, rotateExamples } from "@shared/hints.ts";
 
 const T0 = Date.UTC(2026, 0, 15, 8, 30, 0);
@@ -385,9 +386,14 @@ function hintVectors() {
   // Short phrases (kind "phrase") keep their place; only the full example sentences turn.
   const ph = (t: string): Block => ({ k: "example", text: t, phrase: true });
   const rot: Block[] = [{ k: "text", text: "nghĩa" }, ph("P1"), ph("P2"), ex("A"), { k: "memo", text: "m" }, ex("B"), ex("C")];
+  const acc = ["accommodate 200 guests | chứa được 200 khách", "accommodate a request | đáp ứng một yêu cầu", "accommodate new staff | tạo điều kiện cho nhân viên mới"];
+  const single = ["a reliable supplier | nhà cung cấp đáng tin"];
+  const withPhrases = (word: string, phrases: string[]): Note => ({ ...vocab({ word }), fields: { word, phrases } });
+  const accNote = withPhrases("accommodate", acc);
+  const singleNote = withPhrases("reliable", single);
   return {
     gate: [[0, 0], [1, 0.4], [3, 30], [2, 5], [2, 20.99], [2, 21]].map(([state, stability]) => ({ state, stability, expect: hintGateMs({ state, stability }) })),
-    maxRating: [0, 1, 2].map((l) => maxRating(l as 0 | 1 | 2)),
+    maxRating: [0, 1, 2, 3].map((l) => maxRating(l as 0 | 1 | 2 | 3)),
     terms: [protect.vi, demo.vi, "có; là, ở", "Hợp Đồng / bản cam kết\nthỏa thuận", ""].map((vi) => ({ vi, expect: meaningTerms(vi) })),
     masks: masks.map((m) => ({ ...m, expect: maskHint(m.text, vocab(m.fields), m.template) })),
     cues: cues.map((t) => [t, hintCue(t)]),
@@ -395,6 +401,25 @@ function hintVectors() {
     rotate: [0, 1, 2, 3, 4, -1].map((reps) => ({ reps, expect: rotateExamples(rot, reps).map((b) => (b as { text: string }).text) })),
     rotateBlocks: rot.map((b) => (b as { text: string }).text),
     rotateKinds: rot.map((b) => (b.k === "example" && b.phrase ? "phrase" : b.k)),
+    ladder: {
+      rungHint: [0, 1, 2, 3, 4].map((r) => rungHint(r as Rung)),
+      next: [0, 1, 2, 3, 4].flatMap((r) => [true, false].map((has) => ({ rung: r, has, expect: nextRung(r as Rung, has) }))),
+      letters: [[0, 6], [1999, 6], [2000, 6], [5000, 6], [60000, 6], [-5, 6], [4000, 2], [0, 1]].map(([ms, n]) => ({ ms, n, expect: lettersShown(ms, n) })),
+      otherWord: "accommodate",
+      otherPhrases: acc,
+      other: [0, 1, 2, 3, -1].map((reps) => ({ reps, expect: otherPhrase(accNote, reps) })),
+      singleWord: "reliable",
+      singlePhrases: single,
+      otherNone: otherPhrase(singleNote, 0),
+      flash: [
+        ["accommodate", ["accomplish", "accommodate", "acknowledge", "accompany", "account"], "a"],
+        ["accommodate", ["accomplish", "accomplish", "ACCOMMODATE"], "a"],
+        ["accommodate", ["accomplish"], "a"],
+        ["accommodate", ["accomplish", "accompany"], "b"],
+        ["look after", ["take care", "look up", "go over", "x"], "seed"],
+        ["café", ["cafe", "caffè", "coffee"], "é"],
+      ].map(([word, pool, seed]) => ({ word, pool, seed, expect: flashWords(word as string, pool as string[], seed as string) })),
+    },
   };
 }
 

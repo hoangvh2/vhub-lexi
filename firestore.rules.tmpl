@@ -146,8 +146,8 @@ service cloud.firestore {
         && (!('stability' in d) || d.stability is number)
         && (!('difficulty' in d) || d.difficulty is number)
         && (!('scheduledDays' in d) || d.scheduledDays is number)
-        // A recall helped by a hint is capped (shared/hints.ts maxRating): cue at Good, whole hint at Hard.
-        && (!('hint' in d) || (intIn(d.hint, 1, 2) && d.rating <= 4 - d.hint));
+        // A recall helped by a hint is capped (shared/hints.ts maxRating): cue at Good, whole hint at Hard, flashed answer at Again.
+        && (!('hint' in d) || (intIn(d.hint, 1, 3) && d.rating <= 4 - d.hint));
     }
 
     // ------------------------------------------------------------ per-day counters (atomic increments)

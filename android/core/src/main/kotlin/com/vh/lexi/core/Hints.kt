@@ -19,8 +19,8 @@ fun hintGateMs(state: Int, stability: Double): Long = when {
     else -> 4000
 }
 
-/** The best rating a recall helped by a hint of this level (0 none, 1 cue, 2 whole) may get. */
-fun maxRating(level: Int): Int = when (level) { 2 -> 2; 1 -> 3; else -> 4 }
+/** The best rating a recall helped by a hint of this level (0 none, 1 cue, 2 whole, 3 the ladder flashed the answer) may get. */
+fun maxRating(level: Int): Int = when (level) { 3 -> 1; 2 -> 2; 1 -> 3; else -> 4 }
 
 /** A part of a hint text; masked parts are the answer and are drawn as a blank. */
 data class Seg(val text: String, val masked: Boolean)

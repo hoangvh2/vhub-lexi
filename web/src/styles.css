@@ -727,3 +727,23 @@ input[type="range"] { width: 100%; }
 .ai-memo { align-self: flex-start; margin-top: 6px; }
 .rate button.capped { opacity: 0.35; text-decoration: line-through; cursor: not-allowed; }
 .rate button.capped:hover { transform: none; box-shadow: inset 0 2px 0 var(--hi), 0 8px 16px -10px var(--sh); }
+
+/* Recall ladder (Ladder.tsx): one open rung at a time, no layout jump while a flash plays. */
+.ladder { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 420px; margin: 4px auto 0; }
+.lad-btn { gap: 8px; opacity: 0.55; transition: opacity 0.3s, transform 0.15s; }
+.ladder.awake .lad-btn { opacity: 1; }
+.lad-btn:active { transform: scale(0.97); }
+.lad-btn small { font-size: 11px; font-weight: 700; color: var(--muted); }
+.lad-used { font-size: 12px; color: var(--muted); }
+.lad-phrase { width: 100%; padding: 10px 14px; border-radius: 14px; background: color-mix(in srgb, var(--mode) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--mode) 30%, transparent); animation: lad-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.lad-tag { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mode); }
+.lad-text { font-size: 17px; font-weight: 600; margin-top: 2px; }
+.lad-blank { display: inline-block; width: 4.2em; height: 0.9em; border-bottom: 2.5px solid var(--mode); vertical-align: baseline; margin: 0 2px; }
+.lad-vi { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.lad-stage { min-height: 64px; width: 100%; display: grid; place-items: center; }
+.lad-flash { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; padding: 10px 14px; border-radius: 14px; background: color-mix(in srgb, var(--mode) 12%, var(--surface)); font-size: 20px; color: var(--mode); pointer-events: none; user-select: none; -webkit-user-select: none; animation: lad-flash var(--lad-ms, 1.5s) ease-in-out both; will-change: opacity; }
+.lad-flash.n1 { font-size: 26px; animation-duration: 0.6s; }
+.lad-gone { font-size: 13px; color: var(--muted); }
+@keyframes lad-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes lad-flash { 0% { opacity: 0; transform: scale(0.96); } 12%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .lad-phrase, .lad-flash { animation: none; } .lad-btn { transition: none; } }

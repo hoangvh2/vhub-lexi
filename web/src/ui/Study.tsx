@@ -3,6 +3,7 @@ import { dayId, type Card, type Id, type Rating } from "@shared/model.ts";
 import { answerHint, confusables, hintNote, letterCount, matchConfusable, meaningsByNote, suggestedRatingWith, typingTarget, type Confusable } from "@shared/confusables.ts";
 import { checkTyped, str, studyNote, template, type AnswerVerdict } from "@shared/notetypes.ts";
 import { hintDependent, hintGateMs, maxRating, rotateExamples, type HintLevel } from "@shared/hints.ts";
+import { rungHint, type Rung } from "@shared/ladder.ts";
 import { reviewCard, setSuspended, undoReview, type Reviewed } from "../data/actions.ts";
 import { cards, currentRepo, daily, decks, loaded, notes, prefs } from "../data/state.ts";
 import { LEARN_AHEAD_MS, answeredToday, buildQueue, dueWithin, isLeech, pickNext, tagCounts, type Queue } from "../lib/queue.ts";
@@ -16,6 +17,7 @@ import { speak, stopSpeaking } from "../lib/speech.ts";
 import { useStore } from "../lib/store.ts";
 import { Blocks } from "./Blocks.tsx";
 import { Icon, go, toast } from "./common.tsx";
+import { Ladder } from "./Ladder.tsx";
 import { HintBoxes, HintButtons, MemoryEditor, MemoryPanel, type HintKind } from "./Hints.tsx";
 import { NoteEditor } from "./NoteEditor.tsx";
 
@@ -60,6 +62,8 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
   const [verdict, setVerdict] = useState<AnswerVerdict | null>(null);
   // Typing cards: hint letters shown beyond the first, and the confusable word typed on the first try (one retry).
   const [extraHints, setExtraHints] = useState(0);
+  // The recall ladder rung reached on this card (shared/ladder.ts); it caps the rating like the tip and notes do.
+  const [rung, setRung] = useState<Rung>(0);
   const [mixedUp, setMixedUp] = useState<Confusable | null>(null);
   const [editing, setEditing] = useState<Id | null>(null);
   // Hints opened on the front of this card (shared/hints.ts) and the tip/notes editor.
@@ -124,6 +128,16 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
 
   const note = card ? byId.get(card.noteId) : undefined;
   const tpl = card && note ? template(note.type, card.template) : undefined;
+  // Words for the "4 words flash" rung: the learner's own confusable words first, then others of the same part of
+  // speech. Built only when that rung opens, from notes already in memory (no read).
+  const ladderPool = () => {
+    if (!note) return [];
+    const pos = str(note.fields.pos);
+    const mine = similar.map((c) => c.word);
+    const rest = allNotes.filter((n) => n.type === "vocab" && n.id !== note.id && (!pos || str(n.fields.pos) === pos)).map((n) => str(n.fields.word));
+    const at = rest.length ? (repsShown * 7 + str(note.fields.word).length) % rest.length : 0;
+    return [...mine, ...rest.slice(at), ...rest.slice(0, at)].filter((w) => w && !w.includes(" "));
+  };
   const similar = useMemo(() => (note ? confusables(note, allNotes) : []), [note, allNotes]);
   const outcomes = useMemo(() => (card && revealed ? preview(sched, card, now) : null), [card?.id, card?.updatedAt, revealed, sched]);
 
@@ -144,6 +158,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
     setTyped("");
     setVerdict(null);
     setExtraHints(0);
+    setRung(0);
     setMixedUp(null);
     setLevels({ memo: 0, notes: 0 });
     shownAt.current = Date.now();
@@ -155,7 +170,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
   // (with an Anki history each new card froze 1-2 s on a phone), and a read per card adds to the Firestore bill.
   const readLocked = () =>
     note ? currentRepo().reviewsOfNote(note.id, { cache: false }).then(hintDependent, () => false) : Promise.resolve(false);
-  const hint = Math.max(levels.memo, levels.notes) as HintLevel;
+  const hint = Math.max(levels.memo, levels.notes, rungHint(rung)) as 0 | 1 | 2 | 3;
   const cap = maxRating(hint);
   const gateMs = card ? hintGateMs(card) : 0;
   const openHint = (kind: HintKind) => setLevels((l) => ({ ...l, [kind]: Math.min(2, l[kind] + 1) as HintLevel }));
@@ -412,6 +427,22 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
                 {mixedUp.en && <p class="mixed-en"><b>{mixedUp.word}</b>{mixedUp.pos ? ` (${mixedUp.pos})` : ""}: {mixedUp.en}</p>}
               </div>
             )}
+            {tpl.mode === "type" && !revealed && note.type === "vocab" && answer && (
+              <Ladder
+                key={turn}
+                note={note}
+                reps={repsShown}
+                word={target.word}
+                pool={ladderPool}
+                seed={card.id}
+                gateMs={gateMs}
+                readLocked={readLocked}
+                onChange={(r, extra) => {
+                  setRung(r);
+                  setExtraHints(extra);
+                }}
+              />
+            )}
             {tpl.mode === "type" && !revealed && (
               <form
                 class="typebox"
@@ -435,11 +466,6 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
                 />
                 <div class="row" style={{ justifyContent: "center" }}>
                   <button type="submit" class="btn primary" data-testid="type-check">Kiểm tra</button>
-                  {letters - 1 - extraHints > 1 && (
-                    <button type="button" class="btn" onClick={() => setExtraHints((n) => n + 1)} data-testid="more-hint" title="Hiện thêm một chữ; gợi ý chấm sẽ hạ xuống Khó">
-                      Gợi ý thêm chữ
-                    </button>
-                  )}
                   <button type="button" class="btn ghost" onClick={() => reveal("wrong")}>Không nhớ</button>
                 </div>
               </form>
