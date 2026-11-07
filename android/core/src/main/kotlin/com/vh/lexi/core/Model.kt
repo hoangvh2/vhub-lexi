@@ -147,6 +147,12 @@ fun fsrsWeightsOrNull(raw: Any?): List<Double>? =
 fun cardId(noteId: Id, template: String) = "$noteId.$template"
 fun reviewId(cardId: Id, at: Long) = "$cardId@$at"
 
+/**
+ * Bounds [from, to) of the review ids of one note: they start with its card ids ("noteId.template@…"), and '/' is the
+ * character after '.', so a range read on the id finds exactly those ("n1." up to "n1/" leaves "n10.…" out).
+ */
+fun reviewIdRange(noteId: Id): Pair<String, String> = "$noteId." to "$noteId/"
+
 /** Study-day id (yyyy-MM-dd) with the day starting at [dayStartHour] local time. */
 fun dayId(ms: Long, dayStartHour: Int = 4, zone: ZoneId = ZoneId.systemDefault()): String =
     Instant.ofEpochMilli(ms - dayStartHour * 3_600_000L).atZone(zone).toLocalDate().toString()

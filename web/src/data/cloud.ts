@@ -9,6 +9,7 @@ import {
   collection, deleteDoc, doc, documentId, getDocs, increment, limit, onSnapshot, orderBy, query, setDoc, startAfter, where, writeBatch,
   type DocumentData, type Firestore, type Query, type QuerySnapshot, type WriteBatch,
 } from "firebase/firestore";
+import type { Firestore as LiteFirestore } from "firebase/firestore/lite";
 import { RATING_FIELD, type Card, type Daily, type DailyDelta, type Deck, type Note, type Prefs, type ReviewLog } from "@shared/model.ts";
 import { firebase } from "./fbimpl.ts";
 import type { ExportFile, Repo, RepoEvents, SyncState } from "./repo.ts";
@@ -28,11 +29,21 @@ export class CloudRepo implements Repo {
   /** A failure stays visible for a while even though the rolled-back snapshot that follows looks healthy. */
   private errorUntil = 0;
 
+  /** Firestore Lite on the same app (auth + App Check): plain server reads that never touch the local cache. */
+  private lite: Promise<LiteFirestore> | null;
+
   constructor(
     private readonly uid: string,
     db?: Firestore,
+    lite?: LiteFirestore,
   ) {
     this.db = db ?? firebase().db;
+    this.lite = lite ? Promise.resolve(lite) : null;
+  }
+
+  private liteDb(): Promise<LiteFirestore> {
+    this.lite ??= import("firebase/firestore/lite").then((m) => m.getFirestore(this.db.app));
+    return this.lite;
   }
 
   private col(name: string) {
@@ -175,10 +186,26 @@ export class CloudRepo implements Repo {
     void setDoc(this.ref("settings", "prefs"), p).catch((e) => this.fail(e));
   }
 
-  async reviewsOfNote(noteId: string) {
-    // Equality on one field: served by Firestore's automatic index, and from the cache when offline.
-    const snap = await getDocs(query(this.col("reviews"), where("noteId", "==", noteId), limit(500)));
-    return snap.docs.map((d) => d.data() as ReviewLog).sort((a, b) => a.reviewedAt - b.reviewedAt);
+  /**
+   * Asked from the server with Firestore Lite. The full SDK runs every query against its persistent cache too, and
+   * without a client-side index that is a scan of the whole reviews collection on the main thread: with an Anki
+   * history (~20,000 logs) each new study card froze the page for 1-2 s on a phone.
+   * Equality on one field is served by the server's automatic index. Offline (the request fails) the cached query is
+   * the fallback unless `cache: false`: the study screen would rather skip the hint lock than freeze.
+   */
+  async reviewsOfNote(noteId: string, opts: { cache?: boolean } = {}) {
+    let logs: ReviewLog[];
+    try {
+      const l = await import("firebase/firestore/lite");
+      const db = await this.liteDb();
+      const snap = await l.getDocs(l.query(l.collection(db, "users", this.uid, "reviews"), l.where("noteId", "==", noteId), l.limit(500)));
+      logs = snap.docs.map((d) => d.data() as ReviewLog);
+    } catch (e) {
+      if (opts.cache === false) throw e;
+      const snap = await getDocs(query(this.col("reviews"), where("noteId", "==", noteId), limit(500)));
+      logs = snap.docs.map((d) => d.data() as ReviewLog);
+    }
+    return logs.sort((a, b) => a.reviewedAt - b.reviewedAt);
   }
 
   /**

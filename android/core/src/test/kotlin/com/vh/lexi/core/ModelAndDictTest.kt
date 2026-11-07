@@ -9,6 +9,19 @@ import kotlin.test.assertTrue
 
 class ModelTest {
     private val utc = ZoneOffset.UTC
+
+    @Test
+    fun `review id range holds exactly one note's review ids, as SQLite orders them`() {
+        val ids = listOf(
+            reviewId("n1.recognize", 5), reviewId("n1.cloze", 7), reviewId("n1.listen", 1),
+            reviewId("n10.recognize", 3), reviewId("n1x.recognize", 2), reviewId("n.recognize", 4), reviewId("n2.cloze", 6), "n1",
+        )
+        val (from, to) = reviewIdRange("n1")
+        // SQLite's BINARY collation compares bytes; ids are ASCII, where that is String.compareTo.
+        val inRange = ids.filter { it >= from && it < to }.sorted()
+        assertEquals(listOf("n1.cloze@7", "n1.listen@1", "n1.recognize@5"), inRange)
+        assertTrue(ids.all { it.all { ch -> ch.code < 128 } })
+    }
     @Test
     fun `optimized FSRS parameters are read only as 21 finite numbers and drive the scheduler`() {
         // Firestore hands whole numbers back as Long.

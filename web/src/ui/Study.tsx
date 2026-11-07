@@ -61,10 +61,9 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
   const [extraHints, setExtraHints] = useState(0);
   const [mixedUp, setMixedUp] = useState<Confusable | null>(null);
   const [editing, setEditing] = useState<Id | null>(null);
-  // Hints opened on the front of this card (shared/hints.ts), the tip/notes editor, and whether the word leans on hints.
+  // Hints opened on the front of this card (shared/hints.ts) and the tip/notes editor.
   const [levels, setLevels] = useState<Record<HintKind, HintLevel>>({ memo: 0, notes: 0 });
   const [memoryEdit, setMemoryEdit] = useState<Id | null>(null);
-  const [leaning, setLeaning] = useState(false);
   const history = useRef<Reviewed[]>([]);
   const currentId = useRef<Id | null>(null);
   const shownAt = useRef(Date.now());
@@ -145,17 +144,11 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
     shownAt.current = Date.now();
   }, [turn]);
 
-  // A word that leaned on hints in its last answers gets them locked (read from its review history).
-  const hasHints = !!note && note.type === "vocab" && (!!str(note.fields.mnemonic) || !!str(note.fields.notes));
-  useEffect(() => {
-    setLeaning(false);
-    if (!note || !hasHints) return;
-    let live = true;
-    currentRepo().reviewsOfNote(note.id).then((logs) => live && setLeaning(hintDependent(logs)), () => undefined);
-    return () => {
-      live = false;
-    };
-  }, [turn]);
+  // A word that leaned on hints in its last answers gets them locked. Its review history is read only when a hint is
+  // about to open (not on every card), from the server: the cached query scans every review log on the main thread
+  // (with an Anki history each new card froze 1-2 s on a phone), and a read per card adds to the Firestore bill.
+  const readLocked = () =>
+    note ? currentRepo().reviewsOfNote(note.id, { cache: false }).then(hintDependent, () => false) : Promise.resolve(false);
   const hint = Math.max(levels.memo, levels.notes) as HintLevel;
   const cap = maxRating(hint);
   const gateMs = card ? hintGateMs(card) : 0;
@@ -386,7 +379,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
               </div>
             )}
             {!revealed && MODE_Q[tpl.id] && <div class="mode-q">{MODE_Q[tpl.id]}</div>}
-            {hintable && <HintButtons key={turn} note={note} levels={levels} gateMs={gateMs} locked={leaning} onOpen={openHint} />}
+            {hintable && <HintButtons key={turn} note={note} levels={levels} gateMs={gateMs} readLocked={readLocked} onOpen={openHint} />}
             <Blocks blocks={tpl.front(note, p.layout)} cloze={tpl.id === "cloze"} />
             {hintable && <HintBoxes note={note} templateId={tpl.id} levels={levels} />}
             {tpl.mode === "type" && !revealed && answer && (

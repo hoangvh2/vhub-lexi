@@ -787,8 +787,14 @@ describe("nhập nhanh: screenshots -> reviewed rows -> grammar cards and a pass
     await page.setInputFiles('[data-testid=import-file]', file);
     await page.click('[data-testid=confirm-ok]');
     await page.goto(`${base}/#/study`);
-    await page.waitForSelector('[data-testid=hint-memo] .hint-dot');
+    await page.waitForSelector('[data-testid=hint-memo]');
+    // The history is read only when a hint is about to open (no read per card): no lock shown before that.
+    assert.equal(await page.locator('[data-testid=hint-memo] .hint-dot').count(), 0);
     await page.waitForTimeout(4200);
+    await page.click('[data-testid=hint-memo]');
+    await page.waitForSelector('[data-testid=hint-memo] .hint-dot');
+    assert.equal(await page.locator('[data-testid=hint-box-memo]').count(), 0);
+    // A second tap knows already and still does not open it.
     await page.click('[data-testid=hint-memo]');
     assert.equal(await page.locator('[data-testid=hint-box-memo]').count(), 0);
     if (process.env.LEXI_SHOTS) await page.screenshot({ path: join(process.env.LEXI_SHOTS, "07-locked.png") });
