@@ -56,6 +56,11 @@ describe("core flow (local-only mode)", () => {
     await page.click('[data-testid=rate-3]');
     await page.waitForSelector('[data-testid=session-done]');
     assert.match(await page.textContent('[data-testid=recap]'), /serendipity/);
+    // Settings report what the two ratings cost on this device (same document: the traces live in memory).
+    await page.goto(`${base}/#/settings`);
+    await page.waitForSelector('[data-testid=latency-summary]');
+    assert.match(await page.textContent('[data-testid=latency-summary]'), /^2 lần chấm · chuyển thẻ trung vị \d+ ms/);
+    assert.match(await page.textContent('[data-testid=build-id]'), /Phiên bản: \S+ · \d{4}-\d\d-\d\d/);
     await page.goto(`${base}/#/today`);
     await page.waitForSelector('[data-testid=today-ring]');
     assert.match(await page.textContent('[data-testid=today-ring]'), /1\/1/);

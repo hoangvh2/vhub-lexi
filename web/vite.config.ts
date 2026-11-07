@@ -1,6 +1,7 @@
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 import preact from "@preact/preset-vite";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -39,7 +40,19 @@ function precache(): Plugin {
   };
 }
 
+/** Shown in Settings, so the build a phone runs can be told apart: short commit and build date (no shell: Windows). */
+function buildId(): string {
+  let sha = "dev";
+  try {
+    sha = execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim() || sha;
+  } catch {
+    // Not a git checkout (CI tarball): the date alone still tells builds apart.
+  }
+  return `${sha} · ${new Date().toISOString().slice(0, 16).replace("T", " ")}Z`;
+}
+
 export default defineConfig({
+  define: { __LEXI_BUILD__: JSON.stringify(buildId()) },
   plugins: [preact(), precache()],
   resolve: { alias: { "@shared": fileURLToPath(new URL("../shared", import.meta.url)) } },
   server: { fs: { allow: [".."] }, port: 5173 },
