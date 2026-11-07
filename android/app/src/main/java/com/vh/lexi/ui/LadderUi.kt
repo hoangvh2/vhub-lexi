@@ -42,6 +42,7 @@ import com.vh.lexi.core.flashWords
 import com.vh.lexi.core.letterCount
 import com.vh.lexi.core.nextRung
 import com.vh.lexi.core.otherPhrase
+import com.vh.lexi.ui.theme.Lexi
 import kotlinx.coroutines.delay
 
 private val NEXT_LABEL = mapOf(1 to "Cụm ở nghĩa khác", 2 to "Hiện dần chữ cái", 3 to "Chớp 4 từ", 4 to "Chớp đáp án")
