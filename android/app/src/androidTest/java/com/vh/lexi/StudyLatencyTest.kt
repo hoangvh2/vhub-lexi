@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.printToString
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.data.Col
@@ -127,7 +128,7 @@ class StudyLatencyTest {
         repeat(12) { k ->
             // A typing card is revealed with "Không nhớ"; the rating path is the same.
             if (exists("show-answer")) rule.onNodeWithTag("show-answer").performClick()
-            else rule.onNodeWithText("Không nhớ").performClick()
+            else rule.onNodeWithText("Không nhớ").performScrollTo().performClick() // below the fold on a small screen
             waitFor("rating buttons $k", 10_000) { exists("rate-3") }
             rule.waitForIdle()
             Thread.sleep(400)
