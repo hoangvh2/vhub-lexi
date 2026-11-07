@@ -266,7 +266,7 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
         val log = ReviewLog(
             id = reviewId(card.id, now), cardId = card.id, noteId = card.noteId, deckId = card.deckId, rating = rating, state = card.state,
             stability = next.stability, difficulty = next.difficulty, scheduledDays = next.scheduledDays, reviewedAt = now, durationMs = dur,
-            hint = hint.coerceIn(0, 2),
+            hint = hint.coerceIn(0, 3),
         )
         val wasNew = card.state == CardState.NEW
         val delta = DailyDelta(dayId(now, p.dayStartHour), if (wasNew) 1 else 0, if (wasNew) 0 else 1, rating, dur)

@@ -34,7 +34,8 @@
  "maxRating": [
   4,
   3,
-  2
+  2,
+  1
  ],
  "terms": [
   {
@@ -590,5 +591,282 @@
   "memo",
   "example",
   "example"
- ]
+ ],
+ "ladder": {
+  "rungHint": [
+   0,
+   1,
+   2,
+   2,
+   3
+  ],
+  "next": [
+   {
+    "rung": 0,
+    "has": true,
+    "expect": 1
+   },
+   {
+    "rung": 0,
+    "has": false,
+    "expect": 2
+   },
+   {
+    "rung": 1,
+    "has": true,
+    "expect": 2
+   },
+   {
+    "rung": 1,
+    "has": false,
+    "expect": 2
+   },
+   {
+    "rung": 2,
+    "has": true,
+    "expect": 3
+   },
+   {
+    "rung": 2,
+    "has": false,
+    "expect": 3
+   },
+   {
+    "rung": 3,
+    "has": true,
+    "expect": 4
+   },
+   {
+    "rung": 3,
+    "has": false,
+    "expect": 4
+   },
+   {
+    "rung": 4,
+    "has": true,
+    "expect": null
+   },
+   {
+    "rung": 4,
+    "has": false,
+    "expect": null
+   }
+  ],
+  "letters": [
+   {
+    "ms": 0,
+    "n": 6,
+    "expect": 1
+   },
+   {
+    "ms": 1999,
+    "n": 6,
+    "expect": 1
+   },
+   {
+    "ms": 2000,
+    "n": 6,
+    "expect": 2
+   },
+   {
+    "ms": 5000,
+    "n": 6,
+    "expect": 3
+   },
+   {
+    "ms": 60000,
+    "n": 6,
+    "expect": 5
+   },
+   {
+    "ms": -5,
+    "n": 6,
+    "expect": 1
+   },
+   {
+    "ms": 4000,
+    "n": 2,
+    "expect": 1
+   },
+   {
+    "ms": 0,
+    "n": 1,
+    "expect": 1
+   }
+  ],
+  "otherWord": "accommodate",
+  "otherPhrases": [
+   "accommodate 200 guests | chứa được 200 khách",
+   "accommodate a request | đáp ứng một yêu cầu",
+   "accommodate new staff | tạo điều kiện cho nhân viên mới"
+  ],
+  "other": [
+   {
+    "reps": 0,
+    "expect": {
+     "segs": [
+      {
+       "text": "accommodate",
+       "masked": true
+      },
+      {
+       "text": " a request",
+       "masked": false
+      }
+     ],
+     "vi": "đáp ứng một yêu cầu"
+    }
+   },
+   {
+    "reps": 1,
+    "expect": {
+     "segs": [
+      {
+       "text": "accommodate",
+       "masked": true
+      },
+      {
+       "text": " new staff",
+       "masked": false
+      }
+     ],
+     "vi": "tạo điều kiện cho nhân viên mới"
+    }
+   },
+   {
+    "reps": 2,
+    "expect": {
+     "segs": [
+      {
+       "text": "accommodate",
+       "masked": true
+      },
+      {
+       "text": " 200 guests",
+       "masked": false
+      }
+     ],
+     "vi": "chứa được 200 khách"
+    }
+   },
+   {
+    "reps": 3,
+    "expect": {
+     "segs": [
+      {
+       "text": "accommodate",
+       "masked": true
+      },
+      {
+       "text": " a request",
+       "masked": false
+      }
+     ],
+     "vi": "đáp ứng một yêu cầu"
+    }
+   },
+   {
+    "reps": -1,
+    "expect": {
+     "segs": [
+      {
+       "text": "accommodate",
+       "masked": true
+      },
+      {
+       "text": " 200 guests",
+       "masked": false
+      }
+     ],
+     "vi": "chứa được 200 khách"
+    }
+   }
+  ],
+  "singleWord": "reliable",
+  "singlePhrases": [
+   "a reliable supplier | nhà cung cấp đáng tin"
+  ],
+  "otherNone": null,
+  "flash": [
+   {
+    "word": "accommodate",
+    "pool": [
+     "accomplish",
+     "accommodate",
+     "acknowledge",
+     "accompany",
+     "account"
+    ],
+    "seed": "a",
+    "expect": [
+     "accomplish",
+     "accompany",
+     "accommodate",
+     "acknowledge"
+    ]
+   },
+   {
+    "word": "accommodate",
+    "pool": [
+     "accomplish",
+     "accomplish",
+     "ACCOMMODATE"
+    ],
+    "seed": "a",
+    "expect": null
+   },
+   {
+    "word": "accommodate",
+    "pool": [
+     "accomplish"
+    ],
+    "seed": "a",
+    "expect": null
+   },
+   {
+    "word": "accommodate",
+    "pool": [
+     "accomplish",
+     "accompany"
+    ],
+    "seed": "b",
+    "expect": [
+     "accomplish",
+     "accompany",
+     "accommodate"
+    ]
+   },
+   {
+    "word": "look after",
+    "pool": [
+     "take care",
+     "look up",
+     "go over",
+     "x"
+    ],
+    "seed": "seed",
+    "expect": [
+     "take care",
+     "look after",
+     "go over",
+     "look up"
+    ]
+   },
+   {
+    "word": "café",
+    "pool": [
+     "cafe",
+     "caffè",
+     "coffee"
+    ],
+    "seed": "é",
+    "expect": [
+     "cafe",
+     "caffè",
+     "café",
+     "coffee"
+    ]
+   }
+  ]
+ }
 }

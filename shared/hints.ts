@@ -26,8 +26,9 @@ export function hintGateMs(card: { state: number; stability: number }): number {
 }
 
 /** The best rating a recall helped by a hint of this level may get. */
-export function maxRating(level: HintLevel): Rating {
-  return level === 2 ? 2 : level === 1 ? 3 : 4;
+export function maxRating(level: HintLevel | 3): Rating {
+  // 3 = the recall ladder showed the answer itself (shared/ladder.ts): the word was not recalled.
+  return level === 3 ? 1 : level === 2 ? 2 : level === 1 ? 3 : 4;
 }
 
 /** A part of a hint text; masked parts are the answer and are drawn as a blank. */

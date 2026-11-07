@@ -157,14 +157,17 @@ describe("shape checks reject bad data", () => {
     await assertFails(put("reviews", r.id, { ...r, rating: 1 }));
     await assertSucceeds(deleteDoc(doc(me(), ...path("reviews", r.id))));
   });
-  it("reviews: a hint caps the rating (cue at Good, whole hint at Hard); bad hint values rejected", async () => {
+  it("reviews: a hint caps the rating (cue at Good, whole hint at Hard, flashed answer at Again); bad hint values rejected", async () => {
     const r = (n, rating, hint) => ({ ...fx.review, id: `${fx.review.cardId}@${fx.review.reviewedAt + n}`, reviewedAt: fx.review.reviewedAt + n, rating, hint });
     await assertSucceeds(put("reviews", r(1, 3, 1).id, r(1, 3, 1)));
     await assertFails(put("reviews", r(2, 4, 1).id, r(2, 4, 1)));
     await assertSucceeds(put("reviews", r(3, 2, 2).id, r(3, 2, 2)));
     await assertFails(put("reviews", r(4, 3, 2).id, r(4, 3, 2)));
     await assertFails(put("reviews", r(5, 1, 0).id, r(5, 1, 0)));
-    await assertFails(put("reviews", r(6, 1, 3).id, r(6, 1, 3)));
+    // The recall ladder's last rung flashed the answer: only Again is allowed.
+    await assertSucceeds(put("reviews", r(6, 1, 3).id, r(6, 1, 3)));
+    await assertFails(put("reviews", r(8, 2, 3).id, r(8, 2, 3)));
+    await assertFails(put("reviews", r(9, 1, 4).id, r(9, 1, 4)));
     await assertFails(put("reviews", r(7, 1, "1").id, r(7, 1, "1")));
   });
   it("anki import: every document the importer writes is accepted", async () => {

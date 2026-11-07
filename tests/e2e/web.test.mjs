@@ -174,9 +174,11 @@ describe("core flow (local-only mode)", () => {
     assert.equal(await page.getAttribute('[data-testid=study-card]', 'data-revealed'), "false");
     assert.equal(await page.inputValue('[data-testid=type-input]'), "");
 
-    // One more hint letter, then the right word: correct, but the suggestion drops to Hard.
-    await page.click('[data-testid=more-hint]');
-    assert.equal((await page.textContent('[data-testid=answer-hint]')).trim(), target.slice(0, 2));
+    // The ladder: the letters appear by themselves (a new one every 2 s); then the right word: correct, but the best
+    // rating is Hard. (This word has one phrase at most, so the first press goes to the letters rung.)
+    await page.waitForSelector('[data-testid=ladder].awake', { timeout: 6000 });
+    await page.click('[data-testid=ladder-btn]');
+    await page.waitForFunction((t) => document.querySelector('[data-testid=answer-hint]')?.textContent?.trim() === t, target.slice(0, 2), { timeout: 6000 });
     await page.fill('[data-testid=type-input]', target);
     await page.click('[data-testid=type-check]');
     await page.waitForSelector('[data-testid=verdict]');
@@ -195,6 +197,56 @@ describe("core flow (local-only mode)", () => {
     await page.waitForSelector('[data-testid=verdict]');
     assert.match(await page.textContent('[data-testid=verdict]'), /Chưa đúng/);
     assert.match(await page.getAttribute('[data-testid=rate-1]', 'class'), /suggest/);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("recall ladder: another meaning's phrase, letters by themselves, four words flash, the flashed answer caps the rating at Again", async () => {
+    const { ctx, page, errors } = await open(browser, base);
+    await page.goto(`${base}/#/settings`);
+    await page.waitForSelector('[data-testid=tpl-cloze]');
+    await page.check('[data-testid=tpl-cloze]');
+    await page.uncheck('[data-testid=tpl-recognize]');
+    const T = Date.now() - 60_000;
+    const vocab = (id, word, vi, extra = {}) => ({ id, type: "vocab", deckId: "d1", createdAt: T, updatedAt: T, fields: { word, vi, pos: "verb", en: `${word} definition`, ...extra } });
+    const card = (noteId) => ({ id: `${noteId}.cloze`, noteId, deckId: "d1", template: "cloze", state: 0, due: T, stability: 0, difficulty: 0, scheduledDays: 0, learningSteps: 0, reps: 0, lapses: 0, createdAt: T, updatedAt: T });
+    const file = join(tmpdir(), `lexi-ladder-${process.pid}.json`);
+    writeFileSync(file, JSON.stringify({
+      app: "vhub-lexi", version: 1, exportedAt: T, decks: [{ id: "d1", name: "TOEIC", createdAt: T, updatedAt: T }],
+      notes: [
+        vocab("n1", "accommodate", "chứa được; đáp ứng", { phrases: ["accommodate 200 guests | chứa được 200 khách", "accommodate a request | đáp ứng một yêu cầu"] }),
+        vocab("n2", "negotiate", "đàm phán"), vocab("n3", "implement", "triển khai"), vocab("n4", "postpone", "hoãn lại"),
+      ],
+      cards: [card("n1")],
+    }));
+    await page.setInputFiles('[data-testid=import-file]', file);
+    await page.click('[data-testid=confirm-ok]');
+    await page.goto(`${base}/#/study`);
+    await page.waitForSelector('[data-testid=type-input]');
+    // The card asks with the first phrase (reps 0); rung 1 shows the OTHER one with the word blanked.
+    await page.click('[data-testid=ladder-btn]');
+    const phrase = await page.textContent('[data-testid=ladder-phrase]');
+    assert.match(phrase, /a request/);
+    assert.doesNotMatch(phrase, /accommodate/);
+    // Rung 2: a second letter appears by itself.
+    await page.click('[data-testid=ladder-btn]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=answer-hint]')?.textContent?.trim() === "ac", null, { timeout: 6000 });
+    // Rung 3: four words flash, can't be clicked, then are gone.
+    await page.click('[data-testid=ladder-btn]');
+    await page.waitForSelector('[data-testid=ladder-flash]');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('[data-testid=ladder-flash]')).pointerEvents), "none");
+    assert.equal((await page.$$('[data-testid=ladder-flash] b')).length, 4);
+    await page.waitForSelector('[data-testid=ladder-flash]', { state: "detached", timeout: 4000 });
+    // Rung 4: the answer flashes 0.6 s and is gone; typing it is correct but the best rating is Again.
+    await page.click('[data-testid=ladder-btn]');
+    await page.waitForSelector('[data-testid=ladder-flash]');
+    await page.waitForSelector('[data-testid=ladder-flash]', { state: "detached", timeout: 3000 });
+    assert.equal(await page.$('[data-testid=ladder-btn]'), null);
+    await page.fill('[data-testid=type-input]', "accommodate");
+    await page.click('[data-testid=type-check]');
+    await page.waitForSelector('[data-testid=verdict]');
+    assert.match(await page.getAttribute('[data-testid=rate-1]', 'class'), /suggest/);
+    await page.click('[data-testid=rate-1]');
     assert.deepEqual(errors, []);
     await ctx.close();
   });
