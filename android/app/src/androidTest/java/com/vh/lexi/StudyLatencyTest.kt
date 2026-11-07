@@ -5,6 +5,7 @@ import android.view.Choreographer
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.printToString
@@ -75,7 +76,7 @@ class StudyLatencyTest {
         rule.waitUntil(60_000) { app.data.cards.value.size >= 1200 && app.data.notes.value.size >= 600 }
     }
 
-    private fun exists(tag: String) = rule.onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty()
+    private fun exists(tag: String) = rule.onAllNodes(androidx.compose.ui.test.hasTestTag(tag), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
     /** Front of a card: flip ("Hiện đáp án") or typing ("Kiểm tra"). */
     private fun front() = exists("show-answer") || exists("type-check")
@@ -84,7 +85,9 @@ class StudyLatencyTest {
         try {
             rule.waitUntil(ms, cond)
         } catch (e: Throwable) {
-            throw AssertionError("timeout waiting for $label\n" + rule.onRoot().printToString(maxDepth = 10).take(5000), e)
+            val tree = rule.onRoot(useUnmergedTree = true).printToString(maxDepth = 30)
+            tree.chunked(3000).forEach { Log.i("LEXI_PERF", "tree for $label: $it") }
+            throw AssertionError("timeout waiting for $label", e)
         }
     }
 
@@ -122,8 +125,9 @@ class StudyLatencyTest {
         val gaps = ArrayList<Long>()
         val frames = FrameGaps()
         repeat(12) { k ->
-            // A typing card checked empty is revealed as "not remembered"; the rating path is the same.
-            rule.onNodeWithTag(if (exists("show-answer")) "show-answer" else "type-check").performClick()
+            // A typing card is revealed with "Không nhớ"; the rating path is the same.
+            if (exists("show-answer")) rule.onNodeWithTag("show-answer").performClick()
+            else rule.onNodeWithText("Không nhớ").performClick()
             waitFor("rating buttons $k", 10_000) { exists("rate-3") }
             rule.waitForIdle()
             Thread.sleep(400)
