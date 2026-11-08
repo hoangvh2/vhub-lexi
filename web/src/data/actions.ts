@@ -9,6 +9,8 @@ import { NOTE_TYPES, noteType, wantedTemplates } from "@shared/notetypes.ts";
 import type { Answer, FitResult } from "../lib/optimizer.ts";
 import type { WorkerReply, WorkerRequest } from "../lib/optimizer.worker.ts";
 import { answer, makeScheduler, newCard } from "../lib/scheduler.ts";
+import { eligibility } from "../lib/select.ts";
+import { isFreeNew, liveRecognize } from "../lib/queue.ts";
 import { cards, currentRepo, decks, notes, prefs } from "./state.ts";
 
 export const newId = () => crypto.randomUUID().replaceAll("-", "").slice(0, 20);
@@ -243,8 +245,9 @@ export async function reviewCard(card: Card, rating: Rating, durationMs: number,
     device: "web",
     ...(hint ? { hint } : {}),
   };
-  const wasNew = card.state === CardState.New;
-  const delta: DailyDelta = { id: dayId(now, p.dayStartHour), newCards: wasNew ? 1 : 0, ...(wasNew ? { deckId: card.deckId } : {}), reviews: wasNew ? 0 : 1, rating, ms: log.durationMs };
+  // The daily quota counts words: a typing card of a recognised word is answered as a review, not a new word.
+  const counted = card.state === CardState.New && !isFreeNew(card, liveRecognize(cards.get(), eligibility(notes.get())));
+  const delta: DailyDelta = { id: dayId(now, p.dayStartHour), newCards: counted ? 1 : 0, ...(counted ? { deckId: card.deckId } : {}), reviews: counted ? 0 : 1, rating, ms: log.durationMs };
   await currentRepo().commitReview(next, log, delta);
   return { prev: card, next, logId: log.id, delta };
 }

@@ -296,7 +296,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
         scope.launch {
             data.undo(last)
             buried = buried - last.prev.noteId
-            session = session.copy(answered = maxOf(0, session.answered - 1), again = maxOf(0, session.again - if (last.delta.rating == 1) 1 else 0), shown = maxOf(0, session.shown - 1), shownNew = maxOf(0, session.shownNew - last.delta.newCards), log = session.log.dropLast(1))
+            session = session.copy(answered = maxOf(0, session.answered - 1), again = maxOf(0, session.again - if (last.delta.rating == 1) 1 else 0), shown = maxOf(0, session.shown - 1), shownNew = maxOf(0, session.shownNew - if (last.prev.state == CardState.NEW) 1 else 0), log = session.log.dropLast(1))
             holder[0] = last.prev.id
             now = System.currentTimeMillis()
             busy = false
@@ -319,7 +319,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
         TodayPanel(
             cards = cards, notesById = notesById, queue = queue, daily = daily, dayStartHour = prefs.dayStartHour, newPerDay = prefs.newPerDay, now = now,
             lessons = tags.filter { isLesson(it.first) }.map { LessonProgress(it.first, startedByTag[it.first] ?: 0, it.second) },
-            newMix = newMixLabel(decks, daily.firstOrNull { it.id == dayId(now, prefs.dayStartHour) }?.newByDeck.orEmpty(), queue.newCards),
+            newMix = newMixLabel(decks, daily.firstOrNull { it.id == dayId(now, prefs.dayStartHour) }?.newByDeck.orEmpty(), queue.newCards.filter { n -> queue.freeNew.none { it.id == n.id } }),
             onStart = { started = true; holder[0] = null },
             onLesson = { t -> tag = t; aheadDays = 0; started = true; holder[0] = null },
             onImport = onImport,

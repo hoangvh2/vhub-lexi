@@ -259,6 +259,16 @@ function queueVectors() {
       mk("t7.cloze", "t7", { template: "cloze", createdAt: T0 - 3 * DAY }), mk("t7.recognize", "t7", { createdAt: T0 - 3 * DAY }),
     ],
   });
+  // The daily new quota counts words: typing cards of recognised words come on top of it (one per word), recognize cards use it.
+  scenarios.push({
+    name: "quota-counts-words", prefs: { ...DEFAULT_PREFS, newPerDay: 1, dayStartHour: 4 }, today: undefined, deckId: null, buried: [], learnAheadMs: 0, only: true,
+    extra: [
+      mk("q1.recognize", "q1", { state: CardState.Review, due: T0 + 4 * DAY, scheduledDays: 4, lastReview: T0 - 2 * DAY, createdAt: T0 - 9 * DAY }), mk("q1.listen", "q1", { template: "listen", createdAt: T0 - 9 * DAY }), mk("q1.cloze", "q1", { template: "cloze", createdAt: T0 - 9 * DAY }),
+      mk("q2.recognize", "q2", { createdAt: T0 - 5 * DAY }), mk("q2.cloze", "q2", { template: "cloze", createdAt: T0 - 5 * DAY }),
+      mk("q3.recognize", "q3", { createdAt: T0 - 4 * DAY }),
+      mk("q4.cloze", "q4", { template: "cloze", createdAt: T0 - 3 * DAY }), mk("q5.cloze", "q5", { template: "cloze", createdAt: T0 - 2 * DAY }),
+    ],
+  });
   // A word answered today keeps its review cards for tomorrow (also under review ahead); learning steps still come back.
   scenarios.push({
     name: "answered-today", prefs: { ...DEFAULT_PREFS, newPerDay: 0, dayStartHour: 4 }, today: undefined, deckId: null, buried: [], learnAheadMs: 20 * MIN, reviewAheadDays: 30,
@@ -318,7 +328,7 @@ function queueVectors() {
         if (k >= 0) list.splice(k, 1);
       }
     }
-    return { name: s.name, input: { prefs: normalizePrefs(s.prefs), today: s.today ?? null, deckId: s.deckId, buried: s.buried, learnAheadMs: s.learnAheadMs, now: T0, meanings: s.meanings ?? null, deckWeights: s.weights ?? null, noteIds: s.noteIds ?? null, reviewAheadDays: s.reviewAheadDays ?? 0 }, counts: q.counts, learning: q.learning.map((c) => c.id), review: q.review.map((c) => c.id), newCards: q.newCards.map((c) => c.id), order, cards: all };
+    return { name: s.name, input: { prefs: normalizePrefs(s.prefs), today: s.today ?? null, deckId: s.deckId, buried: s.buried, learnAheadMs: s.learnAheadMs, now: T0, meanings: s.meanings ?? null, deckWeights: s.weights ?? null, noteIds: s.noteIds ?? null, reviewAheadDays: s.reviewAheadDays ?? 0 }, counts: q.counts, learning: q.learning.map((c) => c.id), review: q.review.map((c) => c.id), newCards: q.newCards.map((c) => c.id), freeNew: q.freeNew.map((c) => c.id), order, cards: all };
   });
 }
 

@@ -59,6 +59,7 @@
    "other-deck",
    "new2"
   ],
+  "freeNew": [],
   "order": [
    "learn-due",
    "new1",
@@ -364,6 +365,7 @@
    "new1",
    "other-deck"
   ],
+  "freeNew": [],
   "order": [
    "learn-due",
    "new1",
@@ -662,6 +664,7 @@
    "other-deck",
    "new3"
   ],
+  "freeNew": [],
   "order": [
    "learn-due",
    "new1",
@@ -951,6 +954,7 @@
   "newCards": [
    "other-deck"
   ],
+  "freeNew": [],
   "order": [
    "other-deck"
   ],
@@ -1242,6 +1246,7 @@
   "newCards": [
    "new1"
   ],
+  "freeNew": [],
   "order": [
    "new1",
    "rev-over"
@@ -1531,6 +1536,7 @@
    "rev-tomorrow"
   ],
   "newCards": [],
+  "freeNew": [],
   "order": [
    "learn-due",
    "rev-over",
@@ -1868,6 +1874,7 @@
    "syn-other",
    "syn-near-settled"
   ],
+  "freeNew": [],
   "order": [
    "learn-due",
    "new1",
@@ -2366,6 +2373,7 @@
    "o2.recall",
    "o3.cloze"
   ],
+  "freeNew": [],
   "order": [
    "learn-due",
    "new1",
@@ -2753,16 +2761,19 @@
   "learning": [],
   "review": [],
   "newCards": [
-   "t3.recall",
    "t5.cloze",
    "t6.cloze",
-   "t7.recognize"
+   "t7.recognize",
+   "t3.recall"
+  ],
+  "freeNew": [
+   "t3.recall"
   ],
   "order": [
-   "t3.recall",
    "t5.cloze",
    "t6.cloze",
-   "t7.recognize"
+   "t7.recognize",
+   "t3.recall"
   ],
   "cards": [
    {
@@ -2997,6 +3008,198 @@
   ]
  },
  {
+  "name": "quota-counts-words",
+  "input": {
+   "prefs": {
+    "desiredRetention": 0.9,
+    "newPerDay": 1,
+    "maxReviewsPerDay": 200,
+    "templates": {
+     "vocab": [
+      "recognize",
+      "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
+     ]
+    },
+    "layout": {
+     "showIpa": true,
+     "showPos": true,
+     "showEn": true,
+     "showVi": true,
+     "showExamples": true,
+     "showMnemonic": true
+    },
+    "autoSpeak": "off",
+    "theme": "system",
+    "accent": "teal",
+    "aiEnabled": true,
+    "dayStartHour": 4,
+    "updatedAt": 0
+   },
+   "today": null,
+   "deckId": null,
+   "buried": [],
+   "learnAheadMs": 0,
+   "now": 1768465800000,
+   "meanings": null,
+   "deckWeights": null,
+   "noteIds": null,
+   "reviewAheadDays": 0
+  },
+  "counts": {
+   "new": 2,
+   "learning": 0,
+   "review": 0
+  },
+  "learning": [],
+  "review": [],
+  "newCards": [
+   "q2.recognize",
+   "q1.cloze"
+  ],
+  "freeNew": [
+   "q1.cloze"
+  ],
+  "order": [
+   "q2.recognize",
+   "q1.cloze"
+  ],
+  "cards": [
+   {
+    "id": "q1.recognize",
+    "noteId": "q1",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 2,
+    "due": 1768811400000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 4,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000,
+    "lastReview": 1768293000000
+   },
+   {
+    "id": "q1.listen",
+    "noteId": "q1",
+    "deckId": "d1",
+    "template": "listen",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "q1.cloze",
+    "noteId": "q1",
+    "deckId": "d1",
+    "template": "cloze",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "q2.recognize",
+    "noteId": "q2",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768033800000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "q2.cloze",
+    "noteId": "q2",
+    "deckId": "d1",
+    "template": "cloze",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768033800000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "q3.recognize",
+    "noteId": "q3",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768120200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "q4.cloze",
+    "noteId": "q4",
+    "deckId": "d1",
+    "template": "cloze",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768206600000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "q5.cloze",
+    "noteId": "q5",
+    "deckId": "d1",
+    "template": "cloze",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768293000000,
+    "updatedAt": 1768465800000
+   }
+  ]
+ },
+ {
   "name": "answered-today",
   "input": {
    "prefs": {
@@ -3057,6 +3260,7 @@
    "h2.recognize"
   ],
   "newCards": [],
+  "freeNew": [],
   "order": [
    "learn-due",
    "rev-over",
@@ -3464,6 +3668,7 @@
    "dA3",
    "dA4"
   ],
+  "freeNew": [],
   "order": [
    "dA0",
    "dB0",
@@ -4308,6 +4513,7 @@
    "dA2",
    "dB2"
   ],
+  "freeNew": [],
   "order": [
    "dA0",
    "dB0",
@@ -5157,6 +5363,7 @@
    "dA4",
    "dA5"
   ],
+  "freeNew": [],
   "order": [
    "dA0",
    "dB0",
@@ -5837,6 +6044,7 @@
    "dC0",
    "dD0"
   ],
+  "freeNew": [],
   "order": [
    "dB0",
    "dC0",
@@ -6686,6 +6894,7 @@
    "dB1",
    "dC1"
   ],
+  "freeNew": [],
   "order": [
    "dB0",
    "dC0",
@@ -7523,6 +7732,7 @@
    "dC0",
    "dD0"
   ],
+  "freeNew": [],
   "order": [
    "dA0",
    "dB0",
@@ -8368,6 +8578,7 @@
    "dA2",
    "dA3"
   ],
+  "freeNew": [],
   "order": [
    "dA0",
    "dA1",

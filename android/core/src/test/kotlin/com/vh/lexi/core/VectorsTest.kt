@@ -184,6 +184,7 @@ class QueueVectorsTest {
             assertEquals(s.getJSONArray("learning").strings(), q.learning.map { it.id }, "$name learning")
             assertEquals(s.getJSONArray("review").strings(), q.review.map { it.id }, "$name review")
             assertEquals(s.getJSONArray("newCards").strings(), q.newCards.map { it.id }, "$name new")
+            assertEquals(s.getJSONArray("freeNew").strings(), q.freeNew.map { it.id }, "$name free")
             val c = s.getJSONObject("counts")
             assertEquals(Counts(c.getInt("new"), c.getInt("learning"), c.getInt("review")), q.counts, "$name counts")
 

@@ -7,6 +7,9 @@ import com.vh.lexi.core.CardState
 import com.vh.lexi.core.Daily
 import com.vh.lexi.core.DailyDelta
 import com.vh.lexi.core.Deck
+import com.vh.lexi.core.isFreeNew
+import com.vh.lexi.core.liveRecognize
+import com.vh.lexi.ui.eligibility
 import com.vh.lexi.core.FieldValue
 import com.vh.lexi.core.HintLog
 import com.vh.lexi.core.Id
@@ -297,8 +300,9 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
             stability = next.stability, difficulty = next.difficulty, scheduledDays = next.scheduledDays, reviewedAt = now, durationMs = dur,
             hint = hint.coerceIn(0, 3),
         )
-        val wasNew = card.state == CardState.NEW
-        val delta = DailyDelta(dayId(now, p.dayStartHour), if (wasNew) 1 else 0, if (wasNew) 0 else 1, rating, dur, if (wasNew) card.deckId else null)
+        // The daily quota counts words: a typing card of a recognised word is answered as a review, not a new word.
+        val counted = card.state == CardState.NEW && !isFreeNew(card, liveRecognize(cards.value, eligibility(notes.value.associateBy { it.id })))
+        val delta = DailyDelta(dayId(now, p.dayStartHour), if (counted) 1 else 0, if (counted) 0 else 1, rating, dur, if (counted) card.deckId else null)
         db.withTransaction {
             val day = (dao.get(Col.DAILY, delta.id)?.let { dailyFromDoc(parseDoc(it.json)) } ?: Daily(delta.id)).apply(delta, 1, now)
             write(listOf(DocRow(Col.CARDS, next.id, next.toDoc().toJsonString()), DocRow(Col.REVIEWS, log.id, log.toDoc().toJsonString()), DocRow(Col.DAILY, day.id, day.toDoc().toJsonString())))
