@@ -72,7 +72,7 @@ class SmokeTest {
             rule.waitUntil(10_000, cond)
         } catch (e: Throwable) {
             shot("fail-$label")
-            throw AssertionError("timeout waiting for $label\n" + rule.onRoot().printToString(maxDepth = 12).take(6000), e)
+            throw AssertionError("timeout waiting for $label\n" + rule.onAllNodes(androidx.compose.ui.test.isRoot()).printToString(maxDepth = 12).take(6000), e)
         }
     }
 
@@ -285,7 +285,8 @@ class SmokeTest {
         shot("07g-note-view-trap")
         rule.onNodeWithTag("view-schedule").performScrollTo()
         shot("07h-note-view-trap-bottom")
-        rule.onNodeWithTag("view-cover").performClick()
+        // The switch scrolled out of sight with the schedule: bring it back before tapping it.
+        rule.onNodeWithTag("view-cover").performScrollTo().performClick()
         waitFor("trap-covered") { rule.onAllNodesWithTextCount("The company offers a _____ salary to new engineers.") > 0 }
         assertEquals(0, rule.onAllNodesWithTagCount("example-wrong", unmerged = true))
         shot("07i-note-view-trap-covered")

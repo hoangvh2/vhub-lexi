@@ -2,6 +2,7 @@ package com.vh.lexi.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -104,8 +105,8 @@ fun NoteViewScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            decks.firstOrNull { it.id == note.deckId }?.name?.let { Chip(it, Modifier.weight(1f, fill = false)) }
-                            Spacer(Modifier.weight(1f))
+                            // The deck chip takes the room the switch leaves and shortens only a long name.
+                            Box(Modifier.weight(1f)) { decks.firstOrNull { it.id == note.deckId }?.name?.let { Chip(it) } }
                             val label = if (note.type == "vocab") "Che nghĩa" else "Che đáp án"
                             Surface(
                                 onClick = { onCover(!covered) }, shape = CircleShape, color = if (covered) c.accent else c.surface2,
