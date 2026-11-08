@@ -285,7 +285,12 @@ fun BlocksView(
 @Composable
 fun ScreenHeader(title: String, trailing: @Composable () -> Unit = {}) {
     Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        // One line, never broken inside a word: on a narrow phone the trailing buttons used to squeeze "Thư viện" to a
+        // letter per line. The title keeps its own width and a too-long one shortens with "…".
+        Text(
+            title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f).testTag("screen-title"),
+        )
         trailing()
     }
 }

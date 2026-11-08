@@ -292,6 +292,10 @@ class SmokeTest {
         val rowHeight = with(rule.density) { rule.onNodeWithTag("lib-deck-row").fetchSemanticsNode().size.height.toDp() }
         shot("07j-library-long-deck")
         assertTrue("deck row is $rowHeight high", rowHeight < 64.dp)
+        // The header title stays on one line next to the count and buttons (it used to wrap a letter per line at 320dp).
+        val titleHeight = with(rule.density) { rule.onNodeWithTag("screen-title").fetchSemanticsNode().size.height.toDp() }
+        assertTrue("library title is $titleHeight high", titleHeight < 48.dp)
+        rule.onNodeWithTag("lib-new-deck").assertIsDisplayed()
         rule.onNodeWithText(longDeck, substring = true).performClick()
         rule.onNodeWithText("Tất cả bộ thẻ").performClick()
         waitFor("trap-row") { rule.onAllNodesWithTextCount(title) > 0 }

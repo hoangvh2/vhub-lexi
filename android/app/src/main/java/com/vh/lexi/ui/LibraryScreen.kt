@@ -40,6 +40,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.ui.Alignment
@@ -154,7 +155,10 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
         ScreenHeader("Thư viện") {
             Pill("${notes.count { isMaterial(it) }} từ")
             TextButton(onClick = { selecting = !selecting; selected = emptySet() }, Modifier.testTag("lib-select")) { Text(if (selecting) "Xong" else "Chọn") }
-            OutlinedButton(onClick = { deckDialog = null to "" }) { Text("+ Bộ thẻ", fontSize = 13.sp) }
+            // An icon, not "+ Bộ thẻ": with the count and "Chọn" it left the title too little room on a 320dp phone.
+            androidx.compose.material3.IconButton(onClick = { deckDialog = null to "" }, modifier = Modifier.testTag("lib-new-deck")) {
+                Icon(Icons.Filled.CreateNewFolder, contentDescription = "Thêm bộ thẻ")
+            }
         }
         OutlinedTextField(value = q, onValueChange = { q = it }, singleLine = true, placeholder = { Text("Tìm từ, nghĩa, ví dụ…") }, modifier = Modifier.fillMaxWidth())
         // A long deck name must shorten itself: it used to squeeze the sort button onto two lines and "Sửa bộ thẻ"
