@@ -54,7 +54,9 @@ import com.vh.lexi.core.CardState
 import com.vh.lexi.core.Deck
 import com.vh.lexi.core.NewShare
 import com.vh.lexi.core.ShareMode
+import com.vh.lexi.core.awaitingRecognize
 import com.vh.lexi.core.dailyShares
+import com.vh.lexi.core.introducible
 import com.vh.lexi.core.percents
 import com.vh.lexi.core.rankWeights
 import com.vh.lexi.core.setPercent
@@ -334,7 +336,8 @@ private fun DeckShare(app: LexiApp, newPerDay: Int) {
     // Words each deck still has (notes with a new card), so the preview shows what a full day would really give.
     val eligible = remember(notes) { eligibility(notes.associateBy { it.id }) }
     val left = remember(cards, eligible) {
-        cards.filter { it.state == CardState.NEW && !it.suspended && eligible(it) }.groupBy({ it.deckId }, { it.noteId }).mapValues { it.value.toSet().size }
+        val waiting = awaitingRecognize(cards, eligible)
+        cards.filter { it.state == CardState.NEW && !it.suspended && eligible(it) && introducible(it, waiting) }.groupBy({ it.deckId }, { it.noteId }).mapValues { it.value.toSet().size }
     }
     val words = dailyShares(newPerDay, rows.map { NewShare(it.id, it.newWeight ?: 1, left[it.id] ?: 0) })
 

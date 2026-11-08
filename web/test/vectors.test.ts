@@ -245,6 +245,20 @@ function queueVectors() {
       mk("o3.cloze", "o3", { template: "cloze", createdAt: T0 + 22 }), mk("o3.custom", "o3", { template: "custom", createdAt: T0 + 22 }),
     ],
   });
+  // A word is typed only once recognised: typing cards wait while recognize is new/learning/relearning or was answered
+  // today; recognize in Review since an earlier day, suspended, or missing lets them through.
+  scenarios.push({
+    name: "typing-waits-for-recognize", prefs: { ...DEFAULT_PREFS, newPerDay: 10, dayStartHour: 4 }, today: undefined, deckId: null, buried: [], learnAheadMs: 0, only: true,
+    extra: [
+      mk("t1.recognize", "t1", { state: CardState.Learning, due: T0 + 2 * HOUR, lastReview: T0 - 2 * DAY, createdAt: T0 - 9 * DAY }), mk("t1.cloze", "t1", { template: "cloze", createdAt: T0 - 9 * DAY }),
+      mk("t2.recognize", "t2", { state: CardState.Review, due: T0 + 2 * DAY, scheduledDays: 2, lastReview: T0 - 10 * MIN, createdAt: T0 - 8 * DAY }), mk("t2.recall", "t2", { template: "recall", createdAt: T0 - 8 * DAY }),
+      mk("t3.recognize", "t3", { state: CardState.Review, due: T0 + 2 * DAY, scheduledDays: 3, lastReview: T0 - DAY, createdAt: T0 - 7 * DAY }), mk("t3.listen", "t3", { template: "listen", createdAt: T0 - 7 * DAY }), mk("t3.recall", "t3", { template: "recall", createdAt: T0 - 7 * DAY }),
+      mk("t4.recognize", "t4", { state: CardState.Relearning, due: T0 + 2 * HOUR, lastReview: T0 - 2 * DAY, createdAt: T0 - 6 * DAY }), mk("t4.recall", "t4", { template: "recall", createdAt: T0 - 6 * DAY }),
+      mk("t5.recognize", "t5", { suspended: true, createdAt: T0 - 5 * DAY }), mk("t5.cloze", "t5", { template: "cloze", createdAt: T0 - 5 * DAY }),
+      mk("t6.cloze", "t6", { template: "cloze", createdAt: T0 - 4 * DAY }),
+      mk("t7.cloze", "t7", { template: "cloze", createdAt: T0 - 3 * DAY }), mk("t7.recognize", "t7", { createdAt: T0 - 3 * DAY }),
+    ],
+  });
   // A word answered today keeps its review cards for tomorrow (also under review ahead); learning steps still come back.
   scenarios.push({
     name: "answered-today", prefs: { ...DEFAULT_PREFS, newPerDay: 0, dayStartHour: 4 }, today: undefined, deckId: null, buried: [], learnAheadMs: 20 * MIN, reviewAheadDays: 30,
