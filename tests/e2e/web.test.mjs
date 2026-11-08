@@ -317,8 +317,9 @@ describe("core flow (local-only mode)", () => {
     writeFileSync(file, JSON.stringify({
       app: "vhub-lexi", version: 1, exportedAt: T, decks: [{ id: "d1", name: "600", createdAt: T, updatedAt: T }],
       notes: [vocab("n1", "contract", "lesson-01"), vocab("n2", "warranty", "lesson-02"), vocab("n3", "invoice", "lesson-02")],
-      // contract and warranty are due now; invoice 24 h from now, which always falls in the next study day.
-      cards: [card("n1", {}), card("n2", {}), card("n3", { due: T + D })],
+      // contract and warranty are due now; invoice a little over 24 h from now, which always falls in the next study day
+      // (the day starts at most 24 h away; with exactly 24 h minus the minute in T, a run just after 04:00 counted it as today).
+      cards: [card("n1", {}), card("n2", {}), card("n3", { due: T + D + 120_000 })],
       reviews: [1, 3].map((rating, i) => ({ id: `n1.recognize@${T - (10 - i * 5) * D}`, cardId: "n1.recognize", noteId: "n1", deckId: "d1", rating, state: 2, stability: 5, difficulty: 5, scheduledDays: 5, reviewedAt: T - (10 - i * 5) * D, durationMs: 3000, device: "anki" })),
       daily: [],
     }));
