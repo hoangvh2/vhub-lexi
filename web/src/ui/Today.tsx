@@ -99,8 +99,7 @@ export function Today() {
   // New words per deck today: what was already learned plus what is still waiting in the queue.
   const mix = useMemo(() => {
     const n = new Map<string, number>(Object.entries(today?.newByDeck ?? {}));
-    const free = new Set(queue.freeNew.map((c) => c.id));
-    for (const c of queue.newCards) if (!free.has(c.id)) n.set(c.deckId, (n.get(c.deckId) ?? 0) + 1);
+    for (const c of queue.newCards) n.set(c.deckId, (n.get(c.deckId) ?? 0) + 1);
     return allDecks.filter((d) => (n.get(d.id) ?? 0) > 0).map((d) => ({ id: d.id, name: d.name, n: n.get(d.id) ?? 0 })).sort((a, b) => b.n - a.n);
   }, [today, queue, allDecks]);
   const tomorrow = forecast(allCards, now, p.dayStartHour, 2)[1] ?? 0;

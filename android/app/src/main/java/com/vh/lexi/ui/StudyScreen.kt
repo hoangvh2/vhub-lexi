@@ -109,7 +109,9 @@ import com.vh.lexi.core.dayId
 import com.vh.lexi.core.dueWithin
 import com.vh.lexi.core.streak
 import com.vh.lexi.core.tagCounts
+import com.vh.lexi.core.isFreeNew
 import com.vh.lexi.core.isLeech
+import com.vh.lexi.core.liveRecognize
 import com.vh.lexi.core.isMaterial
 import com.vh.lexi.core.isLesson
 import com.vh.lexi.core.lessonTitle
@@ -205,6 +207,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
     }
     val tagNotes = remember(notes, tag) { tag?.let { t -> notes.filter { t in it.tags }.map { it.id }.toSet() } }
     val eligible = remember(notesById) { eligibility(notesById) }
+    val liveNotes = remember(cards, eligible) { liveRecognize(cards, eligible) }
     val queue = remember(cards, notesById, meanings, decks, daily, prefs, now, deckId, buried, extraNew, ahead, tagNotes, aheadDays) {
         buildQueue(
             QueueInput(
@@ -275,13 +278,12 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
         }
         busy = true
         val dur = System.currentTimeMillis() - shownAt
-        val wasNew = c.state == CardState.NEW
         val answered = note?.let { Answered(it.id, it.fields["word"].str().ifEmpty { it.fields["answer"].str() }.ifEmpty { it.fields["title"].str() }, it.fields["vi"].str(), r) }
         scope.launch {
             val res = data.review(c, r, dur, hint = hint)
             history.add(res); if (history.size > 10) history.removeAt(0)
             buried = buried + c.noteId
-            session = Session(session.answered + 1, session.again + if (r == 1) 1 else 0, session.ms + minOf(dur, 120_000), session.shown + 1, session.shownNew + if (wasNew) 1 else 0, if (answered != null) session.log + answered else session.log)
+            session = Session(session.answered + 1, session.again + if (r == 1) 1 else 0, session.ms + minOf(dur, 120_000), session.shown + 1, session.shownNew + res.delta.newCards.toInt(), if (answered != null) session.log + answered else session.log)
             holder[0] = null
             now = System.currentTimeMillis()
             busy = false
@@ -296,7 +298,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
         scope.launch {
             data.undo(last)
             buried = buried - last.prev.noteId
-            session = session.copy(answered = maxOf(0, session.answered - 1), again = maxOf(0, session.again - if (last.delta.rating == 1) 1 else 0), shown = maxOf(0, session.shown - 1), shownNew = maxOf(0, session.shownNew - if (last.prev.state == CardState.NEW) 1 else 0), log = session.log.dropLast(1))
+            session = session.copy(answered = maxOf(0, session.answered - 1), again = maxOf(0, session.again - if (last.delta.rating == 1) 1 else 0), shown = maxOf(0, session.shown - 1), shownNew = maxOf(0, session.shownNew - last.delta.newCards.toInt()), log = session.log.dropLast(1))
             holder[0] = last.prev.id
             now = System.currentTimeMillis()
             busy = false
@@ -319,7 +321,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
         TodayPanel(
             cards = cards, notesById = notesById, queue = queue, daily = daily, dayStartHour = prefs.dayStartHour, newPerDay = prefs.newPerDay, now = now,
             lessons = tags.filter { isLesson(it.first) }.map { LessonProgress(it.first, startedByTag[it.first] ?: 0, it.second) },
-            newMix = newMixLabel(decks, daily.firstOrNull { it.id == dayId(now, prefs.dayStartHour) }?.newByDeck.orEmpty(), queue.newCards.filter { n -> queue.freeNew.none { it.id == n.id } }),
+            newMix = newMixLabel(decks, daily.firstOrNull { it.id == dayId(now, prefs.dayStartHour) }?.newByDeck.orEmpty(), queue.newCards),
             onStart = { started = true; holder[0] = null },
             onLesson = { t -> tag = t; aheadDays = 0; started = true; holder[0] = null },
             onImport = onImport,
@@ -330,7 +332,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
     val c = Lexi.colors
     val total = queue.counts.new + queue.counts.learning + queue.counts.review
     val doneFrac = if (session.answered + total == 0) 1f else session.answered.toFloat() / (session.answered + total)
-    val kind = card?.let { if (it.state == CardState.NEW) "new" else if (it.state == CardState.REVIEW) "review" else "learn" }
+    val kind = card?.let { c0 -> if (queue.freeNew.any { it.id == c0.id }) "review" else if (c0.state == CardState.NEW) "new" else if (c0.state == CardState.REVIEW) "review" else "learn" }
     // The hint spells out the word being learned, not the inflected form a cloze sentence uses (sail, not sailed).
     val target = typingTarget(if (shown != null && tpl != null) tpl.expected(shown) else emptyList())
     val answer = target.word
@@ -378,7 +380,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
                     streak = streak(daily, now, prefs.dayStartHour), dueTomorrow = dueWithin(cards, eligible, now, prefs.dayStartHour, 1, deckId, tagNotes),
                     nextLesson = nextLesson, onLesson = { t -> tag = t; aheadDays = 0; holder[0] = null },
                     session = session, waitingMs = cards.filter { (it.state == CardState.LEARNING || it.state == CardState.RELEARNING) && !it.suspended && it.due > now && (deckId == null || it.deckId == deckId) }.minOfOrNull { it.due }?.let { it - now },
-                    hasMoreNew = cards.any { it.state == CardState.NEW && !it.suspended && eligible(it) && (deckId == null || it.deckId == deckId) && (tagNotes == null || it.noteId in tagNotes) }, canUndo = history.isNotEmpty(),
+                    hasMoreNew = cards.any { it.state == CardState.NEW && !it.suspended && eligible(it) && !isFreeNew(it, liveNotes) && (deckId == null || it.deckId == deckId) && (tagNotes == null || it.noteId in tagNotes) }, canUndo = history.isNotEmpty(),
                     aheadCount = answeredToday(cards, now, prefs.dayStartHour).let { done -> dueWithin(cards, eligible, now, prefs.dayStartHour, aheadDays + 1, deckId, tagNotes, skip = done) - dueWithin(cards, eligible, now, prefs.dayStartHour, aheadDays, deckId, tagNotes, skip = done) },
                     onContinue = { ahead = DAY_MS; holder[0] = null }, onMore = { extraNew += 5; holder[0] = null }, onAhead = { aheadDays += 1; holder[0] = null }, onUndo = ::undo, onAdd = onAdd,
                 )

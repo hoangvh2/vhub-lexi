@@ -2754,26 +2754,27 @@
    "reviewAheadDays": 0
   },
   "counts": {
-   "new": 4,
+   "new": 3,
    "learning": 0,
-   "review": 0
+   "review": 1
   },
   "learning": [],
-  "review": [],
+  "review": [
+   "t3.recall"
+  ],
   "newCards": [
    "t5.cloze",
    "t6.cloze",
-   "t7.recognize",
-   "t3.recall"
+   "t7.recognize"
   ],
   "freeNew": [
    "t3.recall"
   ],
   "order": [
    "t5.cloze",
+   "t3.recall",
    "t6.cloze",
-   "t7.recognize",
-   "t3.recall"
+   "t7.recognize"
   ],
   "cards": [
    {
@@ -3050,15 +3051,16 @@
    "reviewAheadDays": 0
   },
   "counts": {
-   "new": 2,
+   "new": 1,
    "learning": 0,
-   "review": 0
+   "review": 1
   },
   "learning": [],
-  "review": [],
-  "newCards": [
-   "q2.recognize",
+  "review": [
    "q1.cloze"
+  ],
+  "newCards": [
+   "q2.recognize"
   ],
   "freeNew": [
    "q1.cloze"

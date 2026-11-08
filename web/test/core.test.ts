@@ -130,15 +130,20 @@ describe("queue", () => {
     expect(reopened.newCards.map((c) => c.id)).toEqual(["o.recognize"]);
     // Graduated to Review today: the typing cards still wait for the next study day.
     const graduated = { ...learning, state: CardState.Review, scheduledDays: 2, due: T0 + 2 * DAY, lastReview: T0 + 10 * 60_000 };
-    expect(buildQueue({ ...base, cards: [graduated, clz, rcl], now: T0 + 20 * 60_000 }).newCards).toEqual([]);
-    // Next study day: one typing card (recall first), the other the session after.
-    expect(buildQueue({ ...base, cards: [graduated, clz, rcl], now: nextDayStart(T0, 4) + 60_000 }).newCards.map((c) => c.id)).toEqual(["w.recall"]);
+    const noTyping = buildQueue({ ...base, cards: [graduated, clz, rcl], now: T0 + 20 * 60_000 });
+    expect([...noTyping.newCards, ...noTyping.review]).toEqual([]);
+    // Next study day: one typing card (recall first), the other the session after. It is a review, not a new word.
+    const nextDay = buildQueue({ ...base, cards: [graduated, clz, rcl], now: nextDayStart(T0, 4) + 60_000 });
+    expect(nextDay.review.map((c) => c.id)).toEqual(["w.recall"]);
+    expect(nextDay.newCards).toEqual([]);
     // Still learning tomorrow (rated Again, or lapsed into relearning): the word is not recognised yet, typing waits.
-    expect(buildQueue({ ...base, cards: [{ ...learning, lastReview: T0 - DAY }, clz], now: nextDayStart(T0, 4) + 60_000 }).newCards).toEqual([]);
+    const stillLearning = buildQueue({ ...base, cards: [{ ...learning, lastReview: T0 - DAY }, clz], now: nextDayStart(T0, 4) + 60_000 });
+    expect([...stillLearning.newCards, ...stillLearning.review]).toEqual([]);
     const lapsed = { ...graduated, state: CardState.Relearning, due: nextDayStart(T0, 4) + DAY, lastReview: T0 - DAY };
-    expect(buildQueue({ ...base, cards: [lapsed, clz], now: nextDayStart(T0, 4) + 60_000 }).newCards).toEqual([]);
+    const relearn = buildQueue({ ...base, cards: [lapsed, clz], now: nextDayStart(T0, 4) + 60_000 });
+    expect([...relearn.newCards, ...relearn.review]).toEqual([]);
   });
-  it("typing cards of recognised words do not use the daily new quota; only recognize cards (new words) do", () => {
+  it("only a word's recognize card is \"new\": typing cards of recognised words are reviews and never use the daily new quota", () => {
     const rev = (id: string, noteId: string, over: Partial<Card> = {}) => mk(id, noteId, { state: CardState.Review, due: T0 + 5 * DAY, scheduledDays: 5, lastReview: T0 - 3 * DAY, createdAt: T0 - 9 * DAY, ...over });
     const cards = [
       // Two recognised words with typing cards waiting, plus three brand-new words, quota 2.
@@ -147,14 +152,19 @@ describe("queue", () => {
       mk("n1.recognize", "n1", { createdAt: T0 + 1 }), mk("n2.recognize", "n2", { createdAt: T0 + 2 }), mk("n3.recognize", "n3", { createdAt: T0 + 3 }),
     ];
     const q = buildQueue({ ...base, cards, prefs: { ...DEFAULT_PREFS, newPerDay: 2 } });
-    // Two new words by quota, then one typing card per recognised word (recall before cloze), on top of the quota.
-    expect(q.newCards.map((c) => c.id)).toEqual(["n1.recognize", "n2.recognize", "a.recall", "b.cloze"]);
+    // Exactly the quota of new words; one typing card per recognised word (recall before cloze) listed as a review.
+    expect(q.newCards.map((c) => c.id)).toEqual(["n1.recognize", "n2.recognize"]);
+    expect(q.review.map((c) => c.id)).toEqual(["a.recall", "b.cloze"]);
     expect(q.freeNew.map((c) => c.id)).toEqual(["a.recall", "b.cloze"]);
-    expect(q.counts.new).toBe(4);
-    // Quota used up: typing cards still come, new words stop.
+    expect(q.counts).toEqual({ new: 2, learning: 0, review: 2 });
+    // Quota used up: typing cards still come as reviews, new words stop.
     const today = { id: "x", newCards: 2, reviews: 0, again: 0, hard: 0, good: 0, easy: 0, ms: 0, updatedAt: 0 };
-    expect(buildQueue({ ...base, cards, prefs: { ...DEFAULT_PREFS, newPerDay: 2 }, today }).newCards.map((c) => c.id)).toEqual(["a.recall", "b.cloze"]);
-    // Without a live recognize card every card counts, as before.
+    const full = buildQueue({ ...base, cards, prefs: { ...DEFAULT_PREFS, newPerDay: 2 }, today });
+    expect(full.newCards).toEqual([]);
+    expect(full.review.map((c) => c.id)).toEqual(["a.recall", "b.cloze"]);
+    // The daily review cap applies to them, after the due reviews.
+    expect(buildQueue({ ...base, cards, prefs: { ...DEFAULT_PREFS, newPerDay: 2, maxReviewsPerDay: 1 } }).review.map((c) => c.id)).toEqual(["a.recall"]);
+    // Without a live recognize card every card counts as new, as before.
     const noRec = buildQueue({ ...base, cards: [mk("c.cloze", "c", { template: "cloze" }), mk("d.cloze", "d", { template: "cloze" })], prefs: { ...DEFAULT_PREFS, newPerDay: 1 } });
     expect(noRec.freeNew).toEqual([]);
     expect(noRec.newCards).toHaveLength(1);
