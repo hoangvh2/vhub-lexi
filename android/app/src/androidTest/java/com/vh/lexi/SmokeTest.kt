@@ -37,6 +37,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.test.uiautomator.UiDevice
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.ui.MainActivity
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -192,6 +193,7 @@ class SmokeTest {
         rule.onNodeWithTag("nav-library").performClick()
         waitFor("library-item") { rule.onAllNodesWithTextCount("serendipity") > 0 }
         shot("07-library")
+        moveChosenWordsToAnotherDeck()
 
         // Edit dialog: the form is taller than the dialog, so its last field must be reachable by scrolling, and
         // with the keyboard open that field and the buttons must stay above the keyboard.
@@ -351,6 +353,31 @@ class SmokeTest {
         rule.onNodeWithTag("today-watch").performScrollTo()
         assertTrue(rule.textOf("today-watch"), rule.textOf("today-watch").contains("quên 4"))
         shot("15-today-watch")
+    }
+
+    /** Library: choose a word, "Chuyển bộ" to a new deck; the note and its cards move, the reviewed card keeps its schedule. */
+    private fun moveChosenWordsToAnotherDeck() {
+        val app = rule.activity.application as LexiApp
+        val before = app.data.cards.value.filter { app.data.notes.value.first { n -> n.id == it.noteId }.fields["word"] == FieldValue.Text("serendipity") }
+        assertTrue("cards of serendipity", before.isNotEmpty())
+        rule.onNodeWithTag("lib-select").performClick()
+        rule.onNodeWithText("serendipity").performClick()
+        rule.onNodeWithTag("bulk-move").performClick()
+        // Its only deck is the one it is in, so the dialog starts on "+ Bộ thẻ mới…".
+        waitFor("move-dialog") { rule.onAllNodesWithTagCount("move-name") > 0 }
+        rule.onNodeWithTag("move-name").performTextInput("Ôn lại")
+        hideKeyboard()
+        shot("07c-move-dialog")
+        rule.onNodeWithTag("move-start").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("moved") { app.data.decks.value.any { it.name == "Ôn lại" } && app.data.notes.value.any { n -> app.data.decks.value.any { it.name == "Ôn lại" && it.id == n.deckId } } }
+        val target = app.data.decks.value.first { it.name == "Ôn lại" }.id
+        waitFor("cards-moved") { app.data.cards.value.filter { c -> before.any { it.id == c.id } }.all { it.deckId == target } }
+        for (old in before) {
+            val now = app.data.cards.value.first { it.id == old.id }
+            assertEquals(old.copy(deckId = target, updatedAt = now.updatedAt), now)
+        }
+        waitFor("library-shows-new-deck") { rule.onAllNodesWithTextCount("Ôn lại") > 0 && rule.onAllNodesWithTagCount("bulk-bar") == 0 }
+        shot("07d-moved")
     }
 
     /**
