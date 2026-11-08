@@ -1,0 +1,1657 @@
+{
+ "id": "grammar-toeic",
+ "version": 1,
+ "prefix": "seed-gt-",
+ "deck": {
+  "id": "seed-gt",
+  "name": "Ngữ pháp TOEIC"
+ },
+ "createdAt": 1794096000000,
+ "notes": [
+  {
+   "id": "seed-gt-adj-before-noun",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Từ loại",
+    "title": "Tính từ đứng trước danh từ",
+    "ask": "Chỗ trống nằm giữa a/the/our/its… và một danh từ thì cần từ loại gì?",
+    "signals": "a / an / the / our / its + ___ + danh từ",
+    "rule": "Giữa từ hạn định (a, the, this, our, its…) và danh từ là chỗ của TÍNH TỪ. Trạng từ không bổ nghĩa cho danh từ.",
+    "formula": "(a/the/our) + (trạng từ) + TÍNH TỪ + danh từ",
+    "tip": "Thấy \"___ + danh từ\" → tìm đuôi tính từ: -ive, -able, -ful, -al, -ous, -ent/-ant, -ic.",
+    "items": [
+     "The company offers a [competitive] salary to new engineers. | competitively / competition / compete | Công ty trả mức lương cạnh tranh cho kỹ sư mới.",
+     "Ms. Tran gave a [detailed] explanation of the new policy. | detail / detailing / details | Bà Trần đã giải thích chi tiết về chính sách mới.",
+     "Our [reliable] suppliers deliver every Monday. | reliably / reliance / rely | Các nhà cung cấp đáng tin cậy của chúng tôi giao hàng mỗi thứ Hai.",
+     "The hotel is known for its [attentive] staff. | attentively / attention / attend | Khách sạn nổi tiếng với đội ngũ nhân viên chu đáo.",
+     "Please submit an [accurate] record of your travel expenses. | accurately / accuracy / accuracies | Vui lòng nộp bản ghi chính xác về chi phí đi lại.",
+     "The new software has an [extensive] range of features. | extensively / extend / extension | Phần mềm mới có rất nhiều tính năng."
+    ],
+    "why": [
+     "Trạng từ (-ly): chỉ bổ nghĩa cho động từ, tính từ hoặc cả câu, không cho danh từ.",
+     "Danh từ: hai danh từ đứng liền chỉ đúng khi là danh từ ghép có sẵn (safety rules).",
+     "Động từ: một cụm danh từ không chứa động từ chia."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-tu-loai"
+   ]
+  },
+  {
+   "id": "seed-gt-adv-verb",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Từ loại",
+    "title": "Trạng từ bổ nghĩa cho động từ",
+    "ask": "Câu đã đủ chủ ngữ + động từ (+ tân ngữ); chỗ trống chen giữa trợ động từ và động từ chính, hoặc đứng cuối câu. Cần từ loại gì?",
+    "signals": "has ___ V3 · is ___ V-ing · will ___ V · S + V + O + ___",
+    "rule": "Vị trí bổ nghĩa cho động từ (giữa trợ động từ và động từ chính, trước hoặc sau động từ, cuối mệnh đề đã đủ thành phần) là của TRẠNG TỪ, thường có đuôi -ly.",
+    "formula": "S + (trợ động từ) + TRẠNG TỪ + V … · S + V + O + TRẠNG TỪ",
+    "tip": "Câu đã đủ nghĩa mà vẫn còn chỗ trống → gần như chắc chắn là trạng từ.",
+    "items": [
+     "Sales have [steadily] increased since the campaign began. | steady / steadiness / steadied | Doanh số tăng đều đặn kể từ khi chiến dịch bắt đầu.",
+     "The technicians worked [quickly] to restore the power supply. | quick / quickness / quicken | Các kỹ thuật viên làm việc nhanh chóng để khôi phục nguồn điện.",
+     "The proposal was [carefully] reviewed by the board. | careful / care / cared | Đề xuất đã được hội đồng xem xét cẩn thận.",
+     "Mr. Lee will [personally] greet the visiting delegation. | personal / person / personality | Ông Lee sẽ đích thân chào đón phái đoàn.",
+     "Please read the safety instructions [thoroughly]. | thorough / thoroughness / more thorough | Vui lòng đọc kỹ hướng dẫn an toàn."
+    ],
+    "why": [
+     "Tính từ: không bổ nghĩa cho động từ (sai: work careful).",
+     "Danh từ, động từ: câu đã có đủ chủ ngữ và động từ chính."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-tu-loai"
+   ]
+  },
+  {
+   "id": "seed-gt-adv-before-adj",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Từ loại",
+    "title": "Trạng từ đứng trước tính từ hoặc phân từ",
+    "ask": "Chỗ trống đứng ngay trước một tính từ (hoặc V3 dùng như tính từ) thì cần từ loại gì?",
+    "signals": "___ + tính từ · be + ___ + tính từ · a + ___ + tính từ + danh từ",
+    "rule": "Từ bổ nghĩa cho TÍNH TỪ là TRẠNG TỪ: highly qualified, reasonably priced, extremely busy.",
+    "formula": "(be / a) + TRẠNG TỪ + TÍNH TỪ (+ danh từ)",
+    "tip": "Cụm hay gặp: highly recommended, reasonably priced, newly renovated, fully booked, relatively low.",
+    "items": [
+     "All of the applicants are [highly] qualified for the position. | high / height / higher | Tất cả ứng viên đều có trình độ rất cao cho vị trí này.",
+     "The restaurant serves [reasonably] priced lunches. | reasonable / reason / reasoned | Nhà hàng phục vụ bữa trưa giá cả hợp lý.",
+     "The conference room was [newly] renovated last month. | new / newer / newness | Phòng họp vừa mới được cải tạo tháng trước.",
+     "The results of the survey were [surprisingly] positive. | surprising / surprise / surprised | Kết quả khảo sát tích cực một cách bất ngờ.",
+     "Tickets for the opening night are [nearly] sold out. | near / nearest / nearness | Vé đêm khai mạc gần như đã bán hết."
+    ],
+    "why": [
+     "Tính từ + tính từ: không bổ nghĩa cho nhau (sai: reasonable priced).",
+     "Danh từ: không đứng trước tính từ để bổ nghĩa cho nó."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-tu-loai"
+   ]
+  },
+  {
+   "id": "seed-gt-noun-position",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Từ loại",
+    "title": "Danh từ sau mạo từ, tính từ, giới từ",
+    "ask": "Chỗ trống đứng sau a/the/tính từ/giới từ, hoặc làm chủ ngữ trước động từ chính. Cần từ loại gì?",
+    "signals": "the ___ of · giới từ + (tính từ) + ___ · ___ + động từ chính",
+    "rule": "Chủ ngữ, tân ngữ và vị trí sau giới từ là chỗ của DANH TỪ. Dấu hiệu mạnh: \"the ___ of\", \"giới từ + ___\".",
+    "formula": "the + (tính từ) + DANH TỪ + of … · giới từ + (tính từ) + DANH TỪ",
+    "tip": "Đuôi danh từ: -tion, -sion, -ment, -ness, -ance/-ence, -ity, -ure, -al (approval, arrival).",
+    "items": [
+     "The [expansion] of the factory will create 200 jobs. | expand / expansive / expanded | Việc mở rộng nhà máy sẽ tạo ra 200 việc làm.",
+     "Thank you for your [cooperation] during the renovation. | cooperate / cooperative / cooperatively | Cảm ơn sự hợp tác của bạn trong thời gian cải tạo.",
+     "Final [approval] of the budget is expected next week. | approve / approved / approving | Việc phê duyệt ngân sách dự kiến vào tuần tới.",
+     "[Attendance] at the training session is mandatory. | Attend / Attended / Attentive | Việc tham dự buổi đào tạo là bắt buộc.",
+     "Customers can request a [refund] within 30 days. | refundable / refunded / refunding | Khách hàng có thể yêu cầu hoàn tiền trong vòng 30 ngày."
+    ],
+    "why": [
+     "Động từ: không đứng sau mạo từ \"the\".",
+     "Tính từ: phải có danh từ đi sau mới đứng được sau mạo từ."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-tu-loai"
+   ]
+  },
+  {
+   "id": "seed-gt-linking-verb-adj",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Từ loại",
+    "title": "Tính từ sau động từ nối (be, become, remain…)",
+    "ask": "Sau be / become / remain / seem / stay / appear, hoặc find / keep + tân ngữ, cần từ loại gì để mô tả chủ ngữ hay tân ngữ?",
+    "signals": "be · become · remain · seem · stay · appear · find / keep + O + ___",
+    "rule": "Động từ nối mô tả trạng thái của chủ ngữ nên theo sau là TÍNH TỪ, không phải trạng từ. Tương tự: find / keep / make + tân ngữ + tính từ.",
+    "formula": "S + be/become/remain/seem + TÍNH TỪ · find/keep + O + TÍNH TỪ",
+    "tip": "Thử thay động từ bằng \"là\": \"nhân viên vẫn là bình tĩnh\" → calm (tính từ).",
+    "items": [
+     "Prices have remained [stable] for the past six months. | stably / stability / stabilize | Giá vẫn ổn định trong sáu tháng qua.",
+     "The new manager seems very [knowledgeable] about the market. | knowledgeably / knowledge / know | Người quản lý mới có vẻ rất am hiểu thị trường.",
+     "The staff remained [calm] during the fire drill. | calmly / calmness / calming | Nhân viên vẫn bình tĩnh trong buổi diễn tập chữa cháy.",
+     "Many users found the interface [confusing]. | confusingly / confusion / confuse | Nhiều người dùng thấy giao diện khó hiểu.",
+     "The online booking system became [available] last Friday. | availability / avail / availing | Hệ thống đặt chỗ trực tuyến bắt đầu dùng được từ thứ Sáu tuần trước."
+    ],
+    "why": [
+     "Trạng từ (-ly): không mô tả chủ ngữ sau động từ nối (sai: remain stably).",
+     "Danh từ: chỉ đúng khi chủ ngữ chính là thứ đó (He became a manager)."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-tu-loai"
+   ]
+  },
+  {
+   "id": "seed-gt-person-or-thing-noun",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Từ loại",
+    "title": "Danh từ chỉ người hay chỉ việc, giấy tờ",
+    "ask": "Hai danh từ cùng gốc (applicant / application): dựa vào đâu để chọn?",
+    "signals": "a/an/each/every + ___ · động từ đi kèm: hire, interview → người; submit, review → giấy tờ",
+    "rule": "Xét nghĩa và mạo từ. Danh từ chỉ người (-ant, -ee, -er, -or, -ist) đếm được, số ít phải có a/an/the. Danh từ chỉ việc hay giấy tờ mang nghĩa khác hẳn.",
+    "formula": "hire / interview + an + N(người) · submit / process + an + N(hồ sơ, việc)",
+    "tip": "Hỏi: động từ này làm với NGƯỜI hay với GIẤY TỜ, HOẠT ĐỘNG?",
+    "items": [
+     "The HR team will interview each [applicant] next week. | application / applying / applied | Phòng nhân sự sẽ phỏng vấn từng ứng viên vào tuần tới.",
+     "Please submit your [application] by Friday. | applicant / apply / applicable | Vui lòng nộp hồ sơ trước thứ Sáu.",
+     "Every [participant] will receive a certificate. | participation / participate / participating | Mỗi người tham gia sẽ nhận được chứng chỉ.",
+     "An [inspector] will visit the plant on Monday. | inspection / inspect / inspected | Một thanh tra viên sẽ đến nhà máy vào thứ Hai.",
+     "The [accountant] reviewed the quarterly figures. | accounting / account / accountable | Kế toán viên đã xem xét số liệu quý."
+    ],
+    "why": [
+     "application (hồ sơ): không phỏng vấn được.",
+     "Động từ, phân từ: không đứng sau each/every/an."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-tu-loai"
+   ]
+  },
+  {
+   "id": "seed-gt-compound-noun",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Từ loại",
+    "title": "Danh từ ghép quen thuộc trong TOEIC",
+    "ask": "Khi nào hai danh từ được đứng cạnh nhau (danh từ + danh từ) thay vì tính từ + danh từ?",
+    "signals": "safety / customer / registration / expiration / job + ___",
+    "rule": "Một số cụm là DANH TỪ GHÉP cố định: danh từ đứng trước đóng vai tính từ và thường ở dạng số ít. Học thuộc theo cụm.",
+    "formula": "N1 + N2: safety regulations, customer satisfaction, expiration date",
+    "tip": "Cụm hay gặp: job opening, sales figures, registration form, office supplies, production schedule, performance review.",
+    "items": [
+     "All workers must follow the [safety] regulations. | safe / safely / safer | Mọi công nhân phải tuân thủ quy định an toàn.",
+     "Our goal is to improve customer [satisfaction]. | satisfied / satisfy / satisfactory | Mục tiêu của chúng tôi là nâng cao sự hài lòng của khách hàng.",
+     "Please complete the [registration] form before the seminar. | register / registered / registering | Vui lòng điền mẫu đăng ký trước hội thảo.",
+     "Check the [expiration] date before using the product. | expire / expiring / expires | Kiểm tra hạn sử dụng trước khi dùng sản phẩm.",
+     "The company posted a new job [opening] on its Web site. | open / opened / openly | Công ty đăng một vị trí tuyển dụng mới trên trang web."
+    ],
+    "why": [
+     "Tính từ cùng gốc thường đổi nghĩa (a safe regulation ≠ quy định an toàn).",
+     "Động từ: không đứng giữa hai danh từ trong một cụm danh từ."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-tu-loai"
+   ]
+  },
+  {
+   "id": "seed-gt-ing-or-ed-adj",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Từ loại",
+    "title": "Tính từ đuôi -ing và -ed",
+    "ask": "interesting hay interested? Khi nào dùng -ing, khi nào dùng -ed?",
+    "signals": "người + be + ___ · vật, sự việc + be + ___",
+    "rule": "-ED mô tả cảm xúc của người (bị tác động): I am interested. -ING mô tả tính chất của sự việc gây ra cảm xúc: The talk is interesting.",
+    "formula": "người + be + V-ed · sự việc + be + V-ing",
+    "tip": "\"-ed: người cảm thấy · -ing: sự việc gây ra\".",
+    "items": [
+     "The employees were [excited] about the new bonus program. | exciting / excite / excitement | Nhân viên rất phấn khởi về chương trình thưởng mới.",
+     "The keynote speech was truly [inspiring]. | inspired / inspire / inspiration | Bài phát biểu chính thực sự truyền cảm hứng.",
+     "Customers were [disappointed] by the long delay. | disappointing / disappoint / disappointment | Khách hàng thất vọng vì sự chậm trễ kéo dài.",
+     "The quarterly results were [encouraging]. | encouraged / encourage / encouragement | Kết quả quý rất đáng khích lệ.",
+     "Ms. Ford is [interested] in the marketing position. | interesting / interest / interests | Cô Ford quan tâm đến vị trí marketing."
+    ],
+    "why": [
+     "Nhầm chiều: The staff were exciting = nhân viên \"gây phấn khích\", sai nghĩa.",
+     "Danh từ, động từ nguyên mẫu: sau be cần tính từ để mô tả."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-tu-loai"
+   ]
+  },
+  {
+   "id": "seed-gt-modal-base-verb",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Từ loại",
+    "title": "Sau động từ khuyết thiếu là V nguyên mẫu",
+    "ask": "Sau can / could / must / should / will / may / might, động từ ở dạng gì?",
+    "signals": "can · could · must · should · will · would · may · might · had better",
+    "rule": "Sau động từ khuyết thiếu là V NGUYÊN MẪU không \"to\", không chia. Bị động: modal + be + V3.",
+    "formula": "modal + V (nguyên mẫu)",
+    "tip": "Modal \"ăn\" hết đuôi: không -s, không -ed, không -ing, không \"to\".",
+    "items": [
+     "All visitors must [show] a valid ID. | shows / showing / to show | Mọi khách phải xuất trình giấy tờ tùy thân hợp lệ.",
+     "The new equipment will [help] us cut costs. | helps / helped / helping | Thiết bị mới sẽ giúp chúng tôi cắt giảm chi phí.",
+     "You should [check] the schedule before leaving. | checks / checking / to check | Bạn nên kiểm tra lịch trước khi đi.",
+     "Customers can [return] items within 14 days. | returns / returning / returned | Khách có thể trả hàng trong vòng 14 ngày.",
+     "Ms. Rao may [join] us later this afternoon. | joins / joined / to join | Bà Rao có thể tham gia cùng chúng tôi chiều nay."
+    ],
+    "why": [
+     "modal + to V, V-ing, V-ed, V-s: sai (trừ ought to, have to)."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-tu-loai"
+   ]
+  },
+  {
+   "id": "seed-gt-present-in-time-clause",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Thì động từ",
+    "title": "Hiện tại đơn sau liên từ thời gian, điều kiện",
+    "ask": "Nói về tương lai, sau when / until / as soon as / after / before / once / if + mệnh đề, động từ chia thì gì?",
+    "signals": "when · until · as soon as · after · before · once · by the time · if · unless",
+    "rule": "Mệnh đề bắt đầu bằng liên từ thời gian hoặc điều kiện dùng HIỆN TẠI ĐƠN (hoặc hiện tại hoàn thành) dù nói về tương lai. Chỉ mệnh đề chính dùng will.",
+    "formula": "S + will V … + when/until/as soon as + S + V(s/es)",
+    "tip": "Sau liên từ thời gian không có WILL.",
+    "items": [
+     "Please call the front desk as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi lễ tân ngay khi taxi của bạn đến.",
+     "We will wait until the manager [returns] from lunch. | will return / returned / returning | Chúng tôi sẽ đợi đến khi quản lý ăn trưa về.",
+     "The shop will reopen after the inspector [approves] the repairs. | will approve / approved / approving | Cửa hàng sẽ mở lại sau khi thanh tra duyệt việc sửa chữa.",
+     "If the shipment [is] late, we will notify you by e-mail. | will be / was / being | Nếu hàng giao trễ, chúng tôi sẽ báo cho bạn qua e-mail.",
+     "Once the contract [is signed], construction will begin. | will be signed / signed / signing | Khi hợp đồng được ký, việc xây dựng sẽ bắt đầu."
+    ],
+    "why": [
+     "will + V: không dùng trong mệnh đề thời gian hay điều kiện.",
+     "Quá khứ: câu nói về tương lai (mệnh đề chính có will).",
+     "V-ing đứng một mình: mệnh đề sau liên từ cần động từ chia."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-thi-dong-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-present-for-schedule",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Thì động từ",
+    "title": "Hiện tại đơn diễn tả lịch trình",
+    "ask": "Giờ tàu xe, giờ mở cửa, lịch sự kiện cố định trong tương lai thường chia thì gì?",
+    "signals": "timetable · schedule · flight / train / bus · departs / leaves / opens / starts + giờ cụ thể",
+    "rule": "Sự việc tương lai theo LỊCH TRÌNH CỐ ĐỊNH (giờ tàu, giờ mở cửa, lịch hội nghị) dùng HIỆN TẠI ĐƠN.",
+    "formula": "The train / flight / event + V(s/es) + at/on + thời điểm",
+    "tip": "Có giờ giấc in sẵn (timetable, 9:00 A.M.) → hiện tại đơn.",
+    "items": [
+     "The flight to Singapore [departs] at 7:40 A.M. tomorrow. | departed / has departed / departing | Chuyến bay đi Singapore khởi hành lúc 7:40 sáng mai.",
+     "The museum [opens] at 9 A.M. every weekday. | opened / opening / has opened | Bảo tàng mở cửa lúc 9 giờ sáng các ngày trong tuần.",
+     "According to the schedule, the conference [starts] next Monday. | started / starting / has started | Theo lịch, hội nghị bắt đầu vào thứ Hai tới.",
+     "The last train to the airport [leaves] at 11:30 P.M. tonight. | left / leaving / has left | Chuyến tàu cuối ra sân bay rời ga lúc 11:30 tối nay."
+    ],
+    "why": [
+     "Quá khứ, hiện tại hoàn thành: thời điểm ở tương lai (tomorrow, next).",
+     "V-ing đứng một mình: thiếu động từ chia."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-thi-dong-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-present-perfect",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Thì động từ",
+    "title": "Hiện tại hoàn thành với since, for, so far",
+    "ask": "Thấy since + mốc, for + khoảng thời gian, so far, recently, yet, over the past + thời gian → chia thì gì?",
+    "signals": "since 2020 · for three years · so far · recently · over/in the past + time · already · yet",
+    "rule": "Hành động bắt đầu trong quá khứ và kéo dài hoặc còn liên quan đến hiện tại dùng HIỆN TẠI HOÀN THÀNH: have/has + V3.",
+    "formula": "S + have/has + V3 + since + mốc / for + khoảng thời gian",
+    "tip": "since, for, so far, over the past → have/has + V3.",
+    "items": [
+     "Ms. Cho [has worked] at the firm since 2019. | worked / works / is working | Bà Cho đã làm ở công ty từ năm 2019.",
+     "Since 2015, the city [has attracted] many tech companies. | attracted / attracts / will attract | Từ năm 2015, thành phố đã thu hút nhiều công ty công nghệ.",
+     "So far, more than 500 people [have registered] for the fair. | registered / register / will register | Đến nay đã có hơn 500 người đăng ký hội chợ.",
+     "We [have not received] your payment yet. | had not received / do not receive / will not receive | Chúng tôi vẫn chưa nhận được khoản thanh toán của bạn.",
+     "Sales [have risen] by 15 percent since the new ads were launched. | rose / rise / are rising | Doanh số đã tăng 15% kể từ khi quảng cáo mới ra mắt."
+    ],
+    "why": [
+     "Quá khứ đơn: đi với mốc đã kết thúc (ago, last year), không đi với since hay so far.",
+     "Hiện tại đơn: không diễn tả khoảng thời gian kéo dài đến nay."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-thi-dong-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-past-simple",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Thì động từ",
+    "title": "Quá khứ đơn với ago, last, yesterday, in + năm",
+    "ask": "Mốc thời gian đã kết thúc (ago, last month, yesterday, in 2019) đi với thì nào?",
+    "signals": "ago · last week/month/year · yesterday · in + năm đã qua · when + mệnh đề quá khứ",
+    "rule": "Hành động xảy ra và kết thúc tại một mốc xác định trong quá khứ dùng QUÁ KHỨ ĐƠN, không dùng hiện tại hoàn thành.",
+    "formula": "S + V2/V-ed + … + ago / last … / yesterday",
+    "tip": "AGO, LAST, YESTERDAY → V2. Hiện tại hoàn thành không đi với mốc quá khứ cụ thể.",
+    "items": [
+     "The branch office [opened] two years ago. | has opened / opens / will open | Văn phòng chi nhánh mở cách đây hai năm.",
+     "Mr. Kim [attended] a sales conference in Tokyo last month. | has attended / attends / will attend | Ông Kim dự hội nghị bán hàng ở Tokyo tháng trước.",
+     "The board [approved] the merger yesterday. | has approved / approves / will approve | Hội đồng đã phê duyệt việc sáp nhập hôm qua.",
+     "The company [was founded] in 1998 by two engineers. | has been founded / is founded / founds | Công ty được hai kỹ sư thành lập năm 1998.",
+     "When the storm hit, the staff [moved] the equipment indoors. | have moved / move / will move | Khi bão đến, nhân viên đã chuyển thiết bị vào trong."
+    ],
+    "why": [
+     "has/have + V3: không đi với mốc quá khứ xác định (sai: has opened two years ago).",
+     "Hiện tại, tương lai: mốc thời gian đã qua."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-thi-dong-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-future-simple",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Thì động từ",
+    "title": "Tương lai với next, tomorrow, within, upcoming",
+    "ask": "Mệnh đề chính có tomorrow, next + thời gian, within + khoảng, upcoming, from now → chia thì gì?",
+    "signals": "tomorrow · next week · in two days · within a month · upcoming · soon · from now",
+    "rule": "Mệnh đề CHÍNH nói về tương lai dùng WILL + V nguyên mẫu (hoặc be going to). Chỉ mệnh đề chính, không phải mệnh đề sau when hay if.",
+    "formula": "S + will + V + tomorrow / next … / within …",
+    "tip": "Mốc tương lai trong mệnh đề chính → will.",
+    "items": [
+     "We [will finish] the project within two months. | finished / have finished / to finish | Chúng tôi sẽ hoàn thành dự án trong vòng hai tháng.",
+     "The CEO [will announce] the results at next week's meeting. | announced / has announced / announcing | Tổng giám đốc sẽ công bố kết quả tại cuộc họp tuần sau.",
+     "A technician [will inspect] the elevators tomorrow. | inspected / has inspected / inspecting | Một kỹ thuật viên sẽ kiểm tra thang máy vào ngày mai.",
+     "Five weeks from now, the store [will celebrate] its tenth anniversary. | celebrated / has celebrated / celebrating | Năm tuần nữa cửa hàng sẽ kỷ niệm 10 năm thành lập.",
+     "The upcoming merger [will create] the region's largest bank. | created / has created / creating | Vụ sáp nhập sắp tới sẽ tạo ra ngân hàng lớn nhất khu vực."
+    ],
+    "why": [
+     "Hiện tại hoàn thành, quá khứ: không đi với mốc tương lai.",
+     "to V, V-ing: câu cần động từ chính được chia."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-thi-dong-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-future-perfect",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Thì động từ",
+    "title": "Tương lai hoàn thành với by + mốc tương lai",
+    "ask": "by + mốc tương lai (by next June, by the end of the year) hoặc by the time + hiện tại đơn → mệnh đề chính chia thì gì?",
+    "signals": "by + thời điểm tương lai · by the time + S + V(s/es) · by the end of next …",
+    "rule": "Hành động sẽ HOÀN TẤT trước một mốc trong tương lai dùng TƯƠNG LAI HOÀN THÀNH: will have + V3.",
+    "formula": "By + mốc tương lai, S + will have + V3",
+    "tip": "BY + tương lai → WILL HAVE V3.",
+    "items": [
+     "By the end of next year, the company [will have opened] five new stores. | had opened / has opened / opens | Đến cuối năm sau, công ty sẽ mở xong năm cửa hàng mới.",
+     "By the time you arrive, we [will have finished] the setup. | had finished / have finished / finish | Khi bạn đến nơi, chúng tôi sẽ chuẩn bị xong.",
+     "The crew [will have repaired] the bridge by June. | had repaired / repaired / has repaired | Đội thi công sẽ sửa xong cây cầu trước tháng Sáu.",
+     "By 2030, the firm [will have reduced] its emissions by half. | had reduced / reduced / reduces | Đến năm 2030, công ty sẽ cắt giảm được một nửa lượng khí thải."
+    ],
+    "why": [
+     "had + V3: dùng với mốc quá khứ.",
+     "has/have + V3: nối với hiện tại, không với mốc tương lai."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-thi-dong-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-past-perfect",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Thì động từ",
+    "title": "Quá khứ hoàn thành: việc xảy ra trước một việc quá khứ",
+    "ask": "by the time + quá khứ đơn, before/after + quá khứ, hoặc by + mốc quá khứ → hành động xảy ra trước chia thì gì?",
+    "signals": "by the time + V2 · before / after + V2 · by + mốc quá khứ (by last March)",
+    "rule": "Hành động xảy ra TRƯỚC một hành động hoặc mốc khác trong quá khứ dùng QUÁ KHỨ HOÀN THÀNH: had + V3.",
+    "formula": "By the time + S + V2, S + had + V3",
+    "tip": "Hai việc trong quá khứ: việc trước → had V3, việc sau → V2.",
+    "items": [
+     "By the time the guests arrived, the caterers [had set] up the tables. | will have set / have set / are setting | Khi khách đến, bên phục vụ đã bày bàn xong.",
+     "The meeting [had started] before Mr. Park arrived. | has started / will have started / starts | Cuộc họp đã bắt đầu trước khi ông Park đến.",
+     "She [had worked] in sales for ten years before she became a director. | has worked / works / will have worked | Cô ấy đã làm kinh doanh 10 năm trước khi trở thành giám đốc.",
+     "By last March, the team [had completed] the first phase. | has completed / will have completed / completes | Đến tháng Ba năm ngoái, nhóm đã hoàn thành giai đoạn một."
+    ],
+    "why": [
+     "will have V3: dùng cho mốc tương lai.",
+     "has/have V3: nối với hiện tại, không với mốc quá khứ."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-thi-dong-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-present-continuous",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Thì động từ",
+    "title": "Hiện tại tiếp diễn với currently, now, at the moment",
+    "ask": "Dấu hiệu currently, now, at the moment, at present → chia thì gì?",
+    "signals": "currently · now · at the moment · at present · right now · this week (đang diễn ra)",
+    "rule": "Việc đang diễn ra quanh thời điểm nói dùng HIỆN TẠI TIẾP DIỄN: am/is/are + V-ing. Bị động: is/are being + V3.",
+    "formula": "S + am/is/are + V-ing + now / at the moment",
+    "tip": "currently, now = đang → be + V-ing.",
+    "items": [
+     "The technicians [are installing] new software at the moment. | installed / install / have installed | Các kỹ thuật viên đang cài phần mềm mới.",
+     "Mr. Diaz cannot take your call because he [is meeting] with a client now. | met / meets / has met | Ông Diaz không thể nghe máy vì đang gặp khách hàng.",
+     "The east wing [is being renovated] this month, so please use the west entrance. | renovated / renovates / has renovated | Cánh phía đông đang được cải tạo trong tháng này, vui lòng dùng lối vào phía tây.",
+     "Ms. Hall [is preparing] the quarterly report at present. | prepared / prepares / has prepared | Hiện tại cô Hall đang chuẩn bị báo cáo quý."
+    ],
+    "why": [
+     "Hiện tại đơn: thói quen hoặc sự thật, không phải việc đang diễn ra.",
+     "Quá khứ, hiện tại hoàn thành: không khớp với now, at the moment."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-thi-dong-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-active-or-passive",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Bị động",
+    "title": "Chủ động hay bị động: nhìn tân ngữ sau chỗ trống",
+    "ask": "Sau chỗ trống còn tân ngữ thì chọn chủ động hay bị động? Không còn tân ngữ (theo sau là by, giới từ, hết câu) thì sao?",
+    "signals": "___ + danh từ (tân ngữ) → chủ động · ___ + by / giới từ / dấu chấm → bị động",
+    "rule": "Ngoại động từ mà sau chỗ trống KHÔNG còn tân ngữ → BỊ ĐỘNG (be + V3). Còn tân ngữ → CHỦ ĐỘNG. Chủ ngữ là vật thường bị tác động.",
+    "formula": "S(vật) + be + V3 (+ by …) · S(người) + V + O",
+    "tip": "Che chỗ trống rồi hỏi: sau nó có danh từ làm tân ngữ không?",
+    "items": [
+     "The new policy [was announced] at yesterday's meeting. | announced / announcing / has announced | Chính sách mới đã được công bố tại cuộc họp hôm qua.",
+     "Ms. Lin [announced] the new policy at yesterday's meeting. | was announced / announcing / being announced | Bà Lin đã công bố chính sách mới tại cuộc họp hôm qua.",
+     "All expense reports must [be submitted] by Friday. | submit / submitting / submitted | Mọi báo cáo chi phí phải được nộp trước thứ Sáu.",
+     "The packages [were delivered] to the wrong address. | delivered / delivering / have delivered | Các kiện hàng đã bị giao nhầm địa chỉ.",
+     "The museum [is visited] by thousands of tourists every year. | visits / visiting / has visited | Bảo tàng được hàng nghìn du khách ghé thăm mỗi năm."
+    ],
+    "why": [
+     "Chủ động khi không có tân ngữ: thiếu đối tượng (sai: The policy announced at …).",
+     "Bị động khi còn tân ngữ: thừa tân ngữ."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-bi-dong"
+   ]
+  },
+  {
+   "id": "seed-gt-passive-forms",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Bị động",
+    "title": "Bị động sau modal và ở các thì",
+    "ask": "Bị động của must / will / can + V, have + V3, be + V-ing có dạng thế nào?",
+    "signals": "must/can/should/will + be + V3 · have/has been + V3 · is/are being + V3",
+    "rule": "Bị động = BE (chia theo thì) + V3: must be done, will be held, has been approved, is being repaired.",
+    "formula": "modal + be + V3 · have/has + been + V3 · am/is/are + being + V3",
+    "tip": "Sau modal là BE, sau have là BEEN, sau be (tiếp diễn) là BEING.",
+    "items": [
+     "The annual meeting will [be held] in the main auditorium. | held / being held / been held | Cuộc họp thường niên sẽ được tổ chức tại hội trường chính.",
+     "The budget proposal has [been approved] by the finance team. | be approved / approving / approve | Đề xuất ngân sách đã được nhóm tài chính phê duyệt.",
+     "The elevator is [being repaired], so please use the stairs. | been repaired / be repaired / repair | Thang máy đang được sửa, vui lòng đi cầu thang bộ.",
+     "Laboratory coats must [be worn] at all times. | been worn / wearing / wear | Phải mặc áo blouse phòng thí nghiệm mọi lúc.",
+     "The results should [be posted] on the bulletin board by noon. | been posted / posting / post | Kết quả nên được dán lên bảng tin trước buổi trưa."
+    ],
+    "why": [
+     "modal + been: sai (sau modal là be nguyên mẫu).",
+     "has + be: sai (sau have phải là been).",
+     "V nguyên mẫu, V-ing: chủ ngữ là vật bị tác động, cần bị động."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-bi-dong"
+   ]
+  },
+  {
+   "id": "seed-gt-reduced-participle",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Bị động",
+    "title": "Phân từ rút gọn: danh từ + V-ing hay danh từ + V3",
+    "ask": "Sau một danh từ là chỗ trống rồi tới phần bổ nghĩa: chọn V-ing (chủ động) hay V3 (bị động)?",
+    "signals": "N + ___ + by / giới từ … · N + ___ + tân ngữ",
+    "rule": "Mệnh đề quan hệ rút gọn: danh từ TỰ LÀM hành động → V-ing (= who/which + V). Danh từ BỊ tác động → V3 (= which + be + V3).",
+    "formula": "N + V-ing + O (chủ động) · N + V3 + by/giới từ (bị động)",
+    "tip": "Có tân ngữ theo sau → V-ing. Theo sau là by hoặc giới từ → thường V3.",
+    "items": [
+     "Please read the report [prepared] by the finance team. | preparing / prepares / was prepared | Vui lòng đọc báo cáo do nhóm tài chính soạn.",
+     "Employees [attending] the workshop should register online. | attended / attend / are attending | Nhân viên tham dự hội thảo nên đăng ký trực tuyến.",
+     "Products [purchased] during the sale cannot be returned. | purchasing / purchase / are purchased | Sản phẩm mua trong đợt giảm giá không được đổi trả.",
+     "Visitors [wishing] to tour the plant must wear a helmet. | wished / wish / are wishing | Khách muốn tham quan nhà máy phải đội mũ bảo hộ.",
+     "The items [listed] below are currently out of stock. | listing / list / are listed | Các mặt hàng liệt kê dưới đây hiện đang hết hàng."
+    ],
+    "why": [
+     "Động từ chia thì (is, was…): câu đã có động từ chính, phần này chỉ bổ nghĩa cho danh từ.",
+     "Nhầm chiều chủ động, bị động: \"the report preparing by\" sai."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-bi-dong"
+   ]
+  },
+  {
+   "id": "seed-gt-agreement-of-phrase",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Hòa hợp chủ – vị",
+    "title": "Chủ ngữ thật nằm trước cụm giới từ",
+    "ask": "\"The list of new products ___ …\": động từ hòa hợp với danh từ nào?",
+    "signals": "N1 + of / with / for / in + N2 + ___ · N + along with / as well as + N + ___",
+    "rule": "Động từ hòa hợp với danh từ CHÍNH đứng trước cụm giới từ (of, in, for, along with, as well as…), không phải danh từ đứng sát nó.",
+    "formula": "The N(số ít) + of + N(số nhiều) + V(số ít)",
+    "tip": "Gạch bỏ cụm \"of …\", \"with …\" rồi mới chia động từ.",
+    "items": [
+     "The list of approved suppliers [is] updated every month. | are / were / being | Danh sách nhà cung cấp được duyệt được cập nhật hằng tháng.",
+     "The results of the customer survey [show] a clear trend. | shows / showing / has shown | Kết quả khảo sát khách hàng cho thấy xu hướng rõ ràng.",
+     "The manager, along with two assistants, [is] attending the fair. | are / were / have | Người quản lý cùng hai trợ lý đang tham dự hội chợ.",
+     "One of our branches [has] closed temporarily. | have / are / were | Một trong các chi nhánh của chúng tôi đã tạm đóng cửa.",
+     "The cost of repairs [was] higher than expected. | were / are / have been | Chi phí sửa chữa cao hơn dự kiến."
+    ],
+    "why": [
+     "Chia theo danh từ gần nhất: bẫy cố ý của đề.",
+     "V-ing: câu cần động từ chính được chia."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-hoa-hop-chu-vi"
+   ]
+  },
+  {
+   "id": "seed-gt-each-every-number",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Hòa hợp chủ – vị",
+    "title": "each, every, the number of, a number of",
+    "ask": "each, every, the number of đi với động từ số ít hay số nhiều? Còn a number of?",
+    "signals": "each · every · each of · the number of · a number of",
+    "rule": "EACH, EVERY + danh từ số ít + động từ số ít. EACH OF + danh từ số nhiều + động từ số ít. THE NUMBER OF (= con số) + động từ số ít. A NUMBER OF (= nhiều) + danh từ số nhiều + động từ số nhiều.",
+    "formula": "Each/Every + N + V(s) · The number of + Ns + V(s) · A number of + Ns + V(số nhiều)",
+    "tip": "THE number = con số (một) · A number = nhiều.",
+    "items": [
+     "Every employee [is] required to complete the training. | are / were / being | Mỗi nhân viên đều phải hoàn thành khóa đào tạo.",
+     "Each of the rooms [has] a private balcony. | have / are / having | Mỗi phòng đều có ban công riêng.",
+     "The number of online orders [has] doubled this year. | have / are / were | Số lượng đơn hàng trực tuyến đã tăng gấp đôi năm nay.",
+     "A number of customers [have] asked about the new model. | has / is / was | Nhiều khách hàng đã hỏi về mẫu mới.",
+     "Every [applicant] must provide two references. | applicants / application / applied | Mỗi ứng viên phải cung cấp hai người giới thiệu."
+    ],
+    "why": [
+     "every + danh từ số nhiều: sai (every employees).",
+     "the number of + động từ số nhiều: chủ ngữ là \"con số\", số ít."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-hoa-hop-chu-vi"
+   ]
+  },
+  {
+   "id": "seed-gt-agreement-relative",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Hòa hợp chủ – vị",
+    "title": "Động từ trong mệnh đề quan hệ hòa hợp với danh từ đứng trước",
+    "ask": "\"… the employees who ___ …\": động từ sau who / which / that chia theo đâu?",
+    "signals": "N + who / which / that + ___",
+    "rule": "Động từ trong mệnh đề quan hệ hòa hợp với DANH TỪ mà who / which / that thay thế, tức danh từ ngay trước nó.",
+    "formula": "Ns + who/that + V(số nhiều) · N + which/that + V(s)",
+    "tip": "Thay who bằng danh từ đứng trước rồi đọc lại câu.",
+    "items": [
+     "Employees who [work] overtime receive extra pay. | works / working / has worked | Nhân viên làm thêm giờ được trả thêm tiền.",
+     "The printer that [is] on the third floor needs toner. | are / be / were | Máy in ở tầng ba cần mực.",
+     "Customers who [have] questions should contact our help desk. | has / having / is | Khách hàng có thắc mắc nên liên hệ bộ phận hỗ trợ.",
+     "The reports that [were] submitted yesterday contain errors. | was / is / has | Các báo cáo nộp hôm qua có lỗi."
+    ],
+    "why": [
+     "Chia theo chủ ngữ của cả câu: bẫy khi câu dài.",
+     "V-ing: mệnh đề quan hệ cần động từ chia."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-hoa-hop-chu-vi"
+   ]
+  },
+  {
+   "id": "seed-gt-despite-although",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Liên từ & giới từ",
+    "title": "despite + danh từ · although + mệnh đề",
+    "ask": "Sau chỗ trống là danh từ, V-ing hay một mệnh đề (S + V)? Chọn despite hay although?",
+    "signals": "___ + N / V-ing → despite, in spite of · ___ + S + V → although, though, even though",
+    "rule": "Cùng nghĩa \"mặc dù\": DESPITE / IN SPITE OF + danh từ, cụm danh từ, V-ing. ALTHOUGH / THOUGH / EVEN THOUGH + mệnh đề có chủ ngữ và động từ.",
+    "formula": "Despite + N/V-ing, S + V · Although + S + V, S + V",
+    "tip": "Có động từ chia sau chỗ trống → although. Không có → despite.",
+    "items": [
+     "[Despite] the heavy rain, the outdoor concert continued. | Although / Even though / However | Mặc dù mưa lớn, buổi hòa nhạc ngoài trời vẫn tiếp tục.",
+     "[Although] the rent is high, the location is excellent. | Despite / In spite of / However | Mặc dù tiền thuê cao, vị trí rất tuyệt.",
+     "The project was finished on time [in spite of] a staff shortage. | although / even though / however | Dự án hoàn thành đúng hạn bất chấp việc thiếu nhân sự.",
+     "[Even though] sales fell, the company remained profitable. | Despite / In spite of / Regardless of | Dù doanh số giảm, công ty vẫn có lãi.",
+     "[Despite] having little experience, Mr. Wu was hired. | Although / Though / Even if | Dù ít kinh nghiệm, anh Wu vẫn được tuyển."
+    ],
+    "why": [
+     "despite of: sai, không có \"of\".",
+     "however: trạng từ nối, không nối hai mệnh đề trong một câu bằng dấu phẩy.",
+     "Dùng despite trước mệnh đề hoặc although trước danh từ: sai loại từ."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-lien-tu-gioi-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-because-because-of",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Liên từ & giới từ",
+    "title": "because + mệnh đề · because of, due to + danh từ",
+    "ask": "Chỉ nguyên nhân: khi nào dùng because, khi nào dùng because of / due to / owing to?",
+    "signals": "___ + S + V → because, since, as · ___ + N → because of, due to, owing to",
+    "rule": "BECAUSE / SINCE / AS + mệnh đề. BECAUSE OF / DUE TO / OWING TO + danh từ hoặc cụm danh từ.",
+    "formula": "… because + S + V · … because of / due to + N",
+    "tip": "\"of\", \"to\" là giới từ → theo sau là danh từ.",
+    "items": [
+     "The flight was delayed [due to] fog. | because / since / so | Chuyến bay bị hoãn do sương mù.",
+     "The store closed early [because] the power went out. | because of / due to / owing to | Cửa hàng đóng cửa sớm vì mất điện.",
+     "[Because of] the holiday, the office will be closed on Monday. | Because / Since / As | Vì kỳ nghỉ lễ, văn phòng sẽ đóng cửa thứ Hai.",
+     "[Since] the printer is broken, please use the one on the second floor. | Due to / Because of / Owing to | Vì máy in bị hỏng, vui lòng dùng máy ở tầng hai.",
+     "Production slowed [owing to] a shortage of parts. | because / since / so that | Sản xuất chậm lại do thiếu linh kiện."
+    ],
+    "why": [
+     "because + danh từ: thiếu \"of\".",
+     "so: chỉ kết quả, không chỉ nguyên nhân.",
+     "because of + mệnh đề: sai, giới từ không đứng trước S + V."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-lien-tu-gioi-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-during-while",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Liên từ & giới từ",
+    "title": "during + danh từ · while + mệnh đề hoặc V-ing",
+    "ask": "\"trong khi\", \"trong suốt\": during hay while?",
+    "signals": "___ + N (the meeting, the holiday) → during · ___ + S + V / V-ing → while",
+    "rule": "DURING + danh từ chỉ khoảng thời gian hoặc sự kiện. WHILE + mệnh đề, hoặc + V-ing khi cùng chủ ngữ.",
+    "formula": "during + N · while + S + V / while + V-ing",
+    "tip": "during là giới từ, while là liên từ.",
+    "items": [
+     "Please turn off your phone [during] the presentation. | while / when / for | Vui lòng tắt điện thoại trong suốt bài thuyết trình.",
+     "[While] the CEO was abroad, Ms. Ruiz managed the office. | During / For / Meanwhile | Trong khi giám đốc ở nước ngoài, bà Ruiz quản lý văn phòng.",
+     "Several ideas came up [during] the discussion. | while / meanwhile / when | Nhiều ý tưởng đã nảy ra trong buổi thảo luận.",
+     "Wear safety glasses [while] operating the machine. | during / for / meanwhile | Hãy đeo kính bảo hộ khi vận hành máy.",
+     "No construction work is allowed [during] the holiday season. | while / as / when | Không được thi công trong mùa lễ."
+    ],
+    "why": [
+     "for: đi với khoảng thời gian có số (for two hours), không đi với sự kiện.",
+     "meanwhile: trạng từ nối giữa hai câu, không đứng trước danh từ hay V-ing."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-lien-tu-gioi-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-paired-conjunctions",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Liên từ & giới từ",
+    "title": "Cặp liên từ: both…and, either…or, neither…nor, not only…but also",
+    "ask": "Thấy both / either / neither / not only ở trước, chỗ trống phía sau cần từ nào?",
+    "signals": "both … ___ · either … ___ · neither … ___ · not only … ___",
+    "rule": "Cặp cố định: BOTH … AND, EITHER … OR, NEITHER … NOR, NOT ONLY … BUT (ALSO). Với either/or và neither/nor, động từ hòa hợp với chủ ngữ gần nhất.",
+    "formula": "both A and B · either A or B · neither A nor B · not only A but also B",
+    "tip": "Nhìn chữ đầu của cặp để chọn chữ sau.",
+    "items": [
+     "The position requires both experience [and] creativity. | or / nor / but | Vị trí này đòi hỏi cả kinh nghiệm và sự sáng tạo.",
+     "You can pay either by credit card [or] by bank transfer. | and / nor / but | Bạn có thể trả bằng thẻ tín dụng hoặc chuyển khoản.",
+     "Neither the manager [nor] her assistant was available. | or / and / but | Cả quản lý lẫn trợ lý của cô đều không rảnh.",
+     "The hotel is not only affordable [but also] close to the station. | and also / or also / so also | Khách sạn không chỉ rẻ mà còn gần ga.",
+     "[Both] the sales and marketing teams will attend. | Either / Neither / Not only | Cả nhóm bán hàng và nhóm marketing đều sẽ tham dự."
+    ],
+    "why": [
+     "Ghép sai cặp (neither … or, both … or): lỗi kinh điển.",
+     "and also, or also: không phải cặp cố định."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-lien-tu-gioi-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-unless-provided",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Liên từ & giới từ",
+    "title": "unless (= if … not), provided that, in case",
+    "ask": "Chọn if, unless, provided that hay in case theo nghĩa của câu?",
+    "signals": "unless · provided (that) · as long as · in case · otherwise",
+    "rule": "UNLESS = if … not (trừ khi). PROVIDED (THAT), AS LONG AS = với điều kiện là. IN CASE = phòng khi. Sau các liên từ này dùng hiện tại đơn khi nói về tương lai.",
+    "formula": "S + will V … + unless + S + V(s) (động từ khẳng định)",
+    "tip": "unless đã mang nghĩa phủ định, không viết \"unless … not\".",
+    "items": [
+     "Your order will not ship [unless] payment is received. | if / provided that / as long as | Đơn hàng sẽ không được gửi trừ khi đã nhận thanh toán.",
+     "You may work from home [provided that] your manager approves. | unless / in case / otherwise | Bạn có thể làm ở nhà với điều kiện quản lý đồng ý.",
+     "Bring an umbrella [in case] it rains this afternoon. | unless / provided / so that | Mang ô phòng khi chiều nay mưa.",
+     "Tickets cannot be refunded [unless] the event is canceled. | if / as long as / whether | Vé không được hoàn tiền trừ khi sự kiện bị hủy.",
+     "The offer is valid [as long as] supplies last. | unless / in case / even if | Ưu đãi có hiệu lực chừng nào còn hàng."
+    ],
+    "why": [
+     "if: đảo nghĩa khi câu cần \"trừ khi\".",
+     "otherwise: trạng từ \"nếu không thì\", đứng đầu câu sau dấu chấm hoặc chấm phẩy."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-lien-tu-gioi-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-purpose-so-that",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Liên từ & giới từ",
+    "title": "Chỉ mục đích: so that + mệnh đề · in order to + V",
+    "ask": "Chỉ mục đích \"để\": so that hay in order to? Sau mỗi từ là gì?",
+    "signals": "___ + S + can/will/could + V → so that · ___ + V nguyên mẫu → in order to, so as to, to",
+    "rule": "SO THAT / IN ORDER THAT + mệnh đề (thường có can, could, will, would). IN ORDER TO / SO AS TO / TO + V nguyên mẫu.",
+    "formula": "… so that + S + can + V · … in order to + V",
+    "tip": "Có chủ ngữ mới và can phía sau → so that.",
+    "items": [
+     "Please arrive early [so that] we can start on time. | in order to / so as to / for | Vui lòng đến sớm để chúng ta có thể bắt đầu đúng giờ.",
+     "The firm hired more staff [in order to] meet demand. | so that / in order that / for | Công ty tuyển thêm người để đáp ứng nhu cầu.",
+     "Save your work often [so that] you do not lose any data. | in order to / so as to / because | Hãy lưu bài thường xuyên để không mất dữ liệu.",
+     "Ms. Ito took notes [so as to] remember every detail. | so that / in order that / for | Cô Ito ghi chép để nhớ mọi chi tiết."
+    ],
+    "why": [
+     "for + V nguyên mẫu: sai (for + danh từ hoặc V-ing).",
+     "so that + V nguyên mẫu: thiếu chủ ngữ.",
+     "because: chỉ nguyên nhân, không chỉ mục đích."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-lien-tu-gioi-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-by-or-until",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Liên từ & giới từ",
+    "title": "by (hạn chót) và until (kéo dài đến)",
+    "ask": "\"trước\", \"đến\" một mốc: dùng by hay until?",
+    "signals": "hạn chót (submit, finish, return, be received) → by · trạng thái kéo dài (stay, remain, be open, wait) → until",
+    "rule": "BY = không muộn hơn mốc đó (hành động xảy ra một lần trước hạn). UNTIL / TILL = trạng thái kéo dài liên tục đến mốc đó.",
+    "formula": "submit / finish + by + mốc · stay / remain / be open + until + mốc",
+    "tip": "Nộp BY thứ Sáu · mở cửa UNTIL 10 giờ.",
+    "items": [
+     "Please return the signed form [by] Friday. | until / since / from | Vui lòng gửi lại mẫu đã ký trước thứ Sáu.",
+     "The store is open [until] 10 P.M. on weekends. | by / since / within | Cửa hàng mở cửa đến 10 giờ tối cuối tuần.",
+     "The road will remain closed [until] further notice. | by / since / from | Con đường sẽ tiếp tục đóng cho đến khi có thông báo mới.",
+     "All applications must be received [by] May 31. | until / since / within | Tất cả hồ sơ phải được nhận trước ngày 31 tháng 5.",
+     "Mr. Han will be on leave [until] the end of the month. | by / since / within | Ông Han sẽ nghỉ phép đến hết tháng."
+    ],
+    "why": [
+     "since: chỉ mốc bắt đầu trong quá khứ.",
+     "within: + khoảng thời gian (within two days), không + mốc."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-lien-tu-gioi-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-time-prepositions",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Liên từ & giới từ",
+    "title": "Giới từ thời gian: at, on, in, within, since",
+    "ask": "at, on hay in trước mốc thời gian? within hay since trước khoảng, mốc?",
+    "signals": "at + giờ · on + ngày, thứ · in + tháng, năm, mùa · within + khoảng · since + mốc",
+    "rule": "AT + giờ (at 9 A.M., at noon). ON + ngày, thứ (on May 5, on Monday). IN + tháng, năm, mùa, buổi (in June, in 2025). WITHIN = trong vòng (không quá) một khoảng. SINCE + mốc bắt đầu, đi với hiện tại hoàn thành.",
+    "formula": "at + giờ · on + ngày · in + tháng/năm · within + khoảng thời gian · since + mốc",
+    "tip": "at giờ, on ngày, in tháng năm.",
+    "items": [
+     "The meeting will start [at] 9:30 A.M. | on / in / within | Cuộc họp sẽ bắt đầu lúc 9:30 sáng.",
+     "The new branch opens [on] March 15. | in / at / within | Chi nhánh mới khai trương ngày 15 tháng 3.",
+     "The report was published [in] 2023. | on / at / within | Báo cáo được xuất bản năm 2023.",
+     "Refunds are processed [within] five business days. | since / at / on | Tiền hoàn được xử lý trong vòng năm ngày làm việc.",
+     "We have used this supplier [since] 2018. | for / within / at | Chúng tôi dùng nhà cung cấp này từ năm 2018."
+    ],
+    "why": [
+     "on + tháng, năm hoặc in + ngày cụ thể: sai.",
+     "for + mốc thời gian: sai (for + khoảng)."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-lien-tu-gioi-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-linking-adverbs",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Liên từ & giới từ",
+    "title": "Trạng từ nối however, therefore, moreover (Part 6)",
+    "ask": "Nối ý giữa HAI CÂU (sau dấu chấm hoặc chấm phẩy) dùng loại từ nào? Chọn theo quan hệ ý nào?",
+    "signals": "Câu 1. ___, câu 2. · Câu 1; ___, câu 2.",
+    "rule": "Trạng từ nối đứng đầu câu sau dấu chấm hoặc chấm phẩy, có dấu phẩy theo sau: HOWEVER (tuy nhiên), THEREFORE / AS A RESULT (vì vậy), MOREOVER / IN ADDITION (thêm vào đó), OTHERWISE (nếu không thì), INSTEAD (thay vào đó).",
+    "formula": "Câu 1. / ; However / Therefore / Moreover, câu 2.",
+    "tip": "Đọc câu trước và câu sau rồi hỏi: trái ngược, kết quả hay bổ sung?",
+    "items": [
+     "The product is popular. [However], production costs are rising. | Therefore / Moreover / Although | Sản phẩm được ưa chuộng. Tuy nhiên, chi phí sản xuất đang tăng.",
+     "The road was flooded; [therefore], the delivery was postponed. | however / moreover / because | Đường bị ngập; vì vậy việc giao hàng bị hoãn.",
+     "The hotel offers free Wi-Fi. [In addition], guests receive a free breakfast. | However / Otherwise / Instead | Khách sạn có Wi-Fi miễn phí. Thêm vào đó, khách được ăn sáng miễn phí.",
+     "Please confirm by Friday. [Otherwise], your reservation will be canceled. | Moreover / However / Therefore | Vui lòng xác nhận trước thứ Sáu. Nếu không, đặt chỗ của bạn sẽ bị hủy.",
+     "The train was full. [Instead], we took a bus. | Moreover / Otherwise / For example | Tàu đã kín chỗ. Thay vào đó, chúng tôi đi xe buýt."
+    ],
+    "why": [
+     "although, because: liên từ, phải nối hai mệnh đề trong cùng một câu.",
+     "Chọn sai quan hệ ý: đọc lại cả hai câu (Part 6 luôn cần ngữ cảnh)."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-lien-tu-gioi-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-fixed-prepositions",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Liên từ & giới từ",
+    "title": "Giới từ đi kèm cố định",
+    "ask": "Sau responsible, comply, in charge, eligible, prior, depend… là giới từ nào?",
+    "signals": "tính từ / động từ / danh từ + ___ + N",
+    "rule": "Một số từ luôn đi với giới từ cố định: responsible FOR, comply WITH, in charge OF, depend ON, interested IN, familiar WITH, eligible FOR, according TO, prior TO.",
+    "formula": "responsible for · comply with · in charge of · depend on · eligible for · prior to",
+    "tip": "Học theo cả cụm, đọc to: \"comply with the rules\".",
+    "items": [
+     "Ms. Park is responsible [for] training new staff. | of / with / to | Bà Park chịu trách nhiệm đào tạo nhân viên mới.",
+     "All products must comply [with] safety standards. | to / for / on | Mọi sản phẩm phải tuân thủ tiêu chuẩn an toàn.",
+     "Mr. Ortiz is in charge [of] the Seoul office. | for / with / on | Ông Ortiz phụ trách văn phòng Seoul.",
+     "Full-time employees are eligible [for] health insurance. | to / with / of | Nhân viên toàn thời gian đủ điều kiện hưởng bảo hiểm y tế.",
+     "Please check in at the front desk prior [to] your appointment. | for / of / before | Vui lòng làm thủ tục tại quầy trước giờ hẹn.",
+     "Our prices depend [on] the size of the order. | with / for / of | Giá của chúng tôi phụ thuộc vào quy mô đơn hàng."
+    ],
+    "why": [
+     "Dịch từng chữ từ tiếng Việt thường ra giới từ sai (responsible about).",
+     "prior before: thừa, prior đã mang nghĩa \"trước\"."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-lien-tu-gioi-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-who-which-whose",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Mệnh đề quan hệ",
+    "title": "who, which, whose, whom",
+    "ask": "Chỗ trống đứng sau danh từ để mở mệnh đề quan hệ: chọn who, which, whose hay whom?",
+    "signals": "N(người) + ___ + V → who · N(vật) + ___ + V → which · N + ___ + N + V → whose · N(người) + ___ + S + V → whom",
+    "rule": "WHO thay người làm chủ ngữ. WHOM thay người làm tân ngữ. WHICH (hoặc THAT) thay vật. WHOSE + danh từ chỉ sở hữu (của người hay vật đó).",
+    "formula": "N + who + V · N + whose + N + V · N + which + V · N + whom + S + V",
+    "tip": "Ngay sau chỗ trống là DANH TỪ không có mạo từ → whose.",
+    "items": [
+     "We hired a designer [whose] work has won several awards. | who / which / whom | Chúng tôi thuê một nhà thiết kế có tác phẩm đã đoạt nhiều giải.",
+     "The engineer [who] designed the bridge will speak today. | which / whose / whom | Kỹ sư thiết kế cây cầu sẽ phát biểu hôm nay.",
+     "The printer [which] broke last week has been replaced. | who / whose / whom | Máy in hỏng tuần trước đã được thay.",
+     "The client [whom] we met yesterday signed the contract. | which / whose / what | Khách hàng mà chúng tôi gặp hôm qua đã ký hợp đồng.",
+     "Customers [whose] orders are delayed will receive a coupon. | who / which / whom | Khách hàng có đơn hàng bị trễ sẽ nhận phiếu giảm giá."
+    ],
+    "why": [
+     "who + danh từ + động từ: thiếu nghĩa sở hữu, phải dùng whose.",
+     "which cho người, who cho vật: sai."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-menh-de-quan-he"
+   ]
+  },
+  {
+   "id": "seed-gt-no-that-after-comma",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Mệnh đề quan hệ",
+    "title": "Không dùng that sau dấu phẩy hay giới từ",
+    "ask": "Sau dấu phẩy (mệnh đề bổ sung) hoặc sau giới từ (in, for, to…), dùng which/whom hay that?",
+    "signals": "N, ___ … · giới từ + ___",
+    "rule": "THAT không đứng sau dấu phẩy và không đứng sau giới từ. Dùng WHICH cho vật, WHO / WHOM cho người: …, which…; in which; to whom.",
+    "formula": "N, which/who + V … · N + giới từ + which/whom + S + V",
+    "tip": "Có dấu phẩy hoặc giới từ ngay trước chỗ trống → loại THAT.",
+    "items": [
+     "The new office, [which] opened in May, has a rooftop garden. | that / what / where | Văn phòng mới, mở cửa hồi tháng Năm, có vườn trên sân thượng.",
+     "This is the room in [which] the interviews will be held. | that / where / what | Đây là phòng nơi diễn ra các cuộc phỏng vấn.",
+     "Mr. Shah, [who] joined us last year, now leads the team. | that / which / whom | Ông Shah, người gia nhập năm ngoái, nay dẫn dắt nhóm.",
+     "The person to [whom] you should send the invoice is Ms. Lee. | who / that / which | Người mà bạn nên gửi hóa đơn là bà Lee.",
+     "The hotel, [which] is near the airport, offers free shuttles. | that / where / what | Khách sạn, nằm gần sân bay, có xe đưa đón miễn phí."
+    ],
+    "why": [
+     "what: không có danh từ đứng trước để thay thế.",
+     "where: chỉ thay cho nơi chốn và không đứng sau giới từ."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-menh-de-quan-he"
+   ]
+  },
+  {
+   "id": "seed-gt-what-the-thing-that",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Mệnh đề quan hệ",
+    "title": "what = the thing that (không có danh từ đứng trước)",
+    "ask": "Trước chỗ trống KHÔNG có danh từ để thay thế, mà cần nghĩa \"điều mà, cái mà\", dùng gì?",
+    "signals": "động từ / giới từ + ___ + S + V · ___ + S + V + is …",
+    "rule": "WHAT = the thing(s) that, tự đóng vai danh từ: \"What we need is time.\" WHICH và THAT phải có danh từ đứng trước để thay thế.",
+    "formula": "(động từ / giới từ) + what + S + V · What + S + V + is …",
+    "tip": "Trước chỗ trống có danh từ → which/that. Không có → what.",
+    "items": [
+     "[What] customers want is faster delivery. | That / Which / Who | Điều khách hàng muốn là giao hàng nhanh hơn.",
+     "Please tell us [what] you think of the new design. | that / which / whose | Hãy cho chúng tôi biết bạn nghĩ gì về thiết kế mới.",
+     "The report explains [what] caused the delay. | that / whose / whom | Báo cáo giải thích điều gì đã gây ra sự chậm trễ.",
+     "This is exactly [what] we were looking for. | that / which / where | Đây chính xác là thứ chúng tôi đang tìm."
+    ],
+    "why": [
+     "that, which: thiếu danh từ để thay thế.",
+     "whose: phải có danh từ đi ngay sau."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-menh-de-quan-he"
+   ]
+  },
+  {
+   "id": "seed-gt-reflexive-pronouns",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Đại từ",
+    "title": "Đại từ phản thân (-self, -selves)",
+    "ask": "Khi chủ ngữ và tân ngữ là một người, hoặc cần nghĩa \"tự mình\", dùng đại từ nào?",
+    "signals": "by + ___ (một mình) · S + V + ___ (làm cho chính mình) · S + ___ (nhấn mạnh)",
+    "rule": "Chủ ngữ và tân ngữ là cùng một người → -SELF / -SELVES. BY + oneself = tự mình, một mình. Đặt sau chủ ngữ hoặc cuối câu để nhấn mạnh.",
+    "formula": "S + V + oneself · by + oneself · S + oneself + V",
+    "tip": "\"by + ___\" → luôn là đại từ phản thân.",
+    "items": [
+     "Ms. Ng prepared the entire report by [herself]. | her / hers / she | Cô Ng tự mình chuẩn bị toàn bộ báo cáo.",
+     "The interns introduced [themselves] to the team. | them / their / they | Các thực tập sinh tự giới thiệu với nhóm.",
+     "The CEO [himself] answered the customer's letter. | him / his / he | Chính giám đốc đã trả lời thư của khách hàng.",
+     "Please help [yourself] to coffee in the lounge. | you / your / yours | Mời bạn tự lấy cà phê ở phòng chờ.",
+     "We designed the logo [ourselves] to save money. | us / our / ours | Chúng tôi tự thiết kế logo để tiết kiệm tiền."
+    ],
+    "why": [
+     "Tân ngữ thường (him, them): chỉ người KHÁC với chủ ngữ.",
+     "Tính từ sở hữu (his, their): phải có danh từ đi sau."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-dai-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-possessive-pronouns",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Đại từ",
+    "title": "Tính từ sở hữu, đại từ sở hữu, tân ngữ",
+    "ask": "Trước danh từ dùng their hay theirs? Sau động từ hoặc giới từ dùng them hay they?",
+    "signals": "___ + N → tính từ sở hữu · động từ / giới từ + ___ → tân ngữ · ___ đứng một mình thay cho danh từ → đại từ sở hữu",
+    "rule": "TÍNH TỪ SỞ HỮU (my, your, his, her, its, our, their) đứng TRƯỚC danh từ. ĐẠI TỪ SỞ HỮU (mine, yours, hers, ours, theirs) thay cho cả cụm danh từ. TÂN NGỮ (me, him, them…) đứng sau động từ hoặc giới từ.",
+    "formula": "their + N · … than ours · động từ / giới từ + them",
+    "tip": "Có danh từ ngay sau → dạng ngắn (their). Không có → dạng -s (theirs).",
+    "items": [
+     "Employees should submit [their] time sheets every Friday. | them / theirs / themselves | Nhân viên nên nộp bảng chấm công mỗi thứ Sáu.",
+     "Our prices are lower than [theirs]. | their / them / they | Giá của chúng tôi thấp hơn giá của họ.",
+     "The company updated [its] privacy policy. | it's / it / itself | Công ty đã cập nhật chính sách bảo mật của mình.",
+     "Please send the documents to [me] by noon. | my / mine / I | Vui lòng gửi tài liệu cho tôi trước trưa.",
+     "That laptop is not mine; it is [yours]. | your / you / yourself | Chiếc laptop đó không phải của tôi; nó là của bạn."
+    ],
+    "why": [
+     "it's ≠ its: it's = it is.",
+     "Đại từ phản thân: chỉ dùng khi chủ ngữ và tân ngữ là một."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-dai-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-those-who",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Đại từ",
+    "title": "those who, anyone who",
+    "ask": "\"những ai, những người mà\" dùng those who hay them who?",
+    "signals": "___ who + V · ___ + V-ing / V3 (those interested, those attending)",
+    "rule": "THOSE WHO + động từ số nhiều = những người mà. ANYONE WHO + động từ số ít = bất kỳ ai. Dạng rút gọn: those interested, those attending. Không dùng \"them who\".",
+    "formula": "Those who + V · Anyone who + V(s) · those + V-ing/V3",
+    "tip": "\"them\" không bao giờ đứng trước who.",
+    "items": [
+     "[Those] who wish to attend must register by Friday. | Them / They / Who | Những ai muốn tham dự phải đăng ký trước thứ Sáu.",
+     "[Anyone] who needs a parking permit should contact security. | Those / They / Them | Bất kỳ ai cần thẻ gửi xe nên liên hệ bảo vệ.",
+     "The seminar is free for [those] interested in investing. | them / their / these | Hội thảo miễn phí cho những ai quan tâm đến đầu tư.",
+     "Prizes will be given to [those] who complete the survey. | them / they / whose | Giải thưởng dành cho những người hoàn thành khảo sát."
+    ],
+    "why": [
+     "they, them + who: sai.",
+     "Those who + động từ số ít: sai hòa hợp."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-dai-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-comparative",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "So sánh",
+    "title": "So sánh hơn: -er, more … than; much, far + so sánh hơn",
+    "ask": "Thấy \"than\" phía sau, hoặc much / far / even / still trước chỗ trống → cần dạng gì?",
+    "signals": "___ than · much / far / even / still / a lot + ___",
+    "rule": "Có THAN → so sánh hơn (-er hoặc more + tính từ, trạng từ). Nhấn mạnh so sánh hơn bằng MUCH, FAR, EVEN, STILL, A LOT, không dùng very.",
+    "formula": "adj-er / more + adj + than · much / far + adj-er",
+    "tip": "Thấy \"than\" → loại ngay dạng nguyên và dạng so sánh nhất.",
+    "items": [
+     "The new model is [lighter] than the old one. | light / lightest / lightly | Mẫu mới nhẹ hơn mẫu cũ.",
+     "This route is [much] faster than the highway. | very / more / most | Tuyến đường này nhanh hơn nhiều so với đường cao tốc.",
+     "Ms. Diaz handled the complaint [more] calmly than anyone else. | most / much / very | Bà Diaz xử lý khiếu nại bình tĩnh hơn bất kỳ ai.",
+     "Sales were [higher] than expected this quarter. | high / highest / highly | Doanh số quý này cao hơn dự kiến.",
+     "The second proposal is [far] more detailed than the first. | very / so / most | Đề xuất thứ hai chi tiết hơn hẳn đề xuất đầu."
+    ],
+    "why": [
+     "very + so sánh hơn: sai (very cheaper).",
+     "most, -est: so sánh nhất, không đi với than."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-so-sanh"
+   ]
+  },
+  {
+   "id": "seed-gt-superlative",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "So sánh",
+    "title": "So sánh nhất: the -est, the most; one of the + so sánh nhất + danh từ số nhiều",
+    "ask": "Thấy the + ___ + in/of, hoặc one of the + ___ → cần dạng gì?",
+    "signals": "the ___ in / of / among · one of the ___ + Ns · ever",
+    "rule": "So sánh nhất: THE + adj-est / THE MOST + adj, thường kèm in, of, among hoặc ever. ONE OF THE + so sánh nhất + danh từ SỐ NHIỀU.",
+    "formula": "the + adj-est / the most + adj + N + in/of … · one of the + adj-est + Ns",
+    "tip": "\"the … in the city / of all / ever\" → so sánh nhất.",
+    "items": [
+     "This is the [largest] hotel in the city. | larger / large / most large | Đây là khách sạn lớn nhất thành phố.",
+     "Mr. Cruz is one of the most experienced [pilots] in the company. | pilot / piloting / piloted | Ông Cruz là một trong những phi công giàu kinh nghiệm nhất công ty.",
+     "That was the [most] successful launch in our history. | more / much / very | Đó là đợt ra mắt thành công nhất trong lịch sử của chúng tôi.",
+     "Our store offers the [lowest] prices in the area. | lower / low / lowly | Cửa hàng chúng tôi có giá thấp nhất khu vực."
+    ],
+    "why": [
+     "one of the + danh từ số ít: sai (one of the best hotel).",
+     "so sánh hơn (-er, more) đi với the … in/of: sai."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-so-sanh"
+   ]
+  },
+  {
+   "id": "seed-gt-as-as",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "So sánh",
+    "title": "So sánh ngang bằng: as + tính từ / trạng từ + as",
+    "ask": "Thấy as … as → giữa hai chữ as là dạng gì?",
+    "signals": "as ___ as · as many / much + N + as · not as / so ___ as",
+    "rule": "AS + tính từ hoặc trạng từ ở DẠNG NGUYÊN + AS. Chọn tính từ hay trạng từ theo động từ: be + as adj as; động từ thường + as adv as. Phủ định: not as (so) … as.",
+    "formula": "be + as + adj + as · V + as + adv + as · as many/much + N + as",
+    "tip": "Không dùng -er hay more giữa hai chữ as.",
+    "items": [
+     "The new printer is as [fast] as the old one. | faster / fastest / more fast | Máy in mới nhanh ngang máy cũ.",
+     "Please reply as [soon] as possible. | sooner / soonest / more soon | Vui lòng trả lời càng sớm càng tốt.",
+     "The second test went as [smoothly] as the first. | smooth / smoother / smoothest | Lần thử thứ hai diễn ra suôn sẻ như lần đầu.",
+     "The rent here is not as [expensive] as downtown. | expensively / more expensive / expense | Tiền thuê ở đây không đắt bằng ở trung tâm.",
+     "We received as [many] complaints as last month. | much / more / most | Chúng tôi nhận được số khiếu nại nhiều ngang tháng trước."
+    ],
+    "why": [
+     "as + so sánh hơn + as: sai.",
+     "Tính từ sau động từ thường (went as smooth as): phải là trạng từ."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-so-sanh"
+   ]
+  },
+  {
+   "id": "seed-gt-the-more-the-more",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "So sánh",
+    "title": "The + so sánh hơn, the + so sánh hơn (càng … càng)",
+    "ask": "\"Càng … càng …\" viết thế nào?",
+    "signals": "The ___, the ___ · The more …, the …",
+    "rule": "Cấu trúc \"càng … càng\": THE + so sánh hơn + S + V, THE + so sánh hơn + S + V.",
+    "formula": "The + adj-er / more …, the + adj-er / more …",
+    "tip": "Có \"The …, the …\" ở hai vế → cả hai vế đều là so sánh hơn.",
+    "items": [
+     "The earlier you book, the [cheaper] the tickets are. | cheap / cheapest / cheaply | Đặt càng sớm, vé càng rẻ.",
+     "The more we advertise, the [more] customers we attract. | most / many / much | Quảng cáo càng nhiều, càng thu hút nhiều khách.",
+     "The [longer] the meeting lasts, the less focused people become. | long / longest / length | Cuộc họp càng kéo dài, mọi người càng kém tập trung.",
+     "The faster the delivery, the [happier] our customers are. | happy / happiest / happily | Giao hàng càng nhanh, khách càng hài lòng."
+    ],
+    "why": [
+     "Dạng nguyên hoặc so sánh nhất: sai cấu trúc."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-so-sanh"
+   ]
+  },
+  {
+   "id": "seed-gt-verb-to-infinitive",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "To V / V-ing",
+    "title": "Động từ + to V",
+    "ask": "Sau plan, decide, hope, agree, refuse, aim, intend, fail, manage, expect… là to V hay V-ing?",
+    "signals": "plan · decide · hope · agree · refuse · offer · aim · intend · fail · manage · expect · wish · seek",
+    "rule": "Nhóm động từ chỉ ý định, mong muốn, cam kết đi với TO + V nguyên mẫu.",
+    "formula": "S + plan / decide / hope / agree / refuse … + to V",
+    "tip": "Ý định, mong muốn, cam kết → to V.",
+    "items": [
+     "The company plans [to expand] into Asia next year. | expanding / expand / expanded | Công ty dự định mở rộng sang châu Á năm sau.",
+     "Mr. Bose agreed [to lead] the training session. | leading / lead / led | Ông Bose đồng ý dẫn buổi đào tạo.",
+     "The supplier refused [to lower] its prices. | lowering / lower / lowered | Nhà cung cấp từ chối giảm giá.",
+     "We aim [to respond] to all inquiries within 24 hours. | responding / respond / responded | Chúng tôi đặt mục tiêu phản hồi mọi yêu cầu trong 24 giờ.",
+     "The team managed [to finish] the project early. | finishing / finish / finished | Nhóm đã xoay xở hoàn thành dự án sớm."
+    ],
+    "why": [
+     "V-ing sau các động từ này: sai.",
+     "V nguyên mẫu không \"to\": chỉ dùng sau modal hoặc make, let."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-to-v-v-ing"
+   ]
+  },
+  {
+   "id": "seed-gt-verb-gerund",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "To V / V-ing",
+    "title": "Động từ + V-ing",
+    "ask": "Sau avoid, consider, recommend, suggest, finish, enjoy, mind, postpone, delay… là to V hay V-ing?",
+    "signals": "avoid · consider · recommend · suggest · finish · enjoy · mind · postpone · delay · discuss · keep",
+    "rule": "Nhóm động từ này theo sau là V-ING (danh động từ), không dùng to V.",
+    "formula": "S + avoid / consider / recommend / suggest … + V-ing",
+    "tip": "Nhớ nhóm: mind, enjoy, avoid, finish, postpone, consider, suggest, recommend.",
+    "items": [
+     "Please avoid [using] your phone during the meeting. | to use / use / used | Vui lòng tránh dùng điện thoại trong cuộc họp.",
+     "The board is considering [opening] a new branch. | to open / open / opened | Hội đồng đang cân nhắc mở chi nhánh mới.",
+     "We recommend [booking] your tickets in advance. | to book / book / booked | Chúng tôi khuyên bạn nên đặt vé trước.",
+     "The engineers finished [testing] the system on Monday. | to test / test / tested | Các kỹ sư đã kiểm tra xong hệ thống vào thứ Hai.",
+     "Would you mind [waiting] a few minutes? | to wait / wait / waited | Bạn có phiền đợi vài phút không?"
+    ],
+    "why": [
+     "to V sau nhóm này: sai.",
+     "V nguyên mẫu, V-ed: sau động từ chính cần dạng danh động từ."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-to-v-v-ing"
+   ]
+  },
+  {
+   "id": "seed-gt-preposition-gerund",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "To V / V-ing",
+    "title": "Giới từ + V-ing (kể cả \"to\" là giới từ)",
+    "ask": "Sau giới từ (for, by, before, without…) và sau look forward to, be committed to, động từ ở dạng gì?",
+    "signals": "for / by / before / after / without / instead of + ___ · look forward to · be committed / dedicated to · be used to",
+    "rule": "Sau GIỚI TỪ, động từ ở dạng V-ING. Trong look forward TO, be committed TO, be dedicated TO, be used TO, \"to\" là giới từ nên vẫn + V-ing.",
+    "formula": "giới từ + V-ing · look forward to + V-ing",
+    "tip": "Thử thay bằng danh từ: \"look forward to the meeting\" được → \"to\" là giới từ → V-ing.",
+    "items": [
+     "We look forward to [working] with you. | work / worked / be working | Chúng tôi mong được làm việc với bạn.",
+     "The firm is committed to [reducing] waste. | reduce / reduced / be reduced | Công ty cam kết giảm rác thải.",
+     "You can save time by [ordering] online. | order / ordered / to order | Bạn có thể tiết kiệm thời gian bằng cách đặt hàng trực tuyến.",
+     "Please read the manual before [installing] the software. | install / installed / to install | Vui lòng đọc hướng dẫn trước khi cài phần mềm.",
+     "He left the office without [saying] goodbye. | say / said / to say | Anh ấy rời văn phòng mà không chào tạm biệt."
+    ],
+    "why": [
+     "to + V nguyên mẫu sau look forward, committed: bẫy kinh điển.",
+     "V nguyên mẫu, V-ed sau giới từ: sai."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-to-v-v-ing"
+   ]
+  },
+  {
+   "id": "seed-gt-object-to-infinitive",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "To V / V-ing",
+    "title": "allow, ask, encourage + O + to V · make, let + O + V",
+    "ask": "Sau động từ + tân ngữ (allow us, ask staff…), động từ thứ hai ở dạng gì? Còn make, let thì sao?",
+    "signals": "allow · ask · encourage · require · enable · invite · remind · advise + O + ___ · make / let / have + O + ___",
+    "rule": "ALLOW, ASK, ENCOURAGE, REQUIRE, ENABLE, REMIND, ADVISE, INVITE + tân ngữ + TO V. MAKE, LET, HAVE + tân ngữ + V NGUYÊN MẪU (không to). Bị động: be encouraged / be required + to V.",
+    "formula": "allow / ask / enable + O + to V · make / let + O + V",
+    "tip": "make, let, have = \"khiến, để, nhờ\" → bỏ \"to\".",
+    "items": [
+     "The new system allows customers [to track] their orders. | tracking / track / tracked | Hệ thống mới cho phép khách theo dõi đơn hàng.",
+     "Employees are encouraged [to attend] the workshop. | attending / attend / attended | Nhân viên được khuyến khích tham dự hội thảo.",
+     "The manager let the staff [leave] early on Friday. | to leave / leaving / left | Quản lý cho nhân viên về sớm vào thứ Sáu.",
+     "Please remind Mr. Lim [to sign] the contract. | signing / sign / signed | Hãy nhắc ông Lim ký hợp đồng.",
+     "The delay made the passengers [miss] their connection. | to miss / missing / missed | Sự chậm trễ khiến hành khách lỡ chuyến nối."
+    ],
+    "why": [
+     "V-ing sau tân ngữ của nhóm allow, ask: sai.",
+     "make, let + O + to V: thừa \"to\"."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-to-v-v-ing"
+   ]
+  },
+  {
+   "id": "seed-gt-conditionals",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Điều kiện & giả định",
+    "title": "Câu điều kiện loại 1, 2, 3",
+    "ask": "Nhìn động từ ở mệnh đề if (hoặc mệnh đề chính) → vế còn lại có dạng gì?",
+    "signals": "If + V(s) → will V · If + V2 / were → would V · If + had V3 → would have V3",
+    "rule": "Loại 1 (có thể xảy ra): If + hiện tại đơn, will + V. Loại 2 (không có thật ở hiện tại): If + quá khứ đơn (were), would + V. Loại 3 (không có thật ở quá khứ): If + had + V3, would have + V3.",
+    "formula": "If + V(s), will V · If + V2, would V · If + had V3, would have V3",
+    "tip": "Ghép theo cặp: hiện tại với will, quá khứ với would, had V3 với would have V3.",
+    "items": [
+     "If you [order] today, you will receive a 10 percent discount. | will order / ordered / had ordered | Nếu đặt hàng hôm nay, bạn sẽ được giảm 10%.",
+     "If we had more staff, we [would open] on Sundays. | will open / would have opened / open | Nếu có thêm nhân viên, chúng tôi sẽ mở cửa Chủ nhật.",
+     "If the shipment had arrived earlier, we [would have met] the deadline. | would meet / will meet / had met | Nếu lô hàng đến sớm hơn, chúng tôi đã kịp hạn.",
+     "If I [were] you, I would accept the offer. | am / will be / had been | Nếu tôi là bạn, tôi sẽ nhận lời.",
+     "If it rains tomorrow, the picnic [will be] moved indoors. | would be / is / had been | Nếu mai trời mưa, buổi dã ngoại sẽ chuyển vào trong nhà."
+    ],
+    "why": [
+     "will trong mệnh đề if: sai.",
+     "Trộn sai cặp (If + had V3, will V)."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-dieu-kien-gia-dinh"
+   ]
+  },
+  {
+   "id": "seed-gt-inverted-conditionals",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Điều kiện & giả định",
+    "title": "Đảo ngữ điều kiện: Should, Had, Were + chủ ngữ",
+    "ask": "Câu mở đầu bằng chỗ trống + chủ ngữ + động từ, không có if, vế sau có will, please hoặc would → chọn gì?",
+    "signals": "___ + S + V nguyên mẫu, … (please / will) · ___ + S + V3, … would have · ___ + S + to V, … would",
+    "rule": "Bỏ IF và đảo trợ động từ lên đầu. SHOULD + S + V (= If + S + should V, rất hay gặp trong thư TOEIC). HAD + S + V3 (= điều kiện loại 3). WERE + S + to V (= loại 2).",
+    "formula": "Should you + V, please … · Had + S + V3, S + would have V3 · Were + S + to V, S + would V",
+    "tip": "Câu mẫu: \"Should you have any questions, please contact …\".",
+    "items": [
+     "[Should] you have any questions, please contact our office. | Had / Were / Would | Nếu bạn có thắc mắc, vui lòng liên hệ văn phòng.",
+     "[Had] we known about the traffic, we would have left earlier. | If / Should / Were | Nếu biết trước chuyện kẹt xe, chúng tôi đã đi sớm hơn.",
+     "[Should] the item arrive damaged, we will replace it free of charge. | If / Unless / Were | Nếu hàng đến bị hỏng, chúng tôi sẽ đổi miễn phí.",
+     "[Were] the company to relocate, many employees would resign. | Should / Had / If | Nếu công ty chuyển địa điểm, nhiều nhân viên sẽ nghỉ việc."
+    ],
+    "why": [
+     "If + chủ ngữ số ít + V nguyên mẫu (If the item arrive): sai, với If phải chia arrives; chỉ Should mới đi với V nguyên mẫu.",
+     "Would, Unless: không đảo lên đầu theo cấu trúc này."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-dieu-kien-gia-dinh"
+   ]
+  },
+  {
+   "id": "seed-gt-subjunctive",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Điều kiện & giả định",
+    "title": "Giả định: recommend, require that + S + V nguyên mẫu",
+    "ask": "Sau suggest, recommend, request, require, insist that, hoặc It is essential / important that, động từ ở dạng gì?",
+    "signals": "suggest · recommend · request · require · insist · ask that · It is essential / important / necessary / vital that",
+    "rule": "Câu giả định: … THAT + S + V NGUYÊN MẪU (không chia, không -s, không to) với mọi chủ ngữ. Bị động: be + V3.",
+    "formula": "recommend / require that + S + V (nguyên mẫu) · It is essential that + S + be + V3",
+    "tip": "Thấy \"that\" sau nhóm đề nghị, yêu cầu → động từ trần, kể cả \"he be\".",
+    "items": [
+     "The doctor recommended that Mr. Ali [take] a week off. | takes / took / to take | Bác sĩ đề nghị ông Ali nghỉ một tuần.",
+     "It is essential that every visitor [sign] in at the front desk. | signs / signed / will sign | Điều thiết yếu là mọi khách phải ký sổ ở quầy lễ tân.",
+     "The manager requested that the report [be] completed by noon. | is / was / being | Quản lý yêu cầu báo cáo phải hoàn thành trước trưa.",
+     "We suggest that she [contact] the IT department. | contacts / contacted / to contact | Chúng tôi đề nghị cô ấy liên hệ phòng IT.",
+     "The policy requires that each employee [complete] the course. | completes / completed / completing | Chính sách yêu cầu mỗi nhân viên hoàn thành khóa học."
+    ],
+    "why": [
+     "V(s/es) hoặc will V: bẫy chia theo chủ ngữ.",
+     "to V: sau that là một mệnh đề, cần chủ ngữ + động từ."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-dieu-kien-gia-dinh"
+   ]
+  },
+  {
+   "id": "seed-gt-countable-quantifiers",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Lượng từ",
+    "title": "many, few + danh từ đếm được · much, little + không đếm được",
+    "ask": "Danh từ phía sau đếm được hay không đếm được? Chọn many hay much, few hay little?",
+    "signals": "___ + Ns (đếm được) · ___ + information, equipment, furniture, advice, luggage, feedback",
+    "rule": "MANY, (A) FEW, SEVERAL, A NUMBER OF + danh từ đếm được số nhiều. MUCH, (A) LITTLE, AN AMOUNT OF, A GREAT DEAL OF + danh từ không đếm được. A LOT OF, SOME, PLENTY OF dùng được cho cả hai.",
+    "formula": "many / few / several + Ns · much / little / an amount of + N (không đếm được)",
+    "tip": "Danh từ không đếm được hay gặp: information, equipment, furniture, advice, luggage, feedback, merchandise.",
+    "items": [
+     "We received [many] applications for the position. | much / little / an amount of | Chúng tôi nhận được nhiều hồ sơ cho vị trí này.",
+     "There is too [much] equipment in the storage room. | many / few / a number of | Có quá nhiều thiết bị trong kho.",
+     "Only a [few] seats are left for tonight's show. | little / much / less | Chỉ còn vài ghế cho buổi diễn tối nay.",
+     "Please send us more [information] about the product. | informations / informative / inform | Vui lòng gửi thêm thông tin về sản phẩm.",
+     "[Several] customers asked for a refund. | Much / Little / Every | Một số khách hàng đã yêu cầu hoàn tiền."
+    ],
+    "why": [
+     "informations, equipments: sai, không có dạng số nhiều.",
+     "much + danh từ số nhiều, many + danh từ không đếm được: sai."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-luong-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-another-other",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Lượng từ",
+    "title": "another, other, others, the other",
+    "ask": "Chọn another, other, others hay the other theo danh từ phía sau?",
+    "signals": "___ + N số ít → another · ___ + Ns → other · ___ (đứng một mình, số nhiều) → others · cái còn lại → the other",
+    "rule": "ANOTHER + danh từ số ít (một cái khác). OTHER + danh từ số nhiều hoặc không đếm được. OTHERS = other + Ns, đứng một mình. THE OTHER = cái còn lại trong hai. THE OTHERS = những cái còn lại.",
+    "formula": "another + N · other + Ns · others (một mình) · the other + N / the other (một mình)",
+    "tip": "Có danh từ số nhiều phía sau → other, KHÔNG phải others.",
+    "items": [
+     "Please let me know if you need [another] copy. | other / others / the others | Hãy báo nếu bạn cần thêm một bản.",
+     "Some guests prefer tea; [others] prefer coffee. | other / another / the other | Một số khách thích trà; số khác thích cà phê.",
+     "One printer works, but [the other] is broken. | another / others / other | Một máy in chạy được, máy còn lại bị hỏng.",
+     "The CEO thanked the volunteers and [other] staff members. | others / another / the others | Giám đốc cảm ơn các tình nguyện viên và những nhân viên khác.",
+     "We will discuss this and [other] issues at the meeting. | another / others / the others | Chúng ta sẽ bàn vấn đề này và các vấn đề khác ở cuộc họp."
+    ],
+    "why": [
+     "others + danh từ: sai (others employees).",
+     "another + danh từ số nhiều: sai."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-luong-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-most-almost",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Lượng từ",
+    "title": "most, most of the, almost",
+    "ask": "\"hầu hết\" viết là most, most of the hay almost?",
+    "signals": "___ + Ns (nói chung) · ___ of the / our + Ns · ___ + all / every / tính từ",
+    "rule": "MOST + danh từ (nói chung: most employees). MOST OF + the / our / these + danh từ (nhóm xác định). ALMOST là trạng từ \"gần như\": almost all, almost every, almost finished. Không dùng \"almost + danh từ\" hay \"most of + danh từ\" thiếu từ hạn định.",
+    "formula": "most + Ns · most of the + Ns · almost all / every + N · almost + tính từ",
+    "tip": "Thấy \"of the\" sau chỗ trống → most. Thấy all, every hoặc tính từ sau → almost.",
+    "items": [
+     "[Most] employees use public transportation. | Almost / Most of / The most | Hầu hết nhân viên đi phương tiện công cộng.",
+     "[Most of] the orders were shipped on time. | Almost / Most / Almost of | Hầu hết các đơn hàng được giao đúng hạn.",
+     "[Almost] all of the seats were filled. | Most / Most of / Mostly | Gần như tất cả các ghế đã kín.",
+     "The renovation is [almost] complete. | most / most of / the most | Việc cải tạo gần như đã xong.",
+     "[Almost] every guest left positive feedback. | Most / Most of / The most | Gần như mọi khách đều để lại phản hồi tích cực."
+    ],
+    "why": [
+     "almost + danh từ: sai (almost employees).",
+     "most of + danh từ không có the: sai (most of employees)."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-luong-tu"
+   ]
+  },
+  {
+   "id": "seed-gt-so-such-too-enough",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Cấu trúc đặc biệt",
+    "title": "so … that, such … that, too … to, enough",
+    "ask": "Chọn so hay such (… that)? too hay enough?",
+    "signals": "___ + adj/adv + that → so · ___ + (a/an) + adj + N + that → such · ___ + adj + to V → too · adj + ___ + to V → enough",
+    "rule": "SO + tính từ / trạng từ (+ that). SUCH + (a/an) + tính từ + danh từ (+ that). TOO + tính từ + to V = quá … nên không. Tính từ + ENOUGH + to V = đủ … để (enough đứng SAU tính từ, TRƯỚC danh từ).",
+    "formula": "so + adj + that · such a + adj + N + that · too + adj + to V · adj + enough + to V",
+    "tip": "Có danh từ → such. Không có danh từ → so.",
+    "items": [
+     "The demand was [so] high that we ran out of stock. | such / too / very | Nhu cầu cao đến mức chúng tôi hết hàng.",
+     "It was [such] a successful event that we will repeat it. | so / too / very | Sự kiện thành công đến mức chúng tôi sẽ tổ chức lại.",
+     "The box is [too] heavy to lift alone. | so / such / enough | Chiếc hộp quá nặng để nâng một mình.",
+     "The room is large [enough] to hold 200 people. | too / so / such | Phòng đủ rộng để chứa 200 người.",
+     "The instructions were [so] clear that no one needed help. | such / too / very | Hướng dẫn rõ ràng đến mức không ai cần giúp."
+    ],
+    "why": [
+     "very + adj + that: very không đi với \"that\" chỉ kết quả.",
+     "so + a + adj + N: sai, phải dùng such."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-cau-truc-dac-biet"
+   ]
+  },
+  {
+   "id": "seed-gt-rise-raise",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Cấu trúc đặc biệt",
+    "title": "rise và raise: nội động từ, ngoại động từ",
+    "ask": "Sau chỗ trống có tân ngữ → raise hay rise? Không có tân ngữ → ?",
+    "signals": "___ + tân ngữ (prices, funds, concerns) → raise · ___ không có tân ngữ (by + %) → rise",
+    "rule": "RAISE (raised, raised) là ngoại động từ, cần tân ngữ: raise prices, raise funds. RISE (rose, risen) là nội động từ, không có tân ngữ: prices rose.",
+    "formula": "S + raise + O · S + rise (+ by …)",
+    "tip": "raiSe đi với Sự vật bị nâng lên (tân ngữ).",
+    "items": [
+     "The company will [raise] prices next month. | rise / arise / rose | Công ty sẽ tăng giá vào tháng sau.",
+     "Fuel costs [rose] sharply last year. | raised / raising / arose | Chi phí nhiên liệu tăng mạnh năm ngoái.",
+     "The charity event [raised] over $50,000. | rose / risen / rising | Sự kiện từ thiện quyên góp được hơn 50.000 đô la.",
+     "Interest rates have [risen] by 2 percent. | raised / rose / raising | Lãi suất đã tăng 2%."
+    ],
+    "why": [
+     "rise + tân ngữ: sai.",
+     "Dùng raise chủ động mà không có tân ngữ: sai (Costs raised sharply)."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-cau-truc-dac-biet"
+   ]
+  },
+  {
+   "id": "seed-gt-whether-if",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Cấu trúc đặc biệt",
+    "title": "whether (or not), whether + to V",
+    "ask": "\"liệu … hay không\": khi nào bắt buộc dùng whether thay vì if?",
+    "signals": "___ + to V · ___ or not · giới từ + ___ · ___ đứng đầu câu làm chủ ngữ",
+    "rule": "WHETHER và IF đều nghĩa \"liệu\", nhưng chỉ WHETHER đứng được trước to V, sau giới từ, ngay trước \"or not\", và ở đầu câu làm chủ ngữ.",
+    "formula": "decide whether to V · whether or not · giới từ + whether · Whether … depends on …",
+    "tip": "Đề TOEIC hay hỏi \"whether or not\" và \"whether to\".",
+    "items": [
+     "The board has not decided [whether] to accept the offer. | if / that / what | Hội đồng chưa quyết định có chấp nhận lời đề nghị hay không.",
+     "Please let us know [whether] or not you can attend. | if / that / what | Hãy cho chúng tôi biết bạn có thể tham dự hay không.",
+     "The decision depends on [whether] the budget is approved. | if / that / what | Quyết định phụ thuộc vào việc ngân sách có được duyệt hay không.",
+     "[Whether] the event will be held outdoors depends on the weather. | If / That / What | Sự kiện có tổ chức ngoài trời hay không phụ thuộc vào thời tiết."
+    ],
+    "why": [
+     "if + to V, if or not: sai.",
+     "that, what: không mang nghĩa \"liệu … hay không\"."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-cau-truc-dac-biet"
+   ]
+  },
+  {
+   "id": "seed-gt-already-yet-still",
+   "since": 1,
+   "type": "pattern",
+   "fields": {
+    "topic": "Cấu trúc đặc biệt",
+    "title": "already, yet, still",
+    "ask": "already, yet hay still: dựa vào câu khẳng định, phủ định và vị trí trong câu?",
+    "signals": "have ___ V3 (khẳng định) → already · not … ___ (cuối câu, sau not) → yet · ___ + V / be ___ (vẫn còn) → still",
+    "rule": "ALREADY: khẳng định, \"đã … rồi\" (have already sent). YET: phủ định hoặc câu hỏi, \"chưa\" (have not … yet, has not yet). STILL: \"vẫn\", sự việc còn tiếp diễn (is still waiting).",
+    "formula": "have already + V3 · have not + V3 + yet · S + is still + V-ing",
+    "tip": "Phủ định ở cuối câu → yet. Khẳng định sau have → already.",
+    "items": [
+     "We have [already] shipped your order. | yet / still / ever | Chúng tôi đã gửi đơn hàng của bạn rồi.",
+     "The results have not been announced [yet]. | already / still / ever | Kết quả vẫn chưa được công bố.",
+     "Mr. Tan is [still] waiting for the approval. | yet / already / ever | Ông Tan vẫn đang chờ phê duyệt.",
+     "The new manager has not [yet] arrived. | already / ever / still | Quản lý mới vẫn chưa đến."
+    ],
+    "why": [
+     "yet trong câu khẳng định: sai nghĩa.",
+     "already trong câu phủ định: không tự nhiên trong đề TOEIC."
+    ]
+   },
+   "tags": [
+    "ngu-phap-toeic",
+    "np-cau-truc-dac-biet"
+   ]
+  }
+ ]
+}

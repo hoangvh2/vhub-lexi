@@ -221,7 +221,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
     rateStarted();
     const dur = Date.now() - shownAt.current;
     const wasNew = card.state === 0;
-    const answered: Answered | null = note ? { noteId: note.id, word: str(note.fields.word) || str(note.fields.answer) || tpl?.label || "", vi: str(note.fields.vi), rating: r } : null;
+    const answered: Answered | null = note ? { noteId: note.id, word: str(note.fields.word) || str(note.fields.answer) || str(note.fields.title) || tpl?.label || "", vi: str(note.fields.vi), rating: r } : null;
     try {
       const res = await reviewCard(card, r, dur, Date.now(), hint);
       history.current = [...history.current.slice(-9), res];
@@ -406,7 +406,8 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
             {hintable && <HintButtons key={turn} note={note} levels={levels} gateMs={gateMs} readLocked={readLocked} onOpen={openHint} />}
             <Blocks blocks={tpl.front(shown ?? note, p.layout)} cloze={tpl.id === "cloze"} />
             {hintable && <HintBoxes note={note} templateId={tpl.id} levels={levels} />}
-            {tpl.mode === "type" && !revealed && answer && (
+            {/* A grammar pattern shows its options: a first-letter hint would give the answer away. */}
+            {tpl.mode === "type" && !revealed && answer && note.type !== "pattern" && (
               <div class="target" data-testid="target">
                 <div class="skel" aria-label={`Đáp án có ${letters} chữ cái, bắt đầu bằng ${answer.trim()[0]}`} data-testid="answer-hint">
                   {[...answerHint(answer, 1 + extraHints)].map((ch, i) =>

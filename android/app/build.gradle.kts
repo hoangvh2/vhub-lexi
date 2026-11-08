@@ -43,6 +43,9 @@ android {
         buildConfigField("String", "FUNCTIONS_REGION", quoted(cloudValue("FUNCTIONS_REGION", "asia-southeast1")))
     }
 
+    // The built-in grammar pack (shared/seed/grammar-toeic.json, built by tools/seed/build.ts), loaded by data/Seeds.kt.
+    sourceSets.getByName("main").assets.srcDir("../../shared/seed")
+
     signingConfigs {
         create("release") {
             storeFile = rootProject.file(signingValue("SIGNING_STORE_FILE", "storeFile") ?: "keystore/sideload.jks")

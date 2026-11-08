@@ -16,6 +16,8 @@ kotlin {
 // Reference vectors produced by the TypeScript implementation (web/test/vectors.test.ts).
 sourceSets.test {
     resources.srcDir(layout.projectDirectory.dir("../../shared/vectors"))
+    // The built-in grammar pack (shared/seed/grammar-toeic.json), also shipped as an app asset.
+    resources.srcDir(layout.projectDirectory.dir("../../shared/seed"))
 }
 
 dependencies {

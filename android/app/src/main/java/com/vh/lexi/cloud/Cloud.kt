@@ -20,6 +20,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
 import com.vh.lexi.BuildConfig
 import com.vh.lexi.data.LexiData
+import com.vh.lexi.data.Seeds
 import com.vh.lexi.core.AiError
 import com.vh.lexi.core.Enriched
 import com.vh.lexi.core.Extracted
@@ -27,6 +28,7 @@ import com.vh.lexi.core.extractedFrom
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.concurrent.TimeUnit
@@ -77,6 +79,11 @@ class Cloud(private val context: Context, private val data: LexiData, private va
 
     val sync: CloudSync? = db?.let { CloudSync(it, data, scope, onDenied = ::denied) }
 
+    val seeds = Seeds(context, data)
+
+    /** Adds the missing part of the built-in grammar pack (see [Seeds.load]); null = the server could not be asked. */
+    suspend fun loadSeeds(restore: Boolean = false): Int? = seeds.load(sync?.takeIf { account.value is Account.SignedIn }, restore)
+
     init {
         auth?.addAuthStateListener { a ->
             val user = a.currentUser
@@ -86,6 +93,11 @@ class Cloud(private val context: Context, private val data: LexiData, private va
             } else if ((account.value as? Account.SignedIn)?.uid != user.uid) {
                 _account.value = Account.SignedIn(user.uid, user.email.orEmpty(), user.displayName ?: user.email.orEmpty())
                 sync?.start(user.uid)
+                // The built-in grammar pack: once this phone's data is read, ask the server what it already has.
+                scope.launch {
+                    data.loaded.first { it }
+                    loadSeeds()
+                }
             }
         }
     }

@@ -162,7 +162,7 @@ export const DEFAULT_PREFS: Prefs = {
   desiredRetention: 0.9,
   newPerDay: 15,
   maxReviewsPerDay: 200,
-  templates: { vocab: ["recognize", "cloze"] },
+  templates: { vocab: ["recognize", "cloze"], pattern: ["fill", "rule"] },
   layout: { showIpa: true, showPos: true, showEn: true, showVi: true, showExamples: true, showMnemonic: true },
   autoSpeak: "off",
   theme: "system",

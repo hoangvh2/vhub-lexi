@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { assertFails, assertSucceeds, initializeTestEnvironment } from "@firebase/rules-unit-testing";
-import { collection, deleteDoc, doc, getDoc, getDocs, increment, limit, query, setDoc, writeBatch } from "firebase/firestore";
+import { collection, deleteDoc, doc, documentId, getDoc, getDocs, increment, limit, query, setDoc, where, writeBatch } from "firebase/firestore";
 
 const fx = JSON.parse(readFileSync(new URL("./fixtures.json", import.meta.url), "utf8"));
+// The built-in TOEIC grammar pack exactly as the apps load it (shared/seed.ts).
+const pack = JSON.parse(readFileSync(new URL("../../shared/seed/grammar-toeic.json", import.meta.url), "utf8"));
 // FSRS-6 defaults, as an optimizer run would store them (21 numbers).
 const W = [0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.001, 1.8722, 0.1666, 0.796, 1.4835, 0.0614, 0.2629, 1.6483, 0.6014, 1.8729, 0.5425, 0.0912, 0.0658, 0.1542];
 const rules = readFileSync(new URL("../../firestore.rules", import.meta.url), "utf8");
@@ -133,6 +135,46 @@ describe("shape checks reject bad data", () => {
     await assertFails(put("notes", "t1", { ...t, fields: { ...t.fields, score: "99" } }));
     await assertFails(put("notes", "t1", { ...t, fields: { ...t.fields, p5: "1234567890" } }));
     await assertFails(put("notes", "t1", { ...t, fields: { ...t.fields, v: 5 } }));
+  });
+  it("grammar pack: every seed note, its cards, the deck and the loaded-version marker are accepted; a second device rewrites them", async () => {
+    const deck = { id: pack.deck.id, name: pack.deck.name, createdAt: pack.createdAt, updatedAt: pack.createdAt };
+    const notes = pack.notes.map((s, i) => ({ id: s.id, type: s.type, deckId: deck.id, fields: s.fields, tags: s.tags, createdAt: pack.createdAt + i, updatedAt: pack.createdAt + i }));
+    const cards = notes.flatMap((n) => ["fill", "rule", "spot"].map((t) => ({ ...fx.cards.fresh, id: `${n.id}.${t}`, noteId: n.id, deckId: deck.id, template: t, due: n.createdAt, createdAt: n.createdAt, updatedAt: n.createdAt })));
+    const writeAll = async () => {
+      const db = me();
+      await assertSucceeds(setDoc(doc(db, ...path("decks", deck.id)), deck));
+      for (let i = 0; i < notes.length; i += 100) {
+        const b = writeBatch(db);
+        for (const n of notes.slice(i, i + 100)) b.set(doc(db, ...path("notes", n.id)), n);
+        await assertSucceeds(b.commit());
+      }
+      for (let i = 0; i < cards.length; i += 400) {
+        const b = writeBatch(db);
+        for (const c of cards.slice(i, i + 400)) b.set(doc(db, ...path("cards", c.id)), c);
+        await assertSucceeds(b.commit());
+      }
+      await assertSucceeds(setDoc(doc(db, ...path("settings", "seeds")), { [pack.id]: pack.version, updatedAt: 1 }, { merge: true }));
+    };
+    await writeAll();
+    await writeAll(); // same ids, same createdAt: an identical write from another device passes the update rules
+    const db = me();
+    const range = (name) => query(collection(db, ...path(name)), where(documentId(), ">=", pack.prefix), where(documentId(), "<", "seed-gt."), limit(1000));
+    assert.equal((await assertSucceeds(getDocs(range("notes")))).size, notes.length);
+    assert.equal((await assertSucceeds(getDocs(range("cards")))).size, cards.length);
+    assert.equal((await assertSucceeds(getDoc(doc(db, ...path("settings", "seeds"))))).data()[pack.id], pack.version);
+  });
+  it("pattern notes and the seeds marker: malformed ones rejected", async () => {
+    const n = { id: "p1", type: "pattern", deckId: "deck1", createdAt: 1, updatedAt: 1, fields: { title: "Until + HTĐ", rule: "Mệnh đề thời gian dùng hiện tại.", items: ["Wait until he [arrives]. | will arrive / arrived | Đợi đến khi anh ấy tới."] } };
+    await assertSucceeds(put("notes", "p1", n));
+    await assertFails(put("notes", "p1", { ...n, fields: { ...n.fields, title: "" } }));
+    await assertFails(put("notes", "p1", { ...n, fields: { title: "x", rule: "y" } }));
+    await assertFails(put("notes", "p1", { ...n, fields: { ...n.fields, items: Array(9).fill("a [b] | c / d | e") } }));
+    await assertFails(put("notes", "p1", { ...n, fields: { ...n.fields, rule: "x".repeat(301) } }));
+    await assertFails(put("notes", "p1", { ...n, fields: { ...n.fields, word: "x" } }));
+    await assertFails(put("notes", "p1", { ...n, fields: { ...n.fields, items: "one line" } }));
+    await assertFails(put("settings", "seeds", { "grammar-toeic": "1" }));
+    await assertFails(put("settings", "seeds", { "grammar-toeic": 1, other: 2 }));
+    await assertSucceeds(put("settings", "seeds", { "grammar-toeic": 1, updatedAt: 5 }));
   });
   it("notes: type and createdAt cannot change after creation", async () => {
     await assertSucceeds(put("notes", fx.note.id, fx.note));

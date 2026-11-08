@@ -174,6 +174,7 @@ fun phraseBlocks(note: Note): List<Block> {
  * shown as they are.
  */
 fun studyNote(note: Note, templateId: String, reps: Int): Note {
+    if (note.type == "pattern") return studyPattern(note, templateId, reps)
     if (note.type != "vocab" || templateId != "cloze") return note
     val ps = phrasesOf(note)
     if (ps.isEmpty()) return note
@@ -410,6 +411,159 @@ object Grammar : NoteTypeDef {
         (listOf(note.f("sentence").str(), note.f("answer").str(), note.f("topic").str(), note.f("translation").str(), note.f("rule").str()) + note.tags).joinToString(" ").lowercase()
 }
 
+// ------------------------------------------------------------------ pattern (a grammar rule or trap, with sentences to practise it)
+
+/**
+ * One practice sentence of a grammar pattern (port of shared/notetypes.ts `parsePatternItem`):
+ * `sentence with [answer] | wrong / wrong | meaning`. [at] = start until end (exclusive) of the answer in [sentence].
+ */
+data class PatternItem(val sentence: String, val answer: String, val at: Pair<Int, Int>, val blanked: String, val wrong: List<String>, val vi: String)
+
+const val PATTERN_ITEM_MAX = 300
+
+fun parsePatternItem(line: String): PatternItem? {
+    val parts = line.split("|").map { it.replace(SPACES, " ").trim() }
+    val raw = parts.getOrElse(0) { "" }
+    val open = raw.indexOf('[')
+    if (open < 0) return null
+    val close = raw.indexOf(']', open + 1)
+    if (close < 0 || raw.indexOf('[', open + 1) >= 0 || raw.indexOf(']', close + 1) >= 0) return null
+    val answer = raw.substring(open + 1, close).trim()
+    if (answer.isEmpty()) return null
+    val before = raw.substring(0, open)
+    val after = raw.substring(close + 1)
+    val seen = hashSetOf(normalizeAnswer(answer))
+    val wrong = ArrayList<String>()
+    for (w in parts.getOrElse(1) { "" }.split("/").map { it.trim() }) {
+        val k = normalizeAnswer(w)
+        if (k.isEmpty() || !seen.add(k)) continue
+        wrong += w
+    }
+    return PatternItem(before + answer + after, answer, before.length to before.length + answer.length, before + "_____" + after, wrong, parts.drop(2).joinToString(" | ").trim())
+}
+
+fun patternItems(note: Note): List<PatternItem> = note.fields["items"].items().mapNotNull(::parsePatternItem)
+
+/** The options a fill card shows, in code-unit order of their lower case (the same order as the web app). */
+fun patternOptions(item: PatternItem): List<String> =
+    if (item.wrong.isEmpty()) emptyList() else (listOf(item.answer) + item.wrong).sortedWith { a, b -> a.lowercase().compareTo(b.lowercase()) }
+
+private fun spotSentence(item: PatternItem) = item.sentence.substring(0, item.at.first) + item.wrong[0] + item.sentence.substring(item.at.second)
+
+private fun firstItem(n: Note) = patternItems(n).firstOrNull()
+private fun firstTrapItem(n: Note) = patternItems(n).firstOrNull { it.wrong.isNotEmpty() }
+
+private fun patternBadge(n: Note): List<Block> = n.f("topic").str().let { if (it.isNotEmpty()) listOf(Block.Badge(it)) else emptyList() }
+
+private fun patternExplain(n: Note): List<Block> = buildList {
+    if (n.f("title").str().isNotEmpty()) add(Block.Text("Bẫy: ${n.f("title").str()}", "muted"))
+    if (n.f("rule").str().isNotEmpty()) add(Block.Text(n.f("rule").str(), "strong"))
+    if (n.f("signals").str().isNotEmpty()) add(Block.Text("Dấu hiệu: ${n.f("signals").str()}"))
+    if (n.f("formula").str().isNotEmpty()) add(Block.Text(n.f("formula").str(), "muted"))
+    val why = n.f("why").items()
+    if (why.isNotEmpty()) add(Block.Fold("Vì sao không phải…", why.joinToString("\n")))
+    if (n.f("tip").str().isNotEmpty()) add(Block.Memo(n.f("tip").str()))
+}
+
+private fun itemExample(it: PatternItem) = Block.Example(it.sentence, it.at, it.vi.ifEmpty { null })
+
+private object PatternFill : TemplateDef {
+    override val id = "fill"
+    override val label = "Điền câu theo bẫy"
+    override val description = "Mỗi lần ôn là một câu khác của cùng một bẫy: gõ đáp án đúng trong các lựa chọn, quy tắc hiện ở mặt sau."
+    override val mode = AnswerMode.TYPE
+    override fun applies(note: Note) = firstItem(note) != null
+    override fun front(note: Note, layout: CardLayout) = buildList<Block> {
+        val it = firstItem(note)!!
+        addAll(patternBadge(note))
+        add(Block.Quote(it.blanked))
+        val opts = patternOptions(it)
+        if (opts.isNotEmpty()) add(Block.Text(opts.joinToString(" · "), "muted"))
+    }
+    override fun back(note: Note, layout: CardLayout) = buildList<Block> {
+        val it = firstItem(note)!!
+        add(Block.Title(it.answer))
+        add(itemExample(it))
+        addAll(patternExplain(note))
+    }
+    override fun expected(note: Note) = listOf(firstItem(note)?.answer ?: "")
+    override fun speakBack(note: Note) = firstItem(note)?.sentence
+}
+
+private object PatternRule : TemplateDef {
+    override val id = "rule"
+    override val label = "Nhớ quy tắc"
+    override val description = "Thấy câu hỏi về dấu hiệu, tự nhớ lại quy tắc rồi tự chấm."
+    override val mode = AnswerMode.FLIP
+    override fun applies(note: Note) = note.f("ask").str().isNotEmpty() && note.f("rule").str().isNotEmpty()
+    override fun front(note: Note, layout: CardLayout) = patternBadge(note) + Block.Text(note.f("ask").str(), "strong")
+    override fun back(note: Note, layout: CardLayout) = buildList<Block> {
+        add(Block.Text(note.f("rule").str(), "strong"))
+        if (note.f("formula").str().isNotEmpty()) add(Block.Text(note.f("formula").str(), "muted"))
+        firstItem(note)?.let { add(itemExample(it)) }
+        if (note.f("tip").str().isNotEmpty()) add(Block.Memo(note.f("tip").str()))
+    }
+    override fun speakBack(note: Note) = firstItem(note)?.sentence
+}
+
+private object PatternSpot : TemplateDef {
+    override val id = "spot"
+    override val label = "Tìm lỗi sai"
+    override val description = "Câu chứa đúng một lỗi theo bẫy: tìm chỗ sai và gõ lại từ đúng."
+    override val mode = AnswerMode.TYPE
+    override fun applies(note: Note) = firstTrapItem(note) != null
+    override fun front(note: Note, layout: CardLayout) = buildList<Block> {
+        val it = firstTrapItem(note)!!
+        addAll(patternBadge(note))
+        add(Block.Quote(spotSentence(it)))
+        add(Block.Text("Câu có một chỗ sai. Gõ lại từ đúng thay cho chỗ sai.", "muted"))
+    }
+    override fun back(note: Note, layout: CardLayout) = buildList<Block> {
+        val it = firstTrapItem(note)!!
+        add(Block.Title(it.answer))
+        add(Block.Text("Sai: ${it.wrong[0]} → Đúng: ${it.answer}"))
+        add(itemExample(it))
+        addAll(patternExplain(note))
+    }
+    override fun expected(note: Note) = listOf(firstTrapItem(note)?.answer ?: "")
+    override fun speakBack(note: Note) = firstTrapItem(note)?.sentence
+}
+
+object Pattern : NoteTypeDef {
+    override val id = "pattern"
+    override val label = "Bẫy ngữ pháp"
+    override val fields = listOf(
+        FieldDef("title", "Tên bẫy", "text", required = true, maxLength = 80),
+        FieldDef("topic", "Chủ điểm", "text", maxLength = 40),
+        FieldDef("ask", "Câu hỏi nhớ quy tắc", "longtext", maxLength = 200),
+        FieldDef("signals", "Dấu hiệu nhận biết", "text", maxLength = 160),
+        FieldDef("rule", "Quy tắc", "longtext", required = true, maxLength = 300),
+        FieldDef("formula", "Công thức", "text", maxLength = 120),
+        FieldDef(
+            "items", "Câu luyện", "list", required = true, maxLength = PATTERN_ITEM_MAX,
+            placeholder = "Mỗi dòng một câu: câu có [đáp án] | sai 1 / sai 2 / sai 3 | nghĩa\nví dụ: We will wait until he [returns]. | will return / returned | Chúng tôi sẽ đợi đến khi anh ấy về.",
+        ),
+        FieldDef("why", "Vì sao không phải…", "list", maxLength = 160, placeholder = "Mỗi dòng giải thích một lựa chọn sai"),
+        FieldDef("tip", "Mẹo nhớ", "longtext", maxLength = 200),
+    )
+    override val templates: List<TemplateDef> = listOf(PatternFill, PatternRule, PatternSpot)
+    override fun title(note: Note) = note.f("title").str()
+    override fun subtitle(note: Note) = listOf(note.f("topic").str(), "${patternItems(note).size} câu").filter { it.isNotEmpty() }.joinToString(" · ")
+    override fun searchText(note: Note) =
+        (listOf(note.f("title").str(), note.f("topic").str(), note.f("ask").str(), note.f("signals").str(), note.f("rule").str(), note.f("formula").str()) +
+            note.f("items").items() + note.f("why").items() + note.f("tip").str() + note.tags).joinToString(" ").lowercase()
+}
+
+/** Port of `studyPattern`: the usable sentence at [reps] mod (their number) moves to the front of `items`. */
+private fun studyPattern(note: Note, templateId: String, reps: Int): Note {
+    val lines = note.fields["items"].items()
+    val usable = lines.filter { l -> parsePatternItem(l)?.let { templateId != "spot" || it.wrong.isNotEmpty() } == true }
+    if (usable.size < 2) return note
+    val pick = usable[((reps % usable.size) + usable.size) % usable.size]
+    val i = lines.indexOf(pick)
+    return note.copy(fields = note.fields + ("items" to FieldValue.Items(listOf(pick) + lines.subList(0, i) + lines.subList(i + 1, lines.size))))
+}
+
 // ------------------------------------------------------------------ test (one practice test's result; makes no cards)
 
 /** A practice test the learner logged on the web app: right/total per part and why answers were wrong. It makes no cards. */
@@ -438,7 +592,7 @@ object TestResultType : NoteTypeDef {
 /** Note types that hold learning material (shown in the library, counted as words); a test result is not. */
 fun isMaterial(note: Note) = note.type != "test"
 
-val NOTE_TYPES: Map<String, NoteTypeDef> = mapOf(Vocab.id to Vocab, Grammar.id to Grammar, TestResultType.id to TestResultType)
+val NOTE_TYPES: Map<String, NoteTypeDef> = mapOf(Vocab.id to Vocab, Grammar.id to Grammar, Pattern.id to Pattern, TestResultType.id to TestResultType)
 
 fun noteType(id: String): NoteTypeDef? = NOTE_TYPES[id]
 fun template(typeId: String, templateId: String): TemplateDef? = NOTE_TYPES[typeId]?.templates?.firstOrNull { it.id == templateId }

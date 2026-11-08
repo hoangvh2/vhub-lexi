@@ -80,6 +80,21 @@ service cloud.firestore {
         && optStr(f, 'rule', 300);
     }
 
+    // A grammar trap (shared/notetypes.ts PATTERN): items are "sentence with [answer] | wrong / wrong | meaning".
+    function patternFields(f) {
+      return f.keys().hasAll(['title', 'rule', 'items'])
+        && f.keys().hasOnly(['title', 'topic', 'ask', 'signals', 'rule', 'formula', 'items', 'why', 'tip'])
+        && f.title is string && f.title.size() > 0 && f.title.size() <= 80
+        && f.rule is string && f.rule.size() > 0 && f.rule.size() <= 300
+        && f.items is list && f.items.size() > 0 && f.items.size() <= 8
+        && optStr(f, 'topic', 40)
+        && optStr(f, 'ask', 200)
+        && optStr(f, 'signals', 160)
+        && optStr(f, 'formula', 120)
+        && optStr(f, 'tip', 200)
+        && optList(f, 'why', 8);
+    }
+
     function testFields(f) {
       return f.keys().hasAll(['name'])
         && f.keys().hasOnly(['name', 'date', 'p5', 'p6', 'p7', 'lc', 'minutes', 'v', 'g', 'p', 't'])
@@ -94,6 +109,7 @@ service cloud.firestore {
       return f is map && f.size() <= 12
         && ((type == 'vocab' && vocabFields(f))
           || (type == 'grammar' && grammarFields(f))
+          || (type == 'pattern' && patternFields(f))
           || (type == 'test' && testFields(f)));
     }
 
@@ -101,7 +117,7 @@ service cloud.firestore {
       return d.keys().hasAll(['id', 'type', 'deckId', 'fields', 'createdAt', 'updatedAt'])
         && d.keys().hasOnly(['id', 'type', 'deckId', 'fields', 'aiFields', 'tags', 'createdAt', 'updatedAt'])
         && d.id == id
-        && d.type is string && d.type in ['vocab', 'grammar', 'test']
+        && d.type is string && d.type in ['vocab', 'grammar', 'pattern', 'test']
         && okId(d.deckId)
         && validFields(d.type, d.fields)
         && optList(d, 'aiFields', 12)
@@ -241,6 +257,15 @@ service cloud.firestore {
     match /users/{uid}/settings/prefs {
       allow get: if owner(uid);
       allow create, update: if owner(uid) && validPrefs(request.resource.data);
+      allow delete: if owner(uid);
+    }
+    // Built-in packs already loaded ({ [pack id]: version }, shared/seed.ts): read once per start, never lowered by the app.
+    match /users/{uid}/settings/seeds {
+      allow get: if owner(uid);
+      allow create, update: if owner(uid)
+        && request.resource.data.keys().hasOnly(['grammar-toeic', 'updatedAt'])
+        && (!('grammar-toeic' in request.resource.data) || intIn(request.resource.data['grammar-toeic'], 1, 1000))
+        && optInt(request.resource.data, 'updatedAt');
       allow delete: if owner(uid);
     }
     match /users/{uid}/settings/{other} {

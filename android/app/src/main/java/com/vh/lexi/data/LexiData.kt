@@ -11,7 +11,10 @@ import com.vh.lexi.core.FieldValue
 import com.vh.lexi.core.HintLog
 import com.vh.lexi.core.Id
 import com.vh.lexi.core.Note
+import com.vh.lexi.core.MovePlan
 import com.vh.lexi.core.Prefs
+import com.vh.lexi.core.SEEDS_DOC
+import com.vh.lexi.core.SeedPlan
 import com.vh.lexi.core.ReviewLog
 import com.vh.lexi.core.apply
 import com.vh.lexi.core.dayId
@@ -319,6 +322,42 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
             write(listOf(DocRow(Col.CARDS, r.prev.id, r.prev.toDoc().toJsonString()), DocRow(Col.DAILY, day.id, day.toDoc().toJsonString())), listOf(Col.REVIEWS to listOf(r.logId)))
         }
         cloud?.undoReview(r.prev, r.logId, r.delta)
+    }
+
+    // ---------------------------------------------------------------- built-in packs (shared/seed.ts)
+
+    /**
+     * Writes a planned pack load: the deck if missing, then each note with the cards the learner's templates want,
+     * skipping every note and card id in [skipNotes] / [skipCards] (what the server already has) and anything already
+     * on this phone. Room in one transaction, Firestore in atomic batches of a note and its cards. Returns notes written.
+     */
+    suspend fun writeSeed(plan: SeedPlan, skipNotes: Set<Id>, skipCards: Set<Id>): Int {
+        val haveNotes = notes.value.map { it.id }.toSet()
+        val haveCards = cards.value.map { it.id }.toSet()
+        val fresh = plan.notes.filter { it.id !in skipNotes && it.id !in haveNotes }
+        val newCards = fresh.flatMap { n ->
+            wantedTemplates(n, prefs.value.templates).map { newCard(n, it, n.createdAt) }.filter { it.id !in skipCards && it.id !in haveCards }
+        }
+        val deck = plan.deck?.takeIf { d -> decks.value.none { it.id == d.id } }
+        if (fresh.isEmpty() && deck == null) return 0
+        db.withTransaction {
+            write(
+                listOfNotNull(deck?.let { DocRow(Col.DECKS, it.id, it.toDoc().toJsonString()) }) +
+                    fresh.map { DocRow(Col.NOTES, it.id, it.toDoc().toJsonString()) } + newCards.map { DocRow(Col.CARDS, it.id, it.toDoc().toJsonString()) },
+            )
+        }
+        deck?.let { cloud?.set(Col.DECKS, it.id, it.toDoc()) }
+        cloud?.setGroups(MovePlan(fresh, newCards).batches().map { g -> g.notes.map { it.toDoc() } to g.cards.map { it.toDoc() } })
+        return fresh.size
+    }
+
+    /** Version of a pack loaded on this phone when there is no account (Room row settings/seeds). */
+    suspend fun localSeedVersion(packId: String): Int =
+        dao.all(Col.SETTINGS).firstOrNull { it.id == SEEDS_DOC }?.let { (parseDoc(it.json)[packId] as? Number)?.toInt() } ?: 0
+
+    suspend fun markLocalSeed(packId: String, version: Int) {
+        val row = dao.all(Col.SETTINGS).firstOrNull { it.id == SEEDS_DOC }?.let { parseDoc(it.json) } ?: emptyMap()
+        write(listOf(DocRow(Col.SETTINGS, SEEDS_DOC, (row + (packId to version.toLong())).toJsonString())))
     }
 
     // ---------------------------------------------------------------- sync support

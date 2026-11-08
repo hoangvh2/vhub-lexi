@@ -1,4 +1,5 @@
 import type { Card, Daily, DailyDelta, Deck, Note, Prefs, ReviewLog } from "@shared/model.ts";
+import type { SeedPack, SeedState } from "@shared/seed.ts";
 
 /** Everything the UI reads. Repos push partial updates as their listeners fire. */
 export interface Snapshot {
@@ -63,6 +64,14 @@ export interface Repo {
   reviewsOfNote(noteId: string, opts?: { cache?: boolean }): Promise<ReviewLog[]>;
   /** Every answer on record (up to the review limit): the FSRS optimizer's training data. */
   allReviews(): Promise<ReviewLog[]>;
+  /**
+   * What the store holds of a built-in pack (shared/seed.ts): the version recorded as loaded and the pack's notes,
+   * cards and deck still there. Cloud: asked from the server only, never the cache; null when it cannot be reached.
+   * `ignoreMarker` reports version 0 (the learner asked to bring back what is missing).
+   */
+  seedState(pack: SeedPack, opts?: { ignoreMarker?: boolean }): Promise<{ state: SeedState; cardIds: Set<string> } | null>;
+  /** Records that `version` of pack `packId` is loaded (settings/seeds). */
+  markSeed(packId: string, version: number): Promise<void>;
   exportAll(): Promise<ExportFile>;
   /** Merges a previously exported file (existing ids are overwritten). */
   importAll(f: ExportFile): Promise<{ notes: number; cards: number }>;

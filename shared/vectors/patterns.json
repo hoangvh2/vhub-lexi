@@ -1,0 +1,2601 @@
+{
+ "items": [
+  {
+   "line": "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+   "item": {
+    "sentence": "Please call us as soon as your taxi arrives.",
+    "answer": "arrives",
+    "at": [
+     36,
+     43
+    ],
+    "blanked": "Please call us as soon as your taxi _____.",
+    "wrong": [
+     "will arrive",
+     "arrived",
+     "arriving"
+    ],
+    "vi": "Hãy gọi ngay khi taxi đến."
+   },
+   "options": [
+    "arrived",
+    "arrives",
+    "arriving",
+    "will arrive"
+   ]
+  },
+  {
+   "line": "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục.",
+   "item": {
+    "sentence": "Despite the rain, the show went on.",
+    "answer": "Despite",
+    "at": [
+     0,
+     7
+    ],
+    "blanked": "_____ the rain, the show went on.",
+    "wrong": [
+     "Although"
+    ],
+    "vi": "Dù mưa, buổi diễn vẫn tiếp tục."
+   },
+   "options": [
+    "Although",
+    "Despite"
+   ]
+  },
+  {
+   "line": "The   report was [ prepared ]  by Ms. Lee.",
+   "item": {
+    "sentence": "The report was prepared by Ms. Lee.",
+    "answer": "prepared",
+    "at": [
+     15,
+     23
+    ],
+    "blanked": "The report was _____ by Ms. Lee.",
+    "wrong": [],
+    "vi": ""
+   },
+   "options": []
+  },
+  {
+   "line": "No brackets here | a / b",
+   "item": null,
+   "options": null
+  },
+  {
+   "line": "Two [answers] in [one] line | x",
+   "item": null,
+   "options": null
+  },
+  {
+   "line": "[] empty | a",
+   "item": null,
+   "options": null
+  },
+  {
+   "line": "Meaning with | bar | inside | it",
+   "item": null,
+   "options": null
+  },
+  {
+   "line": "Ends with the [answer]",
+   "item": {
+    "sentence": "Ends with the answer",
+    "answer": "answer",
+    "at": [
+     14,
+     20
+    ],
+    "blanked": "Ends with the _____",
+    "wrong": [],
+    "vi": ""
+   },
+   "options": []
+  },
+  {
+   "line": "A Vietnamese [câu] works too | cau / Câu | một câu",
+   "item": {
+    "sentence": "A Vietnamese câu works too",
+    "answer": "câu",
+    "at": [
+     13,
+     16
+    ],
+    "blanked": "A Vietnamese _____ works too",
+    "wrong": [],
+    "vi": "một câu"
+   },
+   "options": []
+  }
+ ],
+ "cases": [
+  {
+   "note": {
+    "id": "p1",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Hiện tại đơn sau liên từ thời gian",
+     "topic": "Thì động từ",
+     "ask": "Sau until / as soon as, động từ chia thì gì?",
+     "signals": "until · as soon as",
+     "rule": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "formula": "S + will V … until + S + V(s)",
+     "tip": "Không có will sau until.",
+     "why": [
+      "will + V: không dùng sau liên từ thời gian",
+      "Quá khứ: câu nói về tương lai"
+     ],
+     "items": [
+      "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+      "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+      "bad line",
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 0,
+   "items": [
+    "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+    "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+    "bad line",
+    "Call me when the parts [arrive]."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "badge",
+     "text": "Thì động từ"
+    },
+    {
+     "k": "quote",
+     "text": "Please call us as soon as your taxi _____."
+    },
+    {
+     "k": "text",
+     "text": "arrived · arrives · arriving · will arrive",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "arrives"
+    },
+    {
+     "k": "example",
+     "text": "Please call us as soon as your taxi arrives.",
+     "at": [
+      36,
+      43
+     ],
+     "vi": "Hãy gọi ngay khi taxi đến."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Hiện tại đơn sau liên từ thời gian",
+     "tone": "muted"
+    },
+    {
+     "k": "text",
+     "text": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "tone": "strong"
+    },
+    {
+     "k": "text",
+     "text": "Dấu hiệu: until · as soon as"
+    },
+    {
+     "k": "text",
+     "text": "S + will V … until + S + V(s)",
+     "tone": "muted"
+    },
+    {
+     "k": "fold",
+     "label": "Vì sao không phải…",
+     "text": "will + V: không dùng sau liên từ thời gian\nQuá khứ: câu nói về tương lai"
+    },
+    {
+     "k": "memo",
+     "text": "Không có will sau until."
+    }
+   ],
+   "expected": [
+    "arrives"
+   ],
+   "speakBack": "Please call us as soon as your taxi arrives."
+  },
+  {
+   "note": {
+    "id": "p1",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Hiện tại đơn sau liên từ thời gian",
+     "topic": "Thì động từ",
+     "ask": "Sau until / as soon as, động từ chia thì gì?",
+     "signals": "until · as soon as",
+     "rule": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "formula": "S + will V … until + S + V(s)",
+     "tip": "Không có will sau until.",
+     "why": [
+      "will + V: không dùng sau liên từ thời gian",
+      "Quá khứ: câu nói về tương lai"
+     ],
+     "items": [
+      "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+      "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+      "bad line",
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 1,
+   "items": [
+    "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+    "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+    "bad line",
+    "Call me when the parts [arrive]."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "badge",
+     "text": "Thì động từ"
+    },
+    {
+     "k": "quote",
+     "text": "We will wait until the manager _____."
+    },
+    {
+     "k": "text",
+     "text": "returned · returns · will return",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "returns"
+    },
+    {
+     "k": "example",
+     "text": "We will wait until the manager returns.",
+     "at": [
+      31,
+      38
+     ],
+     "vi": "Chúng tôi sẽ đợi."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Hiện tại đơn sau liên từ thời gian",
+     "tone": "muted"
+    },
+    {
+     "k": "text",
+     "text": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "tone": "strong"
+    },
+    {
+     "k": "text",
+     "text": "Dấu hiệu: until · as soon as"
+    },
+    {
+     "k": "text",
+     "text": "S + will V … until + S + V(s)",
+     "tone": "muted"
+    },
+    {
+     "k": "fold",
+     "label": "Vì sao không phải…",
+     "text": "will + V: không dùng sau liên từ thời gian\nQuá khứ: câu nói về tương lai"
+    },
+    {
+     "k": "memo",
+     "text": "Không có will sau until."
+    }
+   ],
+   "expected": [
+    "returns"
+   ],
+   "speakBack": "We will wait until the manager returns."
+  },
+  {
+   "note": {
+    "id": "p1",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Hiện tại đơn sau liên từ thời gian",
+     "topic": "Thì động từ",
+     "ask": "Sau until / as soon as, động từ chia thì gì?",
+     "signals": "until · as soon as",
+     "rule": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "formula": "S + will V … until + S + V(s)",
+     "tip": "Không có will sau until.",
+     "why": [
+      "will + V: không dùng sau liên từ thời gian",
+      "Quá khứ: câu nói về tương lai"
+     ],
+     "items": [
+      "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+      "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+      "bad line",
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 2,
+   "items": [
+    "Call me when the parts [arrive].",
+    "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+    "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+    "bad line"
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "badge",
+     "text": "Thì động từ"
+    },
+    {
+     "k": "quote",
+     "text": "Call me when the parts _____."
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "arrive"
+    },
+    {
+     "k": "example",
+     "text": "Call me when the parts arrive.",
+     "at": [
+      23,
+      29
+     ]
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Hiện tại đơn sau liên từ thời gian",
+     "tone": "muted"
+    },
+    {
+     "k": "text",
+     "text": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "tone": "strong"
+    },
+    {
+     "k": "text",
+     "text": "Dấu hiệu: until · as soon as"
+    },
+    {
+     "k": "text",
+     "text": "S + will V … until + S + V(s)",
+     "tone": "muted"
+    },
+    {
+     "k": "fold",
+     "label": "Vì sao không phải…",
+     "text": "will + V: không dùng sau liên từ thời gian\nQuá khứ: câu nói về tương lai"
+    },
+    {
+     "k": "memo",
+     "text": "Không có will sau until."
+    }
+   ],
+   "expected": [
+    "arrive"
+   ],
+   "speakBack": "Call me when the parts arrive."
+  },
+  {
+   "note": {
+    "id": "p1",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Hiện tại đơn sau liên từ thời gian",
+     "topic": "Thì động từ",
+     "ask": "Sau until / as soon as, động từ chia thì gì?",
+     "signals": "until · as soon as",
+     "rule": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "formula": "S + will V … until + S + V(s)",
+     "tip": "Không có will sau until.",
+     "why": [
+      "will + V: không dùng sau liên từ thời gian",
+      "Quá khứ: câu nói về tương lai"
+     ],
+     "items": [
+      "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+      "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+      "bad line",
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 5,
+   "items": [
+    "Call me when the parts [arrive].",
+    "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+    "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+    "bad line"
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "badge",
+     "text": "Thì động từ"
+    },
+    {
+     "k": "quote",
+     "text": "Call me when the parts _____."
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "arrive"
+    },
+    {
+     "k": "example",
+     "text": "Call me when the parts arrive.",
+     "at": [
+      23,
+      29
+     ]
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Hiện tại đơn sau liên từ thời gian",
+     "tone": "muted"
+    },
+    {
+     "k": "text",
+     "text": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "tone": "strong"
+    },
+    {
+     "k": "text",
+     "text": "Dấu hiệu: until · as soon as"
+    },
+    {
+     "k": "text",
+     "text": "S + will V … until + S + V(s)",
+     "tone": "muted"
+    },
+    {
+     "k": "fold",
+     "label": "Vì sao không phải…",
+     "text": "will + V: không dùng sau liên từ thời gian\nQuá khứ: câu nói về tương lai"
+    },
+    {
+     "k": "memo",
+     "text": "Không có will sau until."
+    }
+   ],
+   "expected": [
+    "arrive"
+   ],
+   "speakBack": "Call me when the parts arrive."
+  },
+  {
+   "note": {
+    "id": "p1",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Hiện tại đơn sau liên từ thời gian",
+     "topic": "Thì động từ",
+     "ask": "Sau until / as soon as, động từ chia thì gì?",
+     "signals": "until · as soon as",
+     "rule": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "formula": "S + will V … until + S + V(s)",
+     "tip": "Không có will sau until.",
+     "why": [
+      "will + V: không dùng sau liên từ thời gian",
+      "Quá khứ: câu nói về tương lai"
+     ],
+     "items": [
+      "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+      "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+      "bad line",
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 0,
+   "items": [
+    "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+    "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+    "bad line",
+    "Call me when the parts [arrive]."
+   ],
+   "applies": true,
+   "mode": "flip",
+   "front": [
+    {
+     "k": "badge",
+     "text": "Thì động từ"
+    },
+    {
+     "k": "text",
+     "text": "Sau until / as soon as, động từ chia thì gì?",
+     "tone": "strong"
+    }
+   ],
+   "back": [
+    {
+     "k": "text",
+     "text": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "tone": "strong"
+    },
+    {
+     "k": "text",
+     "text": "S + will V … until + S + V(s)",
+     "tone": "muted"
+    },
+    {
+     "k": "example",
+     "text": "Please call us as soon as your taxi arrives.",
+     "at": [
+      36,
+      43
+     ],
+     "vi": "Hãy gọi ngay khi taxi đến."
+    },
+    {
+     "k": "memo",
+     "text": "Không có will sau until."
+    }
+   ],
+   "expected": [],
+   "speakBack": "Please call us as soon as your taxi arrives."
+  },
+  {
+   "note": {
+    "id": "p1",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Hiện tại đơn sau liên từ thời gian",
+     "topic": "Thì động từ",
+     "ask": "Sau until / as soon as, động từ chia thì gì?",
+     "signals": "until · as soon as",
+     "rule": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "formula": "S + will V … until + S + V(s)",
+     "tip": "Không có will sau until.",
+     "why": [
+      "will + V: không dùng sau liên từ thời gian",
+      "Quá khứ: câu nói về tương lai"
+     ],
+     "items": [
+      "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+      "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+      "bad line",
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 1,
+   "items": [
+    "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+    "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+    "bad line",
+    "Call me when the parts [arrive]."
+   ],
+   "applies": true,
+   "mode": "flip",
+   "front": [
+    {
+     "k": "badge",
+     "text": "Thì động từ"
+    },
+    {
+     "k": "text",
+     "text": "Sau until / as soon as, động từ chia thì gì?",
+     "tone": "strong"
+    }
+   ],
+   "back": [
+    {
+     "k": "text",
+     "text": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "tone": "strong"
+    },
+    {
+     "k": "text",
+     "text": "S + will V … until + S + V(s)",
+     "tone": "muted"
+    },
+    {
+     "k": "example",
+     "text": "We will wait until the manager returns.",
+     "at": [
+      31,
+      38
+     ],
+     "vi": "Chúng tôi sẽ đợi."
+    },
+    {
+     "k": "memo",
+     "text": "Không có will sau until."
+    }
+   ],
+   "expected": [],
+   "speakBack": "We will wait until the manager returns."
+  },
+  {
+   "note": {
+    "id": "p1",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Hiện tại đơn sau liên từ thời gian",
+     "topic": "Thì động từ",
+     "ask": "Sau until / as soon as, động từ chia thì gì?",
+     "signals": "until · as soon as",
+     "rule": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "formula": "S + will V … until + S + V(s)",
+     "tip": "Không có will sau until.",
+     "why": [
+      "will + V: không dùng sau liên từ thời gian",
+      "Quá khứ: câu nói về tương lai"
+     ],
+     "items": [
+      "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+      "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+      "bad line",
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 2,
+   "items": [
+    "Call me when the parts [arrive].",
+    "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+    "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+    "bad line"
+   ],
+   "applies": true,
+   "mode": "flip",
+   "front": [
+    {
+     "k": "badge",
+     "text": "Thì động từ"
+    },
+    {
+     "k": "text",
+     "text": "Sau until / as soon as, động từ chia thì gì?",
+     "tone": "strong"
+    }
+   ],
+   "back": [
+    {
+     "k": "text",
+     "text": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "tone": "strong"
+    },
+    {
+     "k": "text",
+     "text": "S + will V … until + S + V(s)",
+     "tone": "muted"
+    },
+    {
+     "k": "example",
+     "text": "Call me when the parts arrive.",
+     "at": [
+      23,
+      29
+     ]
+    },
+    {
+     "k": "memo",
+     "text": "Không có will sau until."
+    }
+   ],
+   "expected": [],
+   "speakBack": "Call me when the parts arrive."
+  },
+  {
+   "note": {
+    "id": "p1",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Hiện tại đơn sau liên từ thời gian",
+     "topic": "Thì động từ",
+     "ask": "Sau until / as soon as, động từ chia thì gì?",
+     "signals": "until · as soon as",
+     "rule": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "formula": "S + will V … until + S + V(s)",
+     "tip": "Không có will sau until.",
+     "why": [
+      "will + V: không dùng sau liên từ thời gian",
+      "Quá khứ: câu nói về tương lai"
+     ],
+     "items": [
+      "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+      "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+      "bad line",
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 5,
+   "items": [
+    "Call me when the parts [arrive].",
+    "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+    "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+    "bad line"
+   ],
+   "applies": true,
+   "mode": "flip",
+   "front": [
+    {
+     "k": "badge",
+     "text": "Thì động từ"
+    },
+    {
+     "k": "text",
+     "text": "Sau until / as soon as, động từ chia thì gì?",
+     "tone": "strong"
+    }
+   ],
+   "back": [
+    {
+     "k": "text",
+     "text": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "tone": "strong"
+    },
+    {
+     "k": "text",
+     "text": "S + will V … until + S + V(s)",
+     "tone": "muted"
+    },
+    {
+     "k": "example",
+     "text": "Call me when the parts arrive.",
+     "at": [
+      23,
+      29
+     ]
+    },
+    {
+     "k": "memo",
+     "text": "Không có will sau until."
+    }
+   ],
+   "expected": [],
+   "speakBack": "Call me when the parts arrive."
+  },
+  {
+   "note": {
+    "id": "p1",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Hiện tại đơn sau liên từ thời gian",
+     "topic": "Thì động từ",
+     "ask": "Sau until / as soon as, động từ chia thì gì?",
+     "signals": "until · as soon as",
+     "rule": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "formula": "S + will V … until + S + V(s)",
+     "tip": "Không có will sau until.",
+     "why": [
+      "will + V: không dùng sau liên từ thời gian",
+      "Quá khứ: câu nói về tương lai"
+     ],
+     "items": [
+      "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+      "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+      "bad line",
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 0,
+   "items": [
+    "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+    "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+    "bad line",
+    "Call me when the parts [arrive]."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "badge",
+     "text": "Thì động từ"
+    },
+    {
+     "k": "quote",
+     "text": "Please call us as soon as your taxi will arrive."
+    },
+    {
+     "k": "text",
+     "text": "Câu có một chỗ sai. Gõ lại từ đúng thay cho chỗ sai.",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "arrives"
+    },
+    {
+     "k": "text",
+     "text": "Sai: will arrive → Đúng: arrives"
+    },
+    {
+     "k": "example",
+     "text": "Please call us as soon as your taxi arrives.",
+     "at": [
+      36,
+      43
+     ],
+     "vi": "Hãy gọi ngay khi taxi đến."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Hiện tại đơn sau liên từ thời gian",
+     "tone": "muted"
+    },
+    {
+     "k": "text",
+     "text": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "tone": "strong"
+    },
+    {
+     "k": "text",
+     "text": "Dấu hiệu: until · as soon as"
+    },
+    {
+     "k": "text",
+     "text": "S + will V … until + S + V(s)",
+     "tone": "muted"
+    },
+    {
+     "k": "fold",
+     "label": "Vì sao không phải…",
+     "text": "will + V: không dùng sau liên từ thời gian\nQuá khứ: câu nói về tương lai"
+    },
+    {
+     "k": "memo",
+     "text": "Không có will sau until."
+    }
+   ],
+   "expected": [
+    "arrives"
+   ],
+   "speakBack": "Please call us as soon as your taxi arrives."
+  },
+  {
+   "note": {
+    "id": "p1",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Hiện tại đơn sau liên từ thời gian",
+     "topic": "Thì động từ",
+     "ask": "Sau until / as soon as, động từ chia thì gì?",
+     "signals": "until · as soon as",
+     "rule": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "formula": "S + will V … until + S + V(s)",
+     "tip": "Không có will sau until.",
+     "why": [
+      "will + V: không dùng sau liên từ thời gian",
+      "Quá khứ: câu nói về tương lai"
+     ],
+     "items": [
+      "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+      "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+      "bad line",
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 1,
+   "items": [
+    "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+    "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+    "bad line",
+    "Call me when the parts [arrive]."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "badge",
+     "text": "Thì động từ"
+    },
+    {
+     "k": "quote",
+     "text": "We will wait until the manager will return."
+    },
+    {
+     "k": "text",
+     "text": "Câu có một chỗ sai. Gõ lại từ đúng thay cho chỗ sai.",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "returns"
+    },
+    {
+     "k": "text",
+     "text": "Sai: will return → Đúng: returns"
+    },
+    {
+     "k": "example",
+     "text": "We will wait until the manager returns.",
+     "at": [
+      31,
+      38
+     ],
+     "vi": "Chúng tôi sẽ đợi."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Hiện tại đơn sau liên từ thời gian",
+     "tone": "muted"
+    },
+    {
+     "k": "text",
+     "text": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "tone": "strong"
+    },
+    {
+     "k": "text",
+     "text": "Dấu hiệu: until · as soon as"
+    },
+    {
+     "k": "text",
+     "text": "S + will V … until + S + V(s)",
+     "tone": "muted"
+    },
+    {
+     "k": "fold",
+     "label": "Vì sao không phải…",
+     "text": "will + V: không dùng sau liên từ thời gian\nQuá khứ: câu nói về tương lai"
+    },
+    {
+     "k": "memo",
+     "text": "Không có will sau until."
+    }
+   ],
+   "expected": [
+    "returns"
+   ],
+   "speakBack": "We will wait until the manager returns."
+  },
+  {
+   "note": {
+    "id": "p1",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Hiện tại đơn sau liên từ thời gian",
+     "topic": "Thì động từ",
+     "ask": "Sau until / as soon as, động từ chia thì gì?",
+     "signals": "until · as soon as",
+     "rule": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "formula": "S + will V … until + S + V(s)",
+     "tip": "Không có will sau until.",
+     "why": [
+      "will + V: không dùng sau liên từ thời gian",
+      "Quá khứ: câu nói về tương lai"
+     ],
+     "items": [
+      "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+      "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+      "bad line",
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 2,
+   "items": [
+    "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+    "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+    "bad line",
+    "Call me when the parts [arrive]."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "badge",
+     "text": "Thì động từ"
+    },
+    {
+     "k": "quote",
+     "text": "Please call us as soon as your taxi will arrive."
+    },
+    {
+     "k": "text",
+     "text": "Câu có một chỗ sai. Gõ lại từ đúng thay cho chỗ sai.",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "arrives"
+    },
+    {
+     "k": "text",
+     "text": "Sai: will arrive → Đúng: arrives"
+    },
+    {
+     "k": "example",
+     "text": "Please call us as soon as your taxi arrives.",
+     "at": [
+      36,
+      43
+     ],
+     "vi": "Hãy gọi ngay khi taxi đến."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Hiện tại đơn sau liên từ thời gian",
+     "tone": "muted"
+    },
+    {
+     "k": "text",
+     "text": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "tone": "strong"
+    },
+    {
+     "k": "text",
+     "text": "Dấu hiệu: until · as soon as"
+    },
+    {
+     "k": "text",
+     "text": "S + will V … until + S + V(s)",
+     "tone": "muted"
+    },
+    {
+     "k": "fold",
+     "label": "Vì sao không phải…",
+     "text": "will + V: không dùng sau liên từ thời gian\nQuá khứ: câu nói về tương lai"
+    },
+    {
+     "k": "memo",
+     "text": "Không có will sau until."
+    }
+   ],
+   "expected": [
+    "arrives"
+   ],
+   "speakBack": "Please call us as soon as your taxi arrives."
+  },
+  {
+   "note": {
+    "id": "p1",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Hiện tại đơn sau liên từ thời gian",
+     "topic": "Thì động từ",
+     "ask": "Sau until / as soon as, động từ chia thì gì?",
+     "signals": "until · as soon as",
+     "rule": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "formula": "S + will V … until + S + V(s)",
+     "tip": "Không có will sau until.",
+     "why": [
+      "will + V: không dùng sau liên từ thời gian",
+      "Quá khứ: câu nói về tương lai"
+     ],
+     "items": [
+      "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+      "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+      "bad line",
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 5,
+   "items": [
+    "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+    "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+    "bad line",
+    "Call me when the parts [arrive]."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "badge",
+     "text": "Thì động từ"
+    },
+    {
+     "k": "quote",
+     "text": "We will wait until the manager will return."
+    },
+    {
+     "k": "text",
+     "text": "Câu có một chỗ sai. Gõ lại từ đúng thay cho chỗ sai.",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "returns"
+    },
+    {
+     "k": "text",
+     "text": "Sai: will return → Đúng: returns"
+    },
+    {
+     "k": "example",
+     "text": "We will wait until the manager returns.",
+     "at": [
+      31,
+      38
+     ],
+     "vi": "Chúng tôi sẽ đợi."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Hiện tại đơn sau liên từ thời gian",
+     "tone": "muted"
+    },
+    {
+     "k": "text",
+     "text": "Mệnh đề thời gian dùng hiện tại đơn.",
+     "tone": "strong"
+    },
+    {
+     "k": "text",
+     "text": "Dấu hiệu: until · as soon as"
+    },
+    {
+     "k": "text",
+     "text": "S + will V … until + S + V(s)",
+     "tone": "muted"
+    },
+    {
+     "k": "fold",
+     "label": "Vì sao không phải…",
+     "text": "will + V: không dùng sau liên từ thời gian\nQuá khứ: câu nói về tương lai"
+    },
+    {
+     "k": "memo",
+     "text": "Không có will sau until."
+    }
+   ],
+   "expected": [
+    "returns"
+   ],
+   "speakBack": "We will wait until the manager returns."
+  },
+  {
+   "note": {
+    "id": "p2",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Chỉ có câu",
+     "rule": "Quy tắc",
+     "items": [
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 0,
+   "items": [
+    "Call me when the parts [arrive]."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "Call me when the parts _____."
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "arrive"
+    },
+    {
+     "k": "example",
+     "text": "Call me when the parts arrive.",
+     "at": [
+      23,
+      29
+     ]
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Chỉ có câu",
+     "tone": "muted"
+    },
+    {
+     "k": "text",
+     "text": "Quy tắc",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "arrive"
+   ],
+   "speakBack": "Call me when the parts arrive."
+  },
+  {
+   "note": {
+    "id": "p2",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Chỉ có câu",
+     "rule": "Quy tắc",
+     "items": [
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 1,
+   "items": [
+    "Call me when the parts [arrive]."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "Call me when the parts _____."
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "arrive"
+    },
+    {
+     "k": "example",
+     "text": "Call me when the parts arrive.",
+     "at": [
+      23,
+      29
+     ]
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Chỉ có câu",
+     "tone": "muted"
+    },
+    {
+     "k": "text",
+     "text": "Quy tắc",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "arrive"
+   ],
+   "speakBack": "Call me when the parts arrive."
+  },
+  {
+   "note": {
+    "id": "p2",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Chỉ có câu",
+     "rule": "Quy tắc",
+     "items": [
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 2,
+   "items": [
+    "Call me when the parts [arrive]."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "Call me when the parts _____."
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "arrive"
+    },
+    {
+     "k": "example",
+     "text": "Call me when the parts arrive.",
+     "at": [
+      23,
+      29
+     ]
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Chỉ có câu",
+     "tone": "muted"
+    },
+    {
+     "k": "text",
+     "text": "Quy tắc",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "arrive"
+   ],
+   "speakBack": "Call me when the parts arrive."
+  },
+  {
+   "note": {
+    "id": "p2",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Chỉ có câu",
+     "rule": "Quy tắc",
+     "items": [
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 5,
+   "items": [
+    "Call me when the parts [arrive]."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "Call me when the parts _____."
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "arrive"
+    },
+    {
+     "k": "example",
+     "text": "Call me when the parts arrive.",
+     "at": [
+      23,
+      29
+     ]
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Chỉ có câu",
+     "tone": "muted"
+    },
+    {
+     "k": "text",
+     "text": "Quy tắc",
+     "tone": "strong"
+    }
+   ],
+   "expected": [
+    "arrive"
+   ],
+   "speakBack": "Call me when the parts arrive."
+  },
+  {
+   "note": {
+    "id": "p2",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Chỉ có câu",
+     "rule": "Quy tắc",
+     "items": [
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 0,
+   "items": [
+    "Call me when the parts [arrive]."
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p2",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Chỉ có câu",
+     "rule": "Quy tắc",
+     "items": [
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 1,
+   "items": [
+    "Call me when the parts [arrive]."
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p2",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Chỉ có câu",
+     "rule": "Quy tắc",
+     "items": [
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 2,
+   "items": [
+    "Call me when the parts [arrive]."
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p2",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Chỉ có câu",
+     "rule": "Quy tắc",
+     "items": [
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 5,
+   "items": [
+    "Call me when the parts [arrive]."
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p2",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Chỉ có câu",
+     "rule": "Quy tắc",
+     "items": [
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 0,
+   "items": [
+    "Call me when the parts [arrive]."
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p2",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Chỉ có câu",
+     "rule": "Quy tắc",
+     "items": [
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 1,
+   "items": [
+    "Call me when the parts [arrive]."
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p2",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Chỉ có câu",
+     "rule": "Quy tắc",
+     "items": [
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 2,
+   "items": [
+    "Call me when the parts [arrive]."
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p2",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Chỉ có câu",
+     "rule": "Quy tắc",
+     "items": [
+      "Call me when the parts [arrive]."
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 5,
+   "items": [
+    "Call me when the parts [arrive]."
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p3",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không câu dùng được",
+     "rule": "Quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "no brackets"
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 0,
+   "items": [
+    "no brackets"
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p3",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không câu dùng được",
+     "rule": "Quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "no brackets"
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 1,
+   "items": [
+    "no brackets"
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p3",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không câu dùng được",
+     "rule": "Quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "no brackets"
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 2,
+   "items": [
+    "no brackets"
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p3",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không câu dùng được",
+     "rule": "Quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "no brackets"
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 5,
+   "items": [
+    "no brackets"
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p3",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không câu dùng được",
+     "rule": "Quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "no brackets"
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 0,
+   "items": [
+    "no brackets"
+   ],
+   "applies": true,
+   "mode": "flip",
+   "front": [
+    {
+     "k": "text",
+     "text": "Hỏi gì?",
+     "tone": "strong"
+    }
+   ],
+   "back": [
+    {
+     "k": "text",
+     "text": "Quy tắc",
+     "tone": "strong"
+    }
+   ],
+   "expected": [],
+   "speakBack": null
+  },
+  {
+   "note": {
+    "id": "p3",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không câu dùng được",
+     "rule": "Quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "no brackets"
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 1,
+   "items": [
+    "no brackets"
+   ],
+   "applies": true,
+   "mode": "flip",
+   "front": [
+    {
+     "k": "text",
+     "text": "Hỏi gì?",
+     "tone": "strong"
+    }
+   ],
+   "back": [
+    {
+     "k": "text",
+     "text": "Quy tắc",
+     "tone": "strong"
+    }
+   ],
+   "expected": [],
+   "speakBack": null
+  },
+  {
+   "note": {
+    "id": "p3",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không câu dùng được",
+     "rule": "Quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "no brackets"
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 2,
+   "items": [
+    "no brackets"
+   ],
+   "applies": true,
+   "mode": "flip",
+   "front": [
+    {
+     "k": "text",
+     "text": "Hỏi gì?",
+     "tone": "strong"
+    }
+   ],
+   "back": [
+    {
+     "k": "text",
+     "text": "Quy tắc",
+     "tone": "strong"
+    }
+   ],
+   "expected": [],
+   "speakBack": null
+  },
+  {
+   "note": {
+    "id": "p3",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không câu dùng được",
+     "rule": "Quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "no brackets"
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 5,
+   "items": [
+    "no brackets"
+   ],
+   "applies": true,
+   "mode": "flip",
+   "front": [
+    {
+     "k": "text",
+     "text": "Hỏi gì?",
+     "tone": "strong"
+    }
+   ],
+   "back": [
+    {
+     "k": "text",
+     "text": "Quy tắc",
+     "tone": "strong"
+    }
+   ],
+   "expected": [],
+   "speakBack": null
+  },
+  {
+   "note": {
+    "id": "p3",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không câu dùng được",
+     "rule": "Quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "no brackets"
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 0,
+   "items": [
+    "no brackets"
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p3",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không câu dùng được",
+     "rule": "Quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "no brackets"
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 1,
+   "items": [
+    "no brackets"
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p3",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không câu dùng được",
+     "rule": "Quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "no brackets"
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 2,
+   "items": [
+    "no brackets"
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p3",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không câu dùng được",
+     "rule": "Quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "no brackets"
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 5,
+   "items": [
+    "no brackets"
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p4",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không có quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 0,
+   "items": [
+    "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ the rain, the show went on."
+    },
+    {
+     "k": "text",
+     "text": "Although · Despite",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "Despite"
+    },
+    {
+     "k": "example",
+     "text": "Despite the rain, the show went on.",
+     "at": [
+      0,
+      7
+     ],
+     "vi": "Dù mưa, buổi diễn vẫn tiếp tục."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Không có quy tắc",
+     "tone": "muted"
+    }
+   ],
+   "expected": [
+    "Despite"
+   ],
+   "speakBack": "Despite the rain, the show went on."
+  },
+  {
+   "note": {
+    "id": "p4",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không có quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 1,
+   "items": [
+    "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ the rain, the show went on."
+    },
+    {
+     "k": "text",
+     "text": "Although · Despite",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "Despite"
+    },
+    {
+     "k": "example",
+     "text": "Despite the rain, the show went on.",
+     "at": [
+      0,
+      7
+     ],
+     "vi": "Dù mưa, buổi diễn vẫn tiếp tục."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Không có quy tắc",
+     "tone": "muted"
+    }
+   ],
+   "expected": [
+    "Despite"
+   ],
+   "speakBack": "Despite the rain, the show went on."
+  },
+  {
+   "note": {
+    "id": "p4",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không có quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 2,
+   "items": [
+    "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ the rain, the show went on."
+    },
+    {
+     "k": "text",
+     "text": "Although · Despite",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "Despite"
+    },
+    {
+     "k": "example",
+     "text": "Despite the rain, the show went on.",
+     "at": [
+      0,
+      7
+     ],
+     "vi": "Dù mưa, buổi diễn vẫn tiếp tục."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Không có quy tắc",
+     "tone": "muted"
+    }
+   ],
+   "expected": [
+    "Despite"
+   ],
+   "speakBack": "Despite the rain, the show went on."
+  },
+  {
+   "note": {
+    "id": "p4",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không có quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+     ]
+    }
+   },
+   "template": "fill",
+   "reps": 5,
+   "items": [
+    "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "_____ the rain, the show went on."
+    },
+    {
+     "k": "text",
+     "text": "Although · Despite",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "Despite"
+    },
+    {
+     "k": "example",
+     "text": "Despite the rain, the show went on.",
+     "at": [
+      0,
+      7
+     ],
+     "vi": "Dù mưa, buổi diễn vẫn tiếp tục."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Không có quy tắc",
+     "tone": "muted"
+    }
+   ],
+   "expected": [
+    "Despite"
+   ],
+   "speakBack": "Despite the rain, the show went on."
+  },
+  {
+   "note": {
+    "id": "p4",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không có quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 0,
+   "items": [
+    "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p4",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không có quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 1,
+   "items": [
+    "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p4",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không có quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 2,
+   "items": [
+    "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p4",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không có quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+     ]
+    }
+   },
+   "template": "rule",
+   "reps": 5,
+   "items": [
+    "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+   ],
+   "applies": false
+  },
+  {
+   "note": {
+    "id": "p4",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không có quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 0,
+   "items": [
+    "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "Although the rain, the show went on."
+    },
+    {
+     "k": "text",
+     "text": "Câu có một chỗ sai. Gõ lại từ đúng thay cho chỗ sai.",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "Despite"
+    },
+    {
+     "k": "text",
+     "text": "Sai: Although → Đúng: Despite"
+    },
+    {
+     "k": "example",
+     "text": "Despite the rain, the show went on.",
+     "at": [
+      0,
+      7
+     ],
+     "vi": "Dù mưa, buổi diễn vẫn tiếp tục."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Không có quy tắc",
+     "tone": "muted"
+    }
+   ],
+   "expected": [
+    "Despite"
+   ],
+   "speakBack": "Despite the rain, the show went on."
+  },
+  {
+   "note": {
+    "id": "p4",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không có quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 1,
+   "items": [
+    "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "Although the rain, the show went on."
+    },
+    {
+     "k": "text",
+     "text": "Câu có một chỗ sai. Gõ lại từ đúng thay cho chỗ sai.",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "Despite"
+    },
+    {
+     "k": "text",
+     "text": "Sai: Although → Đúng: Despite"
+    },
+    {
+     "k": "example",
+     "text": "Despite the rain, the show went on.",
+     "at": [
+      0,
+      7
+     ],
+     "vi": "Dù mưa, buổi diễn vẫn tiếp tục."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Không có quy tắc",
+     "tone": "muted"
+    }
+   ],
+   "expected": [
+    "Despite"
+   ],
+   "speakBack": "Despite the rain, the show went on."
+  },
+  {
+   "note": {
+    "id": "p4",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không có quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 2,
+   "items": [
+    "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "Although the rain, the show went on."
+    },
+    {
+     "k": "text",
+     "text": "Câu có một chỗ sai. Gõ lại từ đúng thay cho chỗ sai.",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "Despite"
+    },
+    {
+     "k": "text",
+     "text": "Sai: Although → Đúng: Despite"
+    },
+    {
+     "k": "example",
+     "text": "Despite the rain, the show went on.",
+     "at": [
+      0,
+      7
+     ],
+     "vi": "Dù mưa, buổi diễn vẫn tiếp tục."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Không có quy tắc",
+     "tone": "muted"
+    }
+   ],
+   "expected": [
+    "Despite"
+   ],
+   "speakBack": "Despite the rain, the show went on."
+  },
+  {
+   "note": {
+    "id": "p4",
+    "type": "pattern",
+    "deckId": "d1",
+    "createdAt": 1768465800000,
+    "updatedAt": 1768465800000,
+    "fields": {
+     "title": "Không có quy tắc",
+     "ask": "Hỏi gì?",
+     "items": [
+      "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+     ]
+    }
+   },
+   "template": "spot",
+   "reps": 5,
+   "items": [
+    "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục."
+   ],
+   "applies": true,
+   "mode": "type",
+   "front": [
+    {
+     "k": "quote",
+     "text": "Although the rain, the show went on."
+    },
+    {
+     "k": "text",
+     "text": "Câu có một chỗ sai. Gõ lại từ đúng thay cho chỗ sai.",
+     "tone": "muted"
+    }
+   ],
+   "back": [
+    {
+     "k": "title",
+     "text": "Despite"
+    },
+    {
+     "k": "text",
+     "text": "Sai: Although → Đúng: Despite"
+    },
+    {
+     "k": "example",
+     "text": "Despite the rain, the show went on.",
+     "at": [
+      0,
+      7
+     ],
+     "vi": "Dù mưa, buổi diễn vẫn tiếp tục."
+    },
+    {
+     "k": "text",
+     "text": "Bẫy: Không có quy tắc",
+     "tone": "muted"
+    }
+   ],
+   "expected": [
+    "Despite"
+   ],
+   "speakBack": "Despite the rain, the show went on."
+  }
+ ],
+ "wanted": [
+  {
+   "noteId": "p1",
+   "wanted": [
+    "fill",
+    "rule",
+    "spot"
+   ],
+   "wantedDefault": [
+    "fill",
+    "rule"
+   ]
+  },
+  {
+   "noteId": "p2",
+   "wanted": [
+    "fill"
+   ],
+   "wantedDefault": [
+    "fill"
+   ]
+  },
+  {
+   "noteId": "p3",
+   "wanted": [
+    "rule"
+   ],
+   "wantedDefault": [
+    "rule"
+   ]
+  },
+  {
+   "noteId": "p4",
+   "wanted": [
+    "fill",
+    "spot"
+   ],
+   "wantedDefault": [
+    "fill"
+   ]
+  }
+ ],
+ "labels": [
+  [
+   "Liên từ & giới từ",
+   "lien-tu-gioi-tu"
+  ],
+  [
+   "Hòa hợp chủ – vị",
+   "hoa-hop-chu-vi"
+  ],
+  [
+   "Đại từ",
+   "dai-tu"
+  ],
+  [
+   "To V / V-ing",
+   "to-v-v-ing"
+  ],
+  [
+   "  Đảo ngữ!! ",
+   "dao-ngu"
+  ]
+ ]
+}

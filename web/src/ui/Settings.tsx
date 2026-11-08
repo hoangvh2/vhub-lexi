@@ -4,6 +4,7 @@ import type { CardLayout, Prefs } from "@shared/model.ts";
 import { NOTE_TYPES } from "@shared/notetypes.ts";
 import { applyFsrs, optimizeFsrs, savePrefs } from "../data/actions.ts";
 import { firebaseConfigured, signOutUser } from "../data/firebase.ts";
+import { grammarPack, loadSeeds } from "../data/seed.ts";
 import { validateExport } from "../data/repo.ts";
 import { currentRepo, daily, prefs, sync } from "../data/state.ts";
 import type { AnkiCollection } from "../lib/anki/read.ts";
@@ -44,13 +45,14 @@ export function Settings({ email }: { email: string | null }) {
   const set = (patch: Partial<Prefs>) => void savePrefs({ ...p, ...patch });
   const layout = (k: keyof CardLayout, v: boolean) => set({ layout: { ...p.layout, [k]: v } });
   const vocab = NOTE_TYPES.vocab;
-  const chosen = new Set(p.templates.vocab ?? []);
-  const toggleTpl = (id: string, on: boolean) => {
-    const next = new Set(chosen);
+  const chosenOf = (type: string) => new Set(p.templates[type] ?? NOTE_TYPES[type].templates.map((t) => t.id));
+  const chosen = chosenOf("vocab");
+  const toggleTpl = (id: string, on: boolean, type = "vocab") => {
+    const next = chosenOf(type);
     if (on) next.add(id);
     else next.delete(id);
     if (next.size === 0) return toast("Cần giữ ít nhất một loại thẻ");
-    set({ templates: { ...p.templates, vocab: vocab.templates.map((t) => t.id).filter((x) => next.has(x)) } });
+    set({ templates: { ...p.templates, [type]: NOTE_TYPES[type].templates.map((t) => t.id).filter((x) => next.has(x)) } });
   };
 
   async function exportJson() {
@@ -144,6 +146,8 @@ export function Settings({ email }: { email: string | null }) {
         <p class="muted" style={{ fontSize: "13px" }}>Đổi lựa chọn sẽ tạo thêm thẻ cho các từ đã có. Thẻ đã tắt nhưng chưa học sẽ bị gỡ; thẻ đã học được giữ lại.</p>
       </section>
 
+      <PatternPanel chosen={chosenOf("pattern")} toggle={(id, on) => toggleTpl(id, on, "pattern")} />
+
       <section class="panel col">
         <h2>Hiển thị</h2>
         {([["showIpa", "Phiên âm IPA"], ["showPos", "Loại từ"], ["showVi", "Nghĩa tiếng Việt"], ["showEn", "Định nghĩa tiếng Anh"], ["showExamples", "Ví dụ"], ["showMnemonic", "Mẹo nhớ"]] as const).map(([k, l]) => (
@@ -226,6 +230,40 @@ export function Settings({ email }: { email: string | null }) {
 }
 
 /** What the last ratings cost on this device (lib/perf.ts), with a copy button for sending it. */
+/** Grammar trap cards ("pattern" notes) and the built-in TOEIC pack (data/seed.ts). */
+function PatternPanel({ chosen, toggle }: { chosen: Set<string>; toggle: (id: string, on: boolean) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [size, setSize] = useState<{ notes: number; items: number } | null>(null);
+  useEffect(() => {
+    void grammarPack().then((pk) => setSize({ notes: pk.notes.length, items: pk.notes.reduce((n, x) => n + (Array.isArray(x.fields.items) ? x.fields.items.length : 0), 0) }));
+  }, []);
+
+  async function restore() {
+    setBusy(true);
+    const added = await loadSeeds({ restore: true });
+    setBusy(false);
+    toast(added === null ? "Chưa kết nối được máy chủ, thử lại khi có mạng" : added === 0 ? "Bộ ngữ pháp đã đầy đủ" : `Đã thêm ${added} bẫy còn thiếu`);
+  }
+
+  return (
+    <section class="panel col" data-testid="patterns">
+      <h2>Thẻ ngữ pháp (bẫy)</h2>
+      {NOTE_TYPES.pattern.templates.map((t) => (
+        <label class="switch" key={t.id}>
+          <span><b>{t.label}</b><br /><span class="muted" style={{ fontSize: "13px" }}>{t.description}</span></span>
+          <input type="checkbox" checked={chosen.has(t.id)} onChange={(e) => toggle(t.id, e.currentTarget.checked)} data-testid={`tpl-pattern-${t.id}`} />
+        </label>
+      ))}
+      <p class="muted" style={{ fontSize: "13px" }}>
+        Bộ “Ngữ pháp TOEIC” có sẵn{size ? ` ${size.notes} bẫy, ${size.items} câu` : ""} được tự thêm một lần vào tài khoản khi đăng nhập. Thẻ đã học, đã sửa hay đã xóa đều được giữ nguyên như bạn để.
+      </p>
+      <div class="row">
+        <button type="button" class="btn" disabled={busy} onClick={() => void restore()} data-testid="seed-restore">Thêm lại bẫy còn thiếu</button>
+      </div>
+    </section>
+  );
+}
+
 function LatencyPanel() {
   const [, redraw] = useState(0);
   const traces = rateTraces();
