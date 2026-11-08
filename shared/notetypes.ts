@@ -26,14 +26,17 @@ export type Block =
   /**
    * An example sentence; `at` = [start, end) of the studied word in it (highlighted), `vi` = its translation.
    * `phrase` marks a short phrase (3-5 words, one per meaning) rather than a full sentence; it stays out of rotateExamples.
+   * `wrong` lists the trap options of a grammar sentence, shown struck through (library view only).
    */
-  | { k: "example"; text: string; at?: [number, number]; vi?: string; phrase?: true }
+  | { k: "example"; text: string; at?: [number, number]; vi?: string; phrase?: true; wrong?: string[] }
   /** The memory tip (sound-alike pun or short hook), shown in its own box. */
   | { k: "memo"; text: string }
   /** Secondary text, collapsed under `label` until the learner opens it. */
   | { k: "fold"; label: string; text: string }
   /** A large play button that reads `text` aloud (listening cards). */
-  | { k: "listen"; text: string };
+  | { k: "listen"; text: string }
+  /** A small section heading (the library's view of a whole note). */
+  | { k: "label"; text: string };
 
 /** How the learner answers: "flip" = think, reveal, self-rate; "type" = type it, then self-rate. */
 export type AnswerMode = "flip" | "type";
@@ -660,6 +663,90 @@ export const TEST: NoteTypeDef = {
   subtitle: (n) => str(n.fields.date),
   searchText: (n) => [str(n.fields.name), str(n.fields.date)].join(" ").toLowerCase(),
 };
+
+// ------------------------------------------------------------------ the library's view of a whole note ("Xem")
+
+/** What the view says in place of the hidden part when it is covered. */
+export const COVER_NOTE: Readonly<Record<string, string>> = {
+  vocab: "Nghĩa đang được che. Nhớ thử nghĩa của từ rồi bỏ che để kiểm tra.",
+  pattern: "Đáp án và quy tắc đang được che. Tự điền từng câu rồi bỏ che để kiểm tra.",
+  grammar: "Đáp án đang được che. Tự điền rồi bỏ che để kiểm tra.",
+};
+
+function vocabView(n: Note, covered: boolean): Block[] {
+  const word = str(n.fields.word);
+  const out: Block[] = [{ k: "title", text: word }];
+  if (str(n.fields.pos)) out.push({ k: "badge", text: str(n.fields.pos) });
+  if (str(n.fields.ipa)) out.push({ k: "ipa", text: str(n.fields.ipa) });
+  if (word) out.push({ k: "speak", text: word });
+  const vi = str(n.fields.vi);
+  const en = str(n.fields.en);
+  const examples = list(n.fields.examples);
+  const phrases = phraseBlocks(n);
+  if (covered) {
+    out.push({ k: "text", text: COVER_NOTE.vocab, tone: "muted" });
+    // The English side only: the phrase and sentence translations would give the meaning away.
+    if (phrases.length) out.push({ k: "label", text: "Cụm ngắn" }, ...phrases.map((b): Block => (b.k === "example" ? { k: "example", text: b.text, ...(b.at ? { at: b.at } : {}), phrase: true } : b)));
+    if (examples.length) out.push({ k: "label", text: "Ví dụ" }, ...examples.map((e): Block => { const at = findWord(e, word); return { k: "example", text: e, ...(at ? { at } : {}) }; }));
+    return out;
+  }
+  if (vi || en) out.push({ k: "label", text: "Nghĩa" }, { k: "text", text: vi || en, tone: "strong" });
+  if (phrases.length) out.push({ k: "label", text: "Cụm ngắn" }, ...phrases);
+  if (examples.length) out.push({ k: "label", text: "Ví dụ" }, ...examples.map((e, i) => exampleBlock(n, e, i)));
+  if (str(n.fields.mnemonic)) out.push({ k: "memo", text: str(n.fields.mnemonic) });
+  if (str(n.fields.notes)) out.push({ k: "label", text: "Ghi chú của tôi" }, { k: "text", text: str(n.fields.notes) });
+  if (vi && en) out.push({ k: "fold", label: EN_LABEL, text: en });
+  return out;
+}
+
+function patternView(n: Note, covered: boolean): Block[] {
+  const items = patternItems(n);
+  const out: Block[] = [...patternBadge(n), { k: "title", text: str(n.fields.title) }];
+  if (str(n.fields.ask)) out.push({ k: "text", text: str(n.fields.ask) });
+  if (covered) {
+    out.push({ k: "text", text: COVER_NOTE.pattern, tone: "muted" });
+    if (items.length) out.push({ k: "label", text: `Câu luyện (${items.length})` });
+    for (const it of items) {
+      out.push({ k: "quote", text: it.blanked });
+      const opts = patternOptions(it);
+      if (opts.length) out.push({ k: "text", text: opts.join(" · "), tone: "muted" });
+    }
+    return out;
+  }
+  if (str(n.fields.rule) || str(n.fields.signals) || str(n.fields.formula)) out.push({ k: "label", text: "Quy tắc" });
+  if (str(n.fields.rule)) out.push({ k: "text", text: str(n.fields.rule), tone: "strong" });
+  if (str(n.fields.signals)) out.push({ k: "text", text: `Dấu hiệu: ${str(n.fields.signals)}` });
+  if (str(n.fields.formula)) out.push({ k: "text", text: str(n.fields.formula), tone: "muted" });
+  if (items.length) out.push({ k: "label", text: `Câu luyện (${items.length})` });
+  for (const it of items) out.push({ ...itemExample(it), ...(it.wrong.length ? { wrong: it.wrong } : {}) } as Block);
+  const why = list(n.fields.why);
+  if (why.length) out.push({ k: "label", text: "Vì sao không phải…" }, ...why.map((w): Block => ({ k: "text", text: w })));
+  if (str(n.fields.tip)) out.push({ k: "memo", text: str(n.fields.tip) });
+  return out;
+}
+
+function grammarView(n: Note, covered: boolean): Block[] {
+  const c = grammarCloze(n);
+  const out: Block[] = str(n.fields.topic) ? [{ k: "badge", text: str(n.fields.topic) }] : [];
+  if (covered) return [...out, { k: "quote", text: c?.text ?? str(n.fields.sentence) }, { k: "text", text: COVER_NOTE.grammar, tone: "muted" }];
+  const vi = str(n.fields.translation);
+  out.push({ k: "title", text: str(n.fields.answer) }, { k: "example", text: str(n.fields.sentence), ...(c ? { at: c.at } : {}), ...(vi ? { vi } : {}) });
+  if (str(n.fields.rule)) out.push({ k: "label", text: "Quy tắc" }, { k: "text", text: str(n.fields.rule) });
+  return out;
+}
+
+/**
+ * The whole note as the library shows it when the learner opens it to read ("Xem"), independent of the card layout
+ * settings: everything the note holds, in the order of the answer side. `covered` hides what the learner should
+ * recall (a word's meanings; a grammar note's answers and rule), so the view doubles as a quick self-test.
+ * Empty for note types that have no view (practice test results).
+ */
+export function noteView(note: Note, covered = false): Block[] {
+  if (note.type === "vocab") return vocabView(note, covered);
+  if (note.type === "pattern") return patternView(note, covered);
+  if (note.type === "grammar") return grammarView(note, covered);
+  return [];
+}
 
 /** Note types that hold learning material (and so show in the library, the word count and the "no words yet" screen). */
 export const isMaterial = (n: { type: string }) => n.type !== "test";

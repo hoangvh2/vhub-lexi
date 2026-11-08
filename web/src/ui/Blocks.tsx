@@ -3,7 +3,7 @@ import { speak, speechAvailable } from "../lib/speech.ts";
 import { Icon } from "./common.tsx";
 
 /** Renders template blocks (shared/notetypes.ts). The same description drives the Android UI. */
-export function Blocks({ blocks, cloze }: { blocks: Block[]; cloze?: boolean }) {
+export function Blocks({ blocks, cloze, memoOpen }: { blocks: Block[]; cloze?: boolean; memoOpen?: boolean }) {
   return (
     <div class="blocks">
       {blocks.map((b, i) => {
@@ -46,13 +46,21 @@ export function Blocks({ blocks, cloze }: { blocks: Block[]; cloze?: boolean }) 
                     </button>
                   )}
                 </div>
+                {b.wrong && b.wrong.length > 0 && (
+                  <div class="b-ex-wrong" data-testid="example-wrong">
+                    Bẫy:{" "}
+                    {b.wrong.map((w, j) => (
+                      <span key={j}>{j > 0 && " · "}<s>{w}</s></span>
+                    ))}
+                  </div>
+                )}
                 {b.vi && <div class="b-ex-vi">{b.vi}</div>}
               </div>
             );
           case "memo":
             return (
               // Folded behind a chip so the answer stays short; one tap opens it when the word does not come back.
-              <details class="b-memo" key={i} data-testid="memo" onClick={(e) => e.stopPropagation()}>
+              <details class="b-memo" key={i} data-testid="memo" open={memoOpen} onClick={(e) => e.stopPropagation()}>
                 <summary class="b-memo-lbl"><Icon n="sparkle" size={14} /> Mẹo nhớ</summary>
                 <p>{b.text}</p>
               </details>
@@ -66,6 +74,8 @@ export function Blocks({ blocks, cloze }: { blocks: Block[]; cloze?: boolean }) 
             );
           case "listen":
             return <Listen key={i} text={b.text} />;
+          case "label":
+            return <div class="b-label" key={i}>{b.text}</div>;
         }
       })}
     </div>

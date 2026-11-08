@@ -1,0 +1,649 @@
+[
+ {
+  "note": {
+   "id": "n1",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "resilient",
+    "ipa": "rɪˈzɪljənt",
+    "pos": "adjective",
+    "vi": "kiên cường",
+    "en": "able to recover quickly",
+    "examples": [
+     "Children are often more resilient than adults.",
+     "The team stayed resilient."
+    ],
+    "mnemonic": "re-silient: springs back",
+    "notes": "Hay nhầm với resistant",
+    "examplesVi": [
+     "Trẻ em thường kiên cường hơn người lớn."
+    ]
+   }
+  },
+  "open": [
+   {
+    "k": "title",
+    "text": "resilient"
+   },
+   {
+    "k": "badge",
+    "text": "adjective"
+   },
+   {
+    "k": "ipa",
+    "text": "rɪˈzɪljənt"
+   },
+   {
+    "k": "speak",
+    "text": "resilient"
+   },
+   {
+    "k": "label",
+    "text": "Nghĩa"
+   },
+   {
+    "k": "text",
+    "text": "kiên cường",
+    "tone": "strong"
+   },
+   {
+    "k": "label",
+    "text": "Ví dụ"
+   },
+   {
+    "k": "example",
+    "text": "Children are often more resilient than adults.",
+    "at": [
+     24,
+     33
+    ],
+    "vi": "Trẻ em thường kiên cường hơn người lớn."
+   },
+   {
+    "k": "example",
+    "text": "The team stayed resilient.",
+    "at": [
+     16,
+     25
+    ]
+   },
+   {
+    "k": "memo",
+    "text": "re-silient: springs back"
+   },
+   {
+    "k": "label",
+    "text": "Ghi chú của tôi"
+   },
+   {
+    "k": "text",
+    "text": "Hay nhầm với resistant"
+   },
+   {
+    "k": "fold",
+    "label": "Định nghĩa Anh-Anh",
+    "text": "able to recover quickly"
+   }
+  ],
+  "covered": [
+   {
+    "k": "title",
+    "text": "resilient"
+   },
+   {
+    "k": "badge",
+    "text": "adjective"
+   },
+   {
+    "k": "ipa",
+    "text": "rɪˈzɪljənt"
+   },
+   {
+    "k": "speak",
+    "text": "resilient"
+   },
+   {
+    "k": "text",
+    "text": "Nghĩa đang được che. Nhớ thử nghĩa của từ rồi bỏ che để kiểm tra.",
+    "tone": "muted"
+   },
+   {
+    "k": "label",
+    "text": "Ví dụ"
+   },
+   {
+    "k": "example",
+    "text": "Children are often more resilient than adults.",
+    "at": [
+     24,
+     33
+    ]
+   },
+   {
+    "k": "example",
+    "text": "The team stayed resilient.",
+    "at": [
+     16,
+     25
+    ]
+   }
+  ]
+ },
+ {
+  "note": {
+   "id": "n1",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "resilient",
+    "ipa": "",
+    "pos": "",
+    "vi": "",
+    "en": "able to recover quickly",
+    "examples": [],
+    "mnemonic": ""
+   }
+  },
+  "open": [
+   {
+    "k": "title",
+    "text": "resilient"
+   },
+   {
+    "k": "speak",
+    "text": "resilient"
+   },
+   {
+    "k": "label",
+    "text": "Nghĩa"
+   },
+   {
+    "k": "text",
+    "text": "able to recover quickly",
+    "tone": "strong"
+   }
+  ],
+  "covered": [
+   {
+    "k": "title",
+    "text": "resilient"
+   },
+   {
+    "k": "speak",
+    "text": "resilient"
+   },
+   {
+    "k": "text",
+    "text": "Nghĩa đang được che. Nhớ thử nghĩa của từ rồi bỏ che để kiểm tra.",
+    "tone": "muted"
+   }
+  ]
+ },
+ {
+  "note": {
+   "id": "n1",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "resilient",
+    "ipa": "rɪˈzɪljənt",
+    "pos": "adjective",
+    "vi": "",
+    "en": "",
+    "examples": [],
+    "mnemonic": ""
+   }
+  },
+  "open": [
+   {
+    "k": "title",
+    "text": "resilient"
+   },
+   {
+    "k": "badge",
+    "text": "adjective"
+   },
+   {
+    "k": "ipa",
+    "text": "rɪˈzɪljənt"
+   },
+   {
+    "k": "speak",
+    "text": "resilient"
+   }
+  ],
+  "covered": [
+   {
+    "k": "title",
+    "text": "resilient"
+   },
+   {
+    "k": "badge",
+    "text": "adjective"
+   },
+   {
+    "k": "ipa",
+    "text": "rɪˈzɪljənt"
+   },
+   {
+    "k": "speak",
+    "text": "resilient"
+   },
+   {
+    "k": "text",
+    "text": "Nghĩa đang được che. Nhớ thử nghĩa của từ rồi bỏ che để kiểm tra.",
+    "tone": "muted"
+   }
+  ]
+ },
+ {
+  "note": {
+   "id": "n1",
+   "type": "vocab",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "word": "accommodate",
+    "ipa": "",
+    "pos": "verb",
+    "vi": "(chứa) chứa được; (dịch vụ) đáp ứng",
+    "en": "",
+    "examples": [
+     "The hotel can accommodate a large group."
+    ],
+    "mnemonic": "",
+    "phrases": [
+     "accommodate 200 guests | chứa được 200 khách",
+     "no word here | x"
+    ],
+    "examplesVi": [
+     "Khách sạn chứa được một đoàn lớn."
+    ]
+   }
+  },
+  "open": [
+   {
+    "k": "title",
+    "text": "accommodate"
+   },
+   {
+    "k": "badge",
+    "text": "verb"
+   },
+   {
+    "k": "speak",
+    "text": "accommodate"
+   },
+   {
+    "k": "label",
+    "text": "Nghĩa"
+   },
+   {
+    "k": "text",
+    "text": "(chứa) chứa được; (dịch vụ) đáp ứng",
+    "tone": "strong"
+   },
+   {
+    "k": "label",
+    "text": "Cụm ngắn"
+   },
+   {
+    "k": "example",
+    "text": "accommodate 200 guests",
+    "at": [
+     0,
+     11
+    ],
+    "vi": "chứa được 200 khách",
+    "phrase": true
+   },
+   {
+    "k": "label",
+    "text": "Ví dụ"
+   },
+   {
+    "k": "example",
+    "text": "The hotel can accommodate a large group.",
+    "at": [
+     14,
+     25
+    ],
+    "vi": "Khách sạn chứa được một đoàn lớn."
+   }
+  ],
+  "covered": [
+   {
+    "k": "title",
+    "text": "accommodate"
+   },
+   {
+    "k": "badge",
+    "text": "verb"
+   },
+   {
+    "k": "speak",
+    "text": "accommodate"
+   },
+   {
+    "k": "text",
+    "text": "Nghĩa đang được che. Nhớ thử nghĩa của từ rồi bỏ che để kiểm tra.",
+    "tone": "muted"
+   },
+   {
+    "k": "label",
+    "text": "Cụm ngắn"
+   },
+   {
+    "k": "example",
+    "text": "accommodate 200 guests",
+    "at": [
+     0,
+     11
+    ],
+    "phrase": true
+   },
+   {
+    "k": "label",
+    "text": "Ví dụ"
+   },
+   {
+    "k": "example",
+    "text": "The hotel can accommodate a large group.",
+    "at": [
+     14,
+     25
+    ]
+   }
+  ]
+ },
+ {
+  "note": {
+   "id": "p1",
+   "type": "pattern",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "title": "Hiện tại đơn sau liên từ thời gian",
+    "topic": "Thì động từ",
+    "ask": "Sau until, động từ chia thì gì?",
+    "signals": "until · as soon as",
+    "rule": "Mệnh đề thời gian dùng hiện tại đơn.",
+    "formula": "S + will V … until + S + V(s)",
+    "tip": "Không có will sau until.",
+    "why": [
+     "will + V: không dùng sau liên từ thời gian",
+     "Quá khứ: câu nói về tương lai"
+    ],
+    "items": [
+     "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.",
+     "bad line",
+     "Call me when the parts [arrive]."
+    ]
+   }
+  },
+  "open": [
+   {
+    "k": "badge",
+    "text": "Thì động từ"
+   },
+   {
+    "k": "title",
+    "text": "Hiện tại đơn sau liên từ thời gian"
+   },
+   {
+    "k": "text",
+    "text": "Sau until, động từ chia thì gì?"
+   },
+   {
+    "k": "label",
+    "text": "Quy tắc"
+   },
+   {
+    "k": "text",
+    "text": "Mệnh đề thời gian dùng hiện tại đơn.",
+    "tone": "strong"
+   },
+   {
+    "k": "text",
+    "text": "Dấu hiệu: until · as soon as"
+   },
+   {
+    "k": "text",
+    "text": "S + will V … until + S + V(s)",
+    "tone": "muted"
+   },
+   {
+    "k": "label",
+    "text": "Câu luyện (2)"
+   },
+   {
+    "k": "example",
+    "text": "We will wait until the manager returns.",
+    "at": [
+     31,
+     38
+    ],
+    "vi": "Chúng tôi sẽ đợi.",
+    "wrong": [
+     "will return",
+     "returned"
+    ]
+   },
+   {
+    "k": "example",
+    "text": "Call me when the parts arrive.",
+    "at": [
+     23,
+     29
+    ]
+   },
+   {
+    "k": "label",
+    "text": "Vì sao không phải…"
+   },
+   {
+    "k": "text",
+    "text": "will + V: không dùng sau liên từ thời gian"
+   },
+   {
+    "k": "text",
+    "text": "Quá khứ: câu nói về tương lai"
+   },
+   {
+    "k": "memo",
+    "text": "Không có will sau until."
+   }
+  ],
+  "covered": [
+   {
+    "k": "badge",
+    "text": "Thì động từ"
+   },
+   {
+    "k": "title",
+    "text": "Hiện tại đơn sau liên từ thời gian"
+   },
+   {
+    "k": "text",
+    "text": "Sau until, động từ chia thì gì?"
+   },
+   {
+    "k": "text",
+    "text": "Đáp án và quy tắc đang được che. Tự điền từng câu rồi bỏ che để kiểm tra.",
+    "tone": "muted"
+   },
+   {
+    "k": "label",
+    "text": "Câu luyện (2)"
+   },
+   {
+    "k": "quote",
+    "text": "We will wait until the manager _____."
+   },
+   {
+    "k": "text",
+    "text": "returned · returns · will return",
+    "tone": "muted"
+   },
+   {
+    "k": "quote",
+    "text": "Call me when the parts _____."
+   }
+  ]
+ },
+ {
+  "note": {
+   "id": "p2",
+   "type": "pattern",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "title": "Chỉ có quy tắc",
+    "rule": "Quy tắc",
+    "items": []
+   }
+  },
+  "open": [
+   {
+    "k": "title",
+    "text": "Chỉ có quy tắc"
+   },
+   {
+    "k": "label",
+    "text": "Quy tắc"
+   },
+   {
+    "k": "text",
+    "text": "Quy tắc",
+    "tone": "strong"
+   }
+  ],
+  "covered": [
+   {
+    "k": "title",
+    "text": "Chỉ có quy tắc"
+   },
+   {
+    "k": "text",
+    "text": "Đáp án và quy tắc đang được che. Tự điền từng câu rồi bỏ che để kiểm tra.",
+    "tone": "muted"
+   }
+  ]
+ },
+ {
+  "note": {
+   "id": "g1",
+   "type": "grammar",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "sentence": "The report was prepared by Ms. Lee.",
+    "answer": "prepared",
+    "topic": "Bị động",
+    "translation": "Báo cáo do bà Lee soạn.",
+    "rule": "be + V3"
+   }
+  },
+  "open": [
+   {
+    "k": "badge",
+    "text": "Bị động"
+   },
+   {
+    "k": "title",
+    "text": "prepared"
+   },
+   {
+    "k": "example",
+    "text": "The report was prepared by Ms. Lee.",
+    "at": [
+     15,
+     23
+    ],
+    "vi": "Báo cáo do bà Lee soạn."
+   },
+   {
+    "k": "label",
+    "text": "Quy tắc"
+   },
+   {
+    "k": "text",
+    "text": "be + V3"
+   }
+  ],
+  "covered": [
+   {
+    "k": "badge",
+    "text": "Bị động"
+   },
+   {
+    "k": "quote",
+    "text": "The report was _____ by Ms. Lee."
+   },
+   {
+    "k": "text",
+    "text": "Đáp án đang được che. Tự điền rồi bỏ che để kiểm tra.",
+    "tone": "muted"
+   }
+  ]
+ },
+ {
+  "note": {
+   "id": "g2",
+   "type": "grammar",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "sentence": "No match here.",
+    "answer": "missing"
+   }
+  },
+  "open": [
+   {
+    "k": "title",
+    "text": "missing"
+   },
+   {
+    "k": "example",
+    "text": "No match here."
+   }
+  ],
+  "covered": [
+   {
+    "k": "quote",
+    "text": "No match here."
+   },
+   {
+    "k": "text",
+    "text": "Đáp án đang được che. Tự điền rồi bỏ che để kiểm tra.",
+    "tone": "muted"
+   }
+  ]
+ },
+ {
+  "note": {
+   "id": "t1",
+   "type": "test",
+   "deckId": "d1",
+   "createdAt": 1768465800000,
+   "updatedAt": 1768465800000,
+   "fields": {
+    "name": "Test 1"
+   }
+  },
+  "open": [],
+  "covered": []
+ }
+]

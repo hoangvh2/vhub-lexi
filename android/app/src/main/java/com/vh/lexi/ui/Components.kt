@@ -57,6 +57,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogWindowProvider
@@ -154,11 +155,17 @@ fun ConfirmDialog(title: String, message: String, confirm: String, destructive: 
 
 /** Renders template blocks (core/NoteTypes.kt): the same description drives the web UI. */
 @Composable
-fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifier = Modifier, onSpeakSlow: (String) -> Unit = onSpeak, mode: Color = Lexi.colors.accent) {
+fun BlocksView(
+    blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifier = Modifier, onSpeakSlow: (String) -> Unit = onSpeak, mode: Color = Lexi.colors.accent,
+    /** The library's read view: blocks line up on the left like a page, the memory tip starts open, a long title is smaller. */
+    page: Boolean = false, titleSize: Int = 38,
+) {
     val c = Lexi.colors
-    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val align = if (page) Alignment.Start else Alignment.CenterHorizontally
+    val textAlign = if (page) TextAlign.Start else TextAlign.Center
+    Column(modifier.fillMaxWidth(), horizontalAlignment = align, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         for (b in blocks) when (b) {
-            is Block.Title -> Text(b.text, fontSize = 38.sp, lineHeight = 42.sp, fontFamily = Quicksand, fontWeight = FontWeight.Bold, color = c.ink, textAlign = TextAlign.Center)
+            is Block.Title -> Text(b.text, fontSize = titleSize.sp, lineHeight = (titleSize + 4).sp, fontFamily = Quicksand, fontWeight = FontWeight.Bold, color = c.ink, textAlign = textAlign)
             is Block.Ipa -> Text("/" + b.text.trim('/') + "/", fontSize = 18.sp, color = c.muted)
             is Block.Badge -> Pill(b.text, PillKind.OK)
             is Block.Speak -> Surface(
@@ -173,7 +180,7 @@ fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifie
                 "strong" -> senses(b.text)?.let { list ->
                     // "(công việc) trình diễn; (chung) chứng minh": one line per setting, the setting as a small label.
                     // The first sense sits in a soft butter bubble: the one thing the eye should land on after the word.
-                    Column(Modifier.testTag("senses"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(Modifier.testTag("senses"), horizontalAlignment = align, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         for ((i, s) in list.withIndex()) Row(
                             (if (i == 0) Modifier.background(c.butterSoft, RoundedCornerShape(24.dp)).padding(horizontal = 16.dp, vertical = 6.dp) else Modifier),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -184,10 +191,10 @@ fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifie
                     }
                 } ?: Text(
                     b.text, Modifier.background(c.butterSoft, RoundedCornerShape(24.dp)).padding(horizontal = 20.dp, vertical = 8.dp),
-                    fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.ExtraBold, color = c.ink, textAlign = TextAlign.Center,
+                    fontSize = if (page && titleSize < 38) 18.sp else 22.sp, lineHeight = if (page && titleSize < 38) 26.sp else 30.sp, fontWeight = FontWeight.ExtraBold, color = c.ink, textAlign = textAlign,
                 )
-                "muted" -> Text(b.text, fontSize = 15.sp, lineHeight = 23.sp, color = c.muted, textAlign = TextAlign.Center)
-                else -> Text(b.text, fontSize = 17.sp, lineHeight = 26.sp, color = c.ink, textAlign = TextAlign.Center)
+                "muted" -> Text(b.text, fontSize = 15.sp, lineHeight = 23.sp, color = c.muted, textAlign = textAlign)
+                else -> Text(b.text, fontSize = 17.sp, lineHeight = 26.sp, color = c.ink, textAlign = textAlign)
             }
             is Block.Quote -> Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
                 Box(Modifier.width(3.dp).fillMaxHeight().background(mode))
@@ -217,11 +224,21 @@ fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifie
                         Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.VolumeUp, contentDescription = "Nghe câu ví dụ", tint = c.muted, modifier = Modifier.size(16.dp)) }
                     }
                 }
+                if (b.wrong.isNotEmpty()) Text(
+                    buildAnnotatedString {
+                        append("Bẫy: ")
+                        b.wrong.forEachIndexed { i, w ->
+                            if (i > 0) append(" · ")
+                            withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(w) }
+                        }
+                    },
+                    Modifier.testTag("example-wrong"), fontSize = 14.sp, lineHeight = 21.sp, color = c.roseDeep,
+                )
                 b.vi?.let { Text(it, fontSize = if (b.phrase) 14.5.sp else 15.sp, lineHeight = if (b.phrase) 21.sp else 23.sp, color = if (b.phrase) c.ink else c.muted) }
             }
             // Folded behind a chip so the answer stays short; one tap opens it when the word does not come back.
             is Block.Memo -> {
-                var open by remember(b) { mutableStateOf(false) }
+                var open by remember(b) { mutableStateOf(page) }
                 Column(
                     Modifier.then(if (open) Modifier.fillMaxWidth() else Modifier).background(c.memo, RoundedCornerShape(if (open) 16.dp else 50.dp))
                         .clickable { open = !open }.padding(horizontal = 14.dp, vertical = if (open) 12.dp else 8.dp).testTag("memo"),
@@ -257,6 +274,10 @@ fun BlocksView(blocks: List<Block>, onSpeak: (String) -> Unit, modifier: Modifie
                 }
                 TextButton(onClick = { onSpeakSlow(b.text) }, modifier = Modifier.testTag("listen-slow")) { Text("Nghe chậm", fontWeight = FontWeight.SemiBold, color = c.ink) }
             }
+            is Block.Label -> Text(
+                b.text.uppercase(), Modifier.fillMaxWidth().padding(top = 6.dp), fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 0.8.sp, color = c.muted, textAlign = TextAlign.Start,
+            )
         }
     }
 }
