@@ -35,6 +35,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.ViewCompat
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.test.uiautomator.UiDevice
@@ -280,7 +281,19 @@ class SmokeTest {
                 ),
             )
         }
+        // A long deck name keeps the deck/sort row one line high, with its edit button on screen.
+        val longDeck = "600 essential words for the TOEIC - Vietnamese"
+        runBlocking { app.data.createDeck(longDeck) }
         rule.onNodeWithTag("nav-library").performClick()
+        rule.onNodeWithText("Tất cả bộ thẻ").performClick()
+        rule.onNodeWithText(longDeck).performClick()
+        waitFor("deck-picked") { rule.onAllNodesWithTagCount("deck-edit") > 0 }
+        rule.onNodeWithTag("deck-edit").assertIsDisplayed()
+        val rowHeight = with(rule.density) { rule.onNodeWithTag("lib-deck-row").fetchSemanticsNode().size.height.toDp() }
+        shot("07j-library-long-deck")
+        assertTrue("deck row is $rowHeight high", rowHeight < 64.dp)
+        rule.onNodeWithText(longDeck, substring = true).performClick()
+        rule.onNodeWithText("Tất cả bộ thẻ").performClick()
         waitFor("trap-row") { rule.onAllNodesWithTextCount(title) > 0 }
         rule.onNodeWithText(title).performClick()
         waitFor("trap-view") { rule.onAllNodesWithTagCount("note-view") > 0 }
