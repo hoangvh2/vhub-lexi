@@ -1,4 +1,4 @@
-import { useMemo, useState } from "preact/hooks";
+import { useCallback, useEffect, useMemo, useState } from "preact/hooks";
 import { CardState, type Card, type Id, type Note } from "@shared/model.ts";
 import { isMaterial, noteType } from "@shared/notetypes.ts";
 import { createDeck, deleteDeckAndContents, moveNotes, renameDeck, updateNote } from "../data/actions.ts";
@@ -11,6 +11,22 @@ import { isLeech } from "../lib/queue.ts";
 import { useStore } from "../lib/store.ts";
 import { Icon, Modal, confirmDialog, go, toast } from "./common.tsx";
 import { NoteEditor } from "./NoteEditor.tsx";
+import { NoteView } from "./NoteView.tsx";
+
+/** Wide enough to read a note next to the list instead of over it. */
+const SPLIT_QUERY = "(min-width: 1200px)";
+
+function useSplit(): boolean {
+  const mq = typeof matchMedia === "function" ? matchMedia(SPLIT_QUERY) : null;
+  const [on, setOn] = useState(mq?.matches ?? false);
+  useEffect(() => {
+    if (!mq) return;
+    const f = () => setOn(mq.matches);
+    mq.addEventListener("change", f);
+    return () => mq.removeEventListener("change", f);
+  }, []);
+  return on;
+}
 
 /** Daily AI allowance (LIMITS.dailyEnrich in functions/src/config.ts). */
 const DAILY_AI = 300;
@@ -45,6 +61,9 @@ export function Library() {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("recent");
   const [editing, setEditing] = useState<Id | null>(null);
+  /** The note open in the read view ("Xem"); tapping a row opens it, its "Sửa" button opens the editor. */
+  const [viewing, setViewing] = useState<Id | null>(null);
+  const split = useSplit();
   const [deckDlg, setDeckDlg] = useState<{ id?: Id; name: string } | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<Id>>(new Set());
@@ -81,6 +100,23 @@ export function Library() {
 
   const deckName = (id: Id) => allDecks.find((d) => d.id === id)?.name ?? "";
   const editingNote = editing ? allNotes.find((n) => n.id === editing) : undefined;
+  const viewingNote = viewing ? allNotes.find((n) => n.id === viewing) : undefined;
+  const viewIndex = viewing ? rows.findIndex((n) => n.id === viewing) : -1;
+  const docked = split && !!viewingNote;
+  const stepView = useCallback(
+    (d: 1 | -1) => {
+      if (!rows.length) return;
+      const i = viewIndex < 0 ? 0 : Math.min(rows.length - 1, Math.max(0, viewIndex + d));
+      setViewing(rows[i].id);
+      // Keep the open row in sight in the list next to the panel.
+      requestAnimationFrame(() => document.querySelector(`[data-note="${CSS.escape(rows[i].id)}"]`)?.scrollIntoView({ block: "nearest" }));
+    },
+    [rows, viewIndex],
+  );
+  const viewPrev = useCallback(() => stepView(-1), [stepView]);
+  const viewNext = useCallback(() => stepView(1), [stepView]);
+  const viewEdit = useCallback(() => viewing && setEditing(viewing), [viewing]);
+  const viewClose = useCallback(() => setViewing(null), []);
 
   async function saveDeck() {
     if (!deckDlg || !deckDlg.name.trim()) return;
@@ -165,7 +201,8 @@ export function Library() {
   if (!ready) return <div class="page"><p class="muted">Đang tải…</p></div>;
 
   return (
-    <div class="page">
+    <div class={docked ? "page lib-split" : "page"}>
+      <div class={docked ? "lib-main" : "contents"}>
       <div class="page-head">
         <h1>Thư viện</h1>
         <span class="pill">{allNotes.length} từ</span>
@@ -236,9 +273,10 @@ export function Library() {
             return (
               <button
                 type="button"
-                class={`li${selecting ? " pick" : ""}`}
+                class={`li${selecting ? " pick" : ""}${!selecting && n.id === viewing ? " viewing" : ""}`}
                 key={n.id}
-                onClick={() => (selecting ? toggle(n.id) : setEditing(n.id))}
+                data-note={n.id}
+                onClick={() => (selecting ? toggle(n.id) : setViewing(n.id))}
                 aria-pressed={selecting ? selected.has(n.id) : undefined}
                 data-testid="lib-item"
               >
@@ -337,6 +375,20 @@ export function Library() {
           </Modal>
         );
       })()}
+      </div>
+      {viewingNote && !selecting && (
+        <NoteView
+          note={viewingNote}
+          index={viewIndex}
+          total={rows.length}
+          docked={docked}
+          onPrev={viewPrev}
+          onNext={viewNext}
+          onEdit={viewEdit}
+          onClose={viewClose}
+          paused={!!editingNote}
+        />
+      )}
       {editingNote && <NoteEditor note={editingNote} onClose={() => setEditing(null)} />}
       {deckDlg && (
         <Modal title={deckDlg.id ? "Sửa bộ thẻ" : "Bộ thẻ mới"} onClose={() => setDeckDlg(null)}>

@@ -197,7 +197,7 @@ private val STATE_LABEL = mapOf(CardState.NEW to "Mới", CardState.LEARNING to 
 private val DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
 /** Anki's "card info" in one line: state, interval, recall probability now, difficulty, reps and lapses, due date. */
-private fun cardStats(c: Card, prefs: Prefs, now: Long = System.currentTimeMillis()): String {
+internal fun cardStats(c: Card, prefs: Prefs, now: Long = System.currentTimeMillis()): String {
     if (c.state == CardState.NEW) return "Chưa học lần nào."
     val elapsed = c.lastReview?.let { maxOf(0.0, (now - it) / Fsrs.DAY_MS.toDouble()) } ?: 0.0
     val recall = if (c.stability > 0) prefs.fsrs().forgettingCurve(elapsed, c.stability) else 1.0

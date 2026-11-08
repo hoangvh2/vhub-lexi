@@ -295,11 +295,13 @@ describe("core flow (local-only mode)", () => {
     await addWord(page, base, "leverage", "đòn bẩy");
     await page.goto(`${base}/#/library`);
     await page.click('[data-testid=lib-item]');
+    await page.click('[data-testid=view-edit]');
     await page.click('[data-testid=note-delete]');
     await page.click('[data-testid=confirm-cancel]');
     await page.click('[data-testid=note-save]');
     await page.waitForSelector('[data-testid=lib-item]');
     await page.click('[data-testid=lib-item]');
+    await page.click('[data-testid=view-edit]');
     await page.click('[data-testid=note-delete]');
     await page.click('[data-testid=confirm-ok]');
     await page.waitForFunction(() => !document.querySelector('[data-testid=lib-item]'));
@@ -342,6 +344,16 @@ describe("core flow (local-only mode)", () => {
     // Card info: memory state and the history imported from Anki.
     await page.goto(`${base}/#/library`);
     await page.click('[data-testid=lib-item] >> text=contract');
+    // The read view shows each card's schedule from what is on the device; the history loads on request.
+    await page.waitForSelector('[data-testid=view-schedule]');
+    const sched = await page.textContent('[data-testid=view-schedule]');
+    assert.match(sched, /Nhớ \d+%/);
+    assert.match(sched, /3 lượt, quên 1/);
+    assert.equal(await page.locator('[data-testid=view-history]').count(), 0);
+    await page.click('[data-testid=view-history-load]');
+    await page.waitForSelector('[data-testid=view-history]');
+    assert.match(await page.textContent('[data-testid=view-history]'), /Tốt.*Quên/s);
+    await page.click('[data-testid=view-edit]');
     await page.waitForSelector('[data-testid=card-info]');
     const info = await page.textContent('[data-testid=card-info]');
     assert.match(info, /Khả năng nhớ\s*\d+%/);
@@ -972,5 +984,92 @@ describe("built-in TOEIC grammar pack: grammar trap cards", () => {
     await shot("grammar-3-fill-back");
     await ctx.close();
     assert.deepEqual(errors, []);
+  });
+});
+
+describe("library read view (Xem)", () => {
+  it("tapping a word opens a read view: meaning, examples, cover, step through the list, edit, close", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    const shots = process.env.LEXI_SHOTS;
+    const shot = async (name) => shots && (await page.waitForTimeout(400), await page.screenshot({ path: join(shots, `${name}.png`) }));
+    await addWord(page, base, "resilient", "kiên cường");
+    await addWord(page, base, "diligent", "siêng năng");
+    await page.goto(`${base}/#/library`);
+    await page.waitForSelector('[data-testid=lib-item]');
+    // Newest first: diligent, then resilient.
+    await page.locator('[data-testid=lib-item]', { hasText: "diligent" }).click();
+    await page.waitForSelector('[data-testid=note-view]');
+    assert.equal(await page.locator('[data-testid=note-editor], .modal').count(), 0);
+    const view = page.locator('[data-testid=note-view]');
+    assert.match(await view.textContent(), /diligent/);
+    assert.match(await view.textContent(), /siêng năng/);
+    assert.equal(await page.textContent('[data-testid=view-pos]'), "1 / 2");
+    assert.equal(await page.isDisabled('[data-testid=view-prev]'), true);
+    assert.ok(await noOverflow(page));
+    await shot("view-1-word");
+
+    // Cover: the meaning is hidden, the word stays; the choice is remembered for the next note.
+    await page.click('[data-testid=view-cover]');
+    assert.equal(await page.getAttribute('[data-testid=view-cover]', 'aria-checked'), "true");
+    assert.doesNotMatch(await view.textContent(), /siêng năng/);
+    assert.match(await view.textContent(), /Nghĩa đang được che/);
+    await shot("view-2-covered");
+    await page.click('[data-testid=view-next]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=view-pos]')?.textContent === "2 / 2");
+    assert.match(await view.textContent(), /resilient/);
+    assert.doesNotMatch(await view.textContent(), /kiên cường/);
+    await page.click('[data-testid=view-cover]');
+    assert.match(await view.textContent(), /kiên cường/);
+    assert.equal(await page.isDisabled('[data-testid=view-next]'), true);
+
+    // Sửa opens the editor over the view; saving updates the view in place.
+    await page.click('[data-testid=view-edit]');
+    await page.fill('#f-vi', "kiên cường, mau phục hồi");
+    await page.click('[data-testid=note-save]');
+    await page.waitForFunction(() => /mau phục hồi/.test(document.querySelector('[data-testid=note-view]')?.textContent ?? ""));
+    await page.click('[data-testid=view-close]');
+    await page.waitForFunction(() => !document.querySelector('[data-testid=note-view]'));
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("a grammar trap reads as rule, signals, all its sentences with the traps struck out; desktop shows it next to the list", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 1440, height: 900 } });
+    const shots = process.env.LEXI_SHOTS;
+    const shot = async (name) => shots && (await page.waitForTimeout(400), await page.screenshot({ path: join(shots, `${name}.png`) }));
+    await page.goto(`${base}/#/settings`);
+    await page.waitForSelector('[data-testid=seed-restore]');
+    await page.click('[data-testid=seed-restore]');
+    await page.waitForFunction(() => /Đã thêm \d+ bẫy còn thiếu/.test(document.body.textContent ?? ""));
+    const pack = JSON.parse(readFileSync(new URL("../../shared/seed/grammar-toeic.json", import.meta.url), "utf8"));
+    const trap = pack.notes.find((n) => n.fields.title === "Tính từ đứng trước danh từ");
+    assert.ok(trap);
+    await page.goto(`${base}/#/library`);
+    await page.fill('[data-testid=lib-search]', "Tính từ đứng trước danh từ");
+    await page.locator('[data-testid=lib-item]', { hasText: "Tính từ đứng trước danh từ" }).first().click();
+    const view = page.locator('[data-testid=note-view]');
+    await view.waitFor();
+    // Docked: the list stays on screen next to the view.
+    assert.ok(await page.locator('[data-testid=lib-list]').isVisible());
+    assert.ok((await view.boundingBox()).x > (await page.locator('[data-testid=lib-list]').boundingBox()).x);
+    const text = await view.textContent();
+    assert.ok(text.includes(trap.fields.rule));
+    assert.ok(text.includes(trap.fields.signals));
+    assert.equal(await page.locator('[data-testid=note-view] [data-testid=example]').count(), trap.fields.items.length);
+    assert.match(await page.locator('[data-testid=example-wrong]').first().textContent(), /Bẫy: competitively · competition · compete/);
+    await shot("view-3-trap-desktop");
+    // Cover hides the answers and the rule, keeps the blanked sentences and their options.
+    await page.click('[data-testid=view-cover]');
+    const covered = await view.textContent();
+    assert.ok(!covered.includes(trap.fields.rule));
+    assert.match(covered, /The company offers a _____ salary/);
+    assert.match(covered, /compete · competition · competitive · competitively/);
+    await page.click('[data-testid=view-cover]');
+    // Keyboard: Escape closes the panel.
+    await page.locator('[data-testid=lib-search]').blur();
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => !document.querySelector('[data-testid=note-view]'));
+    assert.deepEqual(errors, []);
+    await ctx.close();
   });
 });

@@ -10,7 +10,7 @@ import { expect, it } from "vitest";
 import { CardState, DEFAULT_PREFS, normalizePrefs, type Card, type Daily, type Note, type Rating } from "@shared/model.ts";
 import { IRREGULAR } from "@shared/irregular.ts";
 import { baseForms } from "@shared/morphy.ts";
-import { type Block, checkTyped, clozeSentence, findExact, findWord, normalizeAnswer, parsePatternItem, patternOptions, phrasesOf, studyNote, template, wantedTemplates } from "@shared/notetypes.ts";
+import { type Block, checkTyped, clozeSentence, findExact, findWord, normalizeAnswer, noteView, parsePatternItem, patternOptions, phrasesOf, studyNote, template, wantedTemplates } from "@shared/notetypes.ts";
 import { planSeed, seedIdRange, slugVi, type SeedPack } from "@shared/seed.ts";
 import { answerHint, confusables, hintNote, letterCount, matchConfusable, meaningPhrases, suggestedRatingWith, typingTarget } from "@shared/confusables.ts";
 import { buildQueue, pickNext } from "../src/lib/queue.ts";
@@ -500,6 +500,31 @@ function patternVectors() {
   return { items, cases, wanted, labels };
 }
 
+/** The library's view of a whole note ("Xem"), open and covered. */
+function viewVectors() {
+  const p = (id: string, type: string, fields: Record<string, string | string[]>): Note => ({ id, type, deckId: "d1", createdAt: T0, updatedAt: T0, fields });
+  const notes: Note[] = [
+    sampleNote({ notes: "Hay nhầm với resistant", examplesVi: ["Trẻ em thường kiên cường hơn người lớn."] }),
+    sampleNote({ vi: "", examples: [], mnemonic: "", ipa: "", pos: "" }),
+    sampleNote({ vi: "", en: "", examples: [], mnemonic: "" }),
+    sampleNote({
+      word: "accommodate", pos: "verb", ipa: "", mnemonic: "", en: "", vi: "(chứa) chứa được; (dịch vụ) đáp ứng",
+      phrases: ["accommodate 200 guests | chứa được 200 khách", "no word here | x"], examples: ["The hotel can accommodate a large group."], examplesVi: ["Khách sạn chứa được một đoàn lớn."],
+    }),
+    p("p1", "pattern", {
+      title: "Hiện tại đơn sau liên từ thời gian", topic: "Thì động từ", ask: "Sau until, động từ chia thì gì?", signals: "until · as soon as",
+      rule: "Mệnh đề thời gian dùng hiện tại đơn.", formula: "S + will V … until + S + V(s)", tip: "Không có will sau until.",
+      why: ["will + V: không dùng sau liên từ thời gian", "Quá khứ: câu nói về tương lai"],
+      items: ["We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.", "bad line", "Call me when the parts [arrive]."],
+    }),
+    p("p2", "pattern", { title: "Chỉ có quy tắc", rule: "Quy tắc", items: [] }),
+    p("g1", "grammar", { sentence: "The report was prepared by Ms. Lee.", answer: "prepared", topic: "Bị động", translation: "Báo cáo do bà Lee soạn.", rule: "be + V3" }),
+    p("g2", "grammar", { sentence: "No match here.", answer: "missing" }),
+    p("t1", "test", { name: "Test 1" }),
+  ];
+  return notes.map((n) => ({ note: n, open: noteView(n), covered: noteView(n, true) }));
+}
+
 /** Seed packs: which documents a load writes given what the server already holds. */
 function seedVectors() {
   const fields = { title: "T", rule: "R", items: ["A [b] c. | d / e | f"] };
@@ -537,6 +562,7 @@ it("cross-platform vectors are up to date", () => {
     ["hints.json", JSON.stringify(hintVectors(), null, 1)],
     ["patterns.json", JSON.stringify(patternVectors(), null, 1)],
     ["seed.json", JSON.stringify(seedVectors(), null, 1)],
+    ["views.json", JSON.stringify(viewVectors(), null, 1)],
     ["testtag.json", JSON.stringify(["Test 1 TOEIC NEW 2026", "Đề ETS 2026 — Test #2", "   ", "Kiểm tra giữa kỳ: Ôn tập rất dài của năm học 2026 lần thứ ba", "ĐĐ ñandú", "a--b"].map((n) => [n, testTag(n)]), null, 1)],
     [join("../../android/core/src/main/kotlin/com/vh/lexi/core/Irregular.kt"), irregularKotlin()],
   ];

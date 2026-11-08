@@ -195,9 +195,21 @@ class SmokeTest {
         shot("07-library")
         moveChosenWordsToAnotherDeck()
 
+        // Tapping a word opens the read view ("Xem"); its cover switch hides the meaning; "Sửa" opens the editor.
+        rule.onNodeWithText("serendipity").performClick()
+        waitFor("note-view") { rule.onAllNodesWithTagCount("note-view") > 0 }
+        rule.onNodeWithTag("view-pos").assertTextContains("/ ", substring = true)
+        assertTrue("meaning shown", inView("sự tình cờ may mắn") > 0)
+        shot("07e-note-view")
+        rule.onNodeWithTag("view-cover").performClick()
+        waitFor("view-covered") { inView("Nghĩa đang được che") > 0 }
+        assertEquals(0, inView("sự tình cờ may mắn"))
+        shot("07f-note-view-covered")
+        rule.onNodeWithTag("view-cover").performClick()
+        waitFor("view-uncovered") { inView("sự tình cờ may mắn") > 0 }
         // Edit dialog: the form is taller than the dialog, so its last field must be reachable by scrolling, and
         // with the keyboard open that field and the buttons must stay above the keyboard.
-        rule.onNodeWithText("serendipity").performClick()
+        rule.onNodeWithTag("view-edit").performClick()
         waitFor("note-editor") { rule.onAllNodesWithTagCount("note-editor-form") > 0 }
         rule.onNodeWithTag("note-editor-save").assertIsDisplayed()
         rule.onNodeWithTag("note-editor-form").performScrollToNode(hasTestTag("note-editor-tags"))
@@ -211,6 +223,8 @@ class SmokeTest {
         rule.onNodeWithText("Huỷ").performSemanticsAction(SemanticsActions.OnClick)
         waitFor("note-editor-closed") { rule.onAllNodesWithTagCount("note-editor-form") == 0 }
         waitFor("keyboard-hidden-after-dialog") { keyboardTop() == null }
+        rule.onNodeWithTag("view-close").performClick()
+        waitFor("note-view-closed") { rule.onAllNodesWithTagCount("note-view") == 0 }
         rule.onNodeWithTag("nav-stats").performClick()
         shot("08-stats")
         rule.onNodeWithTag("nav-settings").performClick()
@@ -231,6 +245,52 @@ class SmokeTest {
         typingCardNamesTheTargetWord()
         todayWithLessonsAndHistory()
         everyTextReadableInBothThemes()
+        grammarTrapReadView()
+    }
+
+    /** Nodes inside the read view ("Xem") showing [text]; the library list behind it is not counted. */
+    private fun inView(text: String) =
+        rule.onAllNodes(hasText(text, substring = true) and androidx.compose.ui.test.hasAnyAncestor(hasTestTag("note-view"))).fetchSemanticsNodes().size
+
+    /** A grammar trap in the read view: rule, every sentence with its traps struck out; covered, only the blanks. */
+    private fun grammarTrapReadView() {
+        val app = rule.activity.application as LexiApp
+        runBlocking { app.data.savePrefs(app.data.prefs.value.copy(theme = "light", accent = "teal")) }
+        val title = "Tính từ đứng trước danh từ"
+        runBlocking {
+            app.data.addNote(
+                "pattern",
+                mapOf(
+                    "title" to FieldValue.Text(title), "topic" to FieldValue.Text("Từ loại"),
+                    "ask" to FieldValue.Text("Chỗ trống nằm giữa a/the/our/its… và một danh từ thì cần từ loại gì?"),
+                    "signals" to FieldValue.Text("a / an / the / our / its + ___ + danh từ"),
+                    "rule" to FieldValue.Text("Giữa từ hạn định (a, the, this, our, its…) và danh từ là chỗ của TÍNH TỪ."),
+                    "formula" to FieldValue.Text("(a/the/our) + (trạng từ) + TÍNH TỪ + danh từ"),
+                    "tip" to FieldValue.Text("Thấy \"___ + danh từ\" → tìm đuôi tính từ: -ive, -able, -ful, -al, -ous."),
+                    "why" to FieldValue.Items(listOf("Trạng từ (-ly): không bổ nghĩa cho danh từ.", "Động từ: một cụm danh từ không chứa động từ chia.")),
+                    "items" to FieldValue.Items(
+                        listOf(
+                            "The company offers a [competitive] salary to new engineers. | competitively / competition / compete | Công ty trả mức lương cạnh tranh cho kỹ sư mới.",
+                            "Ms. Tran gave a [detailed] explanation of the new policy. | detail / detailing / details | Bà Trần đã giải thích chi tiết về chính sách mới.",
+                        ),
+                    ),
+                ),
+            )
+        }
+        rule.onNodeWithTag("nav-library").performClick()
+        waitFor("trap-row") { rule.onAllNodesWithTextCount(title) > 0 }
+        rule.onNodeWithText(title).performClick()
+        waitFor("trap-view") { rule.onAllNodesWithTagCount("note-view") > 0 }
+        waitFor("trap-wrong") { rule.onAllNodesWithTagCount("example-wrong", unmerged = true) == 2 }
+        shot("07g-note-view-trap")
+        rule.onNodeWithTag("view-schedule").performScrollTo()
+        shot("07h-note-view-trap-bottom")
+        rule.onNodeWithTag("view-cover").performClick()
+        waitFor("trap-covered") { rule.onAllNodesWithTextCount("The company offers a _____ salary to new engineers.") > 0 }
+        assertEquals(0, rule.onAllNodesWithTagCount("example-wrong", unmerged = true))
+        shot("07i-note-view-trap-covered")
+        rule.onNodeWithTag("view-close").performClick()
+        waitFor("trap-view-closed") { rule.onAllNodesWithTagCount("note-view") == 0 }
     }
 
     /**

@@ -47,10 +47,12 @@ fun Block.toJson(): JSONObject = when (this) {
         at?.let { o.put("at", JSONArray(listOf(it.first, it.second))) }
         vi?.let { o.put("vi", it) }
         if (phrase) o.put("phrase", true)
+        if (wrong.isNotEmpty()) o.put("wrong", JSONArray(wrong))
     }
     is Block.Memo -> JSONObject().put("k", "memo").put("text", text)
     is Block.Fold -> JSONObject().put("k", "fold").put("label", label).put("text", text)
     is Block.Listen -> JSONObject().put("k", "listen").put("text", text)
+    is Block.Label -> JSONObject().put("k", "label").put("text", text)
 }
 
 /** Order-insensitive JSON comparison without relying on org.json's similar() number quirks. */

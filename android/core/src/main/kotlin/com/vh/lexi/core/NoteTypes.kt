@@ -17,14 +17,17 @@ sealed interface Block {
     /**
      * An example sentence; [at] = start until end (exclusive) of the studied word in it, [vi] = its translation.
      * [phrase] marks a short phrase (3-5 words, one per meaning) rather than a full sentence; it stays out of [rotateExamples].
+     * [wrong] lists the trap options of a grammar sentence, shown struck through (library view only).
      */
-    data class Example(val text: String, val at: Pair<Int, Int>? = null, val vi: String? = null, val phrase: Boolean = false) : Block
+    data class Example(val text: String, val at: Pair<Int, Int>? = null, val vi: String? = null, val phrase: Boolean = false, val wrong: List<String> = emptyList()) : Block
     /** The learner's memory tip (sound-alike pun or short hook), shown in its own box. */
     data class Memo(val text: String) : Block
     /** Secondary text, collapsed under [label] until the learner opens it. */
     data class Fold(val label: String, val text: String) : Block
     /** A large play button that reads [text] aloud (listening cards). */
     data class Listen(val text: String) : Block
+    /** A small section heading (the library's view of a whole note). */
+    data class Label(val text: String) : Block
 }
 
 /** "flip" = think, reveal, self-rate; "type" = type the answer, then self-rate. */
@@ -587,6 +590,93 @@ object TestResultType : NoteTypeDef {
     override fun title(note: Note) = note.f("name").str()
     override fun subtitle(note: Note) = note.f("date").str()
     override fun searchText(note: Note) = listOf(note.f("name").str(), note.f("date").str()).joinToString(" ").lowercase()
+}
+
+// ------------------------------------------------------------------ the library's view of a whole note ("Xem")
+
+/** What the view says in place of the hidden part when it is covered (port of shared/notetypes.ts COVER_NOTE). */
+val COVER_NOTE: Map<String, String> = mapOf(
+    "vocab" to "Nghĩa đang được che. Nhớ thử nghĩa của từ rồi bỏ che để kiểm tra.",
+    "pattern" to "Đáp án và quy tắc đang được che. Tự điền từng câu rồi bỏ che để kiểm tra.",
+    "grammar" to "Đáp án đang được che. Tự điền rồi bỏ che để kiểm tra.",
+)
+
+private fun vocabView(n: Note, covered: Boolean): List<Block> = buildList {
+    val word = n.f("word").str()
+    add(Block.Title(word))
+    if (n.f("pos").str().isNotEmpty()) add(Block.Badge(n.f("pos").str()))
+    if (n.f("ipa").str().isNotEmpty()) add(Block.Ipa(n.f("ipa").str()))
+    if (word.isNotEmpty()) add(Block.Speak(word))
+    val vi = n.f("vi").str()
+    val en = n.f("en").str()
+    val examples = n.f("examples").items()
+    val phrases = phraseBlocks(n)
+    if (covered) {
+        add(Block.Text(COVER_NOTE.getValue("vocab"), "muted"))
+        // The English side only: the phrase and sentence translations would give the meaning away.
+        if (phrases.isNotEmpty()) { add(Block.Label("Cụm ngắn")); phrases.forEach { b -> add(if (b is Block.Example) Block.Example(b.text, b.at, phrase = true) else b) } }
+        if (examples.isNotEmpty()) { add(Block.Label("Ví dụ")); examples.forEach { e -> add(Block.Example(e, findWord(e, word))) } }
+        return@buildList
+    }
+    if (vi.isNotEmpty() || en.isNotEmpty()) { add(Block.Label("Nghĩa")); add(Block.Text(vi.ifEmpty { en }, "strong")) }
+    if (phrases.isNotEmpty()) { add(Block.Label("Cụm ngắn")); addAll(phrases) }
+    if (examples.isNotEmpty()) { add(Block.Label("Ví dụ")); examples.forEachIndexed { i, e -> add(exampleBlock(n, e, i)) } }
+    if (n.f("mnemonic").str().isNotEmpty()) add(Block.Memo(n.f("mnemonic").str()))
+    if (n.f("notes").str().isNotEmpty()) { add(Block.Label("Ghi chú của tôi")); add(Block.Text(n.f("notes").str())) }
+    if (vi.isNotEmpty() && en.isNotEmpty()) add(Block.Fold(EN_LABEL, en))
+}
+
+private fun patternView(n: Note, covered: Boolean): List<Block> = buildList {
+    val items = patternItems(n)
+    addAll(patternBadge(n))
+    add(Block.Title(n.f("title").str()))
+    if (n.f("ask").str().isNotEmpty()) add(Block.Text(n.f("ask").str()))
+    if (covered) {
+        add(Block.Text(COVER_NOTE.getValue("pattern"), "muted"))
+        if (items.isNotEmpty()) add(Block.Label("Câu luyện (${items.size})"))
+        for (it in items) {
+            add(Block.Quote(it.blanked))
+            val opts = patternOptions(it)
+            if (opts.isNotEmpty()) add(Block.Text(opts.joinToString(" · "), "muted"))
+        }
+        return@buildList
+    }
+    val rule = n.f("rule").str()
+    val signals = n.f("signals").str()
+    val formula = n.f("formula").str()
+    if (rule.isNotEmpty() || signals.isNotEmpty() || formula.isNotEmpty()) add(Block.Label("Quy tắc"))
+    if (rule.isNotEmpty()) add(Block.Text(rule, "strong"))
+    if (signals.isNotEmpty()) add(Block.Text("Dấu hiệu: $signals"))
+    if (formula.isNotEmpty()) add(Block.Text(formula, "muted"))
+    if (items.isNotEmpty()) add(Block.Label("Câu luyện (${items.size})"))
+    for (it in items) add(itemExample(it).copy(wrong = it.wrong))
+    val why = n.f("why").items()
+    if (why.isNotEmpty()) { add(Block.Label("Vì sao không phải…")); why.forEach { add(Block.Text(it)) } }
+    if (n.f("tip").str().isNotEmpty()) add(Block.Memo(n.f("tip").str()))
+}
+
+private fun grammarView(n: Note, covered: Boolean): List<Block> = buildList {
+    val c = grammarCloze(n)
+    if (n.f("topic").str().isNotEmpty()) add(Block.Badge(n.f("topic").str()))
+    if (covered) {
+        add(Block.Quote(c?.first ?: n.f("sentence").str()))
+        add(Block.Text(COVER_NOTE.getValue("grammar"), "muted"))
+        return@buildList
+    }
+    add(Block.Title(n.f("answer").str()))
+    add(Block.Example(n.f("sentence").str(), c?.second, n.f("translation").str().ifEmpty { null }))
+    if (n.f("rule").str().isNotEmpty()) { add(Block.Label("Quy tắc")); add(Block.Text(n.f("rule").str())) }
+}
+
+/**
+ * The whole note as the library shows it when the learner opens it to read ("Xem"); port of shared/notetypes.ts
+ * `noteView`, pinned by shared/vectors/views.json. [covered] hides what the learner should recall.
+ */
+fun noteView(note: Note, covered: Boolean = false): List<Block> = when (note.type) {
+    "vocab" -> vocabView(note, covered)
+    "pattern" -> patternView(note, covered)
+    "grammar" -> grammarView(note, covered)
+    else -> emptyList()
 }
 
 /** Note types that hold learning material (shown in the library, counted as words); a test result is not. */

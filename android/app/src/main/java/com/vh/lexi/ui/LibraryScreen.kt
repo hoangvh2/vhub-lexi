@@ -118,6 +118,9 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
     var filter by remember { mutableStateOf(Filter.ALL) }
     var sort by remember { mutableStateOf(Sort.RECENT) }
     var editing by remember { mutableStateOf<String?>(null) }
+    // The note open in the read view ("Xem"): tapping a row opens it, its "Sửa" button opens the editor.
+    var viewing by remember { mutableStateOf<String?>(null) }
+    var covered by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var deckDialog by remember { mutableStateOf<Pair<String?, String>?>(null) }
     var confirmDeck by remember { mutableStateOf<com.vh.lexi.core.Deck?>(null) }
     var sortMenu by remember { mutableStateOf(false) }
@@ -206,7 +209,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
                     val soon = cs.filter { it.state != CardState.NEW }.minByOrNull { it.due }
                     val picked = n.id in selected
                     Row(
-                        Modifier.fillMaxWidth().clickable { if (selecting) { selected = if (picked) selected - n.id else selected + n.id } else editing = n.id }.padding(vertical = 10.dp),
+                        Modifier.fillMaxWidth().clickable { if (selecting) { selected = if (picked) selected - n.id else selected + n.id } else viewing = n.id }.padding(vertical = 10.dp).testTag("lib-item"),
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         if (selecting) Checkbox(checked = picked, onCheckedChange = null) else WordStatus(cs)
@@ -228,6 +231,20 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
         }
     }
 
+    if (!selecting) viewing?.let { id ->
+        notes.firstOrNull { it.id == id }?.let { n ->
+            val i = rows.indexOfFirst { it.id == id }
+            fun step(d: Int) {
+                if (rows.isEmpty()) return
+                viewing = rows[if (i < 0) 0 else (i + d).coerceIn(0, rows.size - 1)].id
+            }
+            NoteViewScreen(
+                note = n, cards = byNote[n.id].orEmpty(), decks = decks, prefs = prefs, index = i, total = rows.size,
+                covered = covered, onCover = { covered = it }, onSpeak = app.speech::speak,
+                onPrev = { step(-1) }, onNext = { step(1) }, onEdit = { editing = id }, onClose = { viewing = null },
+            )
+        }
+    }
     editing?.let { id -> notes.firstOrNull { it.id == id }?.let { NoteEditor(data, it, aiAvailable = aiAvailable, askPhrases = { w, pos, en, vi -> app.cloud.enrichPhrases(w, pos, en, vi) }) { editing = null } } }
 
     aiDialog?.let { dlg ->
