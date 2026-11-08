@@ -6,6 +6,8 @@
  * and the library screen already work on any registered note type.
  *
  *   vocab        implemented (this file)
+ *   grammar      one sentence missed in a test (fill card)
+ *   pattern      a grammar rule or trap with several sentences (fill / rule / find-the-mistake cards)
  *   toeic-mcq    future: question, options[], answer, explanation  -> template mode "choice"
  *   ielts-prompt future: task, sample answer, AI feedback via Cloud Function
  *
@@ -192,6 +194,7 @@ export function phraseBlocks(note: Note): Block[] {
  * Both platforms pick the same phrase because the choice depends only on the card's review count.
  */
 export function studyNote(note: Note, templateId: string, reps: number): Note {
+  if (note.type === "pattern") return studyPattern(note, templateId, reps);
   if (note.type !== "vocab" || templateId !== "cloze") return note;
   const ps = phrasesOf(note);
   if (!ps.length) return note;
@@ -199,6 +202,23 @@ export function studyNote(note: Note, templateId: string, reps: number): Note {
   // Translations stay aligned with their sentences: without one for the phrase, the old ones would slide onto it.
   const examplesVi = p.vi ? [p.vi, ...list(note.fields.examplesVi)] : [];
   return { ...note, fields: { ...note.fields, examples: [p.text, ...list(note.fields.examples)], examplesVi } };
+}
+
+/**
+ * A grammar pattern asks a different sentence each review: the usable sentence at `reps` mod (their number) moves to the
+ * front of `items` (for "find the mistake", only sentences with a wrong option count). The rule card shows that
+ * sentence as its example. Sentences that cannot be parsed stay where they are, after the chosen one.
+ */
+function studyPattern(note: Note, templateId: string, reps: number): Note {
+  const lines = list(note.fields.items);
+  const usable = lines.filter((l) => {
+    const it = parsePatternItem(l);
+    return it !== null && (templateId !== "spot" || it.wrong.length > 0);
+  });
+  if (usable.length < 2) return note;
+  const pick = usable[((reps % usable.length) + usable.length) % usable.length];
+  const i = lines.indexOf(pick);
+  return { ...note, fields: { ...note.fields, items: [pick, ...lines.slice(0, i), ...lines.slice(i + 1)] } };
 }
 
 // ------------------------------------------------------------------ vocab
@@ -443,6 +463,176 @@ export const GRAMMAR: NoteTypeDef = {
   searchText: (n) => [str(n.fields.sentence), str(n.fields.answer), str(n.fields.topic), str(n.fields.translation), str(n.fields.rule), ...(n.tags ?? [])].join(" ").toLowerCase(),
 };
 
+// ------------------------------------------------------------------ pattern (a grammar rule or trap, with sentences to practise it)
+
+/**
+ * One practice sentence of a grammar pattern, as the learner writes it on one line:
+ *   `Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.`
+ * The bracketed part is the answer, then (optional) the wrong options separated by " / " (the first one is the trap the
+ * "find the mistake" card uses), then (optional) the Vietnamese meaning.
+ */
+export interface PatternItem {
+  /** The sentence with the answer in place and the brackets removed. */
+  sentence: string;
+  answer: string;
+  /** [start, end) of the answer in `sentence`. */
+  at: [number, number];
+  /** The sentence with the answer blanked out. */
+  blanked: string;
+  wrong: string[];
+  vi: string;
+}
+
+/** Longest item line kept, also the field's per-line limit. */
+export const PATTERN_ITEM_MAX = 300;
+
+export function parsePatternItem(line: string): PatternItem | null {
+  const parts = line.split("|").map((p) => p.replace(/\s+/g, " ").trim());
+  const raw = parts[0] ?? "";
+  const open = raw.indexOf("[");
+  const close = raw.indexOf("]", open + 1);
+  if (open < 0 || close < 0 || raw.indexOf("[", open + 1) >= 0 || raw.indexOf("]", close + 1) >= 0) return null;
+  const answer = raw.slice(open + 1, close).trim();
+  if (!answer) return null;
+  const before = raw.slice(0, open);
+  const after = raw.slice(close + 1);
+  const sentence = before + answer + after;
+  const at: [number, number] = [before.length, before.length + answer.length];
+  const seen = new Set([normalizeAnswer(answer)]);
+  const wrong: string[] = [];
+  for (const w of (parts[1] ?? "").split("/").map((x) => x.trim())) {
+    const k = normalizeAnswer(w);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    wrong.push(w);
+  }
+  return { sentence, answer, at, blanked: before + "_____" + after, wrong, vi: parts.slice(2).join(" | ").trim() };
+}
+
+/** The usable sentences of a pattern note, in the order they are stored. */
+export function patternItems(note: Note): PatternItem[] {
+  return list(note.fields.items).map(parsePatternItem).filter((x): x is PatternItem => x !== null);
+}
+
+/** The options a fill card shows: the answer and the wrong ones, in a fixed order (code-unit order, the same on Android). */
+export function patternOptions(item: PatternItem): string[] {
+  if (!item.wrong.length) return [];
+  const key = (s: string) => s.toLowerCase();
+  return [item.answer, ...item.wrong].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
+}
+
+/** The sentence with the trap (first wrong option) in place of the answer: the "find the mistake" card. */
+function spotSentence(item: PatternItem): string {
+  return item.sentence.slice(0, item.at[0]) + item.wrong[0] + item.sentence.slice(item.at[1]);
+}
+
+const firstItem = (n: Note) => patternItems(n)[0] ?? null;
+const firstTrapItem = (n: Note) => patternItems(n).find((i) => i.wrong.length > 0) ?? null;
+
+function patternBadge(n: Note): Block[] {
+  return str(n.fields.topic) ? [{ k: "badge", text: str(n.fields.topic) }] : [];
+}
+
+/** What every answer side explains after the sentence: the trap's name, the rule, its signals and formula, why the others are wrong, the tip. */
+function patternExplain(n: Note): Block[] {
+  const out: Block[] = [];
+  // Names the trap, so each sentence is filed under the pattern it belongs to.
+  if (str(n.fields.title)) out.push({ k: "text", text: `Bẫy: ${str(n.fields.title)}`, tone: "muted" });
+  if (str(n.fields.rule)) out.push({ k: "text", text: str(n.fields.rule), tone: "strong" });
+  if (str(n.fields.signals)) out.push({ k: "text", text: `Dấu hiệu: ${str(n.fields.signals)}` });
+  if (str(n.fields.formula)) out.push({ k: "text", text: str(n.fields.formula), tone: "muted" });
+  const why = list(n.fields.why);
+  if (why.length) out.push({ k: "fold", label: "Vì sao không phải…", text: why.join("\n") });
+  if (str(n.fields.tip)) out.push({ k: "memo", text: str(n.fields.tip) });
+  return out;
+}
+
+function itemExample(item: PatternItem): Block {
+  return { k: "example", text: item.sentence, at: item.at, ...(item.vi ? { vi: item.vi } : {}) };
+}
+
+const patternFill: TemplateDef = {
+  id: "fill",
+  label: "Điền câu theo bẫy",
+  description: "Mỗi lần ôn là một câu khác của cùng một bẫy: gõ đáp án đúng trong các lựa chọn, quy tắc hiện ở mặt sau.",
+  mode: "type",
+  applies: (n) => firstItem(n) !== null,
+  front: (n) => {
+    const it = firstItem(n)!;
+    const opts = patternOptions(it);
+    return [...patternBadge(n), { k: "quote", text: it.blanked }, ...(opts.length ? ([{ k: "text", text: opts.join(" · "), tone: "muted" }] as Block[]) : [])];
+  },
+  // The blanked sentence and the options stay above the back, so the back starts with the answer.
+  back: (n) => {
+    const it = firstItem(n)!;
+    return [{ k: "title", text: it.answer }, itemExample(it), ...patternExplain(n)];
+  },
+  expected: (n) => [firstItem(n)?.answer ?? ""],
+  speak: { back: (n) => firstItem(n)?.sentence ?? null },
+};
+
+const patternRule: TemplateDef = {
+  id: "rule",
+  label: "Nhớ quy tắc",
+  description: "Thấy câu hỏi về dấu hiệu, tự nhớ lại quy tắc rồi tự chấm.",
+  mode: "flip",
+  applies: (n) => !!str(n.fields.ask) && !!str(n.fields.rule),
+  front: (n) => [...patternBadge(n), { k: "text", text: str(n.fields.ask), tone: "strong" }],
+  back: (n) => {
+    const it = firstItem(n);
+    const out: Block[] = [{ k: "text", text: str(n.fields.rule), tone: "strong" }];
+    if (str(n.fields.formula)) out.push({ k: "text", text: str(n.fields.formula), tone: "muted" });
+    if (it) out.push(itemExample(it));
+    if (str(n.fields.tip)) out.push({ k: "memo", text: str(n.fields.tip) });
+    return out;
+  },
+  speak: { back: (n) => firstItem(n)?.sentence ?? null },
+};
+
+const patternSpot: TemplateDef = {
+  id: "spot",
+  label: "Tìm lỗi sai",
+  description: "Câu chứa đúng một lỗi theo bẫy: tìm chỗ sai và gõ lại từ đúng.",
+  mode: "type",
+  applies: (n) => firstTrapItem(n) !== null,
+  front: (n) => {
+    const it = firstTrapItem(n)!;
+    return [...patternBadge(n), { k: "quote", text: spotSentence(it) }, { k: "text", text: "Câu có một chỗ sai. Gõ lại từ đúng thay cho chỗ sai.", tone: "muted" }];
+  },
+  back: (n) => {
+    const it = firstTrapItem(n)!;
+    return [{ k: "title", text: it.answer }, { k: "text", text: `Sai: ${it.wrong[0]} → Đúng: ${it.answer}` }, itemExample(it), ...patternExplain(n)];
+  },
+  expected: (n) => [firstTrapItem(n)?.answer ?? ""],
+  speak: { back: (n) => firstTrapItem(n)?.sentence ?? null },
+};
+
+export const PATTERN: NoteTypeDef = {
+  id: "pattern",
+  label: "Bẫy ngữ pháp",
+  fields: [
+    { key: "title", label: "Tên bẫy", kind: "text", required: true, maxLength: 80 },
+    { key: "topic", label: "Chủ điểm", kind: "text", maxLength: 40 },
+    { key: "ask", label: "Câu hỏi nhớ quy tắc", kind: "longtext", maxLength: 200 },
+    { key: "signals", label: "Dấu hiệu nhận biết", kind: "text", maxLength: 160 },
+    { key: "rule", label: "Quy tắc", kind: "longtext", required: true, maxLength: 300 },
+    { key: "formula", label: "Công thức", kind: "text", maxLength: 120 },
+    {
+      key: "items", label: "Câu luyện", kind: "list", required: true, maxLength: PATTERN_ITEM_MAX,
+      placeholder: "Mỗi dòng một câu: câu có [đáp án] | sai 1 / sai 2 / sai 3 | nghĩa\nví dụ: We will wait until he [returns]. | will return / returned | Chúng tôi sẽ đợi đến khi anh ấy về.",
+    },
+    { key: "why", label: "Vì sao không phải…", kind: "list", maxLength: 160, placeholder: "Mỗi dòng giải thích một lựa chọn sai" },
+    { key: "tip", label: "Mẹo nhớ", kind: "longtext", maxLength: 200 },
+  ],
+  templates: [patternFill, patternRule, patternSpot],
+  title: (n) => str(n.fields.title),
+  subtitle: (n) => [str(n.fields.topic), `${patternItems(n).length} câu`].filter(Boolean).join(" · "),
+  searchText: (n) =>
+    [str(n.fields.title), str(n.fields.topic), str(n.fields.ask), str(n.fields.signals), str(n.fields.rule), str(n.fields.formula), ...list(n.fields.items), ...list(n.fields.why), str(n.fields.tip), ...(n.tags ?? [])]
+      .join(" ")
+      .toLowerCase(),
+};
+
 // ------------------------------------------------------------------ test (one practice test's result; makes no cards)
 
 /**
@@ -474,7 +664,7 @@ export const TEST: NoteTypeDef = {
 /** Note types that hold learning material (and so show in the library, the word count and the "no words yet" screen). */
 export const isMaterial = (n: { type: string }) => n.type !== "test";
 
-export const NOTE_TYPES: Readonly<Record<string, NoteTypeDef>> = { vocab: VOCAB, grammar: GRAMMAR, test: TEST };
+export const NOTE_TYPES: Readonly<Record<string, NoteTypeDef>> = { vocab: VOCAB, grammar: GRAMMAR, pattern: PATTERN, test: TEST };
 
 export function noteType(id: string): NoteTypeDef | undefined {
   return NOTE_TYPES[id];

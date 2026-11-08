@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import type { Firestore as LiteFirestore } from "firebase/firestore/lite";
 import { RATING_FIELD, type Card, type Daily, type DailyDelta, type Deck, type Note, type Prefs, type ReviewLog } from "@shared/model.ts";
+import { SEEDS_DOC, seedIdRange, type SeedPack } from "@shared/seed.ts";
 import { snapshotHandled } from "../lib/perf.ts";
 import { firebase } from "./fbimpl.ts";
 import type { ExportFile, Repo, RepoEvents, SyncState } from "./repo.ts";
@@ -21,6 +22,8 @@ export const REVIEW_PAGE = 5000;
 
 /** Firestore accepts at most 500 writes in one batch. */
 export const BATCH_WRITES = 500;
+/** A built-in pack has at most a few hundred documents per collection; the rules require a limit on list queries. */
+export const SEED_QUERY_LIMIT = 1000;
 
 /**
  * Splits notes and cards into batches of at most `max` writes, keeping each note with its cards so a batch that
@@ -284,6 +287,36 @@ export class CloudRepo implements Repo {
       if (snap.docs.length < REVIEW_PAGE) return out;
       after = snap.docs[snap.docs.length - 1].id;
     }
+  }
+
+  /**
+   * Firestore Lite, so the answer comes from the server: a cached answer could miss documents another device wrote,
+   * and the load would then overwrite them. One read for the marker; while the version is not loaded yet, the
+   * id-range queries read only the pack's own documents.
+   */
+  async seedState(pack: SeedPack, opts: { ignoreMarker?: boolean } = {}) {
+    try {
+      const l = await import("firebase/firestore/lite");
+      const db = await this.liteDb();
+      const marker = await l.getDoc(l.doc(db, "users", this.uid, "settings", SEEDS_DOC));
+      const v = marker.exists() ? (marker.data() as Record<string, unknown>)[pack.id] : 0;
+      const applied = opts.ignoreMarker ? 0 : typeof v === "number" ? v : 0;
+      if (applied >= pack.version) return { state: { applied, noteIds: new Set<string>(), deckExists: true }, cardIds: new Set<string>() };
+      const [start, end] = seedIdRange(pack.prefix);
+      const ids = async (name: string) => {
+        const q = l.query(l.collection(db, "users", this.uid, name), l.where(l.documentId(), ">=", start), l.where(l.documentId(), "<", end), l.limit(SEED_QUERY_LIMIT));
+        return new Set((await l.getDocs(q)).docs.map((d) => d.id));
+      };
+      const [noteIds, cardIds, deck] = await Promise.all([ids("notes"), ids("cards"), l.getDoc(l.doc(db, "users", this.uid, "decks", pack.deck.id))]);
+      return { state: { applied, noteIds, deckExists: deck.exists() }, cardIds };
+    } catch (e) {
+      console.warn("[seed] server not reachable", e);
+      return null;
+    }
+  }
+
+  async markSeed(packId: string, version: number) {
+    void setDoc(this.ref("settings", SEEDS_DOC), { [packId]: version, updatedAt: Date.now() }, { merge: true }).catch((e) => this.fail(e));
   }
 
   async exportAll(): Promise<ExportFile> {

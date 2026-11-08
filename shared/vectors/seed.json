@@ -1,0 +1,275 @@
+{
+ "pack": {
+  "id": "grammar-toeic",
+  "version": 2,
+  "prefix": "seed-gt-",
+  "deck": {
+   "id": "seed-gt",
+   "name": "Ngữ pháp TOEIC"
+  },
+  "createdAt": 1768465800000,
+  "notes": [
+   {
+    "id": "seed-gt-a",
+    "since": 1,
+    "type": "pattern",
+    "fields": {
+     "title": "T",
+     "rule": "R",
+     "items": [
+      "A [b] c. | d / e | f"
+     ]
+    },
+    "tags": [
+     "ngu-phap-toeic"
+    ]
+   },
+   {
+    "id": "seed-gt-b",
+    "since": 1,
+    "type": "pattern",
+    "fields": {
+     "title": "T",
+     "rule": "R",
+     "items": [
+      "A [b] c. | d / e | f"
+     ]
+    },
+    "tags": []
+   },
+   {
+    "id": "seed-gt-c",
+    "since": 2,
+    "type": "pattern",
+    "fields": {
+     "title": "T",
+     "rule": "R",
+     "items": [
+      "A [b] c. | d / e | f"
+     ]
+    },
+    "tags": [
+     "np-x"
+    ]
+   }
+  ]
+ },
+ "plans": [
+  {
+   "state": {
+    "applied": 0,
+    "noteIds": [],
+    "deckExists": false
+   },
+   "plan": {
+    "deck": {
+     "id": "seed-gt",
+     "name": "Ngữ pháp TOEIC",
+     "createdAt": 1768465800000,
+     "updatedAt": 1768465800000
+    },
+    "notes": [
+     {
+      "id": "seed-gt-a",
+      "type": "pattern",
+      "deckId": "seed-gt",
+      "fields": {
+       "title": "T",
+       "rule": "R",
+       "items": [
+        "A [b] c. | d / e | f"
+       ]
+      },
+      "tags": [
+       "ngu-phap-toeic"
+      ],
+      "createdAt": 1768465800000,
+      "updatedAt": 1768465800000
+     },
+     {
+      "id": "seed-gt-b",
+      "type": "pattern",
+      "deckId": "seed-gt",
+      "fields": {
+       "title": "T",
+       "rule": "R",
+       "items": [
+        "A [b] c. | d / e | f"
+       ]
+      },
+      "createdAt": 1768465800001,
+      "updatedAt": 1768465800001
+     },
+     {
+      "id": "seed-gt-c",
+      "type": "pattern",
+      "deckId": "seed-gt",
+      "fields": {
+       "title": "T",
+       "rule": "R",
+       "items": [
+        "A [b] c. | d / e | f"
+       ]
+      },
+      "tags": [
+       "np-x"
+      ],
+      "createdAt": 1768465800002,
+      "updatedAt": 1768465800002
+     }
+    ],
+    "version": 2
+   }
+  },
+  {
+   "state": {
+    "applied": 0,
+    "noteIds": [
+     "seed-gt-a"
+    ],
+    "deckExists": true
+   },
+   "plan": {
+    "deck": null,
+    "notes": [
+     {
+      "id": "seed-gt-b",
+      "type": "pattern",
+      "deckId": "seed-gt",
+      "fields": {
+       "title": "T",
+       "rule": "R",
+       "items": [
+        "A [b] c. | d / e | f"
+       ]
+      },
+      "createdAt": 1768465800001,
+      "updatedAt": 1768465800001
+     },
+     {
+      "id": "seed-gt-c",
+      "type": "pattern",
+      "deckId": "seed-gt",
+      "fields": {
+       "title": "T",
+       "rule": "R",
+       "items": [
+        "A [b] c. | d / e | f"
+       ]
+      },
+      "tags": [
+       "np-x"
+      ],
+      "createdAt": 1768465800002,
+      "updatedAt": 1768465800002
+     }
+    ],
+    "version": 2
+   }
+  },
+  {
+   "state": {
+    "applied": 1,
+    "noteIds": [],
+    "deckExists": false
+   },
+   "plan": {
+    "deck": {
+     "id": "seed-gt",
+     "name": "Ngữ pháp TOEIC",
+     "createdAt": 1768465800000,
+     "updatedAt": 1768465800000
+    },
+    "notes": [
+     {
+      "id": "seed-gt-c",
+      "type": "pattern",
+      "deckId": "seed-gt",
+      "fields": {
+       "title": "T",
+       "rule": "R",
+       "items": [
+        "A [b] c. | d / e | f"
+       ]
+      },
+      "tags": [
+       "np-x"
+      ],
+      "createdAt": 1768465800002,
+      "updatedAt": 1768465800002
+     }
+    ],
+    "version": 2
+   }
+  },
+  {
+   "state": {
+    "applied": 1,
+    "noteIds": [
+     "seed-gt-c"
+    ],
+    "deckExists": false
+   },
+   "plan": {
+    "deck": null,
+    "notes": [],
+    "version": 2
+   }
+  },
+  {
+   "state": {
+    "applied": 2,
+    "noteIds": [],
+    "deckExists": false
+   },
+   "plan": null
+  },
+  {
+   "state": {
+    "applied": 3,
+    "noteIds": [],
+    "deckExists": true
+   },
+   "plan": null
+  },
+  {
+   "state": {
+    "applied": 0,
+    "noteIds": [
+     "seed-gt-a",
+     "seed-gt-b",
+     "seed-gt-c"
+    ],
+    "deckExists": false
+   },
+   "plan": {
+    "deck": null,
+    "notes": [],
+    "version": 2
+   }
+  }
+ ],
+ "ranges": [
+  [
+   "seed-gt-",
+   [
+    "seed-gt-",
+    "seed-gt."
+   ]
+  ],
+  [
+   "x-",
+   [
+    "x-",
+    "x."
+   ]
+  ],
+  [
+   "ab",
+   [
+    "ab",
+    "ac"
+   ]
+  ]
+ ]
+}

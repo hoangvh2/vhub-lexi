@@ -126,7 +126,7 @@ data class Prefs(
     val desiredRetention: Double = 0.9,
     val newPerDay: Int = 15,
     val maxReviewsPerDay: Int = 200,
-    val templates: Map<String, List<String>> = mapOf("vocab" to listOf("recognize", "cloze")),
+    val templates: Map<String, List<String>> = mapOf("vocab" to listOf("recognize", "cloze"), "pattern" to listOf("fill", "rule")),
     val layout: CardLayout = CardLayout(),
     val autoSpeak: String = "off", // off | front | back
     val theme: String = "system", // system | light | dark

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -924,5 +924,53 @@ describe("library: move the chosen words to another deck", () => {
     assert.equal(await page.locator('[data-testid=lib-item]', { hasText: studied }).locator('.pill').last().textContent(), dueBefore);
     assert.deepEqual(errors, []);
     await ctx.close();
+  });
+});
+
+describe("built-in TOEIC grammar pack: grammar trap cards", () => {
+  it("local mode starts empty; Settings adds the pack once; a trap card is studied by typing the right option", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    const shots = process.env.LEXI_SHOTS;
+    const shot = async (name) => shots && (await page.waitForTimeout(600), await page.screenshot({ path: join(shots, `${name}.png`), fullPage: true }));
+    await page.goto(`${base}/#/stats`);
+    await page.waitForSelector('[data-testid=stat-words]');
+    assert.equal(await page.textContent('[data-testid=stat-words]'), "0");
+    await page.goto(`${base}/#/settings`);
+    await page.waitForSelector('[data-testid=patterns]');
+    await page.waitForFunction(() => /\d+ bẫy, \d+ câu/.test(document.querySelector("[data-testid=patterns]")?.textContent ?? ""));
+    await shot("grammar-1-settings");
+    await page.click('[data-testid=seed-restore]');
+    await page.waitForFunction(() => /Đã thêm \d+ bẫy còn thiếu/.test(document.body.textContent ?? ""));
+    await page.click('[data-testid=seed-restore]');
+    await page.waitForFunction(() => /Bộ ngữ pháp đã đầy đủ/.test(document.body.textContent ?? ""));
+
+    await page.goto(`${base}/#/study?tag=ngu-phap-toeic`);
+    await page.waitForSelector('[data-testid=study-card]');
+    // Learn the rule card first if it comes up, so the next one is a fill card.
+    for (let i = 0; i < 6 && (await page.getAttribute('[data-testid=study-card]', 'data-template')) !== "fill"; i++) {
+      await page.click('[data-testid=show-answer]');
+      await page.click('[data-testid=rate-3]');
+      await page.waitForSelector('[data-testid=study-card]');
+    }
+    assert.equal(await page.getAttribute('[data-testid=study-card]', 'data-template'), "fill");
+    const front = await page.textContent('[data-testid=study-card]');
+    assert.match(front, /_____/);
+    assert.match(front, / · /); // the options are listed, the learner still types one
+    assert.equal(await page.locator('[data-testid=answer-hint]').count(), 0);
+    await shot("grammar-2-fill-front");
+    // The pack's own sentence for this card: the text before the blank names it.
+    const pack = JSON.parse(readFileSync(new URL("../../shared/seed/grammar-toeic.json", import.meta.url), "utf8"));
+    const item = pack.notes.flatMap((n) => n.fields.items.map((line) => ({ n, line })))
+      .find(({ line }) => { const before = line.split("[")[0].trim(); return before.length > 8 && front.includes(before); });
+    assert.ok(item, `no pack sentence matches: ${front}`);
+    const right = item.line.slice(item.line.indexOf("[") + 1, item.line.indexOf("]"));
+    await page.fill('[data-testid=type-input]', right);
+    await page.click('[data-testid=type-check]');
+    await page.waitForSelector('[data-testid=verdict]');
+    assert.match(await page.textContent("[data-testid=verdict]"), /Chính xác/);
+    assert.match(await page.textContent('[data-testid=study-card]'), new RegExp(item.n.fields.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    await shot("grammar-3-fill-back");
+    await ctx.close();
+    assert.deepEqual(errors, []);
   });
 });

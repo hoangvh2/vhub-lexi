@@ -3,6 +3,7 @@
  * Data is held in memory and written through, so reads are synchronous and writes survive reloads.
  */
 import { RATING_FIELD, type Card, type Daily, type DailyDelta, type Deck, type Note, type Prefs, type ReviewLog } from "@shared/model.ts";
+import type { SeedPack } from "@shared/seed.ts";
 import type { ExportFile, Repo, RepoEvents, Snapshot } from "./repo.ts";
 
 const STORES = ["decks", "notes", "cards", "reviews", "daily", "kv"] as const;
@@ -50,6 +51,8 @@ export class LocalRepo implements Repo {
   private reviews = new Map<string, ReviewLog>();
   private daily = new Map<string, Daily>();
   private prefs: Prefs | null = null;
+  /** Loaded versions of built-in packs ({ [pack id]: version }), kv "seeds". */
+  private seeds: Record<string, number> = {};
 
   constructor(private readonly dbName = "vhub-lexi") {}
 
@@ -67,7 +70,9 @@ export class LocalRepo implements Repo {
     for (const c of await all<Card>("cards")) this.cards.set(c.id, c);
     for (const r of await all<ReviewLog>("reviews")) this.reviews.set(r.id, r);
     for (const d of await all<Daily>("daily")) this.daily.set(d.id, d);
-    this.prefs = ((await all<{ id: string; value: Prefs }>("kv")).find((k) => k.id === "prefs")?.value) ?? null;
+    const kv = await all<{ id: string; value: unknown }>("kv");
+    this.prefs = (kv.find((k) => k.id === "prefs")?.value as Prefs | undefined) ?? null;
+    this.seeds = (kv.find((k) => k.id === "seeds")?.value as Record<string, number> | undefined) ?? {};
     this.emit();
     ev.sync("local");
   }
@@ -173,6 +178,17 @@ export class LocalRepo implements Repo {
     this.prefs = p;
     await this.write([{ store: "kv", put: { id: "prefs", value: p } }]);
     this.emit(["prefs"]);
+  }
+
+  async seedState(pack: SeedPack, opts: { ignoreMarker?: boolean } = {}) {
+    const applied = opts.ignoreMarker ? 0 : (this.seeds[pack.id] ?? 0);
+    const mine = (m: Map<string, unknown>) => new Set([...m.keys()].filter((id) => id.startsWith(pack.prefix)));
+    return { state: { applied, noteIds: mine(this.notes), deckExists: this.decks.has(pack.deck.id) }, cardIds: mine(this.cards) };
+  }
+
+  async markSeed(packId: string, version: number) {
+    this.seeds = { ...this.seeds, [packId]: version };
+    await this.write([{ store: "kv", put: { id: "seeds", value: this.seeds } }]);
   }
 
   async allReviews() {

@@ -4,7 +4,8 @@ import "./fonts.ts";
 import "./styles.css";
 import { LocalRepo } from "./data/local.ts";
 import { firebaseConfigured, makeCloudRepo, onUser } from "./data/firebase.ts";
-import { startRepo, stopRepo, sync } from "./data/state.ts";
+import { loadSeeds } from "./data/seed.ts";
+import { currentRepo, loaded, startRepo, stopRepo, sync } from "./data/state.ts";
 import { useStore } from "./lib/store.ts";
 import { App } from "./ui/App.tsx";
 import { DeniedGate, LoginGate } from "./ui/Gate.tsx";
@@ -18,6 +19,13 @@ function Root() {
   // undefined = still checking the saved sign-in
   const [who, setWho] = useState<Who | null | undefined>(firebaseConfigured ? undefined : null);
   const s = useStore(sync);
+  const ready = useStore(loaded);
+
+  // Built-in grammar pack: added once the account's data is in (add-only, see data/seed.ts). Local-only mode loads it
+  // from Settings instead, so a fresh local profile (and the tests) start empty.
+  useEffect(() => {
+    if (ready && currentRepo().kind === "cloud") void loadSeeds();
+  }, [ready]);
 
   useEffect(() => {
     if (!firebaseConfigured) {

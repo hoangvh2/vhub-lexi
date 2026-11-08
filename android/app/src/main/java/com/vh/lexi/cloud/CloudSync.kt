@@ -2,6 +2,8 @@ package com.vh.lexi.cloud
 
 import android.util.Log
 import com.google.firebase.firestore.DocumentChange
+import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -12,6 +14,10 @@ import com.google.firebase.firestore.WriteBatch
 import com.vh.lexi.core.Card
 import com.vh.lexi.core.DailyDelta
 import com.vh.lexi.core.ReviewLog
+import com.vh.lexi.core.SEEDS_DOC
+import com.vh.lexi.core.SeedPack
+import com.vh.lexi.core.SeedState
+import com.vh.lexi.core.seedIdRange
 import com.vh.lexi.core.SyncStatus
 import com.vh.lexi.data.Col
 import com.vh.lexi.data.Doc
@@ -21,6 +27,7 @@ import com.vh.lexi.data.toDoc
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -120,6 +127,39 @@ class CloudSync(
         }
     }
 
+    // ---------------------------------------------------------------- built-in packs (shared/seed.ts)
+
+    /** What the server (never the cache) holds of [pack]: its recorded version and the pack's notes and cards still there. */
+    data class ServerSeed(val state: SeedState, val cardIds: Set<String>)
+
+    /**
+     * Asked from the server only: a cached answer could miss documents another device wrote, and the load would then
+     * overwrite them. Null when the server cannot be reached (offline), so nothing is written. Costs one read for the
+     * marker; the id-range queries run only while this version is not loaded yet and read only the pack's documents.
+     */
+    suspend fun seedState(pack: SeedPack, ignoreMarker: Boolean = false): ServerSeed? {
+        if (uid == null) return null
+        return try {
+            val marker = col(Col.SETTINGS).document(SEEDS_DOC).get(Source.SERVER).await()
+            val applied = if (ignoreMarker) 0 else (marker.get(pack.id) as? Number)?.toInt() ?: 0
+            if (applied >= pack.version) return ServerSeed(SeedState(applied, emptySet(), true), emptySet())
+            val (start, end) = seedIdRange(pack.prefix)
+            suspend fun ids(name: String) = col(name).whereGreaterThanOrEqualTo(FieldPath.documentId(), start).whereLessThan(FieldPath.documentId(), end)
+                .limit(SEED_QUERY_LIMIT).get(Source.SERVER).await().documents.map { it.id }.toSet()
+            val deck = col(Col.DECKS).document(pack.deckId).get(Source.SERVER).await().exists()
+            ServerSeed(SeedState(applied, ids(Col.NOTES), deck), ids(Col.CARDS))
+        } catch (e: Exception) {
+            Log.w(TAG, "seed state not available", e)
+            null
+        }
+    }
+
+    /** Records that [version] of the pack is loaded (merged, so other packs' entries stay). */
+    fun markSeed(packId: String, version: Int) {
+        if (uid == null) return
+        col(Col.SETTINGS).document(SEEDS_DOC).set(mapOf(packId to version.toLong(), "updatedAt" to System.currentTimeMillis()), SetOptions.merge()).addOnFailureListener(::fail)
+    }
+
     // ---------------------------------------------------------------- writes (fire and forget)
 
     fun set(collection: String, id: String, doc: Doc) {
@@ -191,5 +231,7 @@ class CloudSync(
         private const val TAG = "LexiSync"
         /** Same list caps the Firestore rules allow (firestore.rules.tmpl). */
         private val LIMITS = listOf(Col.DECKS to 200L, Col.NOTES to 5000L, Col.CARDS to 10000L, Col.DAILY to 800L)
+        /** A pack has at most a few hundred documents per collection; the rules require a limit on every list query. */
+        private const val SEED_QUERY_LIMIT = 1000L
     }
 }

@@ -155,6 +155,45 @@ fun SettingsScreen(app: LexiApp) {
             Text("Đổi lựa chọn sẽ tạo thêm thẻ cho các từ đã có. Thẻ đã tắt nhưng chưa học sẽ bị gỡ; thẻ đã học được giữ lại.", color = c.muted, fontSize = 13.sp)
         }
 
+        // Grammar traps: which cards each one makes, and the built-in TOEIC pack (data/Seeds.kt).
+        Panel(Modifier.testTag("patterns")) {
+            Text("Bẫy ngữ pháp", style = MaterialTheme.typography.titleMedium)
+            val pattern = NOTE_TYPES.getValue("pattern")
+            val chosen = p.templates["pattern"].orEmpty().toSet()
+            for (t in pattern.templates) {
+                Row(Modifier.fillMaxWidth().clickable {
+                    val next = if (t.id in chosen) chosen - t.id else chosen + t.id
+                    if (next.isEmpty()) toast("Cần giữ ít nhất một loại thẻ")
+                    else set(p.copy(templates = p.templates + ("pattern" to pattern.templates.map { it.id }.filter { it in next })))
+                }, verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(t.label, fontWeight = FontWeight.Bold)
+                        Text(t.description, color = c.muted, fontSize = 13.sp)
+                    }
+                    Checkbox(checked = t.id in chosen, onCheckedChange = null)
+                }
+            }
+            Text(
+                "Bộ \"Ngữ pháp TOEIC\" (${app.cloud.seeds.pack?.notes?.size ?: 0} bẫy) được nạp tự động một lần. Bẫy đã có, đã sửa hay đã học không bao giờ bị ghi đè.",
+                color = c.muted, fontSize = 13.sp,
+            )
+            var seeding by remember { mutableStateOf(false) }
+            OutlinedButton(enabled = !seeding, onClick = {
+                seeding = true
+                scope.launch {
+                    val added = app.cloud.loadSeeds(restore = true)
+                    seeding = false
+                    toast(
+                        when (added) {
+                            null -> "Chưa kết nối được máy chủ, thử lại khi có mạng"
+                            0 -> "Bộ ngữ pháp đã đầy đủ"
+                            else -> "Đã thêm $added bẫy còn thiếu"
+                        },
+                    )
+                }
+            }, modifier = Modifier.testTag("seed-restore")) { Text(if (seeding) "Đang kiểm tra…" else "Thêm lại bẫy còn thiếu") }
+        }
+
         Panel {
             Text("Hiển thị", style = MaterialTheme.typography.titleMedium)
             fun layout(l: CardLayout) = set(p.copy(layout = l))

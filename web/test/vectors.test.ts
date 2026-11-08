@@ -10,7 +10,8 @@ import { expect, it } from "vitest";
 import { CardState, DEFAULT_PREFS, normalizePrefs, type Card, type Daily, type Note, type Rating } from "@shared/model.ts";
 import { IRREGULAR } from "@shared/irregular.ts";
 import { baseForms } from "@shared/morphy.ts";
-import { type Block, checkTyped, clozeSentence, findExact, findWord, normalizeAnswer, phrasesOf, studyNote, template, wantedTemplates } from "@shared/notetypes.ts";
+import { type Block, checkTyped, clozeSentence, findExact, findWord, normalizeAnswer, parsePatternItem, patternOptions, phrasesOf, studyNote, template, wantedTemplates } from "@shared/notetypes.ts";
+import { planSeed, seedIdRange, slugVi, type SeedPack } from "@shared/seed.ts";
 import { answerHint, confusables, hintNote, letterCount, matchConfusable, meaningPhrases, suggestedRatingWith, typingTarget } from "@shared/confusables.ts";
 import { buildQueue, pickNext } from "../src/lib/queue.ts";
 import { answer, makeScheduler, newCard } from "../src/lib/scheduler.ts";
@@ -451,6 +452,78 @@ function hintVectors() {
   };
 }
 
+/** Grammar patterns: how a sentence line is read, what each card shows by review count, which cards a note makes. */
+function patternVectors() {
+  const lines = [
+    "Please call us as soon as your taxi [arrives]. | will arrive / arrived / arriving | Hãy gọi ngay khi taxi đến.",
+    "[Despite] the rain, the show went on. | Although / although / Despite / | Dù mưa, buổi diễn vẫn tiếp tục.",
+    "The   report was [ prepared ]  by Ms. Lee.",
+    "No brackets here | a / b",
+    "Two [answers] in [one] line | x",
+    "[] empty | a",
+    "Meaning with | bar | inside | it",
+    "Ends with the [answer]",
+    "A Vietnamese [câu] works too | cau / Câu | một câu",
+  ];
+  const items = lines.map((line) => {
+    const it = parsePatternItem(line);
+    return { line, item: it, options: it ? patternOptions(it) : null };
+  });
+  const p = (id: string, fields: Record<string, string | string[]>): Note => ({ id, type: "pattern", deckId: "d1", createdAt: T0, updatedAt: T0, fields });
+  const full = {
+    title: "Hiện tại đơn sau liên từ thời gian", topic: "Thì động từ", ask: "Sau until / as soon as, động từ chia thì gì?", signals: "until · as soon as",
+    rule: "Mệnh đề thời gian dùng hiện tại đơn.", formula: "S + will V … until + S + V(s)", tip: "Không có will sau until.",
+    why: ["will + V: không dùng sau liên từ thời gian", "Quá khứ: câu nói về tương lai"],
+    items: [lines[0], "We will wait until the manager [returns]. | will return / returned | Chúng tôi sẽ đợi.", "bad line", "Call me when the parts [arrive]."],
+  };
+  const notes: Note[] = [
+    p("p1", full),
+    p("p2", { title: "Chỉ có câu", rule: "Quy tắc", items: ["Call me when the parts [arrive]."] }),
+    p("p3", { title: "Không câu dùng được", rule: "Quy tắc", ask: "Hỏi gì?", items: ["no brackets"] }),
+    p("p4", { title: "Không có quy tắc", ask: "Hỏi gì?", items: [lines[1]] }),
+  ];
+  const layout = DEFAULT_PREFS.layout;
+  const cases = notes.flatMap((n) =>
+    ["fill", "rule", "spot"].flatMap((tid) =>
+      [0, 1, 2, 5].map((reps) => {
+        const t = template("pattern", tid)!;
+        const v = studyNote(n, tid, reps);
+        return {
+          note: n, template: tid, reps, items: v.fields.items ?? [], applies: t.applies(v),
+          ...(t.applies(v) ? { mode: t.mode, front: t.front(v, layout), back: t.back(v, layout), expected: t.expected ? t.expected(v) : [], speakBack: t.speak?.back?.(v) ?? null } : {}),
+        };
+      }),
+    ),
+  );
+  const wanted = notes.map((n) => ({ noteId: n.id, wanted: wantedTemplates(n, undefined), wantedDefault: wantedTemplates(n, DEFAULT_PREFS.templates) }));
+  const labels = ["Liên từ & giới từ", "Hòa hợp chủ – vị", "Đại từ", "To V / V-ing", "  Đảo ngữ!! "].map((l) => [l, slugVi(l)]);
+  return { items, cases, wanted, labels };
+}
+
+/** Seed packs: which documents a load writes given what the server already holds. */
+function seedVectors() {
+  const fields = { title: "T", rule: "R", items: ["A [b] c. | d / e | f"] };
+  const pack: SeedPack = {
+    id: "grammar-toeic", version: 2, prefix: "seed-gt-", deck: { id: "seed-gt", name: "Ngữ pháp TOEIC" }, createdAt: T0,
+    notes: [
+      { id: "seed-gt-a", since: 1, type: "pattern", fields, tags: ["ngu-phap-toeic"] },
+      { id: "seed-gt-b", since: 1, type: "pattern", fields, tags: [] },
+      { id: "seed-gt-c", since: 2, type: "pattern", fields, tags: ["np-x"] },
+    ],
+  };
+  const states = [
+    { applied: 0, noteIds: [], deckExists: false },
+    { applied: 0, noteIds: ["seed-gt-a"], deckExists: true },
+    { applied: 1, noteIds: [], deckExists: false },
+    { applied: 1, noteIds: ["seed-gt-c"], deckExists: false },
+    { applied: 2, noteIds: [], deckExists: false },
+    { applied: 3, noteIds: [], deckExists: true },
+    { applied: 0, noteIds: ["seed-gt-a", "seed-gt-b", "seed-gt-c"], deckExists: false },
+  ];
+  const plans = states.map((st) => ({ state: st, plan: planSeed(pack, { ...st, noteIds: new Set(st.noteIds) }) }));
+  return { pack, plans, ranges: ["seed-gt-", "x-", "ab"].map((pr) => [pr, seedIdRange(pr)]) };
+}
+
 it("cross-platform vectors are up to date", () => {
   const dir = join(__dirname, "../../shared/vectors");
   const files: Array<[string, string]> = [
@@ -462,6 +535,8 @@ it("cross-platform vectors are up to date", () => {
     ["import.json", JSON.stringify(importVectors(), null, 1)],
     ["readcheck.json", JSON.stringify(readcheckVectors(), null, 1)],
     ["hints.json", JSON.stringify(hintVectors(), null, 1)],
+    ["patterns.json", JSON.stringify(patternVectors(), null, 1)],
+    ["seed.json", JSON.stringify(seedVectors(), null, 1)],
     ["testtag.json", JSON.stringify(["Test 1 TOEIC NEW 2026", "Đề ETS 2026 — Test #2", "   ", "Kiểm tra giữa kỳ: Ôn tập rất dài của năm học 2026 lần thứ ba", "ĐĐ ñandú", "a--b"].map((n) => [n, testTag(n)]), null, 1)],
     [join("../../android/core/src/main/kotlin/com/vh/lexi/core/Irregular.kt"), irregularKotlin()],
   ];

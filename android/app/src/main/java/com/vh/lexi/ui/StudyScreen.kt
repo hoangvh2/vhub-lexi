@@ -276,7 +276,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
         busy = true
         val dur = System.currentTimeMillis() - shownAt
         val wasNew = c.state == CardState.NEW
-        val answered = note?.let { Answered(it.id, it.fields["word"].str().ifEmpty { it.fields["answer"].str() }, it.fields["vi"].str(), r) }
+        val answered = note?.let { Answered(it.id, it.fields["word"].str().ifEmpty { it.fields["answer"].str() }.ifEmpty { it.fields["title"].str() }, it.fields["vi"].str(), r) }
         scope.launch {
             val res = data.review(c, r, dur, hint = hint)
             history.add(res); if (history.size > 10) history.removeAt(0)
@@ -407,7 +407,8 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
                         if (!revealed) ModeHeader(tpl.id, tpl.label, mode)
                         BlocksView(tpl.front(shown ?: note, prefs.layout), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
                         if (hintable) HintBoxes(note, tpl.id, levels)
-                        if (tpl.mode == AnswerMode.TYPE && !revealed && answer.isNotEmpty()) {
+                        // A grammar pattern shows its options: a first-letter hint would give the answer away.
+                        if (tpl.mode == AnswerMode.TYPE && !revealed && answer.isNotEmpty() && note.type != "pattern") {
                             AnswerHint(answerHint(answer, 1 + extraHints), hintNote(target), mode)
                             if (similar.isNotEmpty()) NotThese(similar.take(3))
                         }

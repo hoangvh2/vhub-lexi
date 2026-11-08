@@ -10,6 +10,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -303,6 +307,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -602,6 +610,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -898,6 +910,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -1177,6 +1193,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -1465,6 +1485,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -1753,6 +1777,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -2287,6 +2315,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -2684,6 +2716,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -3082,6 +3118,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -3927,6 +3967,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -4767,6 +4811,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -5436,6 +5484,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -6281,6 +6333,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -7127,6 +7183,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
@@ -7960,6 +8020,10 @@
      "vocab": [
       "recognize",
       "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
      ]
     },
     "layout": {
