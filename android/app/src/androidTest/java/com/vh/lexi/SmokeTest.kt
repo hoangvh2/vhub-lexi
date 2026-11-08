@@ -388,8 +388,8 @@ class SmokeTest {
         val app = rule.activity.application as LexiApp
         val recallOnly = mapOf("vocab" to listOf("recall"))
         runBlocking { app.data.savePrefs(app.data.prefs.value.copy(templates = recallOnly)) }
-        // Cards are made from the stored prefs, which reach `prefs` asynchronously.
-        waitFor("prefs") { app.data.prefs.value.templates == recallOnly }
+        // Cards are made from the stored prefs, which reach `prefs` asynchronously (other note types keep their defaults).
+        waitFor("prefs") { app.data.prefs.value.templates["vocab"] == recallOnly["vocab"] }
         runBlocking {
             // Their own deck, so the study screen can be narrowed to them (serendipity now has a recall card too).
             val deck = app.data.createDeck("Thuyết phục")
