@@ -1,5 +1,7 @@
 package com.vh.lexi.ui
 
+import android.os.Build
+import android.view.ViewGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -88,6 +90,13 @@ fun NoteViewScreen(
         val dark = c.dark
         SideEffect {
             (view.parent as? DialogWindowProvider)?.window?.let { w ->
+                // decorFitsSystemWindows alone left the window below the status bar but a full screen tall, so its
+                // bottom hung under the navigation bar with no inset reported. Cover the whole screen, bars included,
+                // and let the paddings below keep the content clear of them.
+                WindowCompat.setDecorFitsSystemWindows(w, false)
+                w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) w.attributes = w.attributes.apply { fitInsetsTypes = 0 }
+                w.setDimAmount(0f)
                 WindowCompat.getInsetsController(w, w.decorView).run {
                     isAppearanceLightStatusBars = !dark
                     isAppearanceLightNavigationBars = !dark
