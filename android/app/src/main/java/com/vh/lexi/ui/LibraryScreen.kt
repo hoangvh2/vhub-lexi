@@ -40,6 +40,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -176,7 +177,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
             }
             if (deck != null) androidx.compose.material3.IconButton(
                 onClick = { deckDialog = deck to (decks.firstOrNull { it.id == deck }?.name ?: "") }, modifier = Modifier.testTag("deck-edit"),
-            ) { Icon(androidx.compose.material.icons.Icons.Filled.Edit, contentDescription = "Sửa bộ thẻ") }
+            ) { Icon(Icons.Filled.Edit, contentDescription = "Sửa bộ thẻ") }
         }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (f in Filter.entries) if ((f != Filter.NO_AI && f != Filter.NO_PHRASES) || aiAvailable) FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(f.label) })
