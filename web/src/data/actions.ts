@@ -133,6 +133,25 @@ export async function updateNote(note: Note, patch: { fields?: Record<string, Fi
   if (stale.length) await repo.deleteCards(stale);
 }
 
+/**
+ * The writes that move notes to another deck: each note and all its cards get the new deckId, nothing else changes
+ * (FSRS state, due dates, suspension and the review history stay as they are). Notes already there are skipped.
+ */
+export function planMove(allNotes: readonly Note[], allCards: readonly Card[], noteIds: Iterable<Id>, deckId: Id, now: number): { notes: Note[]; cards: Card[] } {
+  const ids = new Set(noteIds);
+  const moved = allNotes.filter((n) => ids.has(n.id) && n.deckId !== deckId).map((n) => ({ ...n, deckId, updatedAt: now }));
+  const movedIds = new Set(moved.map((n) => n.id));
+  const movedCards = allCards.filter((c) => movedIds.has(c.noteId)).map((c) => ({ ...c, deckId, updatedAt: now }));
+  return { notes: moved, cards: movedCards };
+}
+
+/** Moves the chosen notes (and their cards) to `deckId` (an existing or just-created deck) in batched writes; returns how many notes moved. */
+export async function moveNotes(noteIds: Iterable<Id>, deckId: Id): Promise<number> {
+  const plan = planMove(notes.get(), cards.get(), noteIds, deckId, Date.now());
+  if (plan.notes.length) await currentRepo().saveMany(plan.notes, plan.cards);
+  return plan.notes.length;
+}
+
 export async function removeNote(note: Note) {
   const ids = cards.get().filter((c) => c.noteId === note.id).map((c) => c.id);
   await currentRepo().deleteNote(note.id, ids);

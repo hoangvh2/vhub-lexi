@@ -130,6 +130,13 @@ export class LocalRepo implements Repo {
     this.emit(["cards"]);
   }
 
+  async saveMany(notes: Note[], cards: Card[]) {
+    for (const n of notes) this.notes.set(n.id, n);
+    for (const c of cards) this.cards.set(c.id, c);
+    await this.write([...notes.map((n) => ({ store: "notes" as const, put: n })), ...cards.map((c) => ({ store: "cards" as const, put: c }))]);
+    this.emit(["notes", "cards"]);
+  }
+
   async deleteCards(ids: string[]) {
     for (const id of ids) this.cards.delete(id);
     await this.write(ids.map((id) => ({ store: "cards" as const, del: id })));

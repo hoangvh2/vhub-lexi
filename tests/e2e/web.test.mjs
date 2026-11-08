@@ -866,3 +866,63 @@ describe("nhập nhanh: screenshots -> reviewed rows -> grammar cards and a pass
     await ctx.close();
   });
 });
+
+describe("library: move the chosen words to another deck", () => {
+  it("selects words, moves them (to an existing or a new deck), keeps their study state, and it persists", async () => {
+    const { ctx, page, errors } = await open(browser, base);
+    await addWord(page, base, "resilient", "kiên cường");
+    await addWord(page, base, "diligent", "siêng năng");
+    await addWord(page, base, "candid", "thẳng thắn");
+    // Study one so the move has a non-new card whose schedule must survive.
+    await page.goto(`${base}/#/today`);
+    await page.click('[data-testid=start-study]');
+    await page.waitForSelector('[data-testid=study-card]');
+    const studied = (await page.textContent('[data-testid=study-card]')).match(/resilient|diligent|candid/)[0];
+    await page.click('[data-testid=show-answer]');
+    await page.click('[data-testid=rate-4]');
+
+    await page.goto(`${base}/#/library`);
+    await page.click('text=+ Bộ thẻ');
+    await page.fill('[data-testid=deck-name]', "TOEIC Part 5");
+    await page.click('[data-testid=deck-save]');
+    await page.waitForSelector('[data-testid=deck-name]', { state: "detached" });
+    const dueBefore = await page.locator('[data-testid=lib-item]', { hasText: studied }).locator('.pill').last().textContent();
+
+    // Selecting works without AI (local-only mode); the move button is in the selection bar.
+    await page.click('[data-testid=lib-select]');
+    await page.locator('[data-testid=lib-item]', { hasText: "resilient" }).click();
+    await page.locator('[data-testid=lib-item]', { hasText: "diligent" }).click();
+    assert.match(await page.textContent('[data-testid=bulk-bar]'), /2 từ đã chọn/);
+    await page.click('[data-testid=bulk-move]');
+    await page.selectOption('[data-testid=move-target]', { label: "TOEIC Part 5" });
+    assert.equal(await page.textContent('[data-testid=move-start]'), "Chuyển 2 từ");
+    await page.click('[data-testid=move-start]');
+    await page.waitForSelector('[data-testid=move-start]', { state: "detached" });
+    assert.equal(await page.locator('[data-testid=bulk-bar]').count(), 0);
+
+    const deckOf = async (w) => (await page.locator('[data-testid=lib-item]', { hasText: w }).locator('.muted').first().textContent()).trim();
+    assert.equal(await deckOf("resilient"), "TOEIC Part 5");
+    assert.equal(await deckOf("diligent"), "TOEIC Part 5");
+    assert.equal(await deckOf("candid"), "Mặc định");
+    assert.equal(await page.locator('[data-testid=lib-item]', { hasText: studied }).locator('.pill').last().textContent(), dueBefore);
+
+    // Choosing all, a new deck: "Chọn hết" then "+ Bộ thẻ mới…".
+    await page.click('[data-testid=lib-select]');
+    await page.click('text=Chọn hết 3');
+    await page.click('[data-testid=bulk-move]');
+    await page.selectOption('[data-testid=move-target]', "__new__");
+    assert.equal(await page.isDisabled('[data-testid=move-start]'), true);
+    await page.fill('[data-testid=move-name]', "Ôn lại");
+    await page.click('[data-testid=move-start]');
+    await page.waitForSelector('[data-testid=move-start]', { state: "detached" });
+    for (const w of ["resilient", "diligent", "candid"]) assert.equal(await deckOf(w), "Ôn lại");
+
+    await page.reload();
+    await page.goto(`${base}/#/library`);
+    await page.waitForSelector('[data-testid=lib-item]');
+    for (const w of ["resilient", "diligent", "candid"]) assert.equal(await deckOf(w), "Ôn lại");
+    assert.equal(await page.locator('[data-testid=lib-item]', { hasText: studied }).locator('.pill').last().textContent(), dueBefore);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+});

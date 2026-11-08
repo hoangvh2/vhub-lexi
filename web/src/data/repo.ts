@@ -45,6 +45,11 @@ export interface Repo {
   /** Deletes a note, its cards and nothing else (review logs stay as history). */
   deleteNote(noteId: string, cardIds: string[]): Promise<void>;
   saveCard(c: Card): Promise<void>;
+  /**
+   * Writes whole notes and cards in as few atomic batches as the store allows (Firestore: 500 writes); a note and
+   * the cards given for it always land in the same batch. No reads. Moving words to another deck goes through here.
+   */
+  saveMany(notes: Note[], cards: Card[]): Promise<void>;
   deleteCards(ids: string[]): Promise<void>;
   /** Atomically stores the new card state, appends the log and bumps the day counters. */
   commitReview(card: Card, log: ReviewLog, delta: DailyDelta): Promise<void>;

@@ -132,6 +132,32 @@ describe("CloudRepo on the emulator", () => {
     await until(() => a.state.notes.length === 450 && a.state.cards.length === 450, "import to land", 20000);
   });
 
+  it("moving 300 words (600 cards) to another deck lands on the other device, in batches the rules accept", async () => {
+    const a = await device("owner@example.com", "user-move");
+    const b = await device("owner@example.com", "user-move");
+    const words: Note[] = Array.from({ length: 300 }, (_, i) => ({ ...note, id: `m${i}`, fields: { word: `word${i}`, vi: "x" } }));
+    const wordCards = words.flatMap((n) => [newCard(n.id, "d1", "recognize", T), newCard(n.id, "d1", "cloze", T)]);
+    await a.repo.saveDeck({ id: "d2", name: "Đích", createdAt: T, updatedAt: T });
+    await a.repo.saveMany(words, wordCards);
+    // The Auth emulator links accounts by email, so earlier tests' words are in this account too: look at ours only.
+    const mine = <T extends { id: string }>(l: T[]) => l.filter((x) => /^m\d+(\.|$)/.test(x.id));
+    await until(() => mine(b.state.notes).length === 300 && mine(b.state.cards).length === 600, "words to land", 20000);
+    const reviewed = { ...answer(makeScheduler(0.9), wordCards[0], 3, T + 1) };
+    await a.repo.saveCard(reviewed);
+    await until(() => b.state.cards.some((c) => c.id === reviewed.id && c.reps === 1), "review to land");
+
+    const later = T + 5000;
+    const moved = words.map((n) => ({ ...n, deckId: "d2", updatedAt: later }));
+    const movedCards = [reviewed, ...wordCards.slice(1)].map((c) => ({ ...c, deckId: "d2", updatedAt: later }));
+    await a.repo.saveMany(moved, movedCards);
+    await until(() => mine(b.state.notes).every((n) => n.deckId === "d2") && mine(b.state.cards).every((c) => c.deckId === "d2"), "move to land", 20000);
+    expect(b.state.notes.filter((n) => n.id === "n1").every((n) => n.deckId === "d1")).toBe(true); // other words untouched
+    const got = b.state.cards.find((c) => c.id === reviewed.id)!;
+    expect({ ...got, deckId: reviewed.deckId, updatedAt: reviewed.updatedAt }).toEqual(reviewed);
+    expect(a.state.sync).not.toBe("error");
+    expect(a.state.sync).not.toBe("denied");
+  }, 60_000);
+
   it("reads a review history larger than one Firestore query allows (10,000 documents)", async () => {
     const a = await device("owner@example.com", "user-history");
     // An Anki import with its review log easily passes 10,000 answers. Production Firestore refused the one

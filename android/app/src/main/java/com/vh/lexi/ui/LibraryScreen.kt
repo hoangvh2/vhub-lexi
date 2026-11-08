@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -23,6 +25,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -122,6 +125,8 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
     var selecting by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(emptySet<String>()) }
     var aiDialog by remember { mutableStateOf<AiDialog?>(null) }
+    // "Chuyển sang bộ khác" dialog for the chosen words.
+    var moveDialog by remember { mutableStateOf(false) }
     // The "replace meanings?" question of a starting batch: title, message, answer.
     var overwriteAsk by remember { mutableStateOf<Triple<String, String, CompletableDeferred<Boolean>>?>(null) }
     val now = System.currentTimeMillis()
@@ -144,7 +149,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         ScreenHeader("Thư viện") {
             Pill("${notes.count { isMaterial(it) }} từ")
-            if (aiAvailable) TextButton(onClick = { selecting = !selecting; selected = emptySet() }, Modifier.testTag("lib-select")) { Text(if (selecting) "Xong" else "Chọn") }
+            TextButton(onClick = { selecting = !selecting; selected = emptySet() }, Modifier.testTag("lib-select")) { Text(if (selecting) "Xong" else "Chọn") }
             OutlinedButton(onClick = { deckDialog = null to "" }) { Text("+ Bộ thẻ", fontSize = 13.sp) }
         }
         OutlinedTextField(value = q, onValueChange = { q = it }, singleLine = true, placeholder = { Text("Tìm từ, nghĩa, ví dụ…") }, modifier = Modifier.fillMaxWidth())
@@ -177,7 +182,10 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
                 Text("${selected.size} đã chọn", Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
                 val all = selected.size == rows.size && rows.isNotEmpty()
                 TextButton(onClick = { selected = if (all) emptySet() else rows.map { it.id }.toSet() }) { Text(if (all) "Bỏ chọn" else "Chọn hết ${rows.size}", maxLines = 1) }
-                Button(onClick = { aiDialog = AiDialog(true, false, if (filter == Filter.NO_PHRASES) BatchMode.PHRASES else BatchMode.FULL) }, enabled = vocab > 0 && batch?.running != true, modifier = Modifier.testTag("bulk-ai")) {
+                OutlinedButton(onClick = { moveDialog = true }, enabled = selected.isNotEmpty(), modifier = Modifier.testTag("bulk-move"), contentPadding = PaddingValues(horizontal = 12.dp)) {
+                    Text("Chuyển bộ", maxLines = 1)
+                }
+                if (aiAvailable) Button(onClick = { aiDialog = AiDialog(true, false, if (filter == Filter.NO_PHRASES) BatchMode.PHRASES else BatchMode.FULL) }, enabled = vocab > 0 && batch?.running != true, modifier = Modifier.testTag("bulk-ai"), contentPadding = PaddingValues(horizontal = 12.dp)) {
                     Icon(Icons.Filled.AutoAwesome, null); Text(" AI", maxLines = 1)
                 }
             }
@@ -267,6 +275,59 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
                         if (res != null) { selecting = false; selected = emptySet(); toast(batchSummary(res)) }
                     }
                 }) { Text("Bắt đầu") }
+            },
+        )
+    }
+
+    if (moveDialog) {
+        val picked = notes.filter { it.id in selected }
+        val from = picked.map { it.deckId }.toSet()
+        var target by remember { mutableStateOf(decks.firstOrNull { !(from.size == 1 && it.id in from) }?.id) }
+        var newName by remember { mutableStateOf("") }
+        var busy by remember { mutableStateOf(false) }
+        val already = if (target == null) 0 else picked.count { it.deckId == target }
+        val count = picked.size - already
+        AlertDialog(
+            onDismissRequest = { if (!busy) moveDialog = false },
+            title = { Text("Chuyển ${picked.size} từ sang bộ khác") },
+            text = {
+                ResizeDialogForKeyboard()
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    val names = from.mapNotNull { id -> decks.firstOrNull { it.id == id }?.name }
+                    if (names.isNotEmpty()) Text("Đang ở: " + if (names.size > 3) names.take(3).joinToString(", ") + " và ${names.size - 3} bộ khác" else names.joinToString(", "), color = c.muted, fontSize = 13.sp)
+                    for (d in decks) {
+                        Row(Modifier.fillMaxWidth().clickable { target = d.id }.testTag("move-deck-${d.name}"), verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = target == d.id, onClick = null); Text(" ${d.name}", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth().clickable { target = null }.testTag("move-new"), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = target == null, onClick = null); Text(" + Bộ thẻ mới…")
+                    }
+                    if (target == null) OutlinedTextField(value = newName, onValueChange = { newName = it.take(60) }, singleLine = true, label = { Text("Tên bộ thẻ mới") }, modifier = Modifier.fillMaxWidth().testTag("move-name"))
+                    Text("Lịch ôn, độ nhớ và lịch sử trả lời của từng thẻ được giữ nguyên; chỉ đổi bộ thẻ." + if (already > 0) " $already từ đã ở bộ này nên bỏ qua." else "", color = c.muted, fontSize = 13.sp)
+                }
+            },
+            dismissButton = { TextButton(onClick = { moveDialog = false }, enabled = !busy) { Text("Huỷ") } },
+            confirmButton = {
+                Button(
+                    enabled = !busy && (if (target == null) newName.isNotBlank() else count > 0),
+                    modifier = Modifier.testTag("move-start"),
+                    onClick = {
+                        busy = true
+                        scope.launch {
+                            try {
+                                val deck = target?.let { id -> decks.firstOrNull { it.id == id } } ?: data.createDeck(newName)
+                                val moved = data.moveNotes(selected, deck.id)
+                                moveDialog = false; selecting = false; selected = emptySet()
+                                toast(if (moved > 0) "Đã chuyển $moved từ sang “${deck.name}”" else "Các từ đã chọn đều đã ở “${deck.name}”")
+                            } catch (e: Exception) {
+                                toast("Không chuyển được: ${e.message}")
+                            } finally {
+                                busy = false
+                            }
+                        }
+                    },
+                ) { Text(if (target == null) "Tạo bộ và chuyển ${picked.size} từ" else "Chuyển $count từ") }
             },
         )
     }
