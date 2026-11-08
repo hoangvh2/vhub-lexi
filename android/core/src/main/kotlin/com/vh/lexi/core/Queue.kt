@@ -47,7 +47,8 @@ data class QueueInput(
 
 data class Counts(val new: Int, val learning: Int, val review: Int)
 
-data class Queue(val learning: List<Card>, val review: List<Card>, val newCards: List<Card>, val counts: Counts) {
+/** [freeNew]: the part of [newCards] that does not use today's quota ([isFreeNew]). */
+data class Queue(val learning: List<Card>, val review: List<Card>, val newCards: List<Card>, val counts: Counts, val freeNew: List<Card> = emptyList()) {
     val all: List<Card> get() = learning + review + newCards
 }
 
@@ -119,6 +120,13 @@ const val INTRO_TEMPLATE = "recognize"
 fun awaitingRecognize(cards: List<Card>, eligible: (Card) -> Boolean): Set<Id> =
     cards.filter { it.template == INTRO_TEMPLATE && !it.suspended && it.state != CardState.REVIEW && eligible(it) }.mapTo(HashSet()) { it.noteId }
 
+/** Notes that have a live (eligible, not suspended) recognize card, in any state (queue.ts liveRecognize). */
+fun liveRecognize(cards: List<Card>, eligible: (Card) -> Boolean): Set<Id> =
+    cards.filter { it.template == INTRO_TEMPLATE && !it.suspended && eligible(it) }.mapTo(HashSet()) { it.noteId }
+
+/** The daily "new" quota counts words: a typing card of a word with a live recognize card is free (queue.ts isFreeNew). */
+fun isFreeNew(c: Card, live: Set<Id>): Boolean = c.state == CardState.NEW && c.template != INTRO_TEMPLATE && c.noteId in live
+
 /** A new card that may be introduced now (queue.ts introducible). */
 fun introducible(c: Card, waiting: Set<Id>): Boolean = c.template == INTRO_TEMPLATE || c.noteId !in waiting
 
@@ -126,9 +134,11 @@ fun buildQueue(i: QueueInput): Queue {
     val cutoff = nextDayStart(i.now, i.prefs.dayStartHour, i.zone) + i.reviewAheadDays * Fsrs.DAY_MS
     val doneToday = answeredToday(i.cards, i.now, i.prefs.dayStartHour, i.zone)
     val waiting = awaitingRecognize(i.cards, i.eligible)
+    val live = liveRecognize(i.cards, i.eligible)
     val learning = ArrayList<Card>()
     val review = ArrayList<Card>()
     val fresh = ArrayList<Card>()
+    val freeAll = ArrayList<Card>()
     for (c in i.cards) {
         if (c.suspended || !i.eligible(c)) continue
         if (i.deckId != null && c.deckId != i.deckId) continue
@@ -136,12 +146,16 @@ fun buildQueue(i: QueueInput): Queue {
         when (c.state) {
             CardState.LEARNING, CardState.RELEARNING -> if (c.due <= i.now + i.learnAheadMs) learning += c
             CardState.REVIEW -> if (c.due < cutoff && c.noteId !in i.buried && c.noteId !in doneToday) review += c
-            else -> if (c.noteId !in i.buried && c.noteId !in doneToday && introducible(c, waiting)) fresh += c
+            else -> if (c.noteId !in i.buried && c.noteId !in doneToday && introducible(c, waiting)) (if (isFreeNew(c, live)) freeAll else fresh) += c
         }
     }
     learning.sortBy { it.due }
     review.sortBy { it.due }
-    fresh.sortWith(compareBy<Card> { it.createdAt }.thenBy { introRank(it.template) }.thenBy { it.id })
+    val byIntro = compareBy<Card> { it.createdAt }.thenBy { introRank(it.template) }.thenBy { it.id }
+    fresh.sortWith(byIntro)
+    // Typing cards of recognised words: one per word per queue, outside the daily quota (the next one waits a day).
+    val freeSeen = HashSet<Id>()
+    val freeNew = freeAll.sortedWith(byIntro).filter { freeSeen.add(it.noteId) }
 
     val newLimit = maxOf(0, i.prefs.newPerDay - (i.today?.newCards ?: 0L).toInt())
     val reviewLimit = maxOf(0, i.prefs.maxReviewsPerDay - (i.today?.reviews ?: 0L).toInt())
@@ -215,7 +229,8 @@ fun buildQueue(i: QueueInput): Queue {
         round++
     }
     val reviewCapped = review.take(reviewLimit)
-    return Queue(learning, reviewCapped, newCards, Counts(newCards.size, learning.size, reviewCapped.size))
+    newCards += freeNew
+    return Queue(learning, reviewCapped, newCards, Counts(newCards.size, learning.size, reviewCapped.size), freeNew)
 }
 
 data class SessionState(val shown: Int = 0, val shownNew: Int = 0)

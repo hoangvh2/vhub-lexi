@@ -12,6 +12,8 @@
  * New siblings of a note answered today wait for the next study day too, so leaving and reopening the study screen
  * never serves the cloze of a word met minutes ago as "Mới".
  *
+ * The daily "new" quota counts words, not cards: see isFreeNew. A word's typing cards are offered without using it.
+ *
  * A word is typed only once it is recognised: while a note's "recognize" card is not yet in Review (new, still in its
  * learning steps, or relearning after a lapse), its other new cards (recall, cloze, listen: all typing cards) wait.
  * Notes without a live recognize card (other note types, or the learner turned that template off) are not held.
@@ -55,6 +57,8 @@ export interface QueueInput {
 }
 
 export interface Queue {
+  /** New cards that do not use today's quota (see isFreeNew); also part of newCards. */
+  freeNew: Card[];
   learning: Card[];
   review: Card[];
   newCards: Card[];
@@ -147,6 +151,20 @@ export function awaitingRecognize(cards: readonly Card[], eligible: (c: Card) =>
   return out;
 }
 
+/** Notes that have a live (eligible, not suspended) "recognize" card, in any state. */
+export function liveRecognize(cards: readonly Card[], eligible: (c: Card) => boolean): Set<Id> {
+  const out = new Set<Id>();
+  for (const c of cards) if (c.template === INTRO_TEMPLATE && !c.suspended && eligible(c)) out.add(c.noteId);
+  return out;
+}
+
+/**
+ * The daily "new" quota counts WORDS: a word's recognize card uses one slot, and its typing cards (recall, cloze,
+ * listen) come later for free, once the word is recognised. A new card is free when its note has a live recognize card
+ * and it is not that card; notes without one (template off, other note types) count every card as before.
+ */
+export const isFreeNew = (c: Card, live: ReadonlySet<Id>) => c.state === CardState.New && c.template !== INTRO_TEMPLATE && live.has(c.noteId);
+
 /** A new card that may be introduced now: not a typing card of a word whose recognize card is still settling. */
 export const introducible = (c: Card, waiting: ReadonlySet<Id>) => c.template === INTRO_TEMPLATE || !waiting.has(c.noteId);
 
@@ -154,9 +172,11 @@ export function buildQueue(i: QueueInput): Queue {
   const cutoff = nextDayStart(i.now, i.prefs.dayStartHour) + (i.reviewAheadDays ?? 0) * 86_400_000;
   const doneToday = answeredToday(i.cards, i.now, i.prefs.dayStartHour);
   const waiting = awaitingRecognize(i.cards, i.eligible);
+  const live = liveRecognize(i.cards, i.eligible);
   const learning: Card[] = [];
   const review: Card[] = [];
   const fresh: Card[] = [];
+  const freeAll: Card[] = [];
   for (const c of i.cards) {
     if (c.suspended || !i.eligible(c)) continue;
     if (i.deckId && c.deckId !== i.deckId) continue;
@@ -166,12 +186,17 @@ export function buildQueue(i: QueueInput): Queue {
     } else if (c.state === CardState.Review) {
       if (c.due < cutoff && !i.buried.has(c.noteId) && !doneToday.has(c.noteId)) review.push(c);
     } else if (!i.buried.has(c.noteId) && !doneToday.has(c.noteId) && introducible(c, waiting)) {
-      fresh.push(c);
+      (isFreeNew(c, live) ? freeAll : fresh).push(c);
     }
   }
   learning.sort((a, b) => a.due - b.due);
   review.sort((a, b) => a.due - b.due);
-  fresh.sort((a, b) => a.createdAt - b.createdAt || introRank(a.template) - introRank(b.template) || (a.id < b.id ? -1 : 1));
+  const byIntro = (a: Card, b: Card) => a.createdAt - b.createdAt || introRank(a.template) - introRank(b.template) || (a.id < b.id ? -1 : 1);
+  fresh.sort(byIntro);
+  // Typing cards of recognised words: one per word per queue, outside the daily quota (the next one waits a day).
+  const freeNew: Card[] = [];
+  const freeSeen = new Set<Id>();
+  for (const c of freeAll.sort(byIntro)) if (!freeSeen.has(c.noteId)) (freeSeen.add(c.noteId), freeNew.push(c));
 
   const newLimit = Math.max(0, i.prefs.newPerDay - (i.today?.newCards ?? 0));
   const reviewLimit = Math.max(0, i.prefs.maxReviewsPerDay - (i.today?.reviews ?? 0));
@@ -251,8 +276,10 @@ export function buildQueue(i: QueueInput): Queue {
       if (c) (newCards.push(c), (more = true));
     }
   }
+  newCards.push(...freeNew);
   const reviewCapped = review.slice(0, reviewLimit);
   return {
+    freeNew,
     learning,
     review: reviewCapped,
     newCards,

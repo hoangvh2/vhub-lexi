@@ -40,6 +40,25 @@ describe("actions on the local repo", () => {
     expect(await currentRepo().reviewsOfNote("other")).toEqual([]);
   });
 
+  it("the daily new quota counts words: a typing card of a recognised word is answered as a review", async () => {
+    await addNote({ type: "vocab", fields: vocab });
+    const rec = cards.get().find((c) => c.template === "recognize")!;
+    const t = Date.now();
+    const learned = await reviewCard(rec, 3, 1000, t);
+    // The recognize card reached Review (it is the word being known); its typing sibling is not a new word.
+    await currentRepo().saveCard({ ...learned.next, state: CardState.Review, scheduledDays: 3, updatedAt: t });
+    const clz = cards.get().find((c) => c.template === "cloze")!;
+    expect(clz.state).toBe(CardState.New);
+    const day = () => daily.get().find((d) => d.id === dayId(t, prefs.get().dayStartHour))!;
+    expect(day()).toMatchObject({ newCards: 1, reviews: 0 });
+    const r = await reviewCard(clz, 3, 1000, t + 60_000);
+    expect(r.delta).toMatchObject({ newCards: 0, reviews: 1 });
+    expect(r.delta.deckId).toBeUndefined();
+    expect(day()).toMatchObject({ newCards: 1, reviews: 1 });
+    await undoReview(r);
+    expect(day()).toMatchObject({ newCards: 1, reviews: 0 });
+  });
+
   it("drops empty fields and rejects unknown note types", async () => {
     const note = await addNote({ type: "vocab", fields: { ...vocab, mnemonic: "   ", examples: ["", " a "] } });
     expect(note.fields.mnemonic).toBeUndefined();

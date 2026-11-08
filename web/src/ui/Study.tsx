@@ -252,7 +252,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
         n.delete(last.prev.noteId);
         return n;
       });
-      setSession((s) => ({ ...s, answered: Math.max(0, s.answered - 1), again: Math.max(0, s.again - (last.delta.rating === 1 ? 1 : 0)), shown: Math.max(0, s.shown - 1), shownNew: Math.max(0, s.shownNew - last.delta.newCards), log: s.log.slice(0, -1) }));
+      setSession((s) => ({ ...s, answered: Math.max(0, s.answered - 1), again: Math.max(0, s.again - (last.delta.rating === 1 ? 1 : 0)), shown: Math.max(0, s.shown - 1), shownNew: Math.max(0, s.shownNew - (last.prev.state === 0 ? 1 : 0)), log: s.log.slice(0, -1) }));
       currentId.current = last.prev.id;
       setNow(Date.now());
       toast("Đã hoàn tác lần trả lời trước");

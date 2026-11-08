@@ -138,6 +138,27 @@ describe("queue", () => {
     const lapsed = { ...graduated, state: CardState.Relearning, due: nextDayStart(T0, 4) + DAY, lastReview: T0 - DAY };
     expect(buildQueue({ ...base, cards: [lapsed, clz], now: nextDayStart(T0, 4) + 60_000 }).newCards).toEqual([]);
   });
+  it("typing cards of recognised words do not use the daily new quota; only recognize cards (new words) do", () => {
+    const rev = (id: string, noteId: string, over: Partial<Card> = {}) => mk(id, noteId, { state: CardState.Review, due: T0 + 5 * DAY, scheduledDays: 5, lastReview: T0 - 3 * DAY, createdAt: T0 - 9 * DAY, ...over });
+    const cards = [
+      // Two recognised words with typing cards waiting, plus three brand-new words, quota 2.
+      rev("a.recognize", "a"), mk("a.recall", "a", { template: "recall", createdAt: T0 - 9 * DAY }), mk("a.cloze", "a", { template: "cloze", createdAt: T0 - 9 * DAY }),
+      rev("b.recognize", "b"), mk("b.cloze", "b", { template: "cloze", createdAt: T0 - 8 * DAY }),
+      mk("n1.recognize", "n1", { createdAt: T0 + 1 }), mk("n2.recognize", "n2", { createdAt: T0 + 2 }), mk("n3.recognize", "n3", { createdAt: T0 + 3 }),
+    ];
+    const q = buildQueue({ ...base, cards, prefs: { ...DEFAULT_PREFS, newPerDay: 2 } });
+    // Two new words by quota, then one typing card per recognised word (recall before cloze), on top of the quota.
+    expect(q.newCards.map((c) => c.id)).toEqual(["n1.recognize", "n2.recognize", "a.recall", "b.cloze"]);
+    expect(q.freeNew.map((c) => c.id)).toEqual(["a.recall", "b.cloze"]);
+    expect(q.counts.new).toBe(4);
+    // Quota used up: typing cards still come, new words stop.
+    const today = { id: "x", newCards: 2, reviews: 0, again: 0, hard: 0, good: 0, easy: 0, ms: 0, updatedAt: 0 };
+    expect(buildQueue({ ...base, cards, prefs: { ...DEFAULT_PREFS, newPerDay: 2 }, today }).newCards.map((c) => c.id)).toEqual(["a.recall", "b.cloze"]);
+    // Without a live recognize card every card counts, as before.
+    const noRec = buildQueue({ ...base, cards: [mk("c.cloze", "c", { template: "cloze" }), mk("d.cloze", "d", { template: "cloze" })], prefs: { ...DEFAULT_PREFS, newPerDay: 1 } });
+    expect(noRec.freeNew).toEqual([]);
+    expect(noRec.newCards).toHaveLength(1);
+  });
   it("typing cards are not held when the note has no live recognize card", () => {
     const clz = mk("w.cloze", "w", { template: "cloze" });
     // Recognize suspended, turned off (ineligible), or never made: nothing to wait for.
