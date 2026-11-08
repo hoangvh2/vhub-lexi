@@ -34,6 +34,18 @@ export async function createDeck(name: string): Promise<Deck> {
   return d;
 }
 
+/** Saves each deck's share of the daily new words (Deck.newWeight); `undefined` removes it, which means an equal share. */
+export async function setDeckWeights(weights: ReadonlyMap<Id, number | undefined>) {
+  const now = Date.now();
+  for (const d of decks.get()) {
+    if (!weights.has(d.id)) continue;
+    const w = weights.get(d.id);
+    if (w === d.newWeight) continue;
+    const { newWeight: _old, ...rest } = d;
+    await currentRepo().saveDeck({ ...rest, ...(w === undefined ? {} : { newWeight: Math.max(0, Math.min(100, Math.round(w))) }), updatedAt: now });
+  }
+}
+
 export async function renameDeck(d: Deck, name: string) {
   await currentRepo().saveDeck({ ...d, name: name.trim().slice(0, 60) || d.name, updatedAt: Date.now() });
 }
@@ -213,7 +225,7 @@ export async function reviewCard(card: Card, rating: Rating, durationMs: number,
     ...(hint ? { hint } : {}),
   };
   const wasNew = card.state === CardState.New;
-  const delta: DailyDelta = { id: dayId(now, p.dayStartHour), newCards: wasNew ? 1 : 0, reviews: wasNew ? 0 : 1, rating, ms: log.durationMs };
+  const delta: DailyDelta = { id: dayId(now, p.dayStartHour), newCards: wasNew ? 1 : 0, ...(wasNew ? { deckId: card.deckId } : {}), reviews: wasNew ? 0 : 1, rating, ms: log.durationMs };
   await currentRepo().commitReview(next, log, delta);
   return { prev: card, next, logId: log.id, delta };
 }

@@ -165,7 +165,9 @@ class QueueVectorsTest {
             val p = inp.getJSONObject("prefs")
             val prefs = Prefs(newPerDay = p.getInt("newPerDay"), maxReviewsPerDay = p.getInt("maxReviewsPerDay"), dayStartHour = p.getInt("dayStartHour"))
             val cards = s.getJSONArray("cards").objects().map(::cardFromJson)
-            val today = if (inp.isNull("today")) null else Daily(id = "x", newCards = inp.getJSONObject("today").getLong("newCards"))
+            val today = if (inp.isNull("today")) null else inp.getJSONObject("today").let { t ->
+                Daily(id = "x", newCards = t.getLong("newCards"), newByDeck = t.optJSONObject("newByDeck")?.let { m -> m.keys().asSequence().associateWith { k -> m.getLong(k) } } ?: emptyMap())
+            }
             val now = inp.getLong("now")
             val q = buildQueue(
                 QueueInput(
@@ -173,6 +175,7 @@ class QueueVectorsTest {
                     deckId = if (inp.isNull("deckId")) null else inp.getString("deckId"), buried = inp.getJSONArray("buried").strings().toSet(),
                     learnAheadMs = inp.getLong("learnAheadMs"), zone = ZoneOffset.UTC,
                     meanings = inp.optJSONObject("meanings")?.let { m -> m.keys().asSequence().associateWith { k -> m.getJSONArray(k).strings() } },
+                    deckWeights = inp.optJSONObject("deckWeights")?.let { m -> m.keys().asSequence().associateWith { k -> m.getInt(k) } },
                     noteIds = inp.optJSONArray("noteIds")?.strings()?.toSet(),
                     reviewAheadDays = inp.optInt("reviewAheadDays", 0),
                 ),

@@ -75,14 +75,16 @@ describe("documents the app really writes are accepted", () => {
       b.set(doc(db, ...path("cards", fx.cards.learning.id)), fx.cards.learning);
       if (sign > 0) b.set(doc(db, ...path("reviews", log(n).id)), log(n));
       else b.delete(doc(db, ...path("reviews", log(n).id)));
-      b.set(day, { id: fx.daily.id, newCards: increment(sign), reviews: increment(0), good: increment(sign), ms: increment(sign * 4200), updatedAt: 1 }, { merge: true });
+      b.set(day, { id: fx.daily.id, newCards: increment(sign), newByDeck: { [fx.deck.id]: increment(sign) }, reviews: increment(0), good: increment(sign), ms: increment(sign * 4200), updatedAt: 1 }, { merge: true });
       await b.commit();
     };
     await assertSucceeds(commit(1, 0));
     await assertSucceeds(commit(1, 1));
     assert.equal((await getDoc(day)).data().newCards, 2);
+    assert.equal((await getDoc(day)).data().newByDeck[fx.deck.id], 2);
     await assertSucceeds(commit(-1, 1));
     assert.equal((await getDoc(day)).data().newCards, 1);
+    assert.equal((await getDoc(day)).data().newByDeck[fx.deck.id], 1);
     await assertFails(setDoc(doc(db, ...path("reviews", log(0).id)), { ...log(0), rating: 1 })); // history is append-only
   });
 });
@@ -183,6 +185,7 @@ describe("shape checks reject bad data", () => {
     await assertFails(put("daily", "today", { ...fx.daily, id: "today" }));
     await assertFails(put("daily", "2026-01-15", { ...fx.daily, id: "2026-01-16" }));
     await assertFails(put("daily", fx.daily.id, { ...fx.daily, good: "many" }));
+    await assertFails(put("daily", fx.daily.id, { ...fx.daily, newByDeck: 3 }));
   });
   it("prefs: optimized FSRS parameters accepted", async () => {
     await assertSucceeds(put("settings", "prefs", { ...fx.prefs, fsrsWeights: W, fsrsOptimizedAt: 1_760_000_000_000, fsrsOptimizedReviews: 1200 }));
@@ -202,6 +205,12 @@ describe("shape checks reject bad data", () => {
   it("decks: empty or very long names rejected", async () => {
     await assertFails(put("decks", "d", { ...fx.deck, id: "d", name: "" }));
     await assertFails(put("decks", "d", { ...fx.deck, id: "d", name: "x".repeat(61) }));
+  });
+  it("decks: newWeight is a whole number from 0 to 100", async () => {
+    await assertSucceeds(put("decks", "d", { ...fx.deck, id: "d", newWeight: 0 }));
+    await assertFails(put("decks", "d", { ...fx.deck, id: "d", newWeight: 101 }));
+    await assertFails(put("decks", "d", { ...fx.deck, id: "d", newWeight: -1 }));
+    await assertFails(put("decks", "d", { ...fx.deck, id: "d", newWeight: 2.5 }));
   });
 });
 

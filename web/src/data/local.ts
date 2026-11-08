@@ -32,6 +32,7 @@ export function applyDelta(prev: Daily | undefined, d: DailyDelta, sign: 1 | -1,
   return {
     ...base,
     newCards: Math.max(0, base.newCards + sign * d.newCards),
+    ...(d.newCards && d.deckId ? { newByDeck: { ...base.newByDeck, [d.deckId]: Math.max(0, (base.newByDeck?.[d.deckId] ?? 0) + sign * d.newCards) } } : {}),
     reviews: Math.max(0, base.reviews + sign * d.reviews),
     [f]: Math.max(0, base[f] + sign),
     ms: Math.max(0, base.ms + sign * d.ms),

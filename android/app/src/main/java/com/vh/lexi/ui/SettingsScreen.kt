@@ -27,6 +27,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -49,6 +50,15 @@ import com.vh.lexi.BuildConfig
 import com.vh.lexi.LexiApp
 import com.vh.lexi.cloud.Account
 import com.vh.lexi.core.CardLayout
+import com.vh.lexi.core.CardState
+import com.vh.lexi.core.Deck
+import com.vh.lexi.core.NewShare
+import com.vh.lexi.core.ShareMode
+import com.vh.lexi.core.dailyShares
+import com.vh.lexi.core.percents
+import com.vh.lexi.core.rankWeights
+import com.vh.lexi.core.setPercent
+import com.vh.lexi.core.shareMode
 import com.vh.lexi.core.NOTE_TYPES
 import com.vh.lexi.core.Prefs
 import com.vh.lexi.data.SyncState
@@ -110,6 +120,8 @@ fun SettingsScreen(app: LexiApp) {
             Text("Tự đọc phát âm", fontWeight = FontWeight.SemiBold)
             Segments(listOf("off" to "Tắt", "front" to "Khi hiện thẻ", "back" to "Khi lật thẻ"), p.autoSpeak) { set(p.copy(autoSpeak = it)) }
         }
+
+        DeckShare(app, p.newPerDay)
 
         // Fitted on the web (Settings → "Tối ưu theo lịch sử ôn"); this phone schedules with them once they sync.
         Panel(Modifier.testTag("fsrs")) {
@@ -261,4 +273,84 @@ private fun Segments(options: List<Pair<String, String>>, selected: String, onSe
             SegmentedButton(selected = selected == k, onClick = { onSelect(k) }, shape = SegmentedButtonDefaults.itemShape(i, options.size)) { Text(label, fontSize = 12.sp, maxLines = 1) }
         }
     }
+}
+
+/** Settings: how many of the day's new words each deck gives (Deck.newWeight; the queue reads it). Mirrors DeckShare.tsx. */
+@Composable
+private fun DeckShare(app: LexiApp, newPerDay: Int) {
+    val data = app.data
+    val scope = rememberCoroutineScope()
+    val c = Lexi.colors
+    val decks by data.decks.collectAsState()
+    val cards by data.cards.collectAsState()
+    val notes by data.notes.collectAsState()
+    var forced by remember { mutableStateOf<ShareMode?>(null) }
+    if (decks.size < 2) return
+
+    // Highest share first; equal shares keep the order the decks were made in.
+    val rows = decks.sortedWith(compareByDescending<Deck> { it.newWeight ?: 1 }.thenBy { it.createdAt }.thenBy { it.id })
+    val weights = rows.map { it.newWeight ?: 1 }
+    val mode = forced ?: shareMode(weights)
+    val pct = percents(weights)
+    // Words each deck still has (notes with a new card), so the preview shows what a full day would really give.
+    val eligible = remember(notes) { eligibility(notes.associateBy { it.id }) }
+    val left = remember(cards, eligible) {
+        cards.filter { it.state == CardState.NEW && !it.suspended && eligible(it) }.groupBy({ it.deckId }, { it.noteId }).mapValues { it.value.toSet().size }
+    }
+    val words = dailyShares(newPerDay, rows.map { NewShare(it.id, it.newWeight ?: 1, left[it.id] ?: 0) })
+
+    fun save(next: List<Int>?) {
+        val m = HashMap<String, Int?>()
+        rows.forEachIndexed { k, d -> m[d.id] = next?.get(k) }
+        scope.launch { data.setDeckWeights(m) }
+    }
+
+    Panel(Modifier.testTag("deck-share")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Từ mới theo bộ", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            Text("Tổng $newPerDay từ/ngày", color = c.muted, fontSize = 12.sp)
+        }
+        Segments(listOf("equal" to "Đều", "rank" to "Ưu tiên", "custom" to "Tùy chỉnh"), mode.name.lowercase()) { k ->
+            when (k) {
+                "equal" -> { forced = null; save(null) }
+                "rank" -> { forced = null; save(rankWeights(rows.size)) }
+                else -> { forced = ShareMode.CUSTOM }
+            }
+        }
+        rows.forEachIndexed { k, d ->
+            val paused = (d.newWeight ?: 1) == 0
+            Column(Modifier.fillMaxWidth().background(c.surface2, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(horizontal = 12.dp, vertical = 6.dp).testTag("share-row")) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (mode != ShareMode.EQUAL) {
+                        Column {
+                            TextButton(onClick = { save(pct.toMutableList().also { val t = it[k]; it[k] = it[k - 1]; it[k - 1] = t }) }, enabled = k > 0) { Text("▲") }
+                            TextButton(onClick = { save(pct.toMutableList().also { val t = it[k]; it[k] = it[k + 1]; it[k + 1] = t }) }, enabled = k < rows.size - 1) { Text("▼") }
+                        }
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text(if (mode == ShareMode.EQUAL) d.name else "${k + 1}. ${d.name}", fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        ShareSlider(pct[k], mode != ShareMode.EQUAL, "Tỷ lệ từ mới của ${d.name}") { v -> forced = ShareMode.CUSTOM; save(setPercent(pct, k, v)) }
+                    }
+                    Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
+                        Text(if (paused) "Dừng" else "${pct[k]}%", fontWeight = FontWeight.Bold, color = c.accent)
+                        Text(if ((left[d.id] ?: 0) == 0) "hết từ" else "${words[d.id] ?: 0} từ", color = c.muted, fontSize = 12.sp, modifier = Modifier.testTag("share-words"))
+                    }
+                }
+            }
+        }
+        Text(
+            (if (mode == ShareMode.EQUAL) "Mỗi bộ cho số từ mới như nhau." else "Kéo thanh trượt hoặc đổi vị trí ưu tiên; các bộ còn lại tự cân lại để tổng là 100%. Kéo về 0% để tạm dừng một bộ.") +
+                " Bộ nào trên 0% luôn có ít nhất 1 từ mỗi ngày. Bộ hết từ mới thì phần của nó chia cho các bộ còn lại.",
+            color = c.muted, fontSize = 13.sp,
+        )
+    }
+}
+
+@Composable
+private fun ShareSlider(value: Int, enabled: Boolean, description: String, onChange: (Int) -> Unit) {
+    var local by remember(value) { mutableStateOf(value.toFloat()) }
+    Slider(
+        value = local, onValueChange = { local = it }, onValueChangeFinished = { onChange(Math.round(local)) },
+        valueRange = 0f..100f, enabled = enabled, modifier = Modifier.semantics { contentDescription = description },
+    )
 }

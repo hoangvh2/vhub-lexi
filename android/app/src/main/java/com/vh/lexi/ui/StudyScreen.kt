@@ -101,6 +101,8 @@ import com.vh.lexi.core.SessionState
 import com.vh.lexi.core.Verdict
 import com.vh.lexi.core.answeredToday
 import com.vh.lexi.core.buildQueue
+import com.vh.lexi.core.deckWeights
+import com.vh.lexi.core.newMixLabel
 import com.vh.lexi.core.meaningsByNote
 import com.vh.lexi.core.checkTyped
 import com.vh.lexi.core.dayId
@@ -203,14 +205,14 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
     }
     val tagNotes = remember(notes, tag) { tag?.let { t -> notes.filter { t in it.tags }.map { it.id }.toSet() } }
     val eligible = remember(notesById) { eligibility(notesById) }
-    val queue = remember(cards, notesById, meanings, daily, prefs, now, deckId, buried, extraNew, ahead, tagNotes, aheadDays) {
+    val queue = remember(cards, notesById, meanings, decks, daily, prefs, now, deckId, buried, extraNew, ahead, tagNotes, aheadDays) {
         buildQueue(
             QueueInput(
                 cards = cards,
                 eligible = eligible,
                 today = daily.firstOrNull { it.id == dayId(now, prefs.dayStartHour) },
                 prefs = prefs.copy(newPerDay = prefs.newPerDay + extraNew),
-                now = now, deckId = deckId, buried = buried, learnAheadMs = ahead, meanings = meanings,
+                now = now, deckId = deckId, buried = buried, learnAheadMs = ahead, meanings = meanings, deckWeights = deckWeights(decks),
                 noteIds = tagNotes, reviewAheadDays = aheadDays,
             ),
         )
@@ -317,6 +319,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
         TodayPanel(
             cards = cards, notesById = notesById, queue = queue, daily = daily, dayStartHour = prefs.dayStartHour, newPerDay = prefs.newPerDay, now = now,
             lessons = tags.filter { isLesson(it.first) }.map { LessonProgress(it.first, startedByTag[it.first] ?: 0, it.second) },
+            newMix = newMixLabel(decks, daily.firstOrNull { it.id == dayId(now, prefs.dayStartHour) }?.newByDeck.orEmpty(), queue.newCards),
             onStart = { started = true; holder[0] = null },
             onLesson = { t -> tag = t; aheadDays = 0; started = true; holder[0] = null },
             onImport = onImport,

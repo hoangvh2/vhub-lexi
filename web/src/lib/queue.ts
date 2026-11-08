@@ -3,7 +3,7 @@
  *
  *   learning  cards in (re)learning whose short step is due (or due within the learn-ahead window)
  *   review    review cards due before the next study-day boundary, most overdue first
- *   new       never-seen cards, oldest first, capped by the daily limit
+ *   new       never-seen cards, capped by the daily limit and shared out between decks by weight (see shareOut)
  *
  * Siblings (cards of the same note) are buried for the rest of the session once one is answered,
  * so you never see "word → meaning" and "cloze of the same word" back to back. Review cards of a note answered
@@ -38,8 +38,8 @@ export interface QueueInput {
   learnAheadMs?: number;
   /** Notes whose other cards are hidden for this session. */
   buried: ReadonlySet<Id>;
-  /** Deck-specific new-card limits. */
-  deckNewPerDay?: ReadonlyMap<Id, number>;
+  /** Share of the daily new words per deck (Deck.newWeight, see deckWeights); a deck missing from the map counts as 1. */
+  deckWeights?: ReadonlyMap<Id, number>;
   /** Vietnamese meaning phrases per note (meaningsByNote); when given, near-synonyms are introduced apart. */
   meanings?: ReadonlyMap<Id, readonly string[]>;
   /** Only these notes (e.g. the notes of one lesson tag). */
@@ -62,6 +62,73 @@ export function answeredToday(cards: readonly Card[], now: number, dayStartHour:
   const out = new Set<Id>();
   for (const c of cards) if (c.state !== CardState.New && c.lastReview !== undefined && c.lastReview >= dayStart) out.add(c.noteId);
   return out;
+}
+
+/** Weights of decks for the queue: Deck.newWeight, or 1 when the learner never set one (equal shares). */
+export function deckWeights(decks: readonly { id: Id; newWeight?: number }[]): Map<Id, number> {
+  return new Map(decks.map((d) => [d.id, d.newWeight ?? 1]));
+}
+
+export interface NewShare {
+  id: Id;
+  /** Relative share (integer >= 0; 0 = paused). */
+  weight: number;
+  /** Most this deck can take. */
+  cap: number;
+}
+
+/**
+ * Splits `total` new words between decks in proportion to their weights, in whole words (largest remainder; ties go to
+ * the heavier deck, then the smaller id). A deck that cannot take its share (cap) gives the rest back to the others, so
+ * the total only falls short when every deck is out of words. Integer arithmetic only: the Kotlin port must agree.
+ */
+export function shareOut(total: number, items: readonly NewShare[]): Map<Id, number> {
+  const out = new Map<Id, number>(items.map((x) => [x.id, 0]));
+  let remaining = Math.max(0, Math.floor(total));
+  let active = items.filter((x) => x.weight > 0 && x.cap > 0);
+  while (remaining > 0 && active.length > 0) {
+    const sum = active.reduce((n, x) => n + x.weight, 0);
+    const capped = active.filter((x) => remaining * x.weight > x.cap * sum);
+    if (capped.length > 0) {
+      for (const x of capped) {
+        out.set(x.id, x.cap);
+        remaining -= x.cap;
+      }
+      active = active.filter((x) => !capped.includes(x));
+      continue;
+    }
+    const parts = active.map((x) => ({ x, q: Math.floor((remaining * x.weight) / sum), r: (remaining * x.weight) % sum }));
+    let left = remaining - parts.reduce((n, a) => n + a.q, 0);
+    for (const a of parts) out.set(a.x.id, a.q);
+    parts.sort((a, b) => b.r - a.r || b.x.weight - a.x.weight || (a.x.id < b.x.id ? -1 : a.x.id > b.x.id ? 1 : 0));
+    for (const a of parts) {
+      if (left <= 0) break;
+      out.set(a.x.id, (out.get(a.x.id) ?? 0) + 1);
+      left--;
+    }
+    break;
+  }
+  return out;
+}
+
+/** shareOut for a whole day, plus: every deck above 0% that has words gets at least one, as long as there are enough words for that. */
+export function dailyShares(total: number, items: readonly NewShare[]): Map<Id, number> {
+  const out = shareOut(total, items);
+  const eligible = items.filter((x) => x.weight > 0 && x.cap > 0).sort((a, b) => b.weight - a.weight || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  if (total < eligible.length) return out;
+  for (const x of eligible) {
+    if ((out.get(x.id) ?? 0) > 0) continue;
+    const donors = eligible.filter((d) => (out.get(d.id) ?? 0) >= 2).sort((a, b) => (out.get(b.id) ?? 0) - (out.get(a.id) ?? 0) || b.weight - a.weight || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    if (!donors[0]) break;
+    out.set(donors[0].id, (out.get(donors[0].id) ?? 0) - 1);
+    out.set(x.id, 1);
+  }
+  return out;
+}
+
+/** Notes (not cards) with a new card, per deck, in the order the cards come: what each deck can still offer today. */
+function distinctNotes(cards: readonly Card[] | undefined): number {
+  return new Set((cards ?? []).map((c) => c.noteId)).size;
 }
 
 export function buildQueue(i: QueueInput): Queue {
@@ -107,15 +174,62 @@ export function buildQueue(i: QueueInput): Queue {
     for (const c of i.cards) if (!c.suspended && c.state !== CardState.New && c.scheduledDays < SETTLE_DAYS) hold(c.noteId);
   }
 
-  // One new card per note per session (siblings wait for the next session).
-  const seen = new Set<Id>();
-  const newCards: Card[] = [];
+  // New words: today's total is shared out between decks by weight (a deck that cannot fill its share gives it back),
+  // each deck keeps its own order, and the picks are dealt out deck by deck so the session mixes them.
+  const doneBy = i.today?.newByDeck ?? {};
+  const groups = new Map<Id, Card[]>();
   for (const c of fresh) {
-    if (newCards.length >= newLimit) break;
-    if (seen.has(c.noteId) || blocked(c.noteId)) continue;
-    seen.add(c.noteId);
-    hold(c.noteId);
-    newCards.push(c);
+    const g = groups.get(c.deckId);
+    if (g) g.push(c);
+    else groups.set(c.deckId, [c]);
+  }
+  const weightOf = (id: Id) => i.deckWeights?.get(id) ?? 1;
+  const ids = [...new Set([...(i.deckWeights?.keys() ?? []), ...groups.keys()])];
+  const items: NewShare[] = ids.map((id) => ({ id, weight: weightOf(id), cap: (doneBy[id] ?? 0) + distinctNotes(groups.get(id)) }));
+  const targets = dailyShares(i.prefs.newPerDay, items);
+  const take = new Map<Id, number>();
+  for (const x of items) take.set(x.id, Math.max(0, (targets.get(x.id) ?? 0) - (doneBy[x.id] ?? 0)));
+  let want = new Map(take);
+  if ([...take.values()].reduce((n, v) => n + v, 0) > newLimit) {
+    // Some deck is already past its share today (weights changed): trim to what is left, still by weight.
+    want = shareOut(newLimit, items.filter((x) => (take.get(x.id) ?? 0) > 0).map((x) => ({ id: x.id, weight: x.weight, cap: take.get(x.id) ?? 0 })));
+  }
+  const order = items.filter((x) => x.weight > 0).sort((a, b) => b.weight - a.weight || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).map((x) => x.id);
+  const seen = new Set<Id>(); // one new card per note per session (siblings wait for the next session)
+  const picked = new Map<Id, Card[]>(order.map((d) => [d, []]));
+  const cursor = new Map<Id, number>();
+  const grab = (d: Id, n: number): number => {
+    const list = groups.get(d) ?? [];
+    let k = cursor.get(d) ?? 0;
+    let got = 0;
+    while (got < n && k < list.length) {
+      const c = list[k++];
+      if (seen.has(c.noteId) || blocked(c.noteId)) continue;
+      seen.add(c.noteId);
+      hold(c.noteId);
+      picked.get(d)?.push(c);
+      got++;
+    }
+    cursor.set(d, k);
+    return got;
+  };
+  let taken = 0;
+  for (const d of order) taken += grab(d, Math.min(want.get(d) ?? 0, newLimit - taken));
+  // A near-synonym held a word back: fill the gap from the other decks, one word each in turn.
+  for (let moved = true; moved && taken < newLimit; ) {
+    moved = false;
+    for (const d of order) {
+      if (taken >= newLimit) break;
+      if (grab(d, 1) > 0) (taken++, (moved = true));
+    }
+  }
+  const newCards: Card[] = [];
+  for (let round = 0, more = true; more; round++) {
+    more = false;
+    for (const d of order) {
+      const c = picked.get(d)?.[round];
+      if (c) (newCards.push(c), (more = true));
+    }
   }
   const reviewCapped = review.slice(0, reviewLimit);
   return {

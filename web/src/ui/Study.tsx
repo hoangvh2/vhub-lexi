@@ -6,7 +6,7 @@ import { hintDependent, hintGateMs, maxRating, rotateExamples, type HintLevel } 
 import { rungHint, type Rung } from "@shared/ladder.ts";
 import { reviewCard, setSuspended, undoReview, type Reviewed } from "../data/actions.ts";
 import { cards, currentRepo, daily, decks, loaded, notes, prefs } from "../data/state.ts";
-import { LEARN_AHEAD_MS, answeredToday, buildQueue, dueWithin, isLeech, pickNext, tagCounts, type Queue } from "../lib/queue.ts";
+import { LEARN_AHEAD_MS, answeredToday, buildQueue, deckWeights, dueWithin, isLeech, pickNext, tagCounts, type Queue } from "../lib/queue.ts";
 import { celebrate } from "../lib/motion.ts";
 import { cardShown, rateStarted } from "../lib/perf.ts";
 import { streak } from "../lib/stats.ts";
@@ -110,10 +110,11 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
         buried,
         learnAheadMs: ahead,
         meanings,
+        deckWeights: deckWeights(allDecks),
         noteIds: tagNotes,
         reviewAheadDays: aheadDays,
       }),
-    [allCards, eligible, dailies, p, now, deckId, buried, extraNew, ahead, meanings, tagNotes, aheadDays],
+    [allCards, eligible, dailies, p, now, deckId, buried, extraNew, ahead, meanings, tagNotes, aheadDays, allDecks],
   );
 
   // Keep showing the same card until it is answered, even if the queue changes underneath.

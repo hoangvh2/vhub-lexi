@@ -747,3 +747,22 @@ input[type="range"] { width: 100%; }
 @keyframes lad-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes lad-flash { 0% { opacity: 0; transform: scale(0.96); } 12%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .lad-phrase, .lad-flash { animation: none; } .lad-btn { transition: none; } }
+
+/* Settings: new words by deck */
+.shares { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.shares li { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 18px; background: var(--surface-2); }
+.shares li.paused { opacity: 0.6; }
+.shares .order { display: inline-flex; flex-direction: column; gap: 2px; }
+.shares .order .icon-btn { width: 30px; height: 30px; font-size: 10px; }
+.shares .main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.shares .top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.shares .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shares .rank { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 8px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 12px; }
+.shares .link { border: 0; background: none; padding: 4px 0; color: var(--muted); font-weight: 700; font-size: 13px; cursor: pointer; flex: none; }
+.shares .side { display: flex; flex-direction: column; align-items: flex-end; min-width: 54px; }
+.shares .pct { color: var(--accent); font-size: 17px; }
+.shares .cnt { color: var(--muted); font-weight: 700; }
+.newmix { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 0 4px; }
+.chip.mix { background: var(--surface-2); color: var(--ink); font-weight: 700; }
+.chip.mix b { color: var(--accent); margin-left: 4px; }
+@media (max-width: 600px) { .shares .link { display: none; } }

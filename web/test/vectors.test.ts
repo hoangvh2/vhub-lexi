@@ -7,7 +7,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, it } from "vitest";
-import { CardState, DEFAULT_PREFS, normalizePrefs, type Card, type Note, type Rating } from "@shared/model.ts";
+import { CardState, DEFAULT_PREFS, normalizePrefs, type Card, type Daily, type Note, type Rating } from "@shared/model.ts";
 import { IRREGULAR } from "@shared/irregular.ts";
 import { baseForms } from "@shared/morphy.ts";
 import { type Block, checkTyped, clozeSentence, findExact, findWord, normalizeAnswer, phrasesOf, studyNote, template, wantedTemplates } from "@shared/notetypes.ts";
@@ -210,7 +210,7 @@ function queueVectors() {
     mk("ineligible", "n13"),
   ];
   const eligible = (c: Card) => c.id !== "ineligible";
-  const today = { id: "x", newCards: 1, reviews: 0, again: 0, hard: 0, good: 0, easy: 0, ms: 0, updatedAt: 0 };
+  const today: Daily = { id: "x", newCards: 1, reviews: 0, again: 0, hard: 0, good: 0, easy: 0, ms: 0, updatedAt: 0 };
   const scenarios = [
     { name: "default", prefs: { ...DEFAULT_PREFS, newPerDay: 3, dayStartHour: 4 }, today: undefined, deckId: null, buried: [] as string[], learnAheadMs: 0 },
     { name: "limits-and-today", prefs: { ...DEFAULT_PREFS, newPerDay: 3, maxReviewsPerDay: 2, dayStartHour: 4 }, today, deckId: null, buried: [], learnAheadMs: 0 },
@@ -218,7 +218,7 @@ function queueVectors() {
     { name: "deck-filter", prefs: { ...DEFAULT_PREFS, newPerDay: 10, dayStartHour: 4 }, today: undefined, deckId: "d2", buried: [], learnAheadMs: 0 },
     { name: "tag-filter", prefs: { ...DEFAULT_PREFS, newPerDay: 10, dayStartHour: 4 }, today: undefined, deckId: null, buried: [], learnAheadMs: 0, noteIds: ["n1", "n4", "n7", "n9", "n11"] },
     { name: "review-ahead", prefs: { ...DEFAULT_PREFS, newPerDay: 0, dayStartHour: 4 }, today: undefined, deckId: null, buried: [], learnAheadMs: 0, reviewAheadDays: 1 },
-  ] as Array<{ name: string; prefs: typeof DEFAULT_PREFS; today?: typeof today; deckId: string | null; buried: string[]; learnAheadMs: number; extra?: Card[]; meanings?: Record<string, string[]>; noteIds?: string[]; reviewAheadDays?: number }>;
+  ] as Array<{ name: string; prefs: typeof DEFAULT_PREFS; today?: Daily; deckId: string | null; buried: string[]; learnAheadMs: number; extra?: Card[]; only?: boolean; weights?: Record<string, number>; meanings?: Record<string, string[]>; noteIds?: string[]; reviewAheadDays?: number }>;
   // Near-synonyms: a new word waits while another word with a shared meaning phrase is new in this queue or still settling.
   const syn = (id: string, noteId: string, at: number, over: Partial<Card> = {}) => mk(id, noteId, { createdAt: T0 + at, ...over });
   scenarios.push({
@@ -256,10 +256,38 @@ function queueVectors() {
       mk("h3.cloze", "h3", { template: "cloze", state: CardState.Review, due: T0 - 3 * HOUR, lastReview: T0 - 5 * DAY, createdAt: T0 - 60 * DAY }),
     ],
   });
+  // Daily new words shared between decks by weight (Deck.newWeight): four decks, 50/25/15/10, ten words a day.
+  const deckCards = (deck: string, n: number, base: number) =>
+    Array.from({ length: n }, (_, k) => mk(`${deck}${k}`, `${deck}-n${k}`, { deckId: deck, createdAt: T0 + base + k }));
+  const fourDecks = [...deckCards("dA", 12, 100), ...deckCards("dB", 12, 50), ...deckCards("dC", 12, 20), ...deckCards("dD", 12, 1)];
+  const week = { ...DEFAULT_PREFS, newPerDay: 10, dayStartHour: 4 };
+  const blank = { today: undefined, deckId: null, buried: [] as string[], learnAheadMs: 0, only: true };
+  scenarios.push({ name: "weights-four-decks", prefs: week, ...blank, weights: { dA: 50, dB: 25, dC: 15, dD: 10 }, extra: fourDecks });
+  scenarios.push({ name: "weights-equal-by-default", prefs: week, ...blank, extra: fourDecks });
+  // B has one word, C is paused: B gives back its share, nothing goes to C.
+  scenarios.push({ name: "weights-short-and-paused", prefs: week, ...blank, weights: { dA: 50, dB: 25, dC: 0, dD: 25 }, extra: [...deckCards("dA", 12, 100), ...deckCards("dB", 1, 50), ...deckCards("dC", 12, 20), ...deckCards("dD", 12, 1)] });
+  // Half way through the day: A and B already gave their share, so only C and D are left to fill.
+  scenarios.push({
+    name: "weights-midday", prefs: week, ...blank, weights: { dA: 50, dB: 25, dC: 15, dD: 10 }, extra: fourDecks,
+    today: { ...today, newCards: 7, newByDeck: { dA: 5, dB: 2 } },
+  });
+  // Weights changed during the day: A is already past its new share, the rest is trimmed to what is left.
+  scenarios.push({
+    name: "weights-changed-midday", prefs: week, ...blank, weights: { dA: 10, dB: 40, dC: 40, dD: 10 }, extra: fourDecks,
+    today: { ...today, newCards: 6, newByDeck: { dA: 6 } },
+  });
+  // Few words a day, many decks: each deck above 0% still gets one.
+  scenarios.push({ name: "weights-at-least-one", prefs: { ...week, newPerDay: 4 }, ...blank, weights: { dA: 70, dB: 20, dC: 6, dD: 4 }, extra: fourDecks });
+  // A near-synonym of an earlier pick holds a word back, so the gap is filled from the other decks.
+  scenarios.push({
+    name: "weights-synonym-gap", prefs: { ...week, newPerDay: 4 }, ...blank, weights: { dA: 50, dB: 50 }, extra: [...deckCards("dA", 5, 100), ...deckCards("dB", 2, 50)],
+    meanings: { "dA-n0": ["thuyết phục"], "dB-n0": ["thuyết phục"], "dB-n1": ["thuyết phục"] },
+  });
   return scenarios.map((s) => {
-    const all = [...cards, ...(s.extra ?? [])];
+    const all = [...(s.only ? [] : cards), ...(s.extra ?? [])];
     const meanings = s.meanings ? new Map(Object.entries(s.meanings)) : undefined;
-    const q = buildQueue({ cards: all, eligible, today: s.today, prefs: s.prefs, now: T0, deckId: s.deckId, buried: new Set(s.buried), learnAheadMs: s.learnAheadMs, meanings, noteIds: s.noteIds ? new Set(s.noteIds) : undefined, reviewAheadDays: s.reviewAheadDays });
+    const weights = s.weights ? new Map(Object.entries(s.weights)) : undefined;
+    const q = buildQueue({ cards: all, eligible, today: s.today, prefs: s.prefs, now: T0, deckId: s.deckId, buried: new Set(s.buried), learnAheadMs: s.learnAheadMs, meanings, deckWeights: weights, noteIds: s.noteIds ? new Set(s.noteIds) : undefined, reviewAheadDays: s.reviewAheadDays });
     // Walk the session the way the UI does: pick, drop the picked card from its list, repeat.
     const order: string[] = [];
     const sess = { shown: 0, shownNew: 0 };
@@ -275,7 +303,7 @@ function queueVectors() {
         if (k >= 0) list.splice(k, 1);
       }
     }
-    return { name: s.name, input: { prefs: normalizePrefs(s.prefs), today: s.today ?? null, deckId: s.deckId, buried: s.buried, learnAheadMs: s.learnAheadMs, now: T0, meanings: s.meanings ?? null, noteIds: s.noteIds ?? null, reviewAheadDays: s.reviewAheadDays ?? 0 }, counts: q.counts, learning: q.learning.map((c) => c.id), review: q.review.map((c) => c.id), newCards: q.newCards.map((c) => c.id), order, cards: all };
+    return { name: s.name, input: { prefs: normalizePrefs(s.prefs), today: s.today ?? null, deckId: s.deckId, buried: s.buried, learnAheadMs: s.learnAheadMs, now: T0, meanings: s.meanings ?? null, deckWeights: s.weights ?? null, noteIds: s.noteIds ?? null, reviewAheadDays: s.reviewAheadDays ?? 0 }, counts: q.counts, learning: q.learning.map((c) => c.id), review: q.review.map((c) => c.id), newCards: q.newCards.map((c) => c.id), order, cards: all };
   });
 }
 

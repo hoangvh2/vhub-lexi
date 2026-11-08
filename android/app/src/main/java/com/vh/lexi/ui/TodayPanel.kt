@@ -109,7 +109,7 @@ data class LessonProgress(val tag: String, val started: Int, val count: Int)
 @Composable
 internal fun TodayPanel(
     cards: List<Card>, notesById: Map<String, Note>, queue: Queue, daily: List<Daily>, dayStartHour: Int, newPerDay: Int, now: Long,
-    lessons: List<LessonProgress>, onStart: () -> Unit, onLesson: (String) -> Unit, onImport: () -> Unit = {},
+    lessons: List<LessonProgress>, onStart: () -> Unit, onLesson: (String) -> Unit, onImport: () -> Unit = {}, newMix: String? = null,
 ) {
     val c = Lexi.colors
     // Cards, not answers: a card answered today and not waiting again is done; one in the queue is left.
@@ -181,6 +181,7 @@ internal fun TodayPanel(
                 },
                 Modifier.padding(horizontal = 4.dp), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = c.muted,
             )
+            if (newMix != null) Text(newMix, Modifier.padding(horizontal = 4.dp).testTag("today-mix"), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = c.accent)
             WeekDots(daily, now, dayStartHour, todayId)
             val label = if (left == 0) "Học thêm hoặc ôn trước" else if (done == 0) "Bắt đầu học" else "Học tiếp"
             PrimaryPill(label, onStart, Modifier.fillMaxWidth().testTag("start-study"), big = true, soft = left == 0)
