@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CardState, dayId, nextDayStart, normalizePrefs, DEFAULT_PREFS, type Card, type Note } from "@shared/model.ts";
 import { type Block, checkTyped, clozeSentence, str, suggestedRating, template, wantedTemplates } from "@shared/notetypes.ts";
 import { answer, formatInterval, makeScheduler, newCard, preview } from "../src/lib/scheduler.ts";
-import { answeredToday, buildQueue, dueWithin, pickNext, tagCounts } from "../src/lib/queue.ts";
+import { answeredToday, awaitingRecognize, buildQueue, dueWithin, pickNext, tagCounts } from "../src/lib/queue.ts";
 import { cardCounts, forecast, heatmap, level, retention, streak } from "../src/lib/stats.ts";
 
 const T0 = new Date(2026, 0, 15, 10, 0, 0).getTime();
@@ -114,6 +114,37 @@ describe("queue", () => {
     expect(tomorrow.review.map((c) => c.id)).toEqual(["w.cloze"]);
     expect(buildQueue({ ...base, cards: [after], now: after.due - 2 * DAY }).review).toEqual([]);
     expect(buildQueue({ ...base, cards: [after], now: after.due + 1 }).review.map((c) => c.id)).toEqual(["w.recognize"]);
+  });
+  it("a new word is typed only once recognised: its typing cards wait for recognize to reach Review, and for the next study day", () => {
+    const s = makeScheduler(0.9);
+    const rec = mk("w.recognize", "w");
+    const clz = mk("w.cloze", "w", { template: "cloze" });
+    const rcl = mk("w.recall", "w", { template: "recall" });
+    const other = mk("o.recognize", "o", { createdAt: T0 + 1 });
+    // Only the recognize card is offered, even with nothing buried.
+    expect(buildQueue({ ...base, cards: [clz, rcl, rec, other] }).newCards.map((c) => c.id)).toEqual(["w.recognize", "o.recognize"]);
+    // Answered Good: still in its learning steps. Reopening the study screen (nothing buried) must not offer a typing card.
+    const learning = answer(s, rec, 3, T0);
+    expect(learning.state).not.toBe(CardState.Review);
+    const reopened = buildQueue({ ...base, cards: [learning, clz, rcl, other], now: T0 + 60_000 });
+    expect(reopened.newCards.map((c) => c.id)).toEqual(["o.recognize"]);
+    // Graduated to Review today: the typing cards still wait for the next study day.
+    const graduated = { ...learning, state: CardState.Review, scheduledDays: 2, due: T0 + 2 * DAY, lastReview: T0 + 10 * 60_000 };
+    expect(buildQueue({ ...base, cards: [graduated, clz, rcl], now: T0 + 20 * 60_000 }).newCards).toEqual([]);
+    // Next study day: one typing card (recall first), the other the session after.
+    expect(buildQueue({ ...base, cards: [graduated, clz, rcl], now: nextDayStart(T0, 4) + 60_000 }).newCards.map((c) => c.id)).toEqual(["w.recall"]);
+    // Still learning tomorrow (rated Again, or lapsed into relearning): the word is not recognised yet, typing waits.
+    expect(buildQueue({ ...base, cards: [{ ...learning, lastReview: T0 - DAY }, clz], now: nextDayStart(T0, 4) + 60_000 }).newCards).toEqual([]);
+    const lapsed = { ...graduated, state: CardState.Relearning, due: nextDayStart(T0, 4) + DAY, lastReview: T0 - DAY };
+    expect(buildQueue({ ...base, cards: [lapsed, clz], now: nextDayStart(T0, 4) + 60_000 }).newCards).toEqual([]);
+  });
+  it("typing cards are not held when the note has no live recognize card", () => {
+    const clz = mk("w.cloze", "w", { template: "cloze" });
+    // Recognize suspended, turned off (ineligible), or never made: nothing to wait for.
+    expect(buildQueue({ ...base, cards: [mk("w.recognize", "w", { suspended: true }), clz] }).newCards.map((c) => c.id)).toEqual(["w.cloze"]);
+    expect(buildQueue({ ...base, cards: [mk("w.recognize", "w"), clz], eligible: (c: Card) => c.template !== "recognize" }).newCards.map((c) => c.id)).toEqual(["w.cloze"]);
+    expect(buildQueue({ ...base, cards: [clz] }).newCards.map((c) => c.id)).toEqual(["w.cloze"]);
+    expect(awaitingRecognize([mk("w.recognize", "w"), mk("x.recognize", "x", { state: CardState.Review })], all)).toEqual(new Set(["w"]));
   });
   it("learning cards of a word answered today still come back (short steps are never held)", () => {
     const relearn = mk("w.recognize", "w", { state: CardState.Relearning, due: T0 + 5 * 60_000, lastReview: T0 - 5 * 60_000 });

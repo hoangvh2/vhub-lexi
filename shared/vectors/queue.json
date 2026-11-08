@@ -1846,7 +1846,7 @@
    "reviewAheadDays": 0
   },
   "counts": {
-   "new": 9,
+   "new": 8,
    "learning": 1,
    "review": 3
   },
@@ -1866,8 +1866,7 @@
    "syn-persuade",
    "syn-assure",
    "syn-other",
-   "syn-near-settled",
-   "own-new-sibling"
+   "syn-near-settled"
   ],
   "order": [
    "learn-due",
@@ -1881,8 +1880,7 @@
    "syn-assure",
    "syn-other",
    "rev-later-today",
-   "syn-near-settled",
-   "own-new-sibling"
+   "syn-near-settled"
   ],
   "cards": [
    {
@@ -2701,6 +2699,299 @@
     "reps": 0,
     "lapses": 0,
     "createdAt": 1768465800022,
+    "updatedAt": 1768465800000
+   }
+  ]
+ },
+ {
+  "name": "typing-waits-for-recognize",
+  "input": {
+   "prefs": {
+    "desiredRetention": 0.9,
+    "newPerDay": 10,
+    "maxReviewsPerDay": 200,
+    "templates": {
+     "vocab": [
+      "recognize",
+      "cloze"
+     ],
+     "pattern": [
+      "fill",
+      "rule"
+     ]
+    },
+    "layout": {
+     "showIpa": true,
+     "showPos": true,
+     "showEn": true,
+     "showVi": true,
+     "showExamples": true,
+     "showMnemonic": true
+    },
+    "autoSpeak": "off",
+    "theme": "system",
+    "accent": "teal",
+    "aiEnabled": true,
+    "dayStartHour": 4,
+    "updatedAt": 0
+   },
+   "today": null,
+   "deckId": null,
+   "buried": [],
+   "learnAheadMs": 0,
+   "now": 1768465800000,
+   "meanings": null,
+   "deckWeights": null,
+   "noteIds": null,
+   "reviewAheadDays": 0
+  },
+  "counts": {
+   "new": 4,
+   "learning": 0,
+   "review": 0
+  },
+  "learning": [],
+  "review": [],
+  "newCards": [
+   "t3.recall",
+   "t5.cloze",
+   "t6.cloze",
+   "t7.recognize"
+  ],
+  "order": [
+   "t3.recall",
+   "t5.cloze",
+   "t6.cloze",
+   "t7.recognize"
+  ],
+  "cards": [
+   {
+    "id": "t1.recognize",
+    "noteId": "t1",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 1,
+    "due": 1768473000000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000,
+    "lastReview": 1768293000000
+   },
+   {
+    "id": "t1.cloze",
+    "noteId": "t1",
+    "deckId": "d1",
+    "template": "cloze",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767688200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "t2.recognize",
+    "noteId": "t2",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 2,
+    "due": 1768638600000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 2,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767774600000,
+    "updatedAt": 1768465800000,
+    "lastReview": 1768465200000
+   },
+   {
+    "id": "t2.recall",
+    "noteId": "t2",
+    "deckId": "d1",
+    "template": "recall",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767774600000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "t3.recognize",
+    "noteId": "t3",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 2,
+    "due": 1768638600000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 3,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767861000000,
+    "updatedAt": 1768465800000,
+    "lastReview": 1768379400000
+   },
+   {
+    "id": "t3.listen",
+    "noteId": "t3",
+    "deckId": "d1",
+    "template": "listen",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767861000000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "t3.recall",
+    "noteId": "t3",
+    "deckId": "d1",
+    "template": "recall",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767861000000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "t4.recognize",
+    "noteId": "t4",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 3,
+    "due": 1768473000000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767947400000,
+    "updatedAt": 1768465800000,
+    "lastReview": 1768293000000
+   },
+   {
+    "id": "t4.recall",
+    "noteId": "t4",
+    "deckId": "d1",
+    "template": "recall",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1767947400000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "t5.recognize",
+    "noteId": "t5",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768033800000,
+    "updatedAt": 1768465800000,
+    "suspended": true
+   },
+   {
+    "id": "t5.cloze",
+    "noteId": "t5",
+    "deckId": "d1",
+    "template": "cloze",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768033800000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "t6.cloze",
+    "noteId": "t6",
+    "deckId": "d1",
+    "template": "cloze",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768120200000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "t7.cloze",
+    "noteId": "t7",
+    "deckId": "d1",
+    "template": "cloze",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768206600000,
+    "updatedAt": 1768465800000
+   },
+   {
+    "id": "t7.recognize",
+    "noteId": "t7",
+    "deckId": "d1",
+    "template": "recognize",
+    "state": 0,
+    "due": 1768465800000,
+    "stability": 0,
+    "difficulty": 0,
+    "scheduledDays": 0,
+    "learningSteps": 0,
+    "reps": 0,
+    "lapses": 0,
+    "createdAt": 1768206600000,
     "updatedAt": 1768465800000
    }
   ]

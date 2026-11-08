@@ -112,9 +112,20 @@ fun answeredToday(cards: List<Card>, now: Long, dayStartHour: Int, zone: ZoneId 
     return cards.filter { it.state != CardState.NEW && (it.lastReview ?: Long.MIN_VALUE) >= dayStart }.mapTo(HashSet()) { it.noteId }
 }
 
+/** The template that introduces a word; the note's typing cards wait until it reaches Review (queue.ts INTRO_TEMPLATE). */
+const val INTRO_TEMPLATE = "recognize"
+
+/** Notes whose live (eligible, not suspended) recognize card is not in Review yet (queue.ts awaitingRecognize). */
+fun awaitingRecognize(cards: List<Card>, eligible: (Card) -> Boolean): Set<Id> =
+    cards.filter { it.template == INTRO_TEMPLATE && !it.suspended && it.state != CardState.REVIEW && eligible(it) }.mapTo(HashSet()) { it.noteId }
+
+/** A new card that may be introduced now (queue.ts introducible). */
+fun introducible(c: Card, waiting: Set<Id>): Boolean = c.template == INTRO_TEMPLATE || c.noteId !in waiting
+
 fun buildQueue(i: QueueInput): Queue {
     val cutoff = nextDayStart(i.now, i.prefs.dayStartHour, i.zone) + i.reviewAheadDays * Fsrs.DAY_MS
     val doneToday = answeredToday(i.cards, i.now, i.prefs.dayStartHour, i.zone)
+    val waiting = awaitingRecognize(i.cards, i.eligible)
     val learning = ArrayList<Card>()
     val review = ArrayList<Card>()
     val fresh = ArrayList<Card>()
@@ -125,7 +136,7 @@ fun buildQueue(i: QueueInput): Queue {
         when (c.state) {
             CardState.LEARNING, CardState.RELEARNING -> if (c.due <= i.now + i.learnAheadMs) learning += c
             CardState.REVIEW -> if (c.due < cutoff && c.noteId !in i.buried && c.noteId !in doneToday) review += c
-            else -> if (c.noteId !in i.buried) fresh += c
+            else -> if (c.noteId !in i.buried && c.noteId !in doneToday && introducible(c, waiting)) fresh += c
         }
     }
     learning.sortBy { it.due }

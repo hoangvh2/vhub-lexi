@@ -3,7 +3,7 @@ import { CardState, type Id } from "@shared/model.ts";
 import { setDeckWeights } from "../data/actions.ts";
 import { cards, decks, notes, prefs } from "../data/state.ts";
 import { percents, rankWeights, setPercent, shareMode, type ShareMode } from "../lib/deckshare.ts";
-import { dailyShares } from "../lib/queue.ts";
+import { awaitingRecognize, dailyShares, introducible } from "../lib/queue.ts";
 import { eligibility } from "../lib/select.ts";
 import { useStore } from "../lib/store.ts";
 
@@ -27,9 +27,10 @@ export function DeckShare() {
 
   // Words each deck still has (notes with a new card), so the preview shows what a full day would really give.
   const eligible = eligibility(allNotes);
+  const waiting = awaitingRecognize(allCards, eligible);
   const left = new Map<Id, Set<Id>>();
   for (const c of allCards) {
-    if (c.state !== CardState.New || c.suspended || !eligible(c)) continue;
+    if (c.state !== CardState.New || c.suspended || !eligible(c) || !introducible(c, waiting)) continue;
     const s = left.get(c.deckId) ?? new Set<Id>();
     s.add(c.noteId);
     left.set(c.deckId, s);

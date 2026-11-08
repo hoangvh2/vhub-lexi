@@ -9,6 +9,12 @@
  * so you never see "word → meaning" and "cloze of the same word" back to back. Review cards of a note answered
  * today are also held until the next study day (Anki's "bury review siblings"): the session-only set is lost when
  * the screen is left, and the same word came back as "Ôn" right after the learner had rated it Hard for 27 days.
+ * New siblings of a note answered today wait for the next study day too, so leaving and reopening the study screen
+ * never serves the cloze of a word met minutes ago as "Mới".
+ *
+ * A word is typed only once it is recognised: while a note's "recognize" card is not yet in Review (new, still in its
+ * learning steps, or relearning after a lapse), its other new cards (recall, cloze, listen: all typing cards) wait.
+ * Notes without a live recognize card (other note types, or the learner turned that template off) are not held.
  *
  * Custom study (Anki's "Custom study session", kept to what a vocabulary learner uses): `noteIds` limits the
  * session to some notes (a lesson tag) and `reviewAheadDays` also takes review cards due in the next N days.
@@ -131,9 +137,23 @@ function distinctNotes(cards: readonly Card[] | undefined): number {
   return new Set((cards ?? []).map((c) => c.noteId)).size;
 }
 
+/** The template that introduces a word; the note's typing cards wait until it reaches Review (see awaitingRecognize). */
+export const INTRO_TEMPLATE = "recognize";
+
+/** Notes whose live (eligible, not suspended) "recognize" card is not in Review yet: their other new cards wait. */
+export function awaitingRecognize(cards: readonly Card[], eligible: (c: Card) => boolean): Set<Id> {
+  const out = new Set<Id>();
+  for (const c of cards) if (c.template === INTRO_TEMPLATE && !c.suspended && c.state !== CardState.Review && eligible(c)) out.add(c.noteId);
+  return out;
+}
+
+/** A new card that may be introduced now: not a typing card of a word whose recognize card is still settling. */
+export const introducible = (c: Card, waiting: ReadonlySet<Id>) => c.template === INTRO_TEMPLATE || !waiting.has(c.noteId);
+
 export function buildQueue(i: QueueInput): Queue {
   const cutoff = nextDayStart(i.now, i.prefs.dayStartHour) + (i.reviewAheadDays ?? 0) * 86_400_000;
   const doneToday = answeredToday(i.cards, i.now, i.prefs.dayStartHour);
+  const waiting = awaitingRecognize(i.cards, i.eligible);
   const learning: Card[] = [];
   const review: Card[] = [];
   const fresh: Card[] = [];
@@ -145,7 +165,7 @@ export function buildQueue(i: QueueInput): Queue {
       if (c.due <= i.now + (i.learnAheadMs ?? 0)) learning.push(c);
     } else if (c.state === CardState.Review) {
       if (c.due < cutoff && !i.buried.has(c.noteId) && !doneToday.has(c.noteId)) review.push(c);
-    } else if (!i.buried.has(c.noteId)) {
+    } else if (!i.buried.has(c.noteId) && !doneToday.has(c.noteId) && introducible(c, waiting)) {
       fresh.push(c);
     }
   }
