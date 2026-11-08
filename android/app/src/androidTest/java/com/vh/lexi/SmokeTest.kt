@@ -34,6 +34,10 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.ViewCompat
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.uiautomator.UiDevice
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.ui.MainActivity
@@ -277,13 +281,41 @@ class SmokeTest {
                 ),
             )
         }
+        // A long deck name keeps the deck/sort row one line high, with its edit button on screen.
+        val longDeck = "600 essential words for the TOEIC - Vietnamese"
+        runBlocking { app.data.createDeck(longDeck) }
         rule.onNodeWithTag("nav-library").performClick()
+        rule.onNodeWithText("Tất cả bộ thẻ").performClick()
+        rule.onNodeWithText(longDeck).performClick()
+        waitFor("deck-picked") { rule.onAllNodesWithTagCount("deck-edit") > 0 }
+        rule.onNodeWithTag("deck-edit").assertIsDisplayed()
+        val rowHeight = with(rule.density) { rule.onNodeWithTag("lib-deck-row").fetchSemanticsNode().size.height.toDp() }
+        shot("07j-library-long-deck")
+        assertTrue("deck row is $rowHeight high", rowHeight < 64.dp)
+        // The header title stays on one line next to the count and buttons (it used to wrap a letter per line at 320dp).
+        val titleHeight = with(rule.density) { rule.onNodeWithTag("screen-title").fetchSemanticsNode().size.height.toDp() }
+        assertTrue("library title is $titleHeight high", titleHeight < 48.dp)
+        val titleLayout = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        rule.onNodeWithTag("screen-title").performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(titleLayout) }
+        assertTrue("library title is cut off", !titleLayout.single().hasVisualOverflow)
+        rule.onNodeWithTag("lib-new-deck").assertIsDisplayed()
+        rule.onNodeWithText(longDeck, substring = true).performClick()
+        rule.onNodeWithText("Tất cả bộ thẻ").performClick()
         waitFor("trap-row") { rule.onAllNodesWithTextCount(title) > 0 }
         rule.onNodeWithText(title).performClick()
         waitFor("trap-view") { rule.onAllNodesWithTagCount("note-view") > 0 }
         waitFor("trap-wrong") { rule.onAllNodesWithTagCount("example-wrong", unmerged = true) == 2 }
         shot("07g-note-view-trap")
-        rule.onNodeWithTag("view-schedule").performScrollTo()
+        // The end of a long note scrolls fully into view above the navigation bar (it used to stay under it).
+        val lastCard = rule.onAllNodes(hasTestTag("view-card")).fetchSemanticsNodes().size - 1
+        rule.onAllNodes(hasTestTag("view-card"))[lastCard].performScrollTo()
+        rule.onNodeWithTag("view-body").performTouchInput { swipeUp() }
+        rule.waitForIdle()
+        val end = rule.onAllNodes(hasTestTag("view-card"))[lastCard].fetchSemanticsNode()
+        val endBottom = end.positionOnScreen.y + end.size.height
+        val decor = rule.activity.window.decorView
+        val navTop = decor.height - (ViewCompat.getRootWindowInsets(decor)?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0)
+        assertTrue("last schedule row ends at $endBottom, navigation bar starts at $navTop", endBottom <= navTop)
         shot("07h-note-view-trap-bottom")
         // The switch scrolled out of sight with the schedule: bring it back before tapping it.
         rule.onNodeWithTag("view-cover").performScrollTo().performClick()

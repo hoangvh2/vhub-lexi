@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -40,6 +41,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -152,25 +155,37 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         ScreenHeader("Thư viện") {
             Pill("${notes.count { isMaterial(it) }} từ")
-            TextButton(onClick = { selecting = !selecting; selected = emptySet() }, Modifier.testTag("lib-select")) { Text(if (selecting) "Xong" else "Chọn") }
-            OutlinedButton(onClick = { deckDialog = null to "" }) { Text("+ Bộ thẻ", fontSize = 13.sp) }
+            // Compact buttons, and an icon instead of "+ Bộ thẻ": otherwise "Thư viện" has no room on a 320dp phone.
+            TextButton(
+                onClick = { selecting = !selecting; selected = emptySet() }, Modifier.defaultMinSize(minWidth = 1.dp).testTag("lib-select"),
+                contentPadding = PaddingValues(horizontal = 8.dp),
+            ) { Text(if (selecting) "Xong" else "Chọn", maxLines = 1, softWrap = false) }
+            androidx.compose.material3.IconButton(onClick = { deckDialog = null to "" }, modifier = Modifier.size(40.dp).testTag("lib-new-deck")) {
+                Icon(Icons.Filled.CreateNewFolder, contentDescription = "Thêm bộ thẻ")
+            }
         }
         OutlinedTextField(value = q, onValueChange = { q = it }, singleLine = true, placeholder = { Text("Tìm từ, nghĩa, ví dụ…") }, modifier = Modifier.fillMaxWidth())
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.foundation.layout.Box {
-                OutlinedButton(onClick = { deckMenu = true }) { Text(decks.firstOrNull { it.id == deck }?.name ?: "Tất cả bộ thẻ", maxLines = 1) }
+        // A long deck name must shorten itself: it used to squeeze the sort button onto two lines and "Sửa bộ thẻ"
+        // to zero width, where its text wrapped one letter per line and left a tall empty band above the filters.
+        Row(Modifier.fillMaxWidth().testTag("lib-deck-row"), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.layout.Box(Modifier.weight(1f, fill = false)) {
+                OutlinedButton(onClick = { deckMenu = true }) {
+                    Text(decks.firstOrNull { it.id == deck }?.name ?: "Tất cả bộ thẻ", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
                 DropdownMenu(expanded = deckMenu, onDismissRequest = { deckMenu = false }) {
                     DropdownMenuItem(text = { Text("Tất cả bộ thẻ") }, onClick = { deck = null; deckMenu = false })
                     for (d in decks) DropdownMenuItem(text = { Text(d.name) }, onClick = { deck = d.id; deckMenu = false })
                 }
             }
             androidx.compose.foundation.layout.Box {
-                OutlinedButton(onClick = { sortMenu = true }) { Text(sort.label) }
+                OutlinedButton(onClick = { sortMenu = true }) { Text(sort.label, maxLines = 1, softWrap = false) }
                 DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
                     for (s in Sort.entries) DropdownMenuItem(text = { Text(s.label) }, onClick = { sort = s; sortMenu = false })
                 }
             }
-            if (deck != null) TextButton(onClick = { deckDialog = deck to (decks.firstOrNull { it.id == deck }?.name ?: "") }) { Text("Sửa bộ thẻ") }
+            if (deck != null) androidx.compose.material3.IconButton(
+                onClick = { deckDialog = deck to (decks.firstOrNull { it.id == deck }?.name ?: "") }, modifier = Modifier.testTag("deck-edit"),
+            ) { Icon(Icons.Filled.Edit, contentDescription = "Sửa bộ thẻ") }
         }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (f in Filter.entries) if ((f != Filter.NO_AI && f != Filter.NO_PHRASES) || aiAvailable) FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(f.label) })

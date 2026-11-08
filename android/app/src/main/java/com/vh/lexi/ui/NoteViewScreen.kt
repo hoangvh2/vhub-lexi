@@ -1,5 +1,7 @@
 package com.vh.lexi.ui
 
+import android.os.Build
+import android.view.ViewGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -10,6 +12,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -32,6 +36,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,11 +83,30 @@ fun NoteViewScreen(
     val sorted = cards.sortedBy { order.indexOf(it.template) }
     val scroll = rememberScrollState()
     LaunchedEffect(note.id) { scroll.scrollTo(0) }
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    // Full screen and edge to edge, insets handled here: with the platform's own fitting, Android 15 laid the dialog
+    // under the navigation bar and the end of a long note could not be scrolled into view.
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        val view = LocalView.current
+        val dark = c.dark
+        SideEffect {
+            (view.parent as? DialogWindowProvider)?.window?.let { w ->
+                // decorFitsSystemWindows alone left the window below the status bar but a full screen tall, so its
+                // bottom hung under the navigation bar with no inset reported. Cover the whole screen, bars included,
+                // and let the paddings below keep the content clear of them.
+                WindowCompat.setDecorFitsSystemWindows(w, false)
+                w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) w.attributes = w.attributes.apply { fitInsetsTypes = 0 }
+                w.setDimAmount(0f)
+                WindowCompat.getInsetsController(w, w.decorView).run {
+                    isAppearanceLightStatusBars = !dark
+                    isAppearanceLightNavigationBars = !dark
+                }
+            }
+        }
         Surface(Modifier.fillMaxSize().testTag("note-view"), color = c.bg) {
             Column(Modifier.fillMaxSize()) {
                 Row(
-                    Modifier.fillMaxWidth().background(c.surface).padding(horizontal = 10.dp, vertical = 8.dp),
+                    Modifier.fillMaxWidth().background(c.surface).statusBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     RoundIcon(Icons.Filled.Close, "Đóng", "view-close", enabled = true, onClick = onClose)
@@ -97,7 +124,7 @@ fun NoteViewScreen(
                 }
                 HorizontalDivider(color = c.line)
                 Column(
-                    Modifier.weight(1f).verticalScroll(scroll).padding(horizontal = 16.dp, vertical = 16.dp).testTag("view-body"),
+                    Modifier.weight(1f).verticalScroll(scroll).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 16.dp).testTag("view-body"),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Column(
