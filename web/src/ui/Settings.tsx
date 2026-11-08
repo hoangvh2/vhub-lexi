@@ -12,6 +12,7 @@ import { dictionary } from "../lib/dict.ts";
 import { useStore } from "../lib/store.ts";
 import { rateTraces, traceReport } from "../lib/perf.ts";
 import { BUILD } from "../build.ts";
+import { DeckShare } from "./DeckShare.tsx";
 import { Icon, confirmDialog, syncLabel, toast } from "./common.tsx";
 
 /** Stored keys are kept; the colours are the ones styles.css draws (teal is the default jade, violet the earlier lavender). */
@@ -127,6 +128,8 @@ export function Settings({ email }: { email: string | null }) {
           </div>
         </div>
       </section>
+
+      <DeckShare />
 
       <FsrsOptimizer />
 

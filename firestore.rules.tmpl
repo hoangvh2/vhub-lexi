@@ -45,10 +45,11 @@ service cloud.firestore {
     // ------------------------------------------------------------ decks
     function validDeck(d, id) {
       return d.keys().hasAll(['id', 'name', 'createdAt', 'updatedAt'])
-        && d.keys().hasOnly(['id', 'name', 'newPerDay', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['id', 'name', 'newPerDay', 'newWeight', 'createdAt', 'updatedAt'])
         && d.id == id
         && d.name is string && d.name.size() > 0 && d.name.size() <= 60
         && (!('newPerDay' in d) || intIn(d.newPerDay, 0, 200))
+        && (!('newWeight' in d) || intIn(d.newWeight, 0, 100))
         && d.createdAt is int && d.updatedAt is int;
     }
 
@@ -153,8 +154,9 @@ service cloud.firestore {
     // ------------------------------------------------------------ per-day counters (atomic increments)
     function validDaily(d, id) {
       return d.keys().hasAll(['id'])
-        && d.keys().hasOnly(['id', 'newCards', 'reviews', 'again', 'hard', 'good', 'easy', 'ms', 'updatedAt'])
+        && d.keys().hasOnly(['id', 'newCards', 'newByDeck', 'reviews', 'again', 'hard', 'good', 'easy', 'ms', 'updatedAt'])
         && d.id == id && id.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && (!('newByDeck' in d) || (d.newByDeck is map && d.newByDeck.size() <= 200))
         && optInt(d, 'newCards') && optInt(d, 'reviews') && optInt(d, 'again') && optInt(d, 'hard')
         && optInt(d, 'good') && optInt(d, 'easy') && optInt(d, 'ms') && optInt(d, 'updatedAt');
     }

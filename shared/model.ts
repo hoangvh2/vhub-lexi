@@ -28,6 +28,8 @@ export interface Deck {
   name: string;
   /** Overrides Prefs.newPerDay for this deck when set. */
   newPerDay?: number;
+  /** Share of the daily new words this deck gets, relative to the other decks (0 = paused, absent = 1). Integer 0-100. */
+  newWeight?: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -94,6 +96,8 @@ export interface Daily {
   id: string;
   /** Cards seen for the first time. */
   newCards: number;
+  /** The same count split by deck (absent on days recorded before decks shared the daily new words by weight). */
+  newByDeck?: Record<Id, number>;
   /** Answers to cards that were already Learning/Review/Relearning. */
   reviews: number;
   /** Answers by rating. */
@@ -110,6 +114,8 @@ export interface Daily {
 export interface DailyDelta {
   id: string;
   newCards: 0 | 1;
+  /** Deck of the answered card; with `newCards` it feeds Daily.newByDeck. */
+  deckId?: Id;
   reviews: 0 | 1;
   rating: Rating;
   ms: number;

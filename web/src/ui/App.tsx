@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from "preact/hooks";
 import { meaningsByNote } from "@shared/confusables.ts";
 import { dayId } from "@shared/model.ts";
-import { cards, daily, notes, prefs, sync, warnings } from "../data/state.ts";
-import { buildQueue } from "../lib/queue.ts";
+import { cards, daily, decks, notes, prefs, sync, warnings } from "../data/state.ts";
+import { buildQueue, deckWeights } from "../lib/queue.ts";
 import { eligibility } from "../lib/select.ts";
 import { useStore } from "../lib/store.ts";
 import { Add } from "./Add.tsx";
@@ -28,6 +28,7 @@ export function App({ email }: { email: string | null }) {
   const s = useStore(sync);
   const allCards = useStore(cards);
   const allNotes = useStore(notes);
+  const allDecks = useStore(decks);
   const dailies = useStore(daily);
   const warning = useStore(warnings);
 
@@ -49,10 +50,10 @@ export function App({ email }: { email: string | null }) {
     const now = Date.now();
     const q = buildQueue({
       cards: allCards, eligible: eligibility(allNotes), today: dailies.find((d) => d.id === dayId(now, p.dayStartHour)), prefs: p, now, deckId: null, buried: new Set(),
-      meanings: meaningsByNote(allNotes),
+      meanings: meaningsByNote(allNotes), deckWeights: deckWeights(allDecks),
     });
     return q.counts.new + q.counts.learning + q.counts.review;
-  }, [allCards, allNotes, dailies, p]);
+  }, [allCards, allNotes, allDecks, dailies, p]);
 
   const [path, query = ""] = r.split("?");
   const [, section, arg] = path.split("/");

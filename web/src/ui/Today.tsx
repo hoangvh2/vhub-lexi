@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { meaningsByNote } from "@shared/confusables.ts";
 import { CardState, dayId, nextDayStart } from "@shared/model.ts";
 import { isMaterial, noteType } from "@shared/notetypes.ts";
-import { cards, daily, loaded, notes, prefs } from "../data/state.ts";
+import { cards, daily, decks, loaded, notes, prefs } from "../data/state.ts";
 import { isLesson, lessonName } from "../lib/lessons.ts";
-import { buildQueue, tagCounts } from "../lib/queue.ts";
+import { buildQueue, deckWeights, tagCounts } from "../lib/queue.ts";
 import { eligibility } from "../lib/select.ts";
 import { enter, orb } from "../lib/motion.ts";
 import { forecast, heatmap, level, streak } from "../lib/stats.ts";
@@ -29,6 +29,7 @@ function greeting(hour: number): string {
 export function Today() {
   const allCards = useStore(cards);
   const allNotes = useStore(notes);
+  const allDecks = useStore(decks);
   const dailies = useStore(daily);
   const p = useStore(prefs);
   const ready = useStore(loaded);
@@ -42,8 +43,8 @@ export function Today() {
   }, [ready, hasNotes]);
 
   const queue = useMemo(
-    () => buildQueue({ cards: allCards, eligible: eligibility(allNotes), today: dailies.find((d) => d.id === dayId(now, p.dayStartHour)), prefs: p, now, deckId: null, buried: new Set(), meanings: meaningsByNote(allNotes) }),
-    [allCards, allNotes, dailies, p],
+    () => buildQueue({ cards: allCards, eligible: eligibility(allNotes), today: dailies.find((d) => d.id === dayId(now, p.dayStartHour)), prefs: p, now, deckId: null, buried: new Set(), meanings: meaningsByNote(allNotes), deckWeights: deckWeights(allDecks) }),
+    [allCards, allNotes, allDecks, dailies, p],
   );
   const lessons = useMemo(() => {
     const studied = new Set(allCards.filter((c) => c.state !== CardState.New).map((c) => c.noteId));
@@ -95,6 +96,12 @@ export function Today() {
   const st = streak(dailies, now, p.dayStartHour);
   const today = dailies.find((d) => d.id === dayId(now, p.dayStartHour));
   const newToday = today?.newCards ?? 0;
+  // New words per deck today: what was already learned plus what is still waiting in the queue.
+  const mix = useMemo(() => {
+    const n = new Map<string, number>(Object.entries(today?.newByDeck ?? {}));
+    for (const c of queue.newCards) n.set(c.deckId, (n.get(c.deckId) ?? 0) + 1);
+    return allDecks.filter((d) => (n.get(d.id) ?? 0) > 0).map((d) => ({ id: d.id, name: d.name, n: n.get(d.id) ?? 0 })).sort((a, b) => b.n - a.n);
+  }, [today, queue, allDecks]);
   const tomorrow = forecast(allCards, now, p.dayStartHour, 2)[1] ?? 0;
   const active = new Set(dailies.filter((d) => d.newCards + d.reviews > 0).map((d) => d.id));
   // Monday of this study week, then seven days.
@@ -179,6 +186,13 @@ export function Today() {
           </div>
         </div>
       </section>
+
+      {mix.length > 1 && (
+        <section class="newmix" aria-label="Từ mới hôm nay theo bộ" data-testid="today-mix" data-in>
+          <span class="muted">Từ mới hôm nay</span>
+          <span class="chips">{mix.map((m) => <span key={m.id} class="chip mix">{m.name} <b>{m.n}</b></span>)}</span>
+        </section>
+      )}
 
       <TargetPanel />
 

@@ -38,12 +38,13 @@ private fun Doc.strings(k: String): List<String> = (this[k] as? List<*>)?.filter
 fun Deck.toDoc(): Doc = buildMap {
     put("id", id); put("name", name)
     newPerDay?.let { put("newPerDay", it.toLong()) }
+    newWeight?.let { put("newWeight", it.toLong()) }
     put("createdAt", createdAt); put("updatedAt", updatedAt)
 }
 
 fun deckFromDoc(d: Doc) = Deck(
     id = d.s("id") ?: "", name = d.s("name") ?: "", newPerDay = d.l("newPerDay")?.toInt(),
-    createdAt = d.l("createdAt") ?: 0, updatedAt = d.l("updatedAt") ?: 0,
+    createdAt = d.l("createdAt") ?: 0, updatedAt = d.l("updatedAt") ?: 0, newWeight = d.l("newWeight")?.toInt(),
 )
 
 fun Note.toDoc(): Doc = buildMap {
@@ -101,13 +102,16 @@ fun reviewFromDoc(d: Doc) = ReviewLog(
     hint = d.l("hint")?.toInt() ?: 0,
 )
 
-fun Daily.toDoc(): Doc = mapOf(
-    "id" to id, "newCards" to newCards, "reviews" to reviews, "again" to again, "hard" to hard, "good" to good, "easy" to easy, "ms" to ms, "updatedAt" to updatedAt,
-)
+fun Daily.toDoc(): Doc = buildMap {
+    put("id", id); put("newCards", newCards)
+    if (newByDeck.isNotEmpty()) put("newByDeck", newByDeck)
+    put("reviews", reviews); put("again", again); put("hard", hard); put("good", good); put("easy", easy); put("ms", ms); put("updatedAt", updatedAt)
+}
 
 fun dailyFromDoc(d: Doc) = Daily(
     id = d.s("id") ?: "", newCards = d.l("newCards") ?: 0, reviews = d.l("reviews") ?: 0, again = d.l("again") ?: 0, hard = d.l("hard") ?: 0,
     good = d.l("good") ?: 0, easy = d.l("easy") ?: 0, ms = d.l("ms") ?: 0, updatedAt = d.l("updatedAt") ?: 0,
+    newByDeck = (d["newByDeck"] as? Map<*, *>)?.entries?.mapNotNull { (k, v) -> (k as? String)?.let { it to ((v as? Number)?.toLong() ?: 0L) } }?.toMap() ?: emptyMap(),
 )
 
 fun Prefs.toDoc(): Doc = buildMap {

@@ -26,7 +26,11 @@ sealed interface FieldValue {
 fun FieldValue?.str(): String = (this as? FieldValue.Text)?.value?.trim() ?: ""
 fun FieldValue?.items(): List<String> = (this as? FieldValue.Items)?.value?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
 
-data class Deck(val id: Id, val name: String, val newPerDay: Int? = null, val createdAt: Long, val updatedAt: Long)
+data class Deck(
+    val id: Id, val name: String, val newPerDay: Int? = null, val createdAt: Long, val updatedAt: Long,
+    /** Share of the daily new words this deck gets, relative to the other decks (0 = paused, null = 1). Whole number 0-100. */
+    val newWeight: Int? = null,
+)
 
 data class Note(
     val id: Id,
@@ -79,6 +83,8 @@ data class ReviewLog(
 data class Daily(
     val id: String,
     val newCards: Long = 0,
+    /** [newCards] split by deck (empty on days recorded before decks shared the daily new words by weight). */
+    val newByDeck: Map<String, Long> = emptyMap(),
     val reviews: Long = 0,
     val again: Long = 0,
     val hard: Long = 0,
@@ -89,12 +95,14 @@ data class Daily(
 )
 
 /** What one answer adds to a [Daily]. */
-data class DailyDelta(val id: String, val newCards: Int, val reviews: Int, val rating: Int, val ms: Long)
+/** [deckId] is the answered card's deck; with [newCards] it feeds [Daily.newByDeck]. */
+data class DailyDelta(val id: String, val newCards: Int, val reviews: Int, val rating: Int, val ms: Long, val deckId: String? = null)
 
 fun Daily.apply(d: DailyDelta, sign: Int, now: Long): Daily {
     fun add(v: Long, n: Long) = maxOf(0L, v + sign * n)
     return copy(
         newCards = add(newCards, d.newCards.toLong()),
+        newByDeck = if (d.newCards != 0 && d.deckId != null) newByDeck + (d.deckId to add(newByDeck[d.deckId] ?: 0L, d.newCards.toLong())) else newByDeck,
         reviews = add(reviews, d.reviews.toLong()),
         again = if (d.rating == 1) add(again, 1) else again,
         hard = if (d.rating == 2) add(hard, 1) else hard,

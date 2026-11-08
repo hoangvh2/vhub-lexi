@@ -175,6 +175,7 @@ export class CloudRepo implements Repo {
       {
         id: d.id,
         newCards: inc(sign * d.newCards),
+        ...(d.newCards && d.deckId ? { newByDeck: { [d.deckId]: inc(sign * d.newCards) } } : {}),
         reviews: inc(sign * d.reviews),
         [RATING_FIELD[d.rating]]: inc(sign),
         ms: inc(sign * d.ms),

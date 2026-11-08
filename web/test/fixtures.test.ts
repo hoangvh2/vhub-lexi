@@ -36,10 +36,10 @@ async function build() {
     id: reviewId(fresh.id, T), cardId: fresh.id, noteId: "note1", deckId: "deck1", rating: 3, state: 0,
     stability: learning.stability, difficulty: learning.difficulty, scheduledDays: learning.scheduledDays, reviewedAt: T, durationMs: 4200, device: "web",
   };
-  const delta: DailyDelta = { id: dayId(T, 4), newCards: 1, reviews: 0, rating: 3, ms: 4200 };
+  const delta: DailyDelta = { id: dayId(T, 4), newCards: 1, deckId: "deck1", reviews: 0, rating: 3, ms: 4200 };
   const daily: Daily = applyDelta(undefined, delta, 1, T);
   return {
-    deck: { id: "deck1", name: "Mặc định", createdAt: T, updatedAt: T },
+    deck: { id: "deck1", name: "Mặc định", newWeight: 50, createdAt: T, updatedAt: T },
     note,
     cards: { fresh, learning, review, lapsed, suspended },
     review: log,

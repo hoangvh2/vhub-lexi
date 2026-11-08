@@ -149,14 +149,13 @@ class CloudSync(
         // Increments, not absolute values: two devices working the same day add up instead of overwriting.
         fun inc(n: Long) = FieldValue.increment(n)
         val ratingField = when (delta.rating) { 1 -> "again"; 2 -> "hard"; 3 -> "good"; else -> "easy" }
-        set(
-            col(Col.DAILY).document(delta.id),
-            mapOf(
-                "id" to delta.id, "newCards" to inc(sign * delta.newCards.toLong()), "reviews" to inc(sign * delta.reviews.toLong()),
-                ratingField to inc(sign.toLong()), "ms" to inc(sign * delta.ms), "updatedAt" to now,
-            ),
-            SetOptions.merge(),
+        val fields = mutableMapOf<String, Any>(
+            "id" to delta.id, "newCards" to inc(sign * delta.newCards.toLong()), "reviews" to inc(sign * delta.reviews.toLong()),
+            ratingField to inc(sign.toLong()), "ms" to inc(sign * delta.ms), "updatedAt" to now,
         )
+        // The same count split by deck (the daily new words are shared between decks by weight).
+        if (delta.newCards != 0 && delta.deckId != null) fields["newByDeck"] = mapOf(delta.deckId to inc(sign * delta.newCards.toLong()))
+        set(col(Col.DAILY).document(delta.id), fields, SetOptions.merge())
     }
 
     fun commitReview(card: Card, log: ReviewLog, delta: DailyDelta) {

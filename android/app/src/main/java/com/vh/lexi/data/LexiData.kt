@@ -162,6 +162,16 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
         put(Col.DECKS, d.copy(name = name.trim().take(60).ifEmpty { d.name }, updatedAt = System.currentTimeMillis()).toDoc())
     }
 
+    /** Saves each deck's share of the daily new words ([Deck.newWeight]); null removes it, which means an equal share. */
+    suspend fun setDeckWeights(weights: Map<Id, Int?>) {
+        val now = System.currentTimeMillis()
+        for (d in decks.value) {
+            if (!weights.containsKey(d.id)) continue
+            val w = weights[d.id]?.coerceIn(0, 100)
+            if (w != d.newWeight) put(Col.DECKS, d.copy(newWeight = w, updatedAt = now).toDoc())
+        }
+    }
+
     /** Deletes a deck with its notes and cards. Callers must have confirmed. */
     suspend fun deleteDeckAndContents(deckId: Id) {
         for (n in notes.value.filter { it.deckId == deckId }) removeNote(n)
@@ -269,7 +279,7 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
             hint = hint.coerceIn(0, 3),
         )
         val wasNew = card.state == CardState.NEW
-        val delta = DailyDelta(dayId(now, p.dayStartHour), if (wasNew) 1 else 0, if (wasNew) 0 else 1, rating, dur)
+        val delta = DailyDelta(dayId(now, p.dayStartHour), if (wasNew) 1 else 0, if (wasNew) 0 else 1, rating, dur, if (wasNew) card.deckId else null)
         db.withTransaction {
             val day = (dao.get(Col.DAILY, delta.id)?.let { dailyFromDoc(parseDoc(it.json)) } ?: Daily(delta.id)).apply(delta, 1, now)
             write(listOf(DocRow(Col.CARDS, next.id, next.toDoc().toJsonString()), DocRow(Col.REVIEWS, log.id, log.toDoc().toJsonString()), DocRow(Col.DAILY, day.id, day.toDoc().toJsonString())))

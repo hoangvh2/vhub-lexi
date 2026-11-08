@@ -6,7 +6,7 @@ import java.time.ZoneId
  * Study queue (port of web/src/lib/queue.ts, pinned by shared/vectors/queue.json).
  *   learning  cards in (re)learning whose short step is due (or due within the learn-ahead window)
  *   review    review cards due before the next study-day boundary, most overdue first
- *   new       never-seen cards, oldest first, capped by the daily limit
+ *   new       never-seen cards, capped by the daily limit and shared out between decks by weight ([shareOut])
  * Siblings (cards of one note) are buried for the rest of the session once one is answered.
  * Review cards of a note answered today are also held until the next study day ([answeredToday], from lastReview),
  * so leaving and reopening the study screen does not bring the word straight back (queue.ts).
@@ -35,6 +35,8 @@ data class QueueInput(
     val buried: Set<Id> = emptySet(),
     val learnAheadMs: Long = 0,
     val zone: ZoneId = ZoneId.systemDefault(),
+    /** Share of the daily new words per deck ([Deck.newWeight], see [deckWeights]); a deck missing from the map counts as 1. */
+    val deckWeights: Map<Id, Int>? = null,
     /** Vietnamese meaning phrases per note ([meaningsByNote]); when given, near-synonyms are introduced apart. */
     val meanings: Map<Id, List<String>>? = null,
     /** Only these notes (e.g. the notes of one lesson tag). */
@@ -48,6 +50,61 @@ data class Counts(val new: Int, val learning: Int, val review: Int)
 data class Queue(val learning: List<Card>, val review: List<Card>, val newCards: List<Card>, val counts: Counts) {
     val all: List<Card> get() = learning + review + newCards
 }
+
+/** Weights of decks for the queue: [Deck.newWeight], or 1 when the learner never set one (equal shares). */
+fun deckWeights(decks: List<Deck>): Map<Id, Int> = decks.associate { it.id to (it.newWeight ?: 1) }
+
+data class NewShare(val id: Id, /** Relative share (whole number >= 0; 0 = paused). */ val weight: Int, /** Most this deck can take. */ val cap: Int)
+
+/**
+ * Splits [total] new words between decks in proportion to their weights, in whole words (largest remainder; ties go to
+ * the heavier deck, then the smaller id). A deck that cannot take its share ([NewShare.cap]) gives the rest back to the
+ * others. Port of queue.ts shareOut: integer arithmetic only, so both sides agree.
+ */
+fun shareOut(total: Int, items: List<NewShare>): Map<Id, Int> {
+    val out = LinkedHashMap<Id, Int>()
+    for (x in items) out[x.id] = 0
+    var remaining = maxOf(0, total)
+    var active = items.filter { it.weight > 0 && it.cap > 0 }
+    while (remaining > 0 && active.isNotEmpty()) {
+        val sum = active.sumOf { it.weight.toLong() }
+        val capped = active.filter { remaining.toLong() * it.weight > it.cap.toLong() * sum }
+        if (capped.isNotEmpty()) {
+            for (x in capped) { out[x.id] = x.cap; remaining -= x.cap }
+            active = active.filter { a -> capped.none { it.id == a.id } }
+            continue
+        }
+        class Part(val x: NewShare, val q: Int, val r: Long)
+        val parts = active.map { Part(it, (remaining.toLong() * it.weight / sum).toInt(), remaining.toLong() * it.weight % sum) }
+        var left = remaining - parts.sumOf { it.q }
+        for (a in parts) out[a.x.id] = a.q
+        for (a in parts.sortedWith(compareByDescending<Part> { it.r }.thenByDescending { it.x.weight }.thenBy { it.x.id })) {
+            if (left <= 0) break
+            out[a.x.id] = (out[a.x.id] ?: 0) + 1
+            left--
+        }
+        break
+    }
+    return out
+}
+
+/** [shareOut] for a whole day, plus: every deck above 0% that has words gets at least one, as long as there are enough words for that. */
+fun dailyShares(total: Int, items: List<NewShare>): Map<Id, Int> {
+    val out = LinkedHashMap(shareOut(total, items))
+    val eligible = items.filter { it.weight > 0 && it.cap > 0 }.sortedWith(compareByDescending<NewShare> { it.weight }.thenBy { it.id })
+    if (total < eligible.size) return out
+    for (x in eligible) {
+        if ((out[x.id] ?: 0) > 0) continue
+        val donor = eligible.filter { (out[it.id] ?: 0) >= 2 }
+            .sortedWith(compareByDescending<NewShare> { out[it.id] ?: 0 }.thenByDescending { it.weight }.thenBy { it.id }).firstOrNull() ?: break
+        out[donor.id] = (out[donor.id] ?: 0) - 1
+        out[x.id] = 1
+    }
+    return out
+}
+
+/** Notes (not cards) with a new card in this list. */
+private fun distinctNotes(cards: List<Card>?): Int = cards?.mapTo(HashSet()) { it.noteId }?.size ?: 0
 
 /** Notes with a card answered in the current study day (queue.ts answeredToday). */
 fun answeredToday(cards: List<Card>, now: Long, dayStartHour: Int, zone: ZoneId = ZoneId.systemDefault()): Set<Id> {
@@ -91,14 +148,60 @@ fun buildQueue(i: QueueInput): Queue {
         for (c in i.cards) if (!c.suspended && c.state != CardState.NEW && c.scheduledDays < SETTLE_DAYS) hold(c.noteId)
     }
 
-    val seen = HashSet<Id>()
+    // New words: today's total is shared out between decks by weight (a deck that cannot fill its share gives it back),
+    // each deck keeps its own order, and the picks are dealt out deck by deck so the session mixes them.
+    val doneBy = i.today?.newByDeck.orEmpty()
+    val groups = LinkedHashMap<Id, MutableList<Card>>()
+    for (c in fresh) groups.getOrPut(c.deckId) { ArrayList() } += c
+    fun weightOf(id: Id) = i.deckWeights?.get(id) ?: 1
+    val ids = ((i.deckWeights?.keys ?: emptySet<Id>()) + groups.keys).distinct()
+    val items = ids.map { id -> NewShare(id, weightOf(id), ((doneBy[id] ?: 0L).toInt()) + distinctNotes(groups[id])) }
+    val targets = dailyShares(i.prefs.newPerDay, items)
+    val take = HashMap<Id, Int>()
+    for (x in items) take[x.id] = maxOf(0, (targets[x.id] ?: 0) - (doneBy[x.id] ?: 0L).toInt())
+    var want: Map<Id, Int> = take
+    if (take.values.sum() > newLimit) {
+        // Some deck is already past its share today (weights changed): trim to what is left, still by weight.
+        want = shareOut(newLimit, items.filter { (take[it.id] ?: 0) > 0 }.map { NewShare(it.id, it.weight, take[it.id] ?: 0) })
+    }
+    val order = items.filter { it.weight > 0 }.sortedWith(compareByDescending<NewShare> { it.weight }.thenBy { it.id }).map { it.id }
+    val seen = HashSet<Id>() // one new card per note per session (siblings wait for the next session)
+    val picked = HashMap<Id, MutableList<Card>>()
+    for (d in order) picked[d] = ArrayList()
+    val cursor = HashMap<Id, Int>()
+    fun grab(d: Id, n: Int): Int {
+        val list = groups[d].orEmpty()
+        var k = cursor[d] ?: 0
+        var got = 0
+        while (got < n && k < list.size) {
+            val c = list[k++]
+            if (c.noteId in seen || blocked(c.noteId)) continue
+            seen += c.noteId
+            hold(c.noteId)
+            picked[d]?.add(c)
+            got++
+        }
+        cursor[d] = k
+        return got
+    }
+    var taken = 0
+    for (d in order) taken += grab(d, minOf(want[d] ?: 0, newLimit - taken))
+    // A near-synonym held a word back: fill the gap from the other decks, one word each in turn.
+    var moved = true
+    while (moved && taken < newLimit) {
+        moved = false
+        for (d in order) {
+            if (taken >= newLimit) break
+            if (grab(d, 1) > 0) { taken++; moved = true }
+        }
+    }
     val newCards = ArrayList<Card>()
-    for (c in fresh) {
-        if (newCards.size >= newLimit) break
-        if (c.noteId in seen || blocked(c.noteId)) continue
-        seen += c.noteId
-        hold(c.noteId)
-        newCards += c
+    var round = 0
+    var more = true
+    while (more) {
+        more = false
+        for (d in order) picked[d]?.getOrNull(round)?.let { newCards += it; more = true }
+        round++
     }
     val reviewCapped = review.take(reviewLimit)
     return Queue(learning, reviewCapped, newCards, Counts(newCards.size, learning.size, reviewCapped.size))
