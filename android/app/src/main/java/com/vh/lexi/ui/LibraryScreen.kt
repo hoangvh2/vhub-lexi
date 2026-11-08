@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -154,9 +155,12 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         ScreenHeader("Thư viện") {
             Pill("${notes.count { isMaterial(it) }} từ")
-            TextButton(onClick = { selecting = !selecting; selected = emptySet() }, Modifier.testTag("lib-select")) { Text(if (selecting) "Xong" else "Chọn") }
-            // An icon, not "+ Bộ thẻ": with the count and "Chọn" it left the title too little room on a 320dp phone.
-            androidx.compose.material3.IconButton(onClick = { deckDialog = null to "" }, modifier = Modifier.testTag("lib-new-deck")) {
+            // Compact buttons, and an icon instead of "+ Bộ thẻ": otherwise "Thư viện" has no room on a 320dp phone.
+            TextButton(
+                onClick = { selecting = !selecting; selected = emptySet() }, Modifier.defaultMinSize(minWidth = 1.dp).testTag("lib-select"),
+                contentPadding = PaddingValues(horizontal = 8.dp),
+            ) { Text(if (selecting) "Xong" else "Chọn", maxLines = 1, softWrap = false) }
+            androidx.compose.material3.IconButton(onClick = { deckDialog = null to "" }, modifier = Modifier.size(40.dp).testTag("lib-new-deck")) {
                 Icon(Icons.Filled.CreateNewFolder, contentDescription = "Thêm bộ thẻ")
             }
         }

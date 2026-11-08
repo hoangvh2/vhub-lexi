@@ -295,6 +295,9 @@ class SmokeTest {
         // The header title stays on one line next to the count and buttons (it used to wrap a letter per line at 320dp).
         val titleHeight = with(rule.density) { rule.onNodeWithTag("screen-title").fetchSemanticsNode().size.height.toDp() }
         assertTrue("library title is $titleHeight high", titleHeight < 48.dp)
+        val titleLayout = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        rule.onNodeWithTag("screen-title").performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(titleLayout) }
+        assertTrue("library title is cut off", !titleLayout.single().hasVisualOverflow)
         rule.onNodeWithTag("lib-new-deck").assertIsDisplayed()
         rule.onNodeWithText(longDeck, substring = true).performClick()
         rule.onNodeWithText("Tất cả bộ thẻ").performClick()
