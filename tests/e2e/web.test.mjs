@@ -407,7 +407,9 @@ describe("core flow (local-only mode)", () => {
     const { ctx, page, errors } = await open(browser, base);
     // A learner who forgets fast (recall exp(-t/s), s x2.5 per success): 1200 cards, about 11k answers.
     const DAY = 86_400_000;
-    const T0 = Date.now() - 400 * DAY;
+    // Noon UTC: a 10-minute gap between two answers must never straddle the 04:00 study-day boundary (at 03:50-04:00 it did,
+    // the history changed and the optimizer found nothing to improve).
+    const T0 = Math.floor((Date.now() - 400 * DAY) / DAY) * DAY + 12 * 3_600_000;
     let seed = 11;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     const reviews = [];
