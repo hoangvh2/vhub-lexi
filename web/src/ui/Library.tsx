@@ -1,7 +1,7 @@
 import { useMemo, useState } from "preact/hooks";
 import { CardState, type Card, type Id, type Note } from "@shared/model.ts";
 import { isMaterial, noteType } from "@shared/notetypes.ts";
-import { createDeck, deleteDeckAndContents, renameDeck, updateNote } from "../data/actions.ts";
+import { createDeck, deleteDeckAndContents, moveNotes, renameDeck, updateNote } from "../data/actions.ts";
 import { callEnrich, firebaseConfigured } from "../data/firebase.ts";
 import { cards, decks, loaded, notes, prefs } from "../data/state.ts";
 import { aiBatch, confirmAndRun, stopBatch, type BatchMode, type BatchProgress } from "../lib/batch.ts";
@@ -14,6 +14,8 @@ import { NoteEditor } from "./NoteEditor.tsx";
 
 /** Daily AI allowance (LIMITS.dailyEnrich in functions/src/config.ts). */
 const DAILY_AI = 300;
+
+const NEW_DECK = "__new__";
 
 type Filter = "all" | "new" | "learning" | "review" | "suspended" | "leech" | "noai" | "nophrase";
 type Sort = "recent" | "alpha" | "due";
@@ -47,6 +49,9 @@ export function Library() {
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<Id>>(new Set());
   const [aiDlg, setAiDlg] = useState<{ skipDone: boolean; overwriteVi: boolean; mode: BatchMode } | null>(null);
+  /** "Chuyển sang bộ khác": target deck id, or NEW_DECK with the name of a deck to create. */
+  const [moveDlg, setMoveDlg] = useState<{ target: Id; name: string } | null>(null);
+  const [moving, setMoving] = useState(false);
   const batch = useStore(aiBatch);
   const p = useStore(prefs);
   const aiAvailable = firebaseConfigured && p.aiEnabled;
@@ -112,6 +117,33 @@ export function Library() {
   const runIds = (skipDone: boolean, mode: BatchMode) =>
     selectedNotes.filter((n) => !skipDone || !(mode === "phrases" ? hasPhrases(n.fields) : hasAi(n.aiFields))).map((n) => n.id);
 
+  const pickedNotes = allNotes.filter((n) => selected.has(n.id));
+  const pickedDecks = new Set(pickedNotes.map((n) => n.deckId));
+
+  function openMove() {
+    // Suggest the first deck that is not the only source of the chosen words.
+    const first = allDecks.find((d) => !(pickedDecks.size === 1 && pickedDecks.has(d.id)));
+    setMoveDlg({ target: first?.id ?? NEW_DECK, name: "" });
+  }
+
+  async function runMove() {
+    if (!moveDlg || moving) return;
+    setMoving(true);
+    try {
+      const target = moveDlg.target === NEW_DECK ? (await createDeck(moveDlg.name)) : allDecks.find((d) => d.id === moveDlg.target);
+      if (!target) return;
+      const moved = await moveNotes(selected, target.id);
+      setMoveDlg(null);
+      setSelecting(false);
+      setSelected(new Set());
+      toast(moved ? `Đã chuyển ${moved} từ sang “${target.name}”` : `Các từ đã chọn đều đã ở “${target.name}”`);
+    } catch (e) {
+      toast(`Không chuyển được: ${(e as Error).message}`);
+    } finally {
+      setMoving(false);
+    }
+  }
+
   async function startAi() {
     if (!aiDlg) return;
     const ids = runIds(aiDlg.skipDone, aiDlg.mode);
@@ -138,11 +170,9 @@ export function Library() {
         <h1>Thư viện</h1>
         <span class="pill">{allNotes.length} từ</span>
         <span class="spacer" />
-        {aiAvailable && (
-          <button type="button" class="btn sm" aria-pressed={selecting} onClick={() => (setSelecting(!selecting), setSelected(new Set()))} data-testid="lib-select">
-            {selecting ? "Xong" : "Chọn"}
-          </button>
-        )}
+        <button type="button" class="btn sm" aria-pressed={selecting} onClick={() => (setSelecting(!selecting), setSelected(new Set()))} data-testid="lib-select">
+          {selecting ? "Xong" : "Chọn"}
+        </button>
         <button type="button" class="btn sm" onClick={() => setDeckDlg({ name: "" })}>+ Bộ thẻ</button>
         <button type="button" class="btn primary sm" onClick={() => go("/add")}><Icon n="plus" size={16} /> Thêm từ</button>
       </div>
@@ -175,15 +205,20 @@ export function Library() {
             {selected.size === rows.length && rows.length ? "Bỏ chọn" : `Chọn hết ${rows.length}`}
           </button>
           <span class="spacer" />
-          <button
-            type="button"
-            class="btn primary sm"
-            disabled={!selectedNotes.length || !!batch?.running}
-            onClick={() => setAiDlg({ skipDone: true, overwriteVi: false, mode: filter === "nophrase" ? "phrases" : "full" })}
-            data-testid="bulk-ai"
-          >
-            <Icon n="sparkle" size={16} /> Điền bằng AI
+          <button type="button" class="btn sm" disabled={!pickedNotes.length} onClick={openMove} data-testid="bulk-move">
+            Chuyển bộ
           </button>
+          {aiAvailable && (
+            <button
+              type="button"
+              class="btn primary sm"
+              disabled={!selectedNotes.length || !!batch?.running}
+              onClick={() => setAiDlg({ skipDone: true, overwriteVi: false, mode: filter === "nophrase" ? "phrases" : "full" })}
+              data-testid="bulk-ai"
+            >
+              <Icon n="sparkle" size={16} /> Điền bằng AI
+            </button>
+          )}
         </div>
       )}
 
@@ -264,6 +299,40 @@ export function Library() {
             <div class="modal-actions">
               <button type="button" class="btn" onClick={() => setAiDlg(null)}>Huỷ</button>
               <button type="button" class="btn primary" onClick={() => void startAi()} disabled={!count} data-testid="bulk-start">Bắt đầu</button>
+            </div>
+          </Modal>
+        );
+      })()}
+      {moveDlg && (() => {
+        const isNew = moveDlg.target === NEW_DECK;
+        const already = isNew ? 0 : pickedNotes.filter((n) => n.deckId === moveDlg.target).length;
+        const count = pickedNotes.length - already;
+        const from = [...pickedDecks].map(deckName).filter(Boolean);
+        return (
+          <Modal title={`Chuyển ${pickedNotes.length} từ sang bộ khác`} onClose={() => setMoveDlg(null)}>
+            {from.length > 0 && <p class="muted" style={{ fontSize: "13px" }}>Đang ở: {from.length > 3 ? `${from.slice(0, 3).join(", ")} và ${from.length - 3} bộ khác` : from.join(", ")}</p>}
+            <div class="field">
+              <label for="move-target">Chuyển tới</label>
+              <select id="move-target" class="select" value={moveDlg.target} onChange={(e) => setMoveDlg({ ...moveDlg, target: e.currentTarget.value })} data-testid="move-target">
+                {allDecks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                <option value={NEW_DECK}>+ Bộ thẻ mới…</option>
+              </select>
+            </div>
+            {isNew && (
+              <div class="field">
+                <label for="move-name">Tên bộ thẻ mới</label>
+                <input id="move-name" class="input" value={moveDlg.name} maxLength={60} onInput={(e) => setMoveDlg({ ...moveDlg, name: e.currentTarget.value })} data-testid="move-name" autofocus />
+              </div>
+            )}
+            <p class="muted" style={{ fontSize: "13px" }}>
+              Lịch ôn, độ nhớ và lịch sử trả lời của từng thẻ được giữ nguyên; chỉ đổi bộ thẻ.
+              {already > 0 && ` ${already} từ đã ở bộ này nên bỏ qua.`}
+            </p>
+            <div class="modal-actions">
+              <button type="button" class="btn" onClick={() => setMoveDlg(null)}>Huỷ</button>
+              <button type="button" class="btn primary" onClick={() => void runMove()} disabled={moving || (isNew ? !moveDlg.name.trim() : !count)} data-testid="move-start">
+                {isNew ? `Tạo bộ và chuyển ${pickedNotes.length} từ` : `Chuyển ${count} từ`}
+              </button>
             </div>
           </Modal>
         );

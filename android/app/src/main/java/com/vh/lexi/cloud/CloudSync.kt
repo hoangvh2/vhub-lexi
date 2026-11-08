@@ -136,6 +136,17 @@ class CloudSync(
         }
     }
 
+    /** One atomic batch per group: notes and cards that must change together (moving words between decks). */
+    fun setGroups(groups: List<Pair<List<Doc>, List<Doc>>>) {
+        if (uid == null) return
+        for ((notes, cards) in groups) {
+            val b = db.batch()
+            for (d in notes) b.set(col(Col.NOTES).document(d["id"] as String), d)
+            for (d in cards) b.set(col(Col.CARDS).document(d["id"] as String), d)
+            b.commit().addOnFailureListener(::fail)
+        }
+    }
+
     fun delete(collection: String, ids: List<String>) {
         if (uid == null) return
         for (chunk in ids.chunked(400)) {

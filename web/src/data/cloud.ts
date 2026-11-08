@@ -19,6 +19,38 @@ export const LIMITS = { decks: 200, notes: 5000, cards: 10000, daily: 800 } as c
 /** Firestore answers at most 10,000 documents per query; the review history is read in pages of this size. */
 export const REVIEW_PAGE = 5000;
 
+/** Firestore accepts at most 500 writes in one batch. */
+export const BATCH_WRITES = 500;
+
+/**
+ * Splits notes and cards into batches of at most `max` writes, keeping each note with its cards so a batch that
+ * fails never leaves a word half in one deck and half in another. Cards whose note is not in `notes` go last.
+ */
+export function writeGroups(notes: readonly Note[], cards: readonly Card[], max = BATCH_WRITES): Array<{ notes: Note[]; cards: Card[] }> {
+  const byNote = new Map<string, Card[]>();
+  for (const c of cards) (byNote.get(c.noteId) ?? byNote.set(c.noteId, []).get(c.noteId)!).push(c);
+  const out: Array<{ notes: Note[]; cards: Card[] }> = [];
+  let cur = { notes: [] as Note[], cards: [] as Card[] };
+  const size = () => cur.notes.length + cur.cards.length;
+  const flush = () => {
+    if (size()) out.push(cur);
+    cur = { notes: [], cards: [] };
+  };
+  for (const n of notes) {
+    const own = byNote.get(n.id) ?? [];
+    byNote.delete(n.id);
+    if (size() + 1 + own.length > max) flush();
+    cur.notes.push(n);
+    cur.cards.push(...own);
+  }
+  for (const c of [...byNote.values()].flat()) {
+    if (size() + 1 > max) flush();
+    cur.cards.push(c);
+  }
+  flush();
+  return out;
+}
+
 export class CloudRepo implements Repo {
   readonly kind = "cloud" as const;
   private ev!: RepoEvents;
@@ -157,6 +189,15 @@ export class CloudRepo implements Repo {
 
   async saveCard(c: Card) {
     void setDoc(this.ref("cards", c.id), c).catch((e) => this.fail(e));
+  }
+
+  async saveMany(notes: Note[], cards: Card[]) {
+    for (const group of writeGroups(notes, cards)) {
+      const b = writeBatch(this.db);
+      for (const n of group.notes) b.set(this.ref("notes", n.id), n);
+      for (const c of group.cards) b.set(this.ref("cards", c.id), c);
+      this.send(b);
+    }
   }
 
   async deleteCards(ids: string[]) {

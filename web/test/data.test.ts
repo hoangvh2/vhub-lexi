@@ -2,11 +2,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CardState, DEFAULT_PREFS, dayId } from "@shared/model.ts";
-import { addNote, removeNote, reviewCard, savePrefs, setSuspended, undoReview, updateNote } from "../src/data/actions.ts";
+import { addNote, createDeck, moveNotes, planMove, removeNote, reviewCard, savePrefs, setSuspended, undoReview, updateNote } from "../src/data/actions.ts";
+import { writeGroups } from "../src/data/cloud.ts";
 import { LocalRepo } from "../src/data/local.ts";
 import { validateExport } from "../src/data/repo.ts";
 import { cards, daily, decks, notes, prefs, startRepo, stopRepo, currentRepo } from "../src/data/state.ts";
 import { Dictionary, viFor } from "../src/lib/dict.ts";
+import { newCard } from "../src/lib/scheduler.ts";
 
 let n = 0;
 async function fresh() {
@@ -98,6 +100,51 @@ describe("actions on the local repo", () => {
     expect((await currentRepo().exportAll()).reviews).toHaveLength(1);
   });
 
+  it("moveNotes moves the chosen words and their cards to another deck, keeping FSRS state and history", async () => {
+    const a = await addNote({ type: "vocab", fields: vocab });
+    const b = await addNote({ type: "vocab", fields: { ...vocab, word: "diligent" } });
+    const stay = await addNote({ type: "vocab", fields: { ...vocab, word: "candid" } });
+    const from = a.deckId;
+    const reviewed = await reviewCard(cards.get().find((c) => c.noteId === a.id && c.template === "recognize")!, 3, 1000);
+    await setSuspended(cards.get().find((c) => c.noteId === b.id)!, true);
+    const before = new Map(cards.get().map((c) => [c.id, c]));
+    const target = await createDeck("TOEIC Part 5");
+
+    expect(await moveNotes([a.id, b.id], target.id)).toBe(2);
+
+    const byId = new Map(notes.get().map((n) => [n.id, n]));
+    expect(byId.get(a.id)!.deckId).toBe(target.id);
+    expect(byId.get(b.id)!.deckId).toBe(target.id);
+    expect(byId.get(stay.id)!.deckId).toBe(from);
+    expect(byId.get(a.id)!.fields).toEqual(a.fields);
+    for (const c of cards.get()) {
+      const old = before.get(c.id)!;
+      const want = c.noteId === stay.id ? from : target.id;
+      expect(c.deckId).toBe(want);
+      // Only the deck (and updatedAt) changes: memory state, due date, suspension stay.
+      const { deckId: _d, updatedAt: _u, ...rest } = c;
+      const { deckId: _od, updatedAt: _ou, ...oldRest } = old;
+      expect(rest).toEqual(oldRest);
+    }
+    expect(cards.get().find((c) => c.id === reviewed.next.id)!.reps).toBe(1);
+    // The answer log keeps the deck the word was in when it was answered.
+    const logs = (await currentRepo().exportAll()).reviews;
+    expect(logs).toHaveLength(1);
+    expect(logs[0].deckId).toBe(from);
+    // Survives reopening the database.
+    stopRepo();
+    await startRepo(new LocalRepo(`test-${n}`));
+    expect(notes.get().filter((x) => x.deckId === target.id).map((x) => x.id).sort()).toEqual([a.id, b.id].sort());
+    expect(cards.get().filter((c) => c.deckId === target.id)).toHaveLength([...before.values()].filter((c) => c.noteId !== stay.id).length);
+  });
+
+  it("moveNotes skips words already in the target deck", async () => {
+    const a = await addNote({ type: "vocab", fields: vocab });
+    const stamp = notes.get()[0].updatedAt;
+    expect(await moveNotes([a.id], a.deckId)).toBe(0);
+    expect(notes.get()[0].updatedAt).toBe(stamp);
+  });
+
   it("suspend toggles", async () => {
     await addNote({ type: "vocab", fields: vocab });
     const c = cards.get()[0];
@@ -131,6 +178,37 @@ describe("actions on the local repo", () => {
     expect(notes.get()).toHaveLength(1);
     expect(cards.get()).toHaveLength(2);
     expect(prefs.get().desiredRetention).toBe(DEFAULT_PREFS.desiredRetention);
+  });
+});
+
+describe("moving words between decks: write plan", () => {
+  const T = 1_000;
+  const note = (id: string, deckId = "d1") => ({ id, type: "vocab", deckId, fields: { word: id }, createdAt: T, updatedAt: T });
+  const card = (noteId: string, t: string, deckId = "d1") => ({ ...newCard(noteId, deckId, t, T) });
+
+  it("planMove touches only the chosen notes not yet in the target, and all their cards", () => {
+    const ns = [note("a"), note("b"), note("c", "d2")];
+    const cs = [card("a", "recognize"), card("a", "cloze"), card("b", "recognize"), card("c", "recognize", "d2")];
+    const p = planMove(ns, cs, ["a", "c"], "d2", 5);
+    expect(p.notes.map((n) => [n.id, n.deckId, n.updatedAt])).toEqual([["a", "d2", 5]]);
+    expect(p.cards.map((c) => [c.id, c.deckId, c.updatedAt])).toEqual([["a.recognize", "d2", 5], ["a.cloze", "d2", 5]]);
+    expect(ns[0].deckId).toBe("d1"); // inputs untouched
+  });
+
+  it("writeGroups keeps every note with its cards and stays within Firestore's 500 writes per batch", () => {
+    const ns = Array.from({ length: 400 }, (_, i) => note(`n${i}`));
+    const cs = ns.flatMap((n) => [card(n.id, "recognize"), card(n.id, "cloze")]);
+    const groups = writeGroups(ns, cs);
+    expect(groups.length).toBe(3); // 1,200 writes: 166 words (498 writes) per batch
+    for (const g of groups) {
+      expect(g.notes.length + g.cards.length).toBeLessThanOrEqual(500);
+      const ids = new Set(g.notes.map((n) => n.id));
+      expect(g.cards.every((c) => ids.has(c.noteId))).toBe(true);
+    }
+    expect(groups.flatMap((g) => g.notes)).toHaveLength(400);
+    expect(groups.flatMap((g) => g.cards)).toHaveLength(800);
+    expect(writeGroups([], [])).toEqual([]);
+    expect(writeGroups([note("x")], [card("x", "recognize"), card("orphan", "cloze")], 2).map((g) => g.cards.length)).toEqual([1, 1]);
   });
 });
 

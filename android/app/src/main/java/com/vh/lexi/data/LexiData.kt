@@ -17,6 +17,8 @@ import com.vh.lexi.core.apply
 import com.vh.lexi.core.dayId
 import com.vh.lexi.core.hintLog
 import com.vh.lexi.core.noteType
+import com.vh.lexi.core.batches
+import com.vh.lexi.core.planMove
 import com.vh.lexi.core.reviewId
 import com.vh.lexi.core.reviewIdRange
 import com.vh.lexi.core.wantedTemplates
@@ -235,6 +237,20 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
             putAll(Col.CARDS, moved.filter { it.id !in stale }.map { it.toDoc() })
             remove(Col.CARDS, stale)
         }
+    }
+
+    /**
+     * Moves the chosen notes and their cards to [deckId]: Room in one transaction, Firestore in batches of at most
+     * 500 writes with each note beside its cards, no reads. Returns how many notes moved (those already there are skipped).
+     */
+    suspend fun moveNotes(noteIds: Set<Id>, deckId: Id, now: Long = System.currentTimeMillis()): Int {
+        val plan = planMove(notes.value, cards.value, noteIds, deckId, now)
+        if (plan.notes.isEmpty()) return 0
+        db.withTransaction {
+            write(plan.notes.map { DocRow(Col.NOTES, it.id, it.toDoc().toJsonString()) } + plan.cards.map { DocRow(Col.CARDS, it.id, it.toDoc().toJsonString()) })
+        }
+        cloud?.setGroups(plan.batches().map { g -> g.notes.map { it.toDoc() } to g.cards.map { it.toDoc() } })
+        return plan.notes.size
     }
 
     suspend fun removeNote(note: Note) {
