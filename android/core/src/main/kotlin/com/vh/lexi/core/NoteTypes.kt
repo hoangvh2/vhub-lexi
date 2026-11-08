@@ -421,8 +421,6 @@ data class PatternItem(val sentence: String, val answer: String, val at: Pair<In
 
 const val PATTERN_ITEM_MAX = 300
 
-private val SPACES = Regex("\\s+")
-
 fun parsePatternItem(line: String): PatternItem? {
     val parts = line.split("|").map { it.replace(SPACES, " ").trim() }
     val raw = parts.getOrElse(0) { "" }
