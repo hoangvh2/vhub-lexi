@@ -34,6 +34,9 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.ViewCompat
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.uiautomator.UiDevice
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.ui.MainActivity
@@ -283,7 +286,16 @@ class SmokeTest {
         waitFor("trap-view") { rule.onAllNodesWithTagCount("note-view") > 0 }
         waitFor("trap-wrong") { rule.onAllNodesWithTagCount("example-wrong", unmerged = true) == 2 }
         shot("07g-note-view-trap")
-        rule.onNodeWithTag("view-schedule").performScrollTo()
+        // The end of a long note scrolls fully into view above the navigation bar (it used to stay under it).
+        val lastCard = rule.onAllNodes(hasTestTag("view-card")).fetchSemanticsNodes().size - 1
+        rule.onAllNodes(hasTestTag("view-card"))[lastCard].performScrollTo()
+        rule.onNodeWithTag("view-body").performTouchInput { swipeUp() }
+        rule.waitForIdle()
+        val end = rule.onAllNodes(hasTestTag("view-card"))[lastCard].fetchSemanticsNode()
+        val endBottom = end.positionOnScreen.y + end.size.height
+        val decor = rule.activity.window.decorView
+        val navTop = decor.height - (ViewCompat.getRootWindowInsets(decor)?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0)
+        assertTrue("last schedule row ends at $endBottom, navigation bar starts at $navTop", endBottom <= navTop)
         shot("07h-note-view-trap-bottom")
         // The switch scrolled out of sight with the schedule: bring it back before tapping it.
         rule.onNodeWithTag("view-cover").performScrollTo().performClick()
