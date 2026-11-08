@@ -181,7 +181,6 @@ internal fun TodayPanel(
                 },
                 Modifier.padding(horizontal = 4.dp), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = c.muted,
             )
-            if (newMix != null) Text(newMix, Modifier.padding(horizontal = 4.dp).testTag("today-mix"), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = c.accent)
             WeekDots(daily, now, dayStartHour, todayId)
             val label = if (left == 0) "Học thêm hoặc ôn trước" else if (done == 0) "Bắt đầu học" else "Học tiếp"
             PrimaryPill(label, onStart, Modifier.fillMaxWidth().testTag("start-study"), big = true, soft = left == 0)
@@ -189,6 +188,8 @@ internal fun TodayPanel(
                 val n = lessonName(current.tag)
                 SoftPill(if (n.num != null) "Bài ${n.num} · ${n.title}" else n.title, { onLesson(current.tag) }, Modifier.fillMaxWidth())
             }
+            // Below the buttons, so the start button keeps its place on a small screen.
+            if (newMix != null) Text(newMix, Modifier.padding(horizontal = 4.dp).testTag("today-mix"), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = c.accent)
         }
 
         // Lesson path
