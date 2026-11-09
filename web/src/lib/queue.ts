@@ -12,7 +12,8 @@
  * New siblings of a note answered today wait for the next study day too, so leaving and reopening the study screen
  * never serves the cloze of a word met minutes ago as "Mới".
  *
- * The daily "new" quota counts words, not cards: see isFreeNew. A word's typing cards are offered without using it.
+ * The daily "new" quota counts words, not cards: see isFreeNew. Only a word's recognize card is "new"; its typing cards
+ * are offered as reviews (the "Ôn" count), one per word per day, even though their own FSRS state is still New.
  *
  * A word is typed only once it is recognised: while a note's "recognize" card is not yet in Review (new, still in its
  * learning steps, or relearning after a lapse), its other new cards (recall, cloze, listen: all typing cards) wait.
@@ -57,7 +58,7 @@ export interface QueueInput {
 }
 
 export interface Queue {
-  /** New cards that do not use today's quota (see isFreeNew); also part of newCards. */
+  /** Typing cards of recognised words (see isFreeNew): listed in `review` (after the due ones), never in `newCards`. */
   freeNew: Card[];
   learning: Card[];
   review: Card[];
@@ -162,6 +163,7 @@ export function liveRecognize(cards: readonly Card[], eligible: (c: Card) => boo
  * The daily "new" quota counts WORDS: a word's recognize card uses one slot, and its typing cards (recall, cloze,
  * listen) come later for free, once the word is recognised. A new card is free when its note has a live recognize card
  * and it is not that card; notes without one (template off, other note types) count every card as before.
+ * Free cards are listed and counted as reviews.
  */
 export const isFreeNew = (c: Card, live: ReadonlySet<Id>) => c.state === CardState.New && c.template !== INTRO_TEMPLATE && live.has(c.noteId);
 
@@ -276,10 +278,11 @@ export function buildQueue(i: QueueInput): Queue {
       if (c) (newCards.push(c), (more = true));
     }
   }
-  newCards.push(...freeNew);
-  const reviewCapped = review.slice(0, reviewLimit);
+  // Typing cards of recognised words are reviews: they follow the due ones, under the same daily review cap.
+  const reviewCapped = [...review, ...freeNew].slice(0, reviewLimit);
+  const shownFree = reviewCapped.filter((c) => c.state === CardState.New);
   return {
-    freeNew,
+    freeNew: shownFree,
     learning,
     review: reviewCapped,
     newCards,

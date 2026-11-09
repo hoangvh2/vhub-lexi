@@ -6,7 +6,7 @@ import { hintDependent, hintGateMs, maxRating, rotateExamples, type HintLevel } 
 import { rungHint, type Rung } from "@shared/ladder.ts";
 import { reviewCard, setSuspended, undoReview, type Reviewed } from "../data/actions.ts";
 import { cards, currentRepo, daily, decks, loaded, notes, prefs } from "../data/state.ts";
-import { LEARN_AHEAD_MS, answeredToday, buildQueue, deckWeights, dueWithin, isLeech, pickNext, tagCounts, type Queue } from "../lib/queue.ts";
+import { LEARN_AHEAD_MS, answeredToday, buildQueue, deckWeights, dueWithin, isFreeNew, isLeech, liveRecognize, pickNext, tagCounts, type Queue } from "../lib/queue.ts";
 import { celebrate } from "../lib/motion.ts";
 import { cardShown, rateStarted } from "../lib/perf.ts";
 import { streak } from "../lib/stats.ts";
@@ -80,6 +80,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
   }, []);
 
   const eligible = useMemo(() => eligibility(allNotes), [allNotes]);
+  const live = useMemo(() => liveRecognize(allCards, eligible), [allCards, eligible]);
   const byId = useMemo(() => notesById(allNotes), [allNotes]);
   const meanings = useMemo(() => meaningsByNote(allNotes), [allNotes]);
   const sched = useMemo(() => makeScheduler(p.desiredRetention, p.fsrsWeights), [p.desiredRetention, p.fsrsWeights]);
@@ -220,7 +221,6 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
     busy.current = true;
     rateStarted();
     const dur = Date.now() - shownAt.current;
-    const wasNew = card.state === 0;
     const answered: Answered | null = note ? { noteId: note.id, word: str(note.fields.word) || str(note.fields.answer) || str(note.fields.title) || tpl?.label || "", vi: str(note.fields.vi), rating: r } : null;
     try {
       const res = await reviewCard(card, r, dur, Date.now(), hint);
@@ -231,7 +231,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
         again: s.again + (r === 1 ? 1 : 0),
         ms: s.ms + Math.min(dur, 120_000),
         shown: s.shown + 1,
-        shownNew: s.shownNew + (wasNew ? 1 : 0),
+        shownNew: s.shownNew + res.delta.newCards,
         log: answered ? [...s.log, answered] : s.log,
       }));
       currentId.current = null;
@@ -252,7 +252,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
         n.delete(last.prev.noteId);
         return n;
       });
-      setSession((s) => ({ ...s, answered: Math.max(0, s.answered - 1), again: Math.max(0, s.again - (last.delta.rating === 1 ? 1 : 0)), shown: Math.max(0, s.shown - 1), shownNew: Math.max(0, s.shownNew - (last.prev.state === 0 ? 1 : 0)), log: s.log.slice(0, -1) }));
+      setSession((s) => ({ ...s, answered: Math.max(0, s.answered - 1), again: Math.max(0, s.again - (last.delta.rating === 1 ? 1 : 0)), shown: Math.max(0, s.shown - 1), shownNew: Math.max(0, s.shownNew - last.delta.newCards), log: s.log.slice(0, -1) }));
       currentId.current = last.prev.id;
       setNow(Date.now());
       toast("Đã hoàn tác lần trả lời trước");
@@ -341,7 +341,8 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
   const total = queue.counts.new + queue.counts.learning + queue.counts.review;
   const doneToday = answeredToday(allCards, now, p.dayStartHour);
   const doneFrac = session.answered + total === 0 ? 1 : session.answered / (session.answered + total);
-  const kind = card ? (card.state === 0 ? "new" : card.state === 2 ? "review" : "learn") : null;
+  const typingOfKnown = !!card && queue.freeNew.some((c) => c.id === card.id);
+  const kind = card ? (typingOfKnown ? "review" : card.state === 0 ? "new" : card.state === 2 ? "review" : "learn") : null;
   // The hint spells out the word being learned, not the inflected form a cloze sentence uses (sail, not sailed).
   const target = typingTarget(shown && tpl?.expected ? tpl.expected(shown) : []);
   const answer = target.word;
@@ -381,7 +382,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
           onContinue={() => setAhead(DAY_MS)}
           onMore={() => setExtraNew((n) => n + 5)}
           onUndo={history.current.length ? undo : undefined}
-          hasMoreNew={allCards.some((c) => c.state === 0 && !c.suspended && eligible(c) && (!deckId || c.deckId === deckId) && (!tagNotes || tagNotes.has(c.noteId)))}
+          hasMoreNew={allCards.some((c) => c.state === 0 && !c.suspended && eligible(c) && !isFreeNew(c, live) && (!deckId || c.deckId === deckId) && (!tagNotes || tagNotes.has(c.noteId)))}
           tomorrow={dueWithin(allCards, eligible, now, p.dayStartHour, aheadDays + 1, deckId, tagNotes, doneToday) - dueWithin(allCards, eligible, now, p.dayStartHour, aheadDays, deckId, tagNotes, doneToday)}
           onAhead={() => setAheadDays((d) => d + 1)}
         />

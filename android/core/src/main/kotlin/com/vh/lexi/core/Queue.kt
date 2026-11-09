@@ -47,7 +47,7 @@ data class QueueInput(
 
 data class Counts(val new: Int, val learning: Int, val review: Int)
 
-/** [freeNew]: the part of [newCards] that does not use today's quota ([isFreeNew]). */
+/** [freeNew]: typing cards of recognised words ([isFreeNew]): listed in [review] after the due ones, never in [newCards]. */
 data class Queue(val learning: List<Card>, val review: List<Card>, val newCards: List<Card>, val counts: Counts, val freeNew: List<Card> = emptyList()) {
     val all: List<Card> get() = learning + review + newCards
 }
@@ -228,9 +228,9 @@ fun buildQueue(i: QueueInput): Queue {
         for (d in order) picked[d]?.getOrNull(round)?.let { newCards += it; more = true }
         round++
     }
-    val reviewCapped = review.take(reviewLimit)
-    newCards += freeNew
-    return Queue(learning, reviewCapped, newCards, Counts(newCards.size, learning.size, reviewCapped.size), freeNew)
+    // Typing cards of recognised words are reviews: they follow the due ones, under the same daily review cap.
+    val reviewCapped = (review + freeNew).take(reviewLimit)
+    return Queue(learning, reviewCapped, newCards, Counts(newCards.size, learning.size, reviewCapped.size), reviewCapped.filter { it.state == CardState.NEW })
 }
 
 data class SessionState(val shown: Int = 0, val shownNew: Int = 0)
