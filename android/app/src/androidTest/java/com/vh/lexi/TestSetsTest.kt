@@ -16,6 +16,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
@@ -163,7 +165,8 @@ class TestSetsTest {
         pick(102, "B") // wrong
         waitFor("count-2") { textOf("runner-count").contains("2/3") }
         shot("sets-03-runner")
-        rule.onNodeWithTag("runner-exit").performClick()
+        // A semantics click: a toast at the top of the screen may still cover the back arrow for a few seconds.
+        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
         waitFor("in-progress") { countText("Đang làm · 2/3 câu") > 0 }
         rule.onNodeWithTag("set-open").performScrollTo().performClick()
         waitFor("runner-again") { count("runner-list") > 0 }
@@ -202,7 +205,8 @@ class TestSetsTest {
         // The dialog's window must be gone before the next tap, or the tap lands on it and only dismisses it.
         waitFor("fresh") { count("runner-count") > 0 && textOf("runner-count").contains("0/3") && countText("Làm lại từ đầu?") == 0 }
         rule.waitForIdle()
-        rule.onNodeWithTag("runner-exit").performClick()
+        // A semantics click: a toast at the top of the screen may still cover the back arrow for a few seconds.
+        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
 
         // Deleting asks first: "Huỷ" keeps the set, "Xoá" removes it and its file.
         waitFor("list") { count("set-row") > 0 }

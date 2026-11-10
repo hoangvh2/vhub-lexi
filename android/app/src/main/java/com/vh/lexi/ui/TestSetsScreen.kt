@@ -393,9 +393,10 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Trang $firstScan như AI sẽ đọc. Chữ bị ngược thì xoay lại cho đúng chiều.", fontSize = 13.sp)
+                    if (turn != 0) Text("Đã xoay 180°", fontSize = 12.sp, color = c.muted)
                     OutlinedButton(onClick = { turn = if (turn == 0) 180 else 0 }, Modifier.testTag("pdf-turn")) {
                         Icon(Icons.Filled.Refresh, null)
-                        Text(if (turn != 0) "  Đã xoay 180°: bỏ xoay" else "  Xoay 180°")
+                        Text(if (turn != 0) " Bỏ xoay" else " Xoay 180°", maxLines = 1)
                     }
                 }
             }
@@ -507,7 +508,7 @@ private fun Runner(app: LexiApp, set: TestSet, onExit: () -> Unit, onCards: (Wro
         if (rebase) resumed = System.currentTimeMillis()
         attempt = a
         // The app's scope, not the screen's: the last answer is still written when the screen closes.
-        app.scope.launch { app.testSets.save(set.copy(attempt = a)) }
+        app.testSets.saveSoon(app.scope, set.copy(attempt = a))
     }
     // Leaving the screen (or the app) pauses the clock and keeps the answers.
     fun pause() {
@@ -524,14 +525,16 @@ private fun Runner(app: LexiApp, set: TestSet, onExit: () -> Unit, onCards: (Wro
     }
 
     Column(Modifier.fillMaxSize().testTag("runner")) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Two rows: on a narrow phone the name, the clock, the count and "Nộp bài" do not fit on one.
+        Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onExit, Modifier.testTag("runner-exit")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Bộ đề") }
-            Text(set.name, Modifier.weight(1f), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(set.name, Modifier.weight(1f), fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Pill(clock(elapsed), modifier = Modifier.testTag("runner-clock"))
-            if (!finished) {
-                Pill("${attempt.answers.size}/${set.questions.size}", modifier = Modifier.testTag("runner-count"))
-                Button(onClick = { submitting = true }, Modifier.testTag("runner-submit")) { Text("Nộp bài") }
-            }
+            if (!finished) Pill("${attempt.answers.size}/${set.questions.size} câu", modifier = Modifier.testTag("runner-count"))
+            Box(Modifier.weight(1f))
+            if (!finished) Button(onClick = { submitting = true }, Modifier.testTag("runner-submit")) { Text("Nộp bài") }
         }
         if (finished) Result(app, set, attempt, onCards = onCards, onAgain = { restarting = true }, onSaved = { id -> persist(attempt.copy(resultNoteId = id)) })
         else Questions(set, attempt.answers, review = false) { q, l -> persist(attempt.copy(answers = attempt.answers + (q.i to l))) }

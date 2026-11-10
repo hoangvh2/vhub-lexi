@@ -3,7 +3,10 @@ package com.vh.lexi.data
 import com.vh.lexi.core.TestSet
 import com.vh.lexi.core.testSetFromJson
 import com.vh.lexi.core.toJson
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -22,6 +25,7 @@ class TestSetStore(root: File) {
     private val mediaRoot = File(dir, "media")
     private val lock = Mutex()
     private var loaded = false
+    private val deleted: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
     private val _sets = MutableStateFlow<List<TestSet>>(emptyList())
     val sets: StateFlow<List<TestSet>> = _sets
 
@@ -41,8 +45,23 @@ class TestSetStore(root: File) {
         all
     }
 
-    suspend fun save(set: TestSet) = lock.withLock {
+    suspend fun save(set: TestSet) = write(set.copy(updatedAt = System.currentTimeMillis()))
+
+    /**
+     * Shows [set] at once and writes it in [scope]: an answer chosen or the clock paused as the screen closes is already
+     * there if the test is opened again before the file is written.
+     */
+    fun saveSoon(scope: CoroutineScope, set: TestSet) {
+        if (set.id in deleted) return
         val next = set.copy(updatedAt = System.currentTimeMillis())
+        _sets.update { list -> (listOf(next) + list.filter { it.id != set.id }).sortedByDescending { it.createdAt } }
+        scope.launch { write(next) }
+    }
+
+    private suspend fun write(next: TestSet): Unit = lock.withLock {
+        val set = next
+        // A write still queued when its set was deleted must not bring the file back.
+        if (set.id in deleted) return@withLock
         withContext(Dispatchers.IO) {
             dir.mkdirs()
             val tmp = File(dir, "${safe(set.id)}.tmp")
@@ -52,11 +71,16 @@ class TestSetStore(root: File) {
                 check(tmp.renameTo(fileOf(set.id))) { "could not store the test set" }
             }
         }
-        _sets.value = (listOf(next) + _sets.value.filter { it.id != set.id }).sortedByDescending { it.createdAt }
+        // Writes finish in order, but a newer version may already be shown (saveSoon): never put an older one back.
+        _sets.update { list ->
+            if (list.any { it.id == set.id && it.updatedAt > next.updatedAt }) list
+            else (listOf(next) + list.filter { it.id != set.id }).sortedByDescending { it.createdAt }
+        }
     }
 
     /** The set and every file stored for it (audio, pictures). */
     suspend fun delete(id: String) = lock.withLock {
+        deleted += id
         withContext(Dispatchers.IO) {
             fileOf(id).delete()
             File(mediaRoot, safe(id)).deleteRecursively()
