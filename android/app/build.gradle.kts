@@ -45,6 +45,8 @@ android {
 
     // The built-in grammar pack (shared/seed/grammar-toeic.json, built by tools/seed/build.ts), loaded by data/Seeds.kt.
     sourceSets.getByName("main").assets.srcDir("../../shared/seed")
+    // Bộ đề tests open the same self-made PDFs and audio as the web tests (tools/fixtures/make-test-pdf.py).
+    sourceSets.getByName("androidTest").assets.srcDir("../../web/test/fixtures")
 
     signingConfigs {
         create("release") {
@@ -113,6 +115,9 @@ dependencies {
     implementation("androidx.credentials:credentials:1.3.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+
+    // Bộ đề: text of a PDF with positions (two-column order, the answer key). Pages are drawn by the platform's PdfRenderer.
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")

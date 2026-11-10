@@ -65,6 +65,7 @@ import com.vh.lexi.core.ExtractedPassage
 import com.vh.lexi.core.FieldValue
 import com.vh.lexi.core.IMPORT_TOPICS
 import com.vh.lexi.core.ImportDraft
+import com.vh.lexi.core.WrongDrafts
 import com.vh.lexi.core.LETTERS
 import com.vh.lexi.core.POS_NAMES
 import com.vh.lexi.core.PRACTICE_DECK
@@ -105,8 +106,12 @@ private data class PassageView(val label: String, val coverage: Int?, val words:
  * cards. A reading passage goes to the unknown-words check, and the words picked there become vocabulary cards. The AI only
  * proposes: nothing is saved before the learner has seen the row.
  */
+/**
+ * [preset]: the missed questions of a Bộ đề (TestSetsScreen), shown straight as rows to check, with [presetTest] (the
+ * set's name) as the test the cards are tagged with. Closing the review goes back to the test.
+ */
 @Composable
-fun ImportScreen(app: LexiApp, onClose: () -> Unit) {
+fun ImportScreen(app: LexiApp, preset: WrongDrafts? = null, presetTest: String? = null, onClose: () -> Unit) {
     val context = LocalContext.current
     val data = app.data
     val toast = LocalToaster.current
@@ -123,9 +128,9 @@ fun ImportScreen(app: LexiApp, onClose: () -> Unit) {
     var text by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
-    var rows by remember { mutableStateOf<List<ImportDraft>?>(null) }
-    var passages by remember { mutableStateOf(listOf<ExtractedPassage>()) }
-    var skipped by remember { mutableStateOf(0) }
+    var rows by remember { mutableStateOf<List<ImportDraft>?>(preset?.drafts) }
+    var passages by remember { mutableStateOf(preset?.passages ?: listOf()) }
+    var skipped by remember { mutableStateOf(preset?.skipped ?: 0) }
     var view by remember { mutableStateOf<PassageView?>(null) }
     var saving by remember { mutableStateOf(false) }
 
@@ -151,7 +156,7 @@ fun ImportScreen(app: LexiApp, onClose: () -> Unit) {
         DeckPicker(decks, selectedId, newName, onPick = { pickedDeck = it; newDeck = null }, onNew = { newDeck = it }, onExisting = { decks.firstOrNull()?.let { d -> pickedDeck = d.id; newDeck = null } })
     }
 
-    val testName = remember(notes) { latestTestName(notes) }
+    val testName = remember(notes) { presetTest ?: latestTestName(notes) }
     val existing = remember(notes) { existingSentences(notes) }
 
     BackHandler { if (view != null) view = null else onClose() }
@@ -190,7 +195,10 @@ fun ImportScreen(app: LexiApp, onClose: () -> Unit) {
         }
     }
 
-    fun reset() { rows = null; passages = emptyList(); skipped = 0; uris = emptyList(); text = ""; error = ""; view = null }
+    fun reset() {
+        if (preset != null) return onClose()
+        rows = null; passages = emptyList(); skipped = 0; uris = emptyList(); text = ""; error = ""; view = null
+    }
 
     fun patch(key: String, change: (ImportDraft) -> ImportDraft) { rows = rows?.map { if (it.key == key) change(it) else it } }
 
@@ -259,7 +267,7 @@ fun ImportScreen(app: LexiApp, onClose: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp).testTag("import-screen"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ScreenHeader("Nhập từ đề thi") { TextButton(onClick = { if (view != null) view = null else onClose() }) { Text(if (view != null) "Quay lại" else "Đóng") } }
+        ScreenHeader(if (preset != null) "Thẻ từ câu sai" else "Nhập từ đề thi") { TextButton(onClick = { if (view != null) view = null else onClose() }) { Text(if (view != null) "Quay lại" else "Đóng") } }
 
         val v = view
         if (v != null) {
