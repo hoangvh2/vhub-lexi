@@ -687,3 +687,21 @@ fun testSetFromJson(o: JSONObject): TestSet {
         },
     )
 }
+
+/**
+ * The stretch to replay for a question (web: replayOf in TestSets.tsx): its own clip; for Part 3–4, from the start of the
+ * first question of its group of three (32–34, 35–37 …), where the conversation or talk is, to the end of its own.
+ */
+fun replayOf(all: List<SetQuestion>, q: SetQuestion): Clip? {
+    val clip = q.clip ?: return null
+    val n = q.number
+    if ((q.part == 3 || q.part == 4) && n != null) {
+        val first = n - (n - 32) % 3 // JS % (truncated), as on the web
+        val head = all.firstOrNull { it.number == first && it.clip?.track == clip.track }?.clip
+        if (head != null && head.from <= clip.from) return clip.copy(from = head.from)
+    }
+    return clip
+}
+
+/** A clip's start moved by [ms] (the ±2 s nudge), kept inside the file and at least half a second before its end. */
+fun nudged(clip: Clip, ms: Long): Clip = clip.copy(from = maxOf(0L, minOf(clip.to - 500, clip.from + ms)))

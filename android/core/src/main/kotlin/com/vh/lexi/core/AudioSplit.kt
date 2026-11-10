@@ -29,6 +29,39 @@ object AudioSplit {
         return out
     }
 
+    /**
+     * [frameLevels] fed piece by piece, as a decoder hands out its buffers: a 45-minute file never has to sit in memory
+     * as one array. Gives the same levels as [frameLevels] over the whole file.
+     */
+    class Meter(rate: Int, frameMs: Int = FRAME_MS) {
+        private val size = maxOf(1L, Math.round(rate.toDouble() * frameMs / 1000)).toInt()
+        private var levels = FloatArray(1024)
+        private var frames = 0
+        private var sum = 0.0
+        private var inFrame = 0
+        var samples = 0L
+            private set
+
+        fun add(x: Float) {
+            sum += x.toDouble() * x
+            samples++
+            if (++inFrame == size) flush()
+        }
+
+        private fun flush() {
+            val rms = Math.sqrt(sum / maxOf(1, inFrame))
+            if (frames == levels.size) levels = levels.copyOf(levels.size * 2)
+            levels[frames++] = if (rms > 1e-5) (20 * Math.log10(rms)).toFloat() else -100f
+            sum = 0.0
+            inFrame = 0
+        }
+
+        fun finish(): FloatArray {
+            if (inFrame > 0) flush()
+            return levels.copyOf(frames)
+        }
+    }
+
     /** Silent stretches of at least [minMs], as start to end in ms; one that runs to the end of the file is kept. */
     fun findGaps(levels: FloatArray, frameMs: Int = FRAME_MS, minMs: Int = 600, silenceDb: Double = SILENCE_DB): List<Pair<Long, Long>> {
         val gaps = mutableListOf<Pair<Long, Long>>()
