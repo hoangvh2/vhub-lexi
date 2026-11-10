@@ -42,3 +42,8 @@ infra/.build/
 functions/memo-eval.md
 functions/src/.enrich-base-*
 functions/src/.memo-eval-*
+
+# Personal study data: Lexi backups (they hold words and test questions copied for private study) and test PDFs.
+vh-lexi-*.json
+*.pdf
+!web/test/fixtures/*.pdf

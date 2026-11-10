@@ -12,9 +12,11 @@ import { useStore } from "../lib/store.ts";
 import { Blocks } from "./Blocks.tsx";
 import { Icon, confirmDialog, go, toast } from "./common.tsx";
 import { ImportPanel } from "./ImportPanel.tsx";
+import { TestSetsTab } from "./TestSets.tsx";
 
-type Tab = "result" | "words" | "grammar";
+type Tab = "sets" | "result" | "words" | "grammar";
 const TABS: Array<{ id: Tab; label: string }> = [
+  { id: "sets", label: "Bộ đề" },
   { id: "words", label: "Từ lạ" },
   { id: "grammar", label: "Ngữ pháp" },
   { id: "result", label: "Kết quả bài" },
@@ -46,7 +48,7 @@ const todayIso = () => {
 export function Practice({ initialTab }: { initialTab: string }) {
   const allNotes = useStore(notes);
   const tests = useMemo(() => testResults(allNotes), [allNotes]);
-  const [tab, setTab] = useState<Tab>(initialTab === "result" || initialTab === "grammar" || initialTab === "words" ? initialTab : tests.length ? "words" : "result");
+  const [tab, setTab] = useState<Tab>(initialTab === "result" || initialTab === "grammar" || initialTab === "words" || initialTab === "sets" ? initialTab : tests.length ? "words" : "result");
   // The test new cards are tagged with: the latest one unless the learner picks another.
   const [pick, setPick] = useState<string>("");
   const current = tests.find((t) => t.id === pick) ?? tests[tests.length - 1] ?? null;
@@ -73,7 +75,7 @@ export function Practice({ initialTab }: { initialTab: string }) {
         <button type="button" class="btn ghost sm" onClick={() => go("/today")}><Icon n="arrow" size={16} /> Hôm nay</button>
         <h1>Luyện đề</h1>
       </div>
-      <p class="muted">Làm đề ở nơi bạn quen (Voca Prep, sách ETS), rồi mang câu sai về đây: mỗi câu sai thành một thẻ để Lexi nhắc lại đúng lúc.</p>
+      <p class="muted">Làm đề ngay trong Lexi (nhập file PDF ở “Bộ đề”), hoặc làm ở nơi bạn quen rồi mang câu sai về đây: mỗi câu sai thành một thẻ để Lexi nhắc lại đúng lúc.</p>
 
       <div class="row between">
         <div class="seg" role="tablist" aria-label="Luyện đề">
@@ -81,7 +83,7 @@ export function Practice({ initialTab }: { initialTab: string }) {
             <button type="button" key={t.id} role="tab" aria-pressed={tab === t.id} onClick={() => setTab(t.id)} data-testid={`tab-${t.id}`}>{t.label}</button>
           ))}
         </div>
-        {tests.length > 0 && tab !== "result" && (
+        {tests.length > 0 && tab !== "result" && tab !== "sets" && (
           <label class="inline-pick">
             <span class="muted small">Câu sai thuộc bài</span>
             <select class="select" value={current?.id ?? ""} onChange={(e) => setPick(e.currentTarget.value)} data-testid="test-pick">
@@ -91,8 +93,9 @@ export function Practice({ initialTab }: { initialTab: string }) {
         )}
       </div>
 
-      {tab !== "result" && <DeckPick target={target} decks={allDecks} onChange={setPicked} />}
-      {tab !== "result" && <ImportPanel deck={sink} testName={current?.name ?? null} onPassage={(t) => (setPassage(t), setTab("words"))} />}
+      {tab !== "result" && tab !== "sets" && <DeckPick target={target} decks={allDecks} onChange={setPicked} />}
+      {tab !== "result" && tab !== "sets" && <ImportPanel deck={sink} testName={current?.name ?? null} onPassage={(t) => (setPassage(t), setTab("words"))} />}
+      {tab === "sets" && <TestSetsTab deck={sink} deckPicker={<DeckPick target={target} decks={allDecks} onChange={setPicked} />} onPassage={(t) => (setPassage(t), setTab("words"))} />}
       {tab === "result" && <ResultTab tests={tests} onSaved={(t) => (setPick(t.id), setTab("words"))} />}
       {tab === "words" && <WordsTab deck={sink} testName={current?.name ?? null} text={passage} setText={setPassage} />}
       {tab === "grammar" && <GrammarTab deck={sink} testName={current?.name ?? null} />}

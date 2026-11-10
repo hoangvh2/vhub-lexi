@@ -1073,3 +1073,204 @@ describe("library read view (Xem)", () => {
     await ctx.close();
   });
 });
+
+describe("bộ đề: a test PDF -> questions on this device -> timed attempt -> result + cards from missed questions", () => {
+  const FIXTURES = fileURLToPath(new URL("../../web/test/fixtures/", import.meta.url));
+  const shots = process.env.LEXI_SHOTS;
+
+  /**
+   * Stands in for the Cloud Function on the text path: reads the questions, options, passages and the answer key out
+   * of the text the app sent, the way the model is asked to. So the test checks that the PDF text carries all of it.
+   */
+  function fakeRead(text) {
+    const key = new Map([...(/Answer key[^:]*:([^\n]*)/.exec(text)?.[1] ?? "").matchAll(/(\d+) \(([A-D])\)/g)].map((m) => [Number(m[1]), m[2]]));
+    const body = text.replace(/\n\nAnswer key[\s\S]*$/, "");
+    const passages = [];
+    for (const m of body.matchAll(/Questions (\d+)-(\d+) refer to the following ([^.]+)\.\n([\s\S]*?)\n(?=\d{3}\.)/g)) {
+      passages.push({ id: passages.length + 1, label: `Questions ${m[1]}-${m[2]}`, text: m[4].replace(/-{4,} \(\d+\)/g, "_____"), truncated: false, from: Number(m[1]), to: Number(m[2]), raw: m[4] });
+    }
+    const questions = [];
+    for (const m of body.matchAll(/(?:^|\n)(\d{3})\. ([\s\S]*?)(?=\n\d{3}\. |\n\nPART|\n*$)/g)) {
+      const n = Number(m[1]);
+      const opts = { A: "", B: "", C: "", D: "" };
+      for (const o of m[2].matchAll(/\(([A-D])\) ([^\n]*)/g)) opts[o[1]] = o[2].trim();
+      let stem = m[2].split("(A)")[0].replace(/\s+/g, " ").replace(/-{4,}/g, "_____").trim();
+      const p = passages.find((x) => n >= x.from && n <= x.to);
+      let kind = n >= 147 ? "reading" : "fill";
+      if (!stem && p) {
+        const s = p.raw.replace(/\n/g, " ").split(/(?<=\.)\s+/).find((x) => x.includes(`(${n})`)) ?? "";
+        if (/^-{4,} \(\d+\)\.?$/.test(s.trim())) (kind = "insert"), (stem = "Which sentence fits the blank?");
+        else stem = s.replace(/-{4,} \(\d+\)/, "_____").trim();
+      }
+      const correct = key.get(n) ?? null;
+      questions.push({ number: n, part: null, kind, stem, options: opts, correct, result: "unknown", passage: p?.id ?? null, topic: kind === "fill" ? "Khác" : "", rule: correct && kind === "fill" ? `Đáp án ${correct} hợp ngữ cảnh.` : "", translation: "", flags: [] });
+    }
+    return { passages: passages.map(({ from, to, raw, ...x }) => x), questions };
+  }
+
+  async function importPdf(page, file) {
+    await page.goto(`${base}/#/practice?tab=sets`);
+    await page.waitForSelector('[data-testid=sets-empty]');
+    await page.click('[data-testid=pdf-toggle]');
+    await page.setInputFiles('[data-testid=pdf-file]', join(FIXTURES, file));
+    await page.waitForSelector('[data-testid=pdf-facts]', { timeout: 20_000 });
+  }
+
+  it("imports the text PDF, takes the test with a clock, grades it per part, logs it and makes cards from the misses", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    const shot = async (name) => shots && (await page.waitForTimeout(400), await page.screenshot({ path: join(shots, `${name}.png`), fullPage: false }));
+    const calls = [];
+    await page.exposeFunction("__stubExtract", (input) => (calls.push(input), fakeRead(input.text)));
+    await page.addInitScript(() => { window.__lexiExtract = (input) => window.__stubExtract(input); });
+    await importPdf(page, "reading-test.pdf");
+    const facts = await page.textContent('[data-testid=pdf-facts]');
+    assert.match(facts, /3 trang/);
+    assert.match(await page.textContent('[data-testid=pdf-key]'), /17 câu \(trang 3\)/);
+    assert.match(await page.textContent('[data-testid=pdf-read]'), /1 phần, ≈ 2 lượt AI/);
+    assert.equal(await page.inputValue('[data-testid=set-name]'), "reading test");
+    await page.fill('[data-testid=set-name]', "Đề PDF mẫu");
+    await shot("1-pdf-facts");
+    await page.click('[data-testid=pdf-read]');
+    await page.waitForSelector('[data-testid=pdf-preview]');
+
+    // One call, with the two question pages in reading order and only their answers; the key page is not sent.
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].images.length, 0);
+    assert.ok(calls[0].text.indexOf("105.") < calls[0].text.indexOf("106."));
+    assert.match(calls[0].text, /Answer key \(data, from the same test\): 101 \(A\), 102 \(A\)/);
+    assert.doesNotMatch(calls[0].text, /ANSWER KEY/);
+    assert.match(await page.textContent('[data-testid=pdf-total]'), /17 câu/);
+    const preview = await page.textContent('[data-testid=pdf-preview]');
+    assert.match(preview, /Part 5: 10/);
+    assert.match(preview, /Part 6: 4/);
+    assert.match(preview, /Part 7: 3/);
+    assert.equal(await page.locator('[data-testid=pdf-fix]').count(), 0); // every question has its answer from the key
+    assert.equal(await page.locator('[data-testid=pdf-missing]').count(), 0); // 110 -> 131 is a new part, not a gap
+    await shot("2-pdf-preview");
+    await page.click('[data-testid=pdf-save]');
+    await page.waitForSelector('[data-testid=set-row]');
+    assert.match(await page.textContent('[data-testid=sets]'), /Riêng tư · chỉ trên máy này/);
+
+    // Take it: passages show once above their questions; answers are kept when the screen is left and reopened.
+    await page.click('[data-testid=set-open]');
+    await page.waitForSelector('[data-testid=runner]');
+    assert.equal(await page.locator('[data-testid=runner-q]').count(), 17);
+    assert.equal(await page.locator('[data-testid=runner-passage]').count(), 2);
+    assert.match(await page.textContent('[data-testid=runner-clock]'), /^\d\d:\d\d$/);
+    const q = (n) => page.locator('[data-testid=runner-q]', { hasText: new RegExp(`^${n}\\.`) });
+    const pick = async (n, text) => q(n).locator('label.opt', { hasText: text }).first().click();
+    await pick(101, "receipts"); // right
+    await pick(102, "very"); // wrong
+    await pick(103, "Despite"); // right
+    await shot("3-runner-part5");
+    await page.click('[data-testid=runner-exit]');
+    await page.waitForSelector('[data-testid=set-row]');
+    assert.match(await page.textContent('[data-testid=set-row]'), /Đang làm · 3\/17 câu/);
+    await page.click('[data-testid=set-open]');
+    await page.waitForSelector('[data-testid=runner]');
+    assert.equal(await q(102).locator('input:checked').count(), 1);
+    await pick(131, "parks"); // wrong (fill inside the e-mail)
+    await pick(147, "Young children"); // right
+    await q(147).scrollIntoViewIfNeeded();
+    await shot("4-runner-part7");
+    if (shots) (await page.emulateMedia({ colorScheme: "dark" }), await shot("4b-runner-dark"), await page.emulateMedia({ colorScheme: "light" }));
+    assert.match(await page.textContent('[data-testid=runner-count]'), /5\/17/);
+    await page.waitForTimeout(2200); // the clock runs while the test is open
+    await page.click('[data-testid=runner-submit]');
+    assert.match(await page.textContent('.modal'), /Còn 12 câu chưa làm/);
+    await page.click('[data-testid=confirm-ok]');
+    await page.waitForSelector('[data-testid=runner-result]');
+    assert.equal(await page.textContent('[data-testid=result-score]'), "3/17");
+    assert.match(await page.textContent('[data-testid=result-time]'), /^00:0[2-9]$/);
+    assert.match(await page.textContent('[data-testid=result-p5]'), /2\/10/);
+    assert.match(await page.textContent('[data-testid=result-p6]'), /0\/4/);
+    assert.match(await page.textContent('[data-testid=result-p7]'), /1\/3/);
+    await shot("5-result");
+    if (shots) (await page.emulateMedia({ colorScheme: "dark" }), await shot("5b-result-dark"), await page.emulateMedia({ colorScheme: "light" }));
+
+    // Log it: it shows in "Kết quả bài" as a short test (not compared with the full-RC target).
+    await page.click('[data-testid=result-save]');
+    await page.waitForFunction(() => /Đã lưu vào Kết quả bài/.test(document.querySelector('[data-testid=result-save]').textContent));
+    assert.equal(await page.locator('[data-testid=result-save]').isDisabled(), true);
+
+    // Cards from the misses: the fill-in ones are rows (selected), reading/insert ones are counted, passages offered.
+    await page.click('[data-testid=result-cards]');
+    await page.waitForSelector('[data-testid=import-review]');
+    const rows = page.locator('[data-testid=import-draft]');
+    const n = await rows.count();
+    assert.ok(n >= 10, `rows: ${n}`); // 102, 104–110 blank, 131, 133, 134
+    // The deck choice sits with the rows it applies to; the default is the practice deck.
+    assert.equal(await page.inputValue('[data-testid=runner-result] [data-testid=deck-name]'), "Luyện đề TOEIC");
+    assert.match(await page.textContent('[data-testid=import-skipped]'), /đọc hiểu \/ chèn câu/);
+    assert.ok((await page.locator('[data-testid=import-passage]').count()) >= 1);
+    await shot("6-cards-review");
+    await page.click('[data-testid=import-save]');
+    await page.waitForFunction(() => /Đã thêm \d+ thẻ ngữ pháp · Đề PDF mẫu/.test(document.body.textContent));
+
+    // "Làm lại" wipes the answers, so it asks: "Không" keeps the result, "Làm lại" starts a clean attempt.
+    await page.click('[data-testid=result-again]');
+    await page.click('[data-testid=confirm-cancel]');
+    assert.equal(await page.textContent('[data-testid=result-score]'), "3/17");
+    await page.click('[data-testid=result-again]');
+    await page.click('[data-testid=confirm-ok]');
+    await page.waitForSelector('[data-testid=runner-submit]');
+    assert.match(await page.textContent('[data-testid=runner-count]'), /0\/17/);
+    assert.equal(await page.locator('[data-testid=runner-q] input:checked').count(), 0);
+
+    // The result is a test note: "Kết quả bài" lists it.
+    await page.click('[data-testid=runner-exit]');
+    await page.click('[data-testid=tab-result]');
+    await page.waitForFunction(() => /Đề PDF mẫu/.test(document.querySelector('[data-testid=practice]').textContent));
+    assert.match(await page.textContent('[data-testid=practice]'), /RC 3\/17/);
+    assert.equal(await noOverflow(page), true);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("a scanned PDF goes to the function as page pictures, two at a time, and a pasted key fills the answers", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 1280, height: 800 } });
+    const shot = async (name) => shots && (await page.waitForTimeout(400), await page.screenshot({ path: join(shots, `${name}.png`) }));
+    const calls = [];
+    // No OCR in the stub: whatever the pictures, it "reads" two Part 5 questions without answers.
+    const READ = { passages: [], questions: [101, 102].map((n) => ({ number: n, part: 5, kind: "fill", stem: n === 101 ? "Ms. Tran asked the staff to submit their travel _____ by Friday." : "The new printer is _____ faster than the one we used last year.", options: n === 101 ? { A: "receipts", B: "receive", C: "received", D: "receiving" } : { A: "much", B: "very", C: "many", D: "most" }, correct: null, result: "unknown", passage: null, topic: "", rule: "", translation: "", flags: ["no-answer"] })) };
+    await page.exposeFunction("__stubExtract", (input) => (calls.push({ n: input.images.length, jpeg: input.images.every((i) => i.mime === "image/jpeg" && i.data.startsWith("/9j/")), size: Math.max(...input.images.map((i) => i.data.length)), text: input.text }), READ));
+    await page.addInitScript(() => { window.__lexiExtract = (input) => window.__stubExtract(input); });
+    await importPdf(page, "reading-test-scan.pdf");
+    assert.match(await page.textContent('[data-testid=pdf-scanned]'), /3 trang scan/);
+    assert.match(await page.textContent('[data-testid=pdf-nokey]'), /Không thấy bảng đáp án/);
+    await page.fill('[data-testid=set-key]', "101 A 102 A");
+    assert.match(await page.textContent('[data-testid=set-key-count]'), /2 đáp án/);
+    assert.match(await page.textContent('[data-testid=pdf-read]'), /2 phần, ≈ 6 lượt AI/);
+    await shot("7-scan-facts-desktop");
+    await page.click('[data-testid=pdf-read]');
+    await page.waitForSelector('[data-testid=pdf-preview]', { timeout: 30_000 });
+    assert.deepEqual(calls.map((c) => [c.n, c.jpeg]), [[2, true], [1, true]]);
+    assert.ok(calls.every((c) => c.size < 1_400_000 && c.size > 20_000), JSON.stringify(calls.map((c) => c.size)));
+    assert.match(calls[0].text, /101 \(A\), 102 \(A\)/);
+    assert.match(await page.textContent('[data-testid=pdf-total]'), /2 câu/);
+    assert.equal(await page.locator('[data-testid=pdf-fix]').count(), 0);
+    await page.click('[data-testid=pdf-save]');
+    await page.waitForSelector('[data-testid=set-row]');
+
+    // Deleting asks first: "Không" keeps it, "Xoá" removes it from this device.
+    await page.click('[data-testid=set-delete]');
+    await page.click('[data-testid=confirm-cancel]');
+    assert.equal(await page.locator('[data-testid=set-row]').count(), 1);
+    await page.reload();
+    await page.waitForSelector('[data-testid=set-row]');
+    await page.click('[data-testid=set-delete]');
+    await page.click('[data-testid=confirm-ok]');
+    await page.waitForSelector('[data-testid=sets-empty]');
+    await page.reload();
+    await page.waitForSelector('[data-testid=sets-empty]');
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("the JSON backup says it is private and holds no imported test", async () => {
+    const { ctx, page } = await open(browser, base);
+    await page.goto(`${base}/#/settings`);
+    assert.match(await page.textContent('[data-testid=export-private]'), /không đưa lên repo/);
+    await ctx.close();
+  });
+});

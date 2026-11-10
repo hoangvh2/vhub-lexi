@@ -185,6 +185,7 @@ export function Settings({ email }: { email: string | null }) {
           <input ref={apkg} type="file" accept=".apkg,.colpkg" hidden onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f) void openApkg(f); e.currentTarget.value = ""; }} data-testid="import-anki-file" />
           {email && <button type="button" class="btn danger" onClick={() => void signOut()}><Icon n="logout" /> Đăng xuất</button>}
         </div>
+        <p class="muted small" data-testid="export-private">File xuất ra chứa câu và đoạn bạn chép từ đề để tự học: chỉ giữ cho riêng mình, không đưa lên repo hay gửi cho người khác. Bộ đề nhập từ PDF không nằm trong file này, chúng chỉ ở trên máy đã nhập.</p>
       </section>
 
       <section class="panel col">
