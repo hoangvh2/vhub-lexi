@@ -57,7 +57,10 @@ export interface TestResult {
   /** Right answers over the reading parts that were entered (all three for a full RC). */
   rcRight: number;
   rcTotal: number;
-  /** True when Part 5, 6 and 7 were all entered, so rcRight is comparable with RC_TARGET. */
+  /**
+   * True when Part 5, 6 and 7 were all entered at their real size (30/16/54), so rcRight is comparable with
+   * RC_TARGET. A short imported test (a "Bộ đề" of 20 questions) has all three parts but is not a full RC.
+   */
   fullRc: boolean;
   tag: string;
   createdAt: number;
@@ -94,7 +97,7 @@ export function toResult(n: Note): TestResult {
     causes: { v: int(str(f.v)), g: int(str(f.g)), p: int(str(f.p)), t: int(str(f.t)) },
     rcRight: present.reduce((a, p) => a + p.right, 0),
     rcTotal: present.reduce((a, p) => a + p.total, 0),
-    fullRc: present.length === 3,
+    fullRc: PARTS.every((p) => parts[p.key]?.total === p.total),
     tag: testTag(str(f.name)),
     createdAt: n.createdAt,
   };

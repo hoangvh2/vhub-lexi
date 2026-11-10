@@ -73,7 +73,9 @@ jobs:
           npm run build --prefix web
 
       - name: Production bundle must not contain emulator or test hooks
-        run: "! grep -rE \"127\\.0\\.0\\.1|9099\" web/dist/assets"
+        # The emulator address or the Auth emulator port after a colon. A bare "9099" is not enough: pdf.js's worker
+        # has font metrics like ".90991" in it.
+        run: "! grep -rE \"127\\.0\\.0\\.1|:9099\\b\" web/dist/assets"
 
       - name: Firestore rules tests (emulator)
         run: npm run rules --prefix tests

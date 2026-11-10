@@ -124,6 +124,17 @@ Nhập tay từng câu quá chậm khi một bài sai ~47 câu, nên có một c
 - **Đoạn đọc** đi vào đúng chức năng Từ lạ: web đưa văn bản sang tab Từ lạ (độ phủ, bấm từng từ); Android (`ReadCheck.kt`, port `readcheck.ts`, vector `readcheck.json`) liệt kê từ lạ kèm gợi ý Wiktionary để chọn nhiều từ rồi thêm. Thẻ mang nhãn `de-<bài gần nhất>` (Android lấy bài có ngày mới nhất, kết quả bài nhập trên web).
 - **Vào ứng dụng**: web chọn/kéo thả/dán ảnh (Ctrl+V); Android chọn ảnh hoặc "Chia sẻ" ảnh thẳng vào Lexi.
 
+### Bộ đề (đề Reading từ file PDF → làm bài trong Lexi → kết quả + thẻ)
+
+Một bài đề đầy đủ cần làm trọn trong Lexi, không chỉ mang câu sai về. Chỉ có trên web.
+
+- **Đọc PDF trên máy** (`web/src/lib/pdf.ts`, pdf.js tải lười ~1,5 MB, worker là module `.js` của chính site, `isEvalSupported: false` theo CSP): chữ từng trang theo thứ tự đọc; trang hai cột (Part 5 trong sách đề) đọc hết cột trái rồi cột phải. Trang gần như không có chữ (< 40 ký tự) là trang scan: dựng thành JPEG ~1600 px để gửi như ảnh.
+- **Bảng đáp án** (`web/src/lib/testset.ts`, hàm thuần): trang mà các cặp "101 (A)" chiếm phần lớn nội dung (hoặc có tiêu đề Answer key / Đáp án và ≥ 25%) là trang đáp án: dò bằng code, không gửi cho AI. Người học có thể dán thêm bảng đáp án (bản scan không dò được).
+- **Chia phần cho `extract-questions`** (không đổi function): trang chữ ghép tới 5.000 ký tự/lần (trang dài cắt ở đầu một câu hỏi), trang scan 2 ảnh/lần, để bản chép lại + JSON nằm trong 8.000 token ra của function. Mỗi phần mang theo đáp án của đúng các câu trong phần đó ("Answer key (data …)"). Gộp kết quả: bỏ câu trùng theo số câu, **bảng đáp án của file thắng chữ AI đọc** (khác nhau thì gắn cờ `key-differs`, bỏ quy tắc AI viết cho chữ cái khác), Part lấy theo số câu (101–130 / 131–146 / 147–200), bỏ đoạn đọc không câu nào trỏ tới. Hết lượt AI giữa chừng thì giữ phần đã đọc và báo các trang còn thiếu.
+- **Lưu trên máy, không đồng bộ** (`web/src/data/testsets.ts`, IndexedDB `lexi-private`): nội dung đề là bản sao để tự học nên không lên Firestore, không vào file Xuất JSON, không cần rules mới. Bài làm dở (lựa chọn, thời gian) lưu cùng bộ đề; rời màn hình hoặc ẩn tab thì đồng hồ dừng.
+- **Chấm** (`grade`): theo Part, câu bỏ trống tính sai, câu không có đáp án không chấm. "Lưu vào Kết quả bài" tạo ghi chú `test` như form nhập tay. `fullRc` chỉ đúng khi ba Part đủ 30/16/54 câu, nên một bộ đề ngắn không bị so với mục tiêu 70/100.
+- **Câu sai → thẻ**: câu `fill` sai đi vào đúng bảng duyệt của Nhập nhanh (`DraftReview`), gắn nhãn `de-<tên bộ đề>`; câu đọc hiểu / chèn câu sai thì đưa đoạn đọc sang tab Từ lạ.
+
 ## Thêm nội dung TOEIC / IELTS
 
 Mọi thứ ngoài lớp "mẫu thẻ" đã không biết gì về từ vựng. Để thêm một loại ghi chú:

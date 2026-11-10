@@ -1,0 +1,217 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { beforeEach, describe, expect, it } from "vitest";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+import type { Note } from "@shared/model.ts";
+import { deleteTestSet, loadTestSets, saveTestSet, testSets } from "../src/data/testsets.ts";
+import type { Extracted, ExtractedQuestion } from "../src/lib/import.ts";
+import { layoutText, openPdf, readPages, type PdfJs, type TextItem } from "../src/lib/pdf.ts";
+import { toResult } from "../src/lib/practice.ts";
+import {
+  CHUNK_CHARS, CHUNK_IMAGES, chunkPages, findKey, grade, isKeyPage, keyNote, keyPairs, mergeExtracted, numbersIn, partOfNumber, resultFields, summary, wrongDrafts,
+  type PdfPage, type TestSet,
+} from "../src/lib/testset.ts";
+
+const fixture = (f: string) => new Uint8Array(readFileSync(join(__dirname, "fixtures", f)));
+const pages = async (f: string) => readPages(await openPdf(fixture(f), pdfjs as unknown as PdfJs));
+
+const q = (o: Partial<ExtractedQuestion> & { number: number | null }): ExtractedQuestion => ({
+  part: null, kind: "fill", stem: "The report is ------- finished.", options: { A: "already", B: "yet", C: "still", D: "ever" },
+  correct: null, result: "unknown", passage: null, topic: "", rule: "", translation: "", flags: [], ...o,
+});
+
+describe("reading the test PDF", () => {
+  it("reads the text PDF in order, two-column Part 5 left column first, and finds the key page", async () => {
+    const ps = await pages("reading-test.pdf");
+    expect(ps.map((p) => p.scanned)).toEqual([false, false, false]);
+    const p1 = ps[0].text;
+    // Left column (101–105) before the right one (106–110), and a question's own lines stay together.
+    expect(p1.indexOf("105.")).toBeLessThan(p1.indexOf("106."));
+    expect(p1).toContain("101. Ms. Tran asked the staff to submit their travel -------\nby Friday.\n(A) receipts");
+    expect(ps[1].text).toContain("are asked to ------- (131) in the west lot.");
+    const { key, keyPages } = findKey(ps);
+    expect(keyPages).toEqual([3]);
+    expect(key.size).toBe(17);
+    expect([key.get(101), key.get(106), key.get(132), key.get(148)]).toEqual(["A", "C", "B", "C"]);
+  });
+
+  it("marks every page of the scanned PDF as a picture and finds no key in it", async () => {
+    const ps = await pages("reading-test-scan.pdf");
+    expect(ps.map((p) => p.scanned)).toEqual([true, true, true]);
+    expect(findKey(ps).key.size).toBe(0);
+  });
+
+  it("a question page is not a key page, even with numbers and (A)-(D) options on it", async () => {
+    const ps = await pages("reading-test.pdf");
+    expect(isKeyPage(ps[0].text)).toBe(false);
+    expect(isKeyPage(ps[1].text)).toBe(false);
+    expect(isKeyPage("ANSWER KEY\n101 A 102 C 103 B")).toBe(true); // a short key with a heading
+  });
+
+  it("keeps a single-column page in line order and leaves full-width lines out of the columns", () => {
+    const it = (str: string, x: number, y: number, w = 100): TextItem => ({ str, x, y, w, h: 10 });
+    const one = layoutText([it("second", 40, 700, 60), it("first", 40, 720, 60), it("line", 110, 720, 40)], 600);
+    expect(one).toBe("first line\nsecond");
+    const col = (x: number, s: string) => [1, 2, 3, 4].map((k) => it(`${s}${k}`, x, 740 - k * 20));
+    const two = layoutText([it("PART 5 Directions spanning the page", 40, 760, 500), ...col(40, "L"), ...col(320, "R")], 600);
+    expect(two).toBe("PART 5 Directions spanning the page\n\nL1\nL2\nL3\nL4\n\nR1\nR2\nR3\nR4");
+  });
+});
+
+describe("answer key and pieces", () => {
+  it("reads the usual key layouts", () => {
+    const k = keyPairs("101. (A)  102 B\n103-C 104) D 105: (b)\n1. A 2 (C)");
+    expect([...k]).toEqual([[101, "A"], [102, "B"], [103, "C"], [104, "D"], [1, "A"], [2, "C"]]);
+    expect(keyPairs("in 2016 a").size).toBe(0);
+  });
+
+  it("joins text pages up to the limit, never sends the key page, and sends scans two at a time", () => {
+    const page = (n: number, len: number, scanned = false): PdfPage => ({ n, text: scanned ? "" : `${n}0${n}. ${"x".repeat(len)}`, scanned });
+    const cs = chunkPages([page(1, 1500), page(2, 1500), page(3, 3000), page(4, 0, true), page(5, 0, true), page(6, 0, true), page(7, 200)], new Set([7]));
+    expect(cs.map((c) => [c.kind, c.pages])).toEqual([["text", [1, 2]], ["text", [3]], ["images", [4, 5]], ["images", [6]]]);
+    for (const c of cs) if (c.kind === "text") expect(c.text.length).toBeLessThanOrEqual(CHUNK_CHARS);
+    expect(cs.filter((c) => c.kind === "images").every((c) => c.pages.length <= CHUNK_IMAGES)).toBe(true);
+  });
+
+  it("splits a page longer than the limit at the start of a question", () => {
+    const qs = Array.from({ length: 40 }, (_, i) => `${101 + i}. ${"word ".repeat(30)}\n(A) a (B) b (C) c (D) d`).join("\n");
+    const cs = chunkPages([{ n: 1, text: qs, scanned: false }], new Set());
+    expect(cs.length).toBeGreaterThan(1);
+    for (const c of cs) {
+      expect(c.kind === "text" && c.text.length <= CHUNK_CHARS).toBe(true);
+      if (c.kind === "text") expect(c.text).toMatch(/^\d{3}\. /);
+    }
+    expect(cs.flatMap((c) => (c.kind === "text" ? numbersIn(c.text) : []))).toEqual(Array.from({ length: 40 }, (_, i) => 101 + i));
+  });
+
+  it("gives a piece only the answers of its own questions", async () => {
+    const ps = await pages("reading-test.pdf");
+    const { key, keyPages } = findKey(ps);
+    const [c] = chunkPages(ps, new Set(keyPages));
+    expect(c.kind).toBe("text");
+    const note = keyNote(key, numbersIn(c.kind === "text" ? c.text : ""));
+    expect(note).toContain("101 (A)");
+    expect(note).toContain("149 (B)");
+    expect(keyNote(key, [999])).toBe("");
+    expect(keyNote(new Map([[5, "B"]]), "all")).toContain("5 (B)");
+  });
+});
+
+describe("merging what the function read", () => {
+  const key = new Map([[101, "A"], [102, "B"], [147, "C"]] as const);
+
+  it("dedupes overlapping pieces, applies the PDF key, takes the part from the number and renumbers passages", () => {
+    const a: Extracted = {
+      passages: [{ id: 1, label: "Header", text: "page header nobody points at", truncated: false }],
+      questions: [q({ number: 102, options: { A: "a", B: "b", C: "", D: "" } }), q({ number: 101, correct: "B", rule: "rule for B", part: 6 })],
+    };
+    const b: Extracted = {
+      passages: [{ id: 1, label: "Notice", text: "Greenway library notice text", truncated: false }],
+      questions: [q({ number: 102, correct: "B", options: { A: "a", B: "b", C: "c", D: "d" } }), q({ number: 147, kind: "reading", stem: "Who is it for?", passage: 1, correct: "C", rule: "x" }), q({ number: 148, kind: "reading", stem: "What?", passage: 1 })],
+    };
+    const m = mergeExtracted([a, b], key);
+    expect(m.questions.map((x) => x.number)).toEqual([101, 102, 147, 148]);
+    expect(m.questions.map((x) => x.i)).toEqual([0, 1, 2, 3]);
+    // 101: the key says A, the model said B: the key wins, the explanation for B is dropped, the row is flagged.
+    expect(m.questions[0]).toMatchObject({ correct: "A", part: 5, rule: "" });
+    expect(m.questions[0].flags).toContain("key-differs");
+    // 102 kept from the reading with four options.
+    expect(m.questions[1].options.D).toBe("d");
+    expect(m.questions[1].correct).toBe("B");
+    // Only the passage a question points at is kept, at index 0.
+    expect(m.passages).toEqual([{ label: "Notice", text: "Greenway library notice text", truncated: false }]);
+    expect([m.questions[2].passage, m.questions[3].passage]).toEqual([0, 0]);
+    expect(m.questions[2]).toMatchObject({ part: 7, correct: "C", rule: "x" });
+    expect(m.questions[3].correct).toBeNull();
+    expect(summary(m)).toMatchObject({ total: 4, byPart: { p5: 2, p6: 0, p7: 2, other: 0 }, noAnswer: 1, missing: [] });
+    // 101, 102 | 147, 148: no gap inside a part. A gap inside one is reported.
+    expect(summary({ questions: [101, 103, 147].map((n, i) => ({ ...m.questions[0], i, number: n, part: partOfNumber(n) })) }).missing).toEqual([102]);
+  });
+
+  it("parts by number follow the TOEIC layout", () => {
+    expect([partOfNumber(101), partOfNumber(130), partOfNumber(131), partOfNumber(146), partOfNumber(147), partOfNumber(200), partOfNumber(12), partOfNumber(null)]).toEqual([5, 5, 6, 6, 7, 7, null, null]);
+  });
+
+  it("a key letter whose option is empty leaves the question without an answer, flagged", () => {
+    const m = mergeExtracted([{ passages: [], questions: [q({ number: 102, options: { A: "a", B: "", C: "c", D: "d" } })] }], key);
+    expect(m.questions[0].correct).toBeNull();
+    expect(m.questions[0].flags).toContain("answer-empty");
+  });
+});
+
+describe("taking a set", () => {
+  const set: Pick<TestSet, "questions" | "passages"> = mergeExtracted(
+    [{
+      passages: [{ id: 1, label: "E-mail", text: "Employees are asked to _____ in the west lot.", truncated: false }],
+      questions: [
+        q({ number: 101, correct: "B", stem: "The report is _____ finished.", rule: "already + V3" }),
+        q({ number: 102, correct: "A", stem: "Please call _____ you need help.", options: { A: "if", B: "so", C: "but", D: "or" } }),
+        q({ number: 131, correct: "A", stem: "Employees are asked to _____ in the west lot.", options: { A: "park", B: "parks", C: "parked", D: "parking" }, passage: 1 }),
+        q({ number: 147, kind: "reading", stem: "Who is it for?", correct: "C", passage: 1 }),
+        q({ number: 148, kind: "reading", stem: "Where?", correct: null }),
+      ],
+    }],
+    new Map(),
+  );
+
+  it("grades per part, counts blanks as wrong and leaves out questions with no answer", () => {
+    const g = grade(set, { 0: "B", 1: "C", 3: "C" });
+    expect(g).toMatchObject({ right: 2, total: 4, ungraded: 1, wrong: [1, 2] });
+    expect(g.parts).toEqual({ p5: { right: 1, total: 2 }, p6: { right: 0, total: 1 }, p7: { right: 1, total: 1 } });
+  });
+
+  it("logs the attempt in the shape of the Kết quả bài form, and a short set is not a full RC", () => {
+    const g = grade(set, { 0: "B", 1: "C", 3: "C" });
+    const f = resultFields("  Đề PDF 1 ", "2026-11-10", g, 21 * 60_000 + 20_000);
+    expect(f).toEqual({ name: "Đề PDF 1", date: "2026-11-10", p5: "1/2", p6: "0/1", p7: "1/1", minutes: "21" });
+    const note: Note = { id: "t", type: "test", deckId: "d", fields: f, createdAt: 0, updatedAt: 0 };
+    expect(toResult(note)).toMatchObject({ rcRight: 2, rcTotal: 4, fullRc: false });
+    const full: Note = { ...note, fields: { name: "x", p5: "20/30", p6: "8/16", p7: "25/54" } };
+    expect(toResult(full).fullRc).toBe(true);
+  });
+
+  it("turns the missed fill-in questions into review rows and hands over the passages of the missed ones", () => {
+    const g = grade(set, { 0: "B", 1: "C" });
+    const w = wrongDrafts(set, g, new Set());
+    expect(w.drafts.map((d) => d.number)).toEqual([102, 131]);
+    expect(w.drafts.every((d) => d.result === "wrong" && d.include)).toBe(true);
+    expect(w.skipped).toBe(1); // 147, a reading question
+    expect(w.passages.map((p) => p.label)).toEqual(["E-mail"]);
+    // A sentence that already has a card is not selected again.
+    const again = wrongDrafts(set, g, new Set(["please call if you need help."]));
+    expect(again.drafts.find((d) => d.number === 102)?.include).toBe(false);
+  });
+});
+
+describe("device-only store", () => {
+  beforeEach(async () => {
+    for (const s of await loadTestSets(true)) await deleteTestSet(s.id);
+  });
+
+  it("keeps sets in IndexedDB, newest first, and deletes one", async () => {
+    const base = { source: { fileName: "a.pdf", pages: 1 }, passages: [], questions: [], updatedAt: 0 };
+    await saveTestSet({ ...base, id: "a", name: "A", createdAt: 1 });
+    await saveTestSet({ ...base, id: "b", name: "B", createdAt: 2 });
+    expect((await loadTestSets(true)).map((s) => s.id)).toEqual(["b", "a"]);
+    await saveTestSet({ ...base, id: "a", name: "A", createdAt: 1, attempt: { startedAt: 5, elapsedMs: 9, answers: { 0: "A" } } });
+    expect((await loadTestSets(true)).find((s) => s.id === "a")?.attempt?.answers).toEqual({ 0: "A" });
+    await deleteTestSet("b");
+    expect(testSets.get().map((s) => s.id)).toEqual(["a"]);
+    expect((await loadTestSets(true)).map((s) => s.id)).toEqual(["a"]);
+  });
+});
+
+describe("key page guard", () => {
+  it("a Vietnamese question page titled with 'đáp án' is still a question page", () => {
+    const page = "Chọn đáp án đúng cho mỗi câu.\n131. (A) park (B) parks (C) parked (D) parking\n132. (A) The garage was built in 1998. (B) Please allow extra time to reach your desk.\n133. (A) patient (B) patience\nThe east parking garage will be closed for repairs from June 3 to June 14 and employees are asked to park in the west lot.";
+    expect(isKeyPage(page)).toBe(false);
+  });
+});
+
+describe("passage display", () => {
+  it("joins wrapped lines, keeps header lines and paragraphs", async () => {
+    const { reflow } = await import("../src/lib/testset.ts");
+    const t = "To: All staff\nSubject: Parking\n\nThe east parking garage will be closed for repairs from June 3 to June 14. During\nthis time, employees park in the west lot.\n\nThank you.";
+    expect(reflow(t)).toBe("To: All staff\nSubject: Parking\n\nThe east parking garage will be closed for repairs from June 3 to June 14. During this time, employees park in the west lot.\n\nThank you.");
+  });
+});

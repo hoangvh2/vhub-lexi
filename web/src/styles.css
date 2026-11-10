@@ -296,7 +296,6 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .study { display: flex; flex-direction: column; gap: 14px; min-height: calc(100% - 4px); }
 .counts { display: flex; gap: 6px; font-size: 13px; font-weight: 800; flex-wrap: wrap; }
 .counts span { padding: 5px 12px; border-radius: 999px; background: var(--surface); box-shadow: var(--clay-sm); white-space: nowrap; }
-.deck-pick { flex: 1 1 120px; min-width: 0; max-width: 240px; width: auto; min-height: 40px; padding: 4px 36px 4px 14px; margin-left: auto; text-overflow: ellipsis; }
 .counts b { font-variant-numeric: tabular-nums; }
 .c-new { color: var(--easy); } .c-learn { color: var(--again); } .c-rev { color: var(--good); }
 .counts .on { box-shadow: inset 0 0 0 2px currentColor; }
@@ -693,6 +692,37 @@ input[type="range"] { width: 100%; }
 .draft .opt.on { box-shadow: inset 0 0 0 2px var(--accent); }
 .draft .clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 0; white-space: pre-wrap; }
 .draft .btn.sm { align-self: flex-start; }
+/* ---- Bộ đề: a test imported from a PDF, taken in Lexi ---- */
+.drafts.compact .draft { gap: 8px; padding: 12px; }
+.sets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.set { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--surface-2); flex-wrap: wrap; }
+.set .name { overflow-wrap: anywhere; }
+.runner { gap: 14px; }
+.runner-bar { position: sticky; top: 8px; z-index: 5; gap: 10px; padding: 10px 12px; flex-wrap: nowrap; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
+.runner-bar .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.runner-bar .pill { font-variant-numeric: tabular-nums; }
+.part-head { margin: 6px 0 0; font-family: var(--f-display); font-size: 18px; }
+.runner .passage { margin: 0; }
+.runner .passage p { margin: 6px 0 0; }
+.qcard { gap: 12px; }
+.qcard.missed { box-shadow: inset 0 0 0 2px var(--rose-soft); }
+.qcard .stem { margin: 0; line-height: 1.6; font-size: 16px; overflow-wrap: anywhere; }
+.qcard .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+.qcard .opt { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); cursor: pointer; min-height: 44px; overflow-wrap: anywhere; }
+.qcard .opt input { accent-color: var(--accent); }
+.qcard .opt.on { box-shadow: inset 0 0 0 2px var(--accent); background: var(--accent-soft); }
+.qcard .opt.right { background: var(--mint-soft); box-shadow: inset 0 0 0 2px var(--mint-deep); }
+.qcard .opt.bad { background: var(--rose-soft); box-shadow: inset 0 0 0 2px var(--rose-deep); }
+.runner .deck-pick { flex-wrap: wrap; width: 100%; align-self: stretch; justify-content: flex-start; }
+.pill.wrap { white-space: normal; align-self: flex-start; line-height: 1.45; border-radius: 14px; }
+.runner .deck-pick .input, .runner .deck-pick .select { flex: 1 1 180px; }
+.big-score { font-family: var(--f-display); font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
+@media (max-width: 899px) {
+  .runner-bar { top: 4px; }
+  .runner-bar .name { display: none; }
+  .qcard .opts { grid-template-columns: minmax(0, 1fr); }
+  .set .row { width: 100%; justify-content: flex-end; }
+}
 .deck-pick { align-items: center; gap: 8px; flex-wrap: nowrap; }
 .deck-pick .select, .deck-pick .input { min-width: 0; flex: 1; }
 .deck-pick label { white-space: nowrap; }

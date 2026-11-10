@@ -39,7 +39,6 @@ export function ImportPanel({ deck, testName, onPassage }: { deck: DeckSink; tes
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ drafts: Draft[]; passages: ExtractedPassage[]; skipped: number } | null>(null);
-  const [saving, setSaving] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const available = !!hook() || (firebaseConfigured && p.aiEnabled);
   const existing = useMemo(() => existingSentences(allNotes), [allNotes]);
@@ -82,32 +81,6 @@ export function ImportPanel({ deck, testName, onPassage }: { deck: DeckSink; tes
       setError(describeError(e));
     } finally {
       setBusy(false);
-    }
-  }
-
-  function patch(key: string, change: Partial<Draft>, edit?: string) {
-    setResult((r) => r && { ...r, drafts: r.drafts.map((d) => (d.key === key ? { ...d, ...change, edited: edit && !d.edited.includes(edit) ? [...d.edited, edit] : d.edited } : d)) });
-  }
-
-  const chosen = result?.drafts.filter((d) => d.include && problems(d, existing).block.length === 0) ?? [];
-
-  async function saveChosen() {
-    if (!result || !chosen.length || saving) return;
-    setSaving(true);
-    try {
-      const tags = ["ngu-phap", ...(testName ? [testTag(testName)] : [])];
-      const done = new Set<string>();
-      const deckId = await deck.resolve();
-      for (const d of chosen) {
-        await addNote({ type: "grammar", fields: grammarFields(d), tags, deckId, aiFields: aiFieldsOf(d) });
-        done.add(d.key);
-      }
-      toast(`Đã thêm ${done.size} thẻ ngữ pháp${testName ? ` · ${testName}` : ""}`);
-      const left = result.drafts.filter((d) => !done.has(d.key));
-      if (!left.length && !result.passages.length) reset();
-      else setResult({ ...result, drafts: left });
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -157,45 +130,95 @@ export function ImportPanel({ deck, testName, onPassage }: { deck: DeckSink; tes
         </>
       )}
 
-      {result && (
-        <div class="col" data-testid="import-review">
-          {result.drafts.length > 0 && (
-            <>
-              <div class="row between">
-                <b>Câu ngữ pháp ({result.drafts.length})</b>
-                <span class="muted small">Kiểm tra từng câu với đề gốc. Câu có cảnh báo được bỏ chọn sẵn.</span>
-              </div>
-              <ul class="drafts">
-                {result.drafts.map((d) => <DraftRow key={d.key} d={d} existing={existing} onChange={patch} />)}
-              </ul>
-              <div class="row">
-                <button type="button" class="btn primary" disabled={!chosen.length || saving} onClick={() => void saveChosen()} data-testid="import-save"><Icon n="check" /> Lưu {chosen.length} thẻ</button>
-                <button type="button" class="btn ghost" onClick={reset}>Làm lại</button>
-              </div>
-            </>
-          )}
-          {result.skipped > 0 && <p class="muted small" data-testid="import-skipped">{result.skipped} câu hiểu bài / chèn câu không thành thẻ ngữ pháp. Ghi nhận trong “Kết quả bài”; đoạn đọc của chúng ở bên dưới.</p>}
-          {result.passages.length > 0 && (
-            <>
-              <b>Đoạn đọc ({result.passages.length})</b>
-              <ul class="drafts">
-                {result.passages.map((ps) => (
-                  <li key={ps.id} class="draft" data-testid="import-passage">
-                    <div class="row between">
-                      <b>{ps.label || `Đoạn ${ps.id}`}</b>
-                      {ps.truncated && <span class="pill warn" data-testid="import-truncated">Có thể bị cắt, chụp thêm phần còn lại</span>}
-                    </div>
-                    <p class="muted small clamp">{ps.text}</p>
-                    <button type="button" class="btn sm" onClick={() => (onPassage(ps.text), toast("Đã đưa đoạn vào tab Từ lạ"))} data-testid="import-use-passage">Tìm từ lạ trong đoạn này</button>
-                  </li>
-                ))}
-              </ul>
-              {!result.drafts.length && <button type="button" class="btn ghost" onClick={reset}>Xong</button>}
-            </>
-          )}
-        </div>
-      )}
+      {result && <DraftReview result={result} setResult={setResult} existing={existing} deck={deck} testName={testName} onPassage={onPassage} onDone={reset} />}
     </section>
+  );
+}
+
+export interface Review {
+  drafts: Draft[];
+  passages: ExtractedPassage[];
+  skipped: number;
+}
+
+/**
+ * The rows the learner checks before a card exists: grammar rows to save as fill-in cards (tagged with the test),
+ * and the passages to look for missing words in. Used by "Nhập nhanh" and by a finished "Bộ đề" attempt.
+ */
+export function DraftReview({ result, setResult, existing, deck, testName, onPassage, onDone, skippedText }: {
+  result: Review;
+  setResult(r: Review | null): void;
+  existing: ReadonlySet<string>;
+  deck: DeckSink;
+  testName: string | null;
+  onPassage(text: string): void;
+  onDone(): void;
+  skippedText?: string;
+}) {
+  const [saving, setSaving] = useState(false);
+  const chosen = result.drafts.filter((d) => d.include && problems(d, existing).block.length === 0);
+
+  function patch(key: string, change: Partial<Draft>, edit?: string) {
+    setResult({ ...result, drafts: result.drafts.map((d) => (d.key === key ? { ...d, ...change, edited: edit && !d.edited.includes(edit) ? [...d.edited, edit] : d.edited } : d)) });
+  }
+
+  async function saveChosen() {
+    if (!chosen.length || saving) return;
+    setSaving(true);
+    try {
+      const tags = ["ngu-phap", ...(testName ? [testTag(testName)] : [])];
+      const done = new Set<string>();
+      const deckId = await deck.resolve();
+      for (const d of chosen) {
+        await addNote({ type: "grammar", fields: grammarFields(d), tags, deckId, aiFields: aiFieldsOf(d) });
+        done.add(d.key);
+      }
+      toast(`Đã thêm ${done.size} thẻ ngữ pháp${testName ? ` · ${testName}` : ""}`);
+      const left = result.drafts.filter((d) => !done.has(d.key));
+      if (!left.length && !result.passages.length) onDone();
+      else setResult({ ...result, drafts: left });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div class="col" data-testid="import-review">
+      {result.drafts.length > 0 && (
+        <>
+          <div class="row between">
+            <b>Câu ngữ pháp ({result.drafts.length})</b>
+            <span class="muted small">Kiểm tra từng câu với đề gốc. Câu có cảnh báo được bỏ chọn sẵn.</span>
+          </div>
+          <ul class="drafts">
+            {result.drafts.map((d) => <DraftRow key={d.key} d={d} existing={existing} onChange={patch} />)}
+          </ul>
+          <div class="row">
+            <button type="button" class="btn primary" disabled={!chosen.length || saving} onClick={() => void saveChosen()} data-testid="import-save"><Icon n="check" /> Lưu {chosen.length} thẻ</button>
+            <button type="button" class="btn ghost" onClick={onDone}>{skippedText ? "Đóng" : "Làm lại"}</button>
+          </div>
+        </>
+      )}
+      {result.skipped > 0 && <p class="muted small" data-testid="import-skipped">{skippedText ?? `${result.skipped} câu hiểu bài / chèn câu không thành thẻ ngữ pháp. Ghi nhận trong “Kết quả bài”; đoạn đọc của chúng ở bên dưới.`}</p>}
+      {result.passages.length > 0 && (
+        <>
+          <b>Đoạn đọc ({result.passages.length})</b>
+          <ul class="drafts">
+            {result.passages.map((ps) => (
+              <li key={ps.id} class="draft" data-testid="import-passage">
+                <div class="row between">
+                  <b>{ps.label || `Đoạn ${ps.id}`}</b>
+                  {ps.truncated && <span class="pill warn" data-testid="import-truncated">Có thể bị cắt, chụp thêm phần còn lại</span>}
+                </div>
+                <p class="muted small clamp">{ps.text}</p>
+                <button type="button" class="btn sm" onClick={() => (onPassage(ps.text), toast("Đã đưa đoạn vào tab Từ lạ"))} data-testid="import-use-passage">Tìm từ lạ trong đoạn này</button>
+              </li>
+            ))}
+          </ul>
+          {!result.drafts.length && <button type="button" class="btn ghost" onClick={onDone}>Xong</button>}
+        </>
+      )}
+    </div>
   );
 }
 

@@ -25,9 +25,10 @@ function precache(): Plugin {
           if (statSync(p).isDirectory()) {
             if (r === "dict") continue; // fetched on demand, cached by version
             walk(p, r);
-          } else if (!/\.(map|woff)$/.test(n) && n !== "sw.js" && !/^(sql-wasm|fsrs-binding|optimizer\.worker)/.test(n)) files.push("/" + r);
+          } else if (!/\.(map|woff)$/.test(n) && n !== "sw.js" && !/^(sql-wasm|fsrs-binding|optimizer\.worker|pdf)/.test(n)) files.push("/" + r);
           // sql-wasm*: the Anki reader (~1 MB), downloaded only when the learner imports a package. fsrs-binding*,
-          // optimizer.worker*: the FSRS optimizer (~1.6 MB), only when they press "Tối ưu". Both cached on first use.
+          // optimizer.worker*: the FSRS optimizer (~1.6 MB), only when they press "Tối ưu". pdf*: pdf.js and its worker
+          // (~1.5 MB), only when a test PDF is picked. All cached on first use.
         }
       };
       walk(outDir);
