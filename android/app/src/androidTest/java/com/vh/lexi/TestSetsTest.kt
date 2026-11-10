@@ -196,7 +196,9 @@ class TestSetsTest {
         rule.onNodeWithTag("result-again").performClick()
         waitFor("again-dialog-2") { countText("Làm lại từ đầu?") > 0 }
         dialogButton("Làm lại").performClick()
-        waitFor("fresh") { count("runner-count") > 0 && textOf("runner-count").contains("0/3") }
+        // The dialog's window must be gone before the next tap, or the tap lands on it and only dismisses it.
+        waitFor("fresh") { count("runner-count") > 0 && textOf("runner-count").contains("0/3") && countText("Làm lại từ đầu?") == 0 }
+        rule.waitForIdle()
         rule.onNodeWithTag("runner-exit").performClick()
 
         // Deleting asks first: "Huỷ" keeps the set, "Xoá" removes it and its file.
