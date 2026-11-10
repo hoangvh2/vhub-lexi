@@ -146,10 +146,9 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
         ScreenHeader("Bộ đề") { TextButton(onClick = onClose) { Text("Đóng") } }
         PdfImport(app) { s -> toast("Đã lưu bộ đề “${s.name}”") }
         Panel(Modifier.testTag("sets")) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Bộ đề của bạn", Modifier.weight(1f), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
-                Pill("Riêng tư · chỉ trên máy này")
-            }
+            // Title, then the pill under it: side by side they squeeze the title to three lines on a 320 dp phone.
+            Text("Bộ đề của bạn", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+            Pill("Riêng tư · chỉ trên máy này")
             if (ready && sets.isEmpty()) Text("Chưa có bộ đề nào. Nhập một file PDF đề Reading ở trên để làm bài ngay trong Lexi.", fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("sets-empty"))
             for (s in sets) SetRow(app, s) { running = s.id }
             Text("Nội dung đề là bản sao để bạn tự học: chỉ nằm trong máy này, không đồng bộ, không sao lưu. Kết quả bài và thẻ tạo từ câu sai thì đồng bộ như mọi thẻ khác.", fontSize = 12.sp, color = c.muted)
