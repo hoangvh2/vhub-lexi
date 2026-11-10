@@ -1272,6 +1272,83 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await ctx.close();
   });
 
+  it("a big file: only the chosen pages are read, the key is looked for among them, a bad choice is refused", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    const calls = [];
+    await page.exposeFunction("__stubExtract", (input) => (calls.push(input), fakeRead(input.text)));
+    await page.addInitScript(() => { window.__lexiExtract = (input) => window.__stubExtract(input); });
+    await importPdf(page, "reading-test.pdf");
+    // Not a page of this file: said so, nothing can be read.
+    await page.fill('[data-testid=set-range]', "4");
+    await page.waitForSelector('[data-testid=set-range-bad]');
+    assert.equal(await page.isEnabled('[data-testid=pdf-read]'), false);
+    // Part 5 only: the key page (3) is outside the choice, so no key.
+    await page.fill('[data-testid=set-range]', "1");
+    await page.waitForSelector('[data-testid=pdf-nokey]');
+    assert.match(await page.textContent('[data-testid=pdf-nokey]'), /trong các trang đã chọn/);
+    assert.match(await page.textContent('[data-testid=pdf-pages]'), /^1\/3 trang$/);
+    // Part 6–7 with the key page at the back.
+    await page.fill('[data-testid=set-range]', "2 - 3");
+    await page.waitForSelector('[data-testid=pdf-key]');
+    assert.equal(await page.locator('[data-testid=set-range-bad]').count(), 0);
+    assert.match(await page.textContent('[data-testid=pdf-pages]'), /^2\/3 trang$/);
+    await page.click('[data-testid=pdf-read]');
+    await page.waitForSelector('[data-testid=pdf-preview]');
+    assert.equal(calls.length, 1);
+    assert.doesNotMatch(calls[0].text, /\n101\. /, "a page that was not chosen went to the AI");
+    assert.doesNotMatch(calls[0].text, /ANSWER KEY/, "the key page itself is never sent (only the key note for these numbers)");
+    assert.match(calls[0].text, /Answer key[^\n]*131 \(/, "the key found on the chosen page 3 goes with the questions");
+    const total = Number((await page.textContent('[data-testid=pdf-total]')).match(/\d+/)[0]);
+    assert.ok(total > 0 && total < 17, `only Part 6–7 questions expected, got ${total}`);
+    assert.equal(await page.locator('[data-testid=pdf-noanswer]').count(), 0);
+    assert.equal(await noOverflow(page), true);
+    await page.click('[data-testid=pdf-save]');
+    await page.waitForSelector('[data-testid=set-row]');
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("a copier scan (1-bit CCITT, fed in upside down): the page is drawn, not blank, and the turn reaches the AI", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    const sent = [];
+    await page.exposeFunction("__stubExtract", (input) => (sent.push(...input.images.map((i) => `data:${i.mime};base64,${i.data}`)), { passages: [], questions: [] }));
+    await page.addInitScript(() => { window.__lexiExtract = (input) => window.__stubExtract(input); });
+    await importPdf(page, "reading-test-copier.pdf");
+    // Ink per horizontal band, top to bottom: a page turned 180° has the same bands in reverse.
+    const bands = (src) => page.evaluate(async (src) => {
+      const img = new Image();
+      img.src = src;
+      await img.decode();
+      const c = document.createElement("canvas");
+      c.width = 60; c.height = 80;
+      const g = c.getContext("2d");
+      g.drawImage(img, 0, 0, 60, 80);
+      const d = g.getImageData(0, 0, 60, 80).data;
+      const out = Array(8).fill(0);
+      for (let i = 0; i < d.length; i += 4) out[Math.floor(i / 4 / 60 / 10)] += 255 - d[i];
+      return out;
+    }, src);
+    await page.waitForSelector('[data-testid=pdf-thumb-img][data-turn="0"]');
+    const upright = await bands(await page.getAttribute('[data-testid=pdf-thumb-img]', "src"));
+    await page.click('[data-testid=pdf-turn]');
+    await page.waitForSelector('[data-testid=pdf-thumb-img][data-turn="180"]');
+    assert.equal(await page.getAttribute('[data-testid=pdf-turn]', "aria-pressed"), "true");
+    assert.equal(await noOverflow(page), true);
+    await page.fill('[data-testid=set-range]', "1");
+    await page.click('[data-testid=pdf-read]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=pdf-error]'));
+    assert.equal(sent.length, 1);
+    const turned = await bands(sent[0]);
+    const close = (a, b) => a.every((x, i) => Math.abs(x - b[i]) <= Math.max(800, Math.max(...b) * 0.15));
+    // Without pdf.js's image decoders (wasmUrl) this page renders white: the AI would get an empty picture.
+    const ink = (b) => b.reduce((a, x) => a + x, 0) / (60 * 80);
+    assert.ok(ink(upright) > 2 && ink(turned) > 2, `page drawn blank: ink ${ink(upright)} / ${ink(turned)}`);
+    assert.ok(!close(upright, [...upright].reverse()), "the fixture page must not read the same upside down");
+    assert.ok(close(turned, [...upright].reverse()), `sent page is not turned: ${turned} vs ${upright}`);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
   it("the JSON backup says it is private and holds no imported test", async () => {
     const { ctx, page } = await open(browser, base);
     await page.goto(`${base}/#/settings`);

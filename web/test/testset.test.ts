@@ -8,7 +8,7 @@ import type { Extracted, ExtractedQuestion } from "../src/lib/import.ts";
 import { layoutText, openPdf, readPages, type PdfJs, type TextItem } from "../src/lib/pdf.ts";
 import { toResult } from "../src/lib/practice.ts";
 import {
-  CHUNK_CHARS, CHUNK_IMAGES, chunkPages, findKey, grade, isKeyPage, keyNote, keyPairs, mergeExtracted, numbersIn, partOfNumber, resultFields, summary, wrongDrafts,
+  CHUNK_CHARS, CHUNK_IMAGES, chunkPages, findKey, formatPages, grade, isKeyPage, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, partOfNumber, resultFields, summary, wrongDrafts,
   type PdfPage, type TestSet,
 } from "../src/lib/testset.ts";
 
@@ -128,6 +128,22 @@ describe("merging what the function read", () => {
     expect(summary({ questions: [101, 103, 147].map((n, i) => ({ ...m.questions[0], i, number: n, part: partOfNumber(n) })) }).missing).toEqual([102]);
   });
 
+  it("a book that numbers each exercise from 1 keeps both questions 1, in the order read; a question read twice is kept once", () => {
+    const ex1: Extracted = { passages: [], questions: [q({ number: 1, stem: "The bank has confirmed it will take _____ measures.", part: 5 }), q({ number: 2, stem: "The management decided to lay off _____.", part: 5 })] };
+    // The next piece re-reads question 2 across the page break (same stem, more options), then a new exercise starts at 1.
+    const ex2: Extracted = {
+      passages: [],
+      questions: [
+        q({ number: 2, stem: "The management decided to lay off _____.", options: { A: "a", B: "b", C: "c", D: "d" }, part: 5 }),
+        q({ number: 1, kind: "reading", stem: "What is the purpose of the e-mail?", part: 7 }),
+      ],
+    };
+    const m = mergeExtracted([ex1, ex2], new Map());
+    expect(m.questions.map((x) => [x.number, x.stem.slice(0, 12)])).toEqual([[1, "The bank has"], [2, "The manageme"], [1, "What is the "]]);
+    expect(m.questions.map((x) => x.part)).toEqual([5, 5, 7]);
+    expect(summary(m).missing).toEqual([]);
+  });
+
   it("parts by number follow the TOEIC layout", () => {
     expect([partOfNumber(101), partOfNumber(130), partOfNumber(131), partOfNumber(146), partOfNumber(147), partOfNumber(200), partOfNumber(12), partOfNumber(null)]).toEqual([5, 5, 6, 6, 7, 7, null, null]);
   });
@@ -213,5 +229,24 @@ describe("passage display", () => {
     const { reflow } = await import("../src/lib/testset.ts");
     const t = "To: All staff\nSubject: Parking\n\nThe east parking garage will be closed for repairs from June 3 to June 14. During\nthis time, employees park in the west lot.\n\nThank you.";
     expect(reflow(t)).toBe("To: All staff\nSubject: Parking\n\nThe east parking garage will be closed for repairs from June 3 to June 14. During this time, employees park in the west lot.\n\nThank you.");
+  });
+});
+
+describe("page range (a big book: read only the chosen pages)", () => {
+  it("reads ranges, single pages and open ends; empty means every page", () => {
+    expect(parsePageRange("", 5)).toEqual([1, 2, 3, 4, 5]);
+    expect(parsePageRange("45-47, 290-292", 300)).toEqual([45, 46, 47, 290, 291, 292]);
+    expect(parsePageRange("2–3; 8 10", 12)).toEqual([2, 3, 8, 10]);
+    expect(parsePageRange("10 đến 12", 20)).toEqual([10, 11, 12]);
+    expect(parsePageRange("298-", 300)).toEqual([298, 299, 300]);
+    expect(parsePageRange("3, 1-3", 9)).toEqual([1, 2, 3]);
+    expect(parsePageRange("295-400", 300)).toEqual([295, 296, 297, 298, 299, 300]);
+  });
+  it("refuses what is not a page instead of reading other pages", () => {
+    for (const t of ["0-3", "9-3", "abc", "350", "1-2-3", "5,x"]) expect(parsePageRange(t, 300), t).toBeNull();
+  });
+  it("writes the choice back short", () => {
+    expect(formatPages([1, 2, 3, 7, 9, 10])).toBe("1-3, 7, 9-10");
+    expect(formatPages([4])).toBe("4");
   });
 });

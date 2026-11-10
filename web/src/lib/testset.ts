@@ -50,6 +50,38 @@ export function isKeyPage(text: string): boolean {
 }
 
 /** The answer key of the PDF: the pairs found on its key pages. */
+/**
+ * Pages typed as "45-60, 290-292" (also "45–60", "45 đến 60", spaces or ";" between) → sorted page numbers within
+ * 1..numPages. Empty → every page. `null` when something is not a page or a range, or a range runs backwards, so the
+ * screen can say so instead of silently reading other pages.
+ */
+export function parsePageRange(text: string, numPages: number): number[] | null {
+  const t = text.trim().toLowerCase().replace(/\s*(?:[-–—]|đến|to)\s*/g, "-");
+  if (!t) return Array.from({ length: numPages }, (_, i) => i + 1);
+  const out = new Set<number>();
+  for (const s of t.split(/[,;\s]+/).filter(Boolean)) {
+    const m = /^(\d{1,5})(-(\d{1,5})?)?$/.exec(s);
+    if (!m) return null;
+    const a = Number(m[1]);
+    const b = m[3] !== undefined ? Number(m[3]) : m[2] ? numPages : a;
+    if (a < 1 || b < a || a > numPages) return null;
+    for (let n = a; n <= Math.min(b, numPages); n++) out.add(n);
+  }
+  return out.size ? [...out].sort((x, y) => x - y) : null;
+}
+
+/** Selected pages written back short: [1,2,3,7,9,10] → "1-3, 7, 9-10". */
+export function formatPages(pages: readonly number[]): string {
+  const out: string[] = [];
+  for (let i = 0; i < pages.length; i++) {
+    let j = i;
+    while (j + 1 < pages.length && pages[j + 1] === pages[j] + 1) j++;
+    out.push(j > i ? `${pages[i]}-${pages[j]}` : String(pages[i]));
+    i = j;
+  }
+  return out.join(", ");
+}
+
 export function findKey(pages: readonly PdfPage[]): { key: Map<number, Letter>; keyPages: number[] } {
   const key = new Map<number, Letter>();
   const keyPages: number[] = [];
@@ -175,7 +207,7 @@ export interface TestSet {
   name: string;
   createdAt: number;
   updatedAt: number;
-  source: { fileName: string; pages: number };
+  source: { fileName: string; pages: number; range?: string };
   passages: SetPassage[];
   questions: SetQuestion[];
   attempt?: Attempt;
@@ -190,6 +222,12 @@ export function partOfNumber(n: number | null): 5 | 6 | 7 | null {
   return null;
 }
 
+const stemWords = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
+function sameStem(a: string, b: string): boolean {
+  const x = stemWords(a);
+  const y = stemWords(b);
+  return !x || !y || x.startsWith(y.slice(0, 40)) || y.startsWith(x.slice(0, 40));
+}
 const keyOf = (q: Pick<ExtractedQuestion, "number" | "kind" | "stem">) => (q.number !== null ? `#${q.number}` : `${q.kind}|${str(q.stem).toLowerCase()}`);
 
 /**
@@ -230,7 +268,10 @@ export function mergeExtracted(results: readonly Extracted[], key: ReadonlyMap<n
         translation: correct && correct === read ? str(q.translation) : "",
         flags,
       };
-      const k = keyOf({ number, kind: q.kind, stem: item.stem });
+      // The same number is the same question only when the stems agree: a book numbers each exercise from 1 again,
+      // so "1." on two pages is two questions, while one question read twice across a page break keeps its stem.
+      let k = keyOf({ number, kind: q.kind, stem: item.stem });
+      for (let d = 1; number !== null && byKey.has(k) && !sameStem(byKey.get(k)!.stem, item.stem); d++) k = `#${number}~${d}`;
       const prev = byKey.get(k);
       const filled = (o: Record<Letter, string>) => LETTERS.filter((l) => o[l]).length;
       if (!prev) {
@@ -240,8 +281,10 @@ export function mergeExtracted(results: readonly Extracted[], key: ReadonlyMap<n
     }
   }
   const qs = order.map((k) => byKey.get(k)!);
-  // Numbered questions in number order; unnumbered ones keep their place after the one before them.
-  const sorted = qs.every((q) => q.number !== null) ? [...qs].sort((a, b) => a.number! - b.number!) : qs;
+  // Numbered questions in number order; unnumbered ones, or a book's exercises that each start at 1, keep the
+  // order they were read in.
+  const unique = new Set(qs.map((q) => q.number)).size === qs.length;
+  const sorted = unique && qs.every((q) => q.number !== null) ? [...qs].sort((a, b) => a.number! - b.number!) : qs;
   // Drop passages no question points at (a header or a page footer the model took for one).
   const used = [...new Set(sorted.map((q) => q.passage).filter((p): p is number => p !== null))].sort((a, b) => a - b);
   const remap = new Map(used.map((p, i) => [p, i]));

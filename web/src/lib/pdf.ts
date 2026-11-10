@@ -3,12 +3,13 @@
  * column first), and a JPEG of a page for scans. Nothing leaves the device here; pdf.js (~1.5 MB with its worker) is
  * downloaded only when a PDF is picked.
  */
+declare const __PDFJS_WASM__: string | undefined;
 import type { PdfPage } from "./testset.ts";
 import { SCANNED_BELOW } from "./testset.ts";
 
 /** The part of pdf.js used here (the browser build and the Node "legacy" build used by the tests have it). */
 export interface PdfJs {
-  getDocument(src: { data: Uint8Array; isEvalSupported?: boolean; disableFontFace?: boolean; useSystemFonts?: boolean }): { promise: Promise<PdfDocProxy>; destroy(): Promise<void> };
+  getDocument(src: { data: Uint8Array; isEvalSupported?: boolean; disableFontFace?: boolean; useSystemFonts?: boolean; wasmUrl?: string }): { promise: Promise<PdfDocProxy>; destroy(): Promise<void> };
 }
 interface PdfDocProxy {
   numPages: number;
@@ -19,7 +20,9 @@ export interface PdfDoc extends PdfDocProxy {
   close(): Promise<void>;
 }
 interface PdfPageProxy {
-  getViewport(o: { scale: number }): { width: number; height: number };
+  /** The page's own rotation from the file (0, 90, 180, 270). */
+  rotate: number;
+  getViewport(o: { scale: number; rotation?: number }): { width: number; height: number };
   getTextContent(): Promise<{ items: Array<{ str?: string; transform?: number[]; width?: number; height?: number; hasEOL?: boolean }> }>;
   render(o: { canvasContext: CanvasRenderingContext2D; viewport: { width: number; height: number }; canvas?: HTMLCanvasElement }): { promise: Promise<void> };
 }
@@ -98,10 +101,14 @@ function lines(items: readonly TextItem[]): string {
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-export async function openPdf(data: Uint8Array, lib?: PdfJs): Promise<PdfDoc> {
+/**
+ * `wasmUrl`: where pdf.js finds its image decoders. Without them a copier scan (1-bit CCITT / JBIG2) renders as a
+ * blank page with only its text overlay, and the AI would read nothing. Built into the site by vite.config.ts.
+ */
+export async function openPdf(data: Uint8Array, lib?: PdfJs, wasmUrl: string = typeof __PDFJS_WASM__ === "string" ? __PDFJS_WASM__ : ""): Promise<PdfDoc> {
   const pdfjs = lib ?? (await browserPdfJs());
   // No eval (the site's CSP forbids it), no font loading: only the text and the picture are needed.
-  const task = pdfjs.getDocument({ data, isEvalSupported: false, disableFontFace: true, useSystemFonts: false });
+  const task = pdfjs.getDocument({ data, isEvalSupported: false, disableFontFace: true, useSystemFonts: false, ...(wasmUrl ? { wasmUrl } : {}) });
   const doc = await task.promise;
   return { numPages: doc.numPages, getPage: (n) => doc.getPage(n), close: () => task.destroy() };
 }
@@ -126,12 +133,16 @@ export async function readPages(doc: PdfDoc, onPage?: (n: number) => void): Prom
 /** Longest side of a rendered page: enough for the model to read 9-pt print, small enough for the function's limit. */
 const RENDER_PX = 1600;
 
-/** A page as a JPEG in base64 (no data: prefix), for the function. */
-export async function renderPage(doc: PdfDoc, n: number): Promise<{ mime: string; data: string }> {
+/**
+ * A page as a JPEG in base64 (no data: prefix), for the function. `turn` turns it further than the file says (a
+ * book fed into the copier upside down comes out at 180°); `px` is the longest side.
+ */
+export async function renderPage(doc: PdfDoc, n: number, opts: { turn?: number; px?: number; quality?: number } = {}): Promise<{ mime: string; data: string }> {
   const page = await doc.getPage(n);
-  const base = page.getViewport({ scale: 1 });
-  const scale = RENDER_PX / Math.max(base.width, base.height);
-  const vp = page.getViewport({ scale });
+  const rotation = (((page.rotate ?? 0) + (opts.turn ?? 0)) % 360 + 360) % 360;
+  const base = page.getViewport({ scale: 1, rotation });
+  const scale = (opts.px ?? RENDER_PX) / Math.max(base.width, base.height);
+  const vp = page.getViewport({ scale, rotation });
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(vp.width);
   canvas.height = Math.round(vp.height);
@@ -139,7 +150,7 @@ export async function renderPage(doc: PdfDoc, n: number): Promise<{ mime: string
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   await page.render({ canvasContext: ctx, viewport: vp, canvas }).promise;
-  for (const q of [0.8, 0.65, 0.5]) {
+  for (const q of opts.quality ? [opts.quality] : [0.8, 0.65, 0.5]) {
     const data = canvas.toDataURL("image/jpeg", q).split(",")[1] ?? "";
     if (data.length <= 1_400_000) return { mime: "image/jpeg", data };
   }
