@@ -192,9 +192,9 @@ private fun SetRow(app: LexiApp, set: TestSet, onOpen: () -> Unit) {
 
 // ------------------------------------------------------------------ import
 
-private class Picked(val fileName: String, val file: File, val pages: List<PdfPage>)
+private class PdfPicked(val fileName: String, val file: File, val pages: List<PdfPage>)
 
-private class Draft(val set: MergedSet, val failed: List<Int>, val stopped: String)
+private class PdfDraft(val set: MergedSet, val failed: List<Int>, val stopped: String)
 
 private fun displayName(context: android.content.Context, uri: Uri): String =
     runCatching {
@@ -213,7 +213,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
     val available = app.extractOverride != null || (account is Account.SignedIn && prefs.aiEnabled)
 
     var open by remember { mutableStateOf(false) }
-    var picked by remember { mutableStateOf<Picked?>(null) }
+    var picked by remember { mutableStateOf<PdfPicked?>(null) }
     var loading by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var pastedKey by remember { mutableStateOf("") }
@@ -224,7 +224,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
     var error by remember { mutableStateOf("") }
     var progress by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var saving by remember { mutableStateOf(false) }
-    var draft by remember { mutableStateOf<Draft?>(null) }
+    var draft by remember { mutableStateOf<PdfDraft?>(null) }
 
     val p = picked
     // Only the chosen pages are read, and the answer key is looked for among them (a book's key restarts per unit).
@@ -255,7 +255,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                 }
                 val r = withContext(Dispatchers.IO) {
                     val file = Pdf.copyToCache(context, uri)
-                    Picked(fileName, file, Pdf.readPages(context, file) { n, of -> loading = "Đang đọc trang $n/$of…" })
+                    PdfPicked(fileName, file, Pdf.readPages(context, file) { n, of -> loading = "Đang đọc trang $n/$of…" })
                 }
                 picked = r
                 range = ""; turn = 0; thumb = null; draft = null
@@ -325,7 +325,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
             progress = null
             val set = withContext(Dispatchers.Default) { mergeExtracted(results, key) }
             if (set.questions.isEmpty()) error = stopped.ifEmpty { "Không thấy câu hỏi nào trong file này." }
-            else draft = Draft(set, failed.toList(), stopped)
+            else draft = PdfDraft(set, failed.toList(), stopped)
         }
     }
 
@@ -441,7 +441,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                             val ok = l in allowed
                             Row(
                                 Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(enabled = ok) {
-                                    draft = Draft(dr.set.copy(questions = dr.set.questions.map { if (it.i == q.i) it.copy(correct = l) else it }), dr.failed, dr.stopped)
+                                    draft = PdfDraft(dr.set.copy(questions = dr.set.questions.map { if (it.i == q.i) it.copy(correct = l) else it }), dr.failed, dr.stopped)
                                 }.testTag("pdf-fix-$l"),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
@@ -482,7 +482,8 @@ private fun linesOf(questions: List<SetQuestion>): List<Line> {
     var lastPassage: Int? = null
     for (q in questions) {
         if (q.part != lastPart) out += Line.Head(q.part)
-        if (q.passage != null && q.passage != lastPassage) out += Line.Passage(q.passage)
+        val passage = q.passage
+        if (passage != null && passage != lastPassage) out += Line.Passage(passage)
         lastPart = q.part
         lastPassage = q.passage
         out += Line.Question(q)
