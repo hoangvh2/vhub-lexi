@@ -392,7 +392,10 @@ describe("core flow (local-only mode)", () => {
     const mainBottom = await page.evaluate(() => document.querySelector("#main").getBoundingClientRect().bottom);
     assert.ok(box && box.y + box.height <= mainBottom, `rating row at ${JSON.stringify(box)}, visible area ends at ${mainBottom}`);
     assert.equal(await noOverflow(page), true);
+    // Leave the study screen for real before coming back: two hash changes in a row can land in one render, and the
+    // study screen then stays mounted with the card above still revealed (no "show answer" button to wait for).
     await page.goto(`${base}/#/today`);
+    await page.waitForSelector('[data-testid=today]');
     await page.goto(`${base}/#/study`);
     let answeredNew = false;
     const seen = [];
