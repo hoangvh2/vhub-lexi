@@ -236,6 +236,15 @@ def audio() -> None:
         out = os.path.join(OUT, f"listening-0{i}.mp3")
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", f"sine=frequency={hz}:duration=1.2",
                         "-ac", "1", "-ar", "22050", "-b:a", "32k", "-map_metadata", "-1", out], check=True)
+    # One file for Part 2 laid out like the exam: directions (4 s), a 3 s pause, then three questions, each spoken
+    # in two bursts 1 s apart (question, then the responses) and followed by a 5 s answer pause.
+    tone = lambda f, d: ["-f", "lavfi", "-i", f"sine=frequency={f}:duration={d}"]
+    quiet = lambda d: ["-f", "lavfi", "-i", f"anullsrc=r=22050:cl=mono:d={d}"]
+    inputs = tone(300, 4) + quiet(3) + tone(500, 1) + quiet(1) + tone(600, 1.5) + quiet(5)
+    order = "[0][1]" + "[2][3][4][5]" * 3
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-filter_complex",
+                    f"{order}concat=n=14:v=0:a=1,aresample=22050,pan=mono|c0=c0", "-b:a", "32k", "-ac", "1",
+                    "-map_metadata", "-1", os.path.join(OUT, "listening-part2.mp3")], check=True)
 
 
 if __name__ == "__main__":

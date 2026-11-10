@@ -706,6 +706,9 @@ input[type="range"] { width: 100%; }
 .listen-bar .muted { font-variant-numeric: tabular-nums; }
 .pictures { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 .pictures img { width: 100%; border-radius: 12px; background: #fff; box-shadow: var(--clay-sm); }
+.qcard .replay { gap: 6px; flex-wrap: wrap; align-items: center; }
+.qcard .replay .muted { font-variant-numeric: tabular-nums; }
+.qcard .replay .nudge { gap: 4px; margin-left: auto; }
 .qcard .opts.letters { grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); }
 .qcard .opts.letters .opt { justify-content: center; }
 .scan-check { display: flex; gap: 14px; align-items: center; padding: 10px; border-radius: 16px; background: var(--surface-2); }
