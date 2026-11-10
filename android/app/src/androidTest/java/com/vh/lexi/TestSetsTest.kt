@@ -94,7 +94,10 @@ class TestSetsTest {
             rule.waitUntil(ms, cond)
         } catch (e: Throwable) {
             shot("fail-sets-$label")
-            throw AssertionError("timeout waiting for $label\n" + rule.onAllNodes(androidx.compose.ui.test.isRoot()).printToString(maxDepth = 14).take(6000), e)
+            val tree = rule.onAllNodes(androidx.compose.ui.test.isRoot()).printToString(maxDepth = 14).take(6000)
+            // CI prints the LEXI_PERF log tag after the run; the Gradle console shows only the first lines of a failure.
+            tree.lines().forEach { android.util.Log.i("LEXI_PERF", "sets-$label | $it") }
+            throw AssertionError("timeout waiting for $label\n$tree", e)
         }
     }
 
