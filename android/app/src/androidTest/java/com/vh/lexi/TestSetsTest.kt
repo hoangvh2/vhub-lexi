@@ -6,7 +6,7 @@ import android.os.ParcelFileDescriptor
 import android.util.Base64
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasTestTag
@@ -124,7 +124,7 @@ class TestSetsTest {
         rule.onAllNodes(hasTestTag("opt-$letter") and hasAnyAncestor(card))[0].performClick()
     }
 
-    private fun dialogButton(text: String) = rule.onAllNodes(hasText(text) and SemanticsMatcher.keyIsDefined(SemanticsProperties.OnClick)).onLast()
+    private fun dialogButton(text: String) = rule.onAllNodes(hasText(text) and hasClickAction()).onLast()
 
     @Test
     fun textPdfToResultAndCards() {
