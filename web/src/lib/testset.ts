@@ -182,6 +182,8 @@ export interface SetQuestion {
   choices?: number;
   /** Listening, one audio file per question: the index into the set's `tracks`. */
   track?: number;
+  /** Listening, several questions per file: where this one is (ms), found from the answer pauses (audio.ts). */
+  clip?: { track: number; from: number; to: number };
   stem: string;
   options: Record<Letter, string>;
   correct: Letter | null;

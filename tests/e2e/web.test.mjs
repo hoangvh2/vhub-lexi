@@ -1473,6 +1473,55 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await ctx.close();
   });
 
+  it("listening, one long file: after the test each question is found from its answer pause and heard again, nudged ±2 s", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    await importPdf(page, "listening-test.pdf");
+    await page.click('[data-testid=set-section] >> text=Listening');
+    await page.fill('[data-testid=lc-p1]', "");
+    await page.fill('[data-testid=lc-p2]', "3-5");
+    await page.fill('[data-testid=set-range]', "4");
+    await page.setInputFiles('[data-testid=lc-audio]', join(FIXTURES, "listening-part2.mp3"));
+    await page.click('[data-testid=pdf-read]');
+    await page.waitForSelector('[data-testid=pdf-preview]');
+    await page.click('[data-testid=pdf-save]');
+    await page.click('[data-testid=set-open]');
+    await page.waitForSelector('[data-testid=listen-bar]');
+    await page.locator('[data-testid=runner-q]').nth(0).locator('label:has-text("B")').click();
+    await page.click('[data-testid=runner-submit]');
+    await page.click('[data-testid=confirm-ok]');
+    await page.waitForSelector('[data-testid=runner-result]');
+    assert.equal(await page.locator('[data-testid=q-replay]').count(), 0);
+    await page.click('[data-testid=result-split]');
+    await page.waitForSelector('[data-testid=q-replay]', { timeout: 20_000 });
+    // Missed: 4 and 5 (left blank). The fixture's questions start at 7 s, 15.5 s and 24 s.
+    const ranges = await page.$$eval('[data-testid=q-replay-range]', (els) => els.map((e) => e.textContent));
+    assert.equal(ranges.length, 2);
+    assert.match(ranges[0], /^File 1 · 0:15–0:19$/);
+    assert.match(ranges[1], /^File 1 · 0:24–0:2[78]$/);
+    await page.click('[data-testid=result-toggle]');
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid=q-replay]').length === 3);
+    assert.equal(await page.locator('[data-testid=q-replay-range]').first().textContent(), "File 1 · 0:07–0:10");
+    await page.locator('[data-testid=q-replay-play]').nth(1).click();
+    await page.waitForFunction(() => /Tạm dừng/.test(document.querySelector('[data-testid=listen-toggle]')?.textContent ?? ""));
+    assert.match(await page.textContent('[data-testid=listen-pos]'), /File 1\/1 · 0:1[5-6]/);
+    // It stops at the end of the question by itself (0:19), not running into the next one.
+    await page.waitForFunction(() => /Nghe tiếp/.test(document.querySelector('[data-testid=listen-toggle]')?.textContent ?? ""), null, { timeout: 10_000 });
+    assert.match(await page.textContent('[data-testid=listen-pos]'), /0:19/);
+    // Started too late: 2 s earlier, kept after a reload.
+    await page.locator('[data-testid=q-replay-earlier]').nth(1).click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid=q-replay-range]')[1]?.textContent === "File 1 · 0:13–0:19");
+    await page.reload();
+    await page.click('[data-testid=set-open]');
+    await page.waitForSelector('[data-testid=runner-result]');
+    await page.click('[data-testid=result-toggle]');
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid=q-replay-range]')[1]?.textContent === "File 1 · 0:13–0:19");
+    assert.equal(await page.locator('[data-testid=result-split]').count(), 0);
+    assert.equal(await noOverflow(page), true);
+    if (shots) await page.locator("[data-testid=runner-q]").nth(1).screenshot({ path: join(shots, "11-lc-replay.png") });
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
   it("the JSON backup says it is private and holds no imported test", async () => {
     const { ctx, page } = await open(browser, base);
     await page.goto(`${base}/#/settings`);

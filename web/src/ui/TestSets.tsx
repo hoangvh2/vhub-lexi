@@ -5,6 +5,7 @@ import { callExtract, firebaseConfigured } from "../data/firebase.ts";
 import { notes, prefs } from "../data/state.ts";
 import { deleteTestSet, loadMedia, loadTestSets, saveMedia, saveTestSet, testSets } from "../data/testsets.ts";
 import { LETTERS, existingSentences, type Extracted, type Letter } from "../lib/import.ts";
+import { decodeLevels, findGaps, mmss as clipTime, placeQuestions } from "../lib/audio.ts";
 import { openPdf, readPages, renderPage, type PdfDoc } from "../lib/pdf.ts";
 import { PARTS, formatScore } from "../lib/practice.ts";
 import { useStore } from "../lib/store.ts";
@@ -467,6 +468,8 @@ interface Player {
   at: number;
   duration: number;
   play(track: number, chain?: boolean): Promise<void>;
+  /** Plays one stretch of a file (ms), then stops: a question heard again. */
+  playRange(track: number, from: number, to: number): Promise<void>;
   toggle(): void;
   pause(): void;
 }
@@ -479,6 +482,7 @@ function usePlayer(set: TestSet): Player | null {
   const audio = useRef<HTMLAudioElement | null>(null);
   const urls = useRef(new Map<number, string>());
   const chain = useRef(false);
+  const stopAt = useRef<number | null>(null);
   const [state, setState] = useState({ track: null as number | null, playing: false, at: 0, duration: 0 });
   const tracks = set.tracks ?? [];
 
@@ -488,6 +492,12 @@ function usePlayer(set: TestSet): Player | null {
     audio.current = a;
     const sync = () => setState((s) => ({ ...s, playing: !a.paused, at: a.currentTime, duration: Number.isFinite(a.duration) ? a.duration : 0 }));
     for (const ev of ["play", "pause", "timeupdate", "loadedmetadata"]) a.addEventListener(ev, sync);
+    a.addEventListener("timeupdate", () => {
+      if (stopAt.current !== null && a.currentTime * 1000 >= stopAt.current) {
+        stopAt.current = null;
+        a.pause();
+      }
+    });
     a.addEventListener("ended", () => {
       const i = Number(a.dataset.track);
       if (chain.current && i + 1 < tracks.length) void play(i + 1, true);
@@ -503,11 +513,12 @@ function usePlayer(set: TestSet): Player | null {
     };
   }, [set.id]);
 
-  async function play(track: number, keepGoing = false) {
+  async function play(track: number, keepGoing = false, from?: number, to?: number) {
     const a = audio.current;
     const t = tracks[track];
     if (!a || !t) return;
     chain.current = keepGoing;
+    stopAt.current = to ?? null;
     let url = urls.current.get(track);
     if (!url) {
       const blob = await loadMedia(t.key);
@@ -519,6 +530,10 @@ function usePlayer(set: TestSet): Player | null {
       a.src = url;
       a.dataset.track = String(track);
     } else if (a.ended) a.currentTime = 0;
+    if (from !== undefined) {
+      if (a.readyState < 1) await new Promise((r) => a.addEventListener("loadedmetadata", r, { once: true }));
+      a.currentTime = from / 1000;
+    }
     setState((s) => ({ ...s, track }));
     await a.play().catch(() => toast("Trình duyệt chặn phát âm thanh: bấm phát lại"));
   }
@@ -526,7 +541,8 @@ function usePlayer(set: TestSet): Player | null {
   if (!tracks.length) return null;
   return {
     ...state,
-    play,
+    play: (track, keepGoing) => play(track, keepGoing),
+    playRange: (track, from, to) => play(track, false, from, to),
     toggle: () => {
       const a = audio.current;
       if (!a) return;
@@ -654,7 +670,16 @@ function Runner({ set, deck, deckPicker, onPassage, onExit }: { set: TestSet; de
 }
 
 /** The test in order: a part heading where the part changes, each passage once above its first question. */
-function Questions({ set, answers, onChoose, review, player }: { set: TestSet; answers: Record<number, Letter>; onChoose?(q: SetQuestion, l: Letter): void; review?: boolean; player?: Player | null }) {
+function Questions({ set, answers, onChoose, review, player, onNudge, all }: {
+  set: TestSet;
+  answers: Record<number, Letter>;
+  onChoose?(q: SetQuestion, l: Letter): void;
+  review?: boolean;
+  player?: Player | null;
+  onNudge?(q: SetQuestion, ms: number): void;
+  /** Every question of the set, when `set` shows only some (a Part 3 question replays from its group's first). */
+  all?: readonly SetQuestion[];
+}) {
   let lastPart: number | null | undefined;
   let lastPassage: number | null = null;
   return (
@@ -674,7 +699,7 @@ function Questions({ set, answers, onChoose, review, player }: { set: TestSet; a
                 <p lang="en">{reflow(set.passages[q.passage!].text)}</p>
               </article>
             )}
-            <QuestionCard q={q} pick={answers[q.i]} onChoose={onChoose} review={review} player={player} />
+            <QuestionCard q={q} pick={answers[q.i]} onChoose={onChoose} review={review} player={player} replay={review ? replayOf(all ?? set.questions, q) : null} onNudge={onNudge} />
           </div>
         );
       })}
@@ -682,7 +707,16 @@ function Questions({ set, answers, onChoose, review, player }: { set: TestSet; a
   );
 }
 
-function QuestionCard({ q, pick, onChoose, review, player }: { q: SetQuestion; pick: Letter | undefined; onChoose?(q: SetQuestion, l: Letter): void; review?: boolean; player?: Player | null }) {
+function QuestionCard({ q, pick, onChoose, review, player, replay, onNudge }: {
+  q: SetQuestion;
+  pick: Letter | undefined;
+  onChoose?(q: SetQuestion, l: Letter): void;
+  review?: boolean;
+  player?: Player | null;
+  /** In review: the stretch to hear again (a Part 3–4 question starts with its conversation). */
+  replay?: { track: number; from: number; to: number } | null;
+  onNudge?(q: SetQuestion, ms: number): void;
+}) {
   const wrong = review && q.correct && pick !== q.correct;
   const letters = lettersOf(q);
   const own = player && q.track !== undefined;
@@ -708,11 +742,53 @@ function QuestionCard({ q, pick, onChoose, review, player }: { q: SetQuestion; p
           );
         })}
       </div>
+      {review && player && replay && q.track === undefined && (
+        <div class="row replay" data-testid="q-replay">
+          <button type="button" class="btn ghost sm" onClick={() => void player.playRange(replay.track, replay.from, replay.to)} data-testid="q-replay-play"><Icon n="play" size={16} /> Nghe lại câu {q.number ?? q.i + 1}</button>
+          <span class="muted small" data-testid="q-replay-range">File {replay.track + 1} · {clipTime(replay.from)}–{clipTime(replay.to)}</span>
+          {onNudge && (
+            <span class="row nudge" role="group" aria-label="Chỉnh điểm bắt đầu">
+              <button type="button" class="btn ghost sm" title="Bắt đầu sớm hơn 2 giây" onClick={() => onNudge(q, -2000)} data-testid="q-replay-earlier">−2s</button>
+              <button type="button" class="btn ghost sm" title="Bắt đầu muộn hơn 2 giây" onClick={() => onNudge(q, 2000)} data-testid="q-replay-later">+2s</button>
+            </span>
+          )}
+        </div>
+      )}
       {review && !q.correct && <span class="pill">Chưa có đáp án, không chấm</span>}
       {review && wrong && !pick && <span class="pill bad">Bỏ trống</span>}
       {review && q.rule && <p class="muted small"><span class="ai-tag">AI</span> {q.rule}</p>}
     </section>
   );
+}
+
+/**
+ * The stretch to replay for a question: its own clip; for Part 3–4, from the start of the first question of its group
+ * of three (32–34, 35–37 …), where the conversation or talk is, to the end of its own.
+ */
+function replayOf(all: readonly SetQuestion[], q: SetQuestion): { track: number; from: number; to: number } | null {
+  if (!q.clip) return null;
+  if ((q.part === 3 || q.part === 4) && q.number !== null) {
+    const first = q.number - ((q.number - 32) % 3);
+    const head = all.find((x) => x.number === first && x.clip?.track === q.clip!.track);
+    if (head?.clip && head.clip.from <= q.clip.from) return { ...q.clip, from: head.clip.from };
+  }
+  return q.clip;
+}
+
+/** Splits the set's long files into questions from their answer pauses and stores where each one is. */
+async function splitAudio(set: TestSet): Promise<number> {
+  const tracks = set.tracks ?? [];
+  const levels = [];
+  for (const t of tracks) {
+    const blob = await loadMedia(t.key);
+    if (!blob) throw new Error("missing audio");
+    const { levels: l, durationMs } = await decodeLevels(blob);
+    levels.push({ gaps: findGaps(l), durationMs });
+  }
+  const placed = placeQuestions(levels, set.questions.map((q) => q.part));
+  const found = placed.filter(Boolean).length;
+  if (found) await saveTestSet({ ...set, questions: set.questions.map((q, i) => (placed[i] ? { ...q, clip: placed[i]! } : q)) });
+  return found;
 }
 
 function Result({ set, attempt, deck, deckPicker, onPassage, onAgain, onSaved, player }: {
@@ -747,6 +823,26 @@ function Result({ set, attempt, deck, deckPicker, onPassage, onAgain, onSaved, p
   }
 
   const shown = onlyWrong ? { ...set, questions: set.questions.filter((q) => g.wrong.includes(q.i)) } : set;
+  // Long files (a whole Part per file): found once on request, kept with the set.
+  const splittable = !!set.tracks?.length && !set.questions.some((q) => q.track !== undefined);
+  const split = set.questions.some((q) => q.clip);
+  const [splitting, setSplitting] = useState(false);
+  async function runSplit() {
+    setSplitting(true);
+    try {
+      const n = await splitAudio(set);
+      toast(n ? `Đã tách ${n}/${set.questions.length} câu trong file nghe` : "Không tách được: file nghe không có khoảng nghỉ rõ sau mỗi câu");
+    } catch {
+      toast("Không đọc được file nghe trên máy này");
+    } finally {
+      setSplitting(false);
+    }
+  }
+  async function nudge(q: SetQuestion, ms: number) {
+    if (!q.clip) return;
+    const clip = { ...q.clip, from: Math.max(0, Math.min(q.clip.to - 500, q.clip.from + ms)) };
+    await saveTestSet({ ...set, questions: set.questions.map((x) => (x.i === q.i ? { ...x, clip } : x)) });
+  }
 
   return (
     <div class="col" data-testid="runner-result">
@@ -768,6 +864,11 @@ function Result({ set, attempt, deck, deckPicker, onPassage, onAgain, onSaved, p
           <button type="button" class="btn primary" disabled={saved} onClick={() => void saveResult()} data-testid="result-save">{saved ? <><Icon n="check" /> Đã lưu vào Kết quả bài</> : "Lưu vào Kết quả bài"}</button>
           <button type="button" class="btn" disabled={!g.wrong.length} onClick={makeCards} data-testid="result-cards"><Icon n="sparkle" /> Tạo thẻ từ {g.wrong.length} câu sai</button>
           <button type="button" class="btn ghost" onClick={onAgain} data-testid="result-again">Làm lại</button>
+          {splittable && !split && (
+            <button type="button" class="btn" disabled={splitting} onClick={() => void runSplit()} data-testid="result-split">
+              <Icon n="speaker" /> {splitting ? "Đang dò từng câu…" : "Dò từng câu để nghe lại"}
+            </button>
+          )}
         </div>
       </section>
       {review && (
@@ -789,7 +890,7 @@ function Result({ set, attempt, deck, deckPicker, onPassage, onAgain, onSaved, p
         <h3 class="part-head">{onlyWrong ? `Câu sai (${g.wrong.length})` : `Tất cả (${set.questions.length})`}</h3>
         <button type="button" class="btn ghost sm" onClick={() => setOnlyWrong(!onlyWrong)} data-testid="result-toggle">{onlyWrong ? "Xem cả bài" : "Chỉ câu sai"}</button>
       </div>
-      <Questions set={shown} answers={attempt.answers} review player={player} />
+      <Questions set={shown} answers={attempt.answers} review player={player} all={set.questions} onNudge={(q, ms) => void nudge(q, ms)} />
     </div>
   );
 }
