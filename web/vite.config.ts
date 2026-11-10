@@ -23,7 +23,7 @@ function precache(): Plugin {
           const p = join(dir, n);
           const r = rel ? `${rel}/${n}` : n;
           if (statSync(p).isDirectory()) {
-            if (r === "dict") continue; // fetched on demand, cached by version
+            if (r === "dict" || r.startsWith("pdfjs-")) continue; // fetched on demand, cached by version
             walk(p, r);
           } else if (!/\.(map|woff)$/.test(n) && n !== "sw.js" && !/^(sql-wasm|fsrs-binding|optimizer\.worker|pdf)/.test(n)) files.push("/" + r);
           // sql-wasm*: the Anki reader (~1 MB), downloaded only when the learner imports a package. fsrs-binding*,
@@ -41,6 +41,25 @@ function precache(): Plugin {
   };
 }
 
+/**
+ * pdf.js decodes the images of copier scans (CCITT fax, JBIG2), JPEG 2000 and colour profiles with WebAssembly it
+ * fetches from `wasmUrl`. Served from this site under a versioned folder (fetched only when a scan is rendered).
+ */
+const PDFJS_DIR = `pdfjs-${JSON.parse(readFileSync(fileURLToPath(new URL("./node_modules/pdfjs-dist/package.json", import.meta.url)), "utf8")).version}`;
+function pdfjsWasm(): Plugin {
+  const src = fileURLToPath(new URL("./node_modules/pdfjs-dist/wasm/", import.meta.url));
+  return {
+    name: "lexi-pdfjs-wasm",
+    apply: "build",
+    generateBundle() {
+      for (const n of readdirSync(src)) {
+        // The decoders and their licences; not the eval stand-in (eval is off) nor the JS fallbacks (wasm is allowed).
+        if (/^(jbig2|openjpeg|qcms_bg)\.wasm$|^LICENSE_/.test(n)) this.emitFile({ type: "asset", fileName: `${PDFJS_DIR}/${n}`, source: readFileSync(join(src, n)) });
+      }
+    },
+  };
+}
+
 /** Shown in Settings, so the build a phone runs can be told apart: short commit and build date (no shell: Windows). */
 function buildId(): string {
   let sha = "dev";
@@ -53,8 +72,8 @@ function buildId(): string {
 }
 
 export default defineConfig({
-  define: { __LEXI_BUILD__: JSON.stringify(buildId()) },
-  plugins: [preact(), precache()],
+  define: { __LEXI_BUILD__: JSON.stringify(buildId()), __PDFJS_WASM__: JSON.stringify(`/${PDFJS_DIR}/`) },
+  plugins: [preact(), pdfjsWasm(), precache()],
   resolve: { alias: { "@shared": fileURLToPath(new URL("../shared", import.meta.url)) } },
   server: { fs: { allow: [".."] }, port: 5173 },
   build: { target: "es2022", sourcemap: false, chunkSizeWarningLimit: 1000 },

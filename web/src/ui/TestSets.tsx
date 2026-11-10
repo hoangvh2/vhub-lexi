@@ -8,7 +8,7 @@ import { LETTERS, existingSentences, type Extracted, type Letter } from "../lib/
 import { openPdf, readPages, renderPage, type PdfDoc } from "../lib/pdf.ts";
 import { PARTS, formatScore } from "../lib/practice.ts";
 import { useStore } from "../lib/store.ts";
-import { chunkPages, findKey, grade, keyNote, keyPairs, mergeExtracted, numbersIn, reflow, resultFields, summary, wrongDrafts, type Chunk, type PdfPage, type SetQuestion, type TestSet } from "../lib/testset.ts";
+import { chunkPages, findKey, formatPages, grade, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, reflow, resultFields, summary, wrongDrafts, type Chunk, type PdfPage, type SetQuestion, type TestSet } from "../lib/testset.ts";
 import { Icon, confirmDialog, toast } from "./common.tsx";
 import { DraftReview, type Review } from "./ImportPanel.tsx";
 import type { DeckSink } from "./Practice.tsx";
@@ -19,7 +19,10 @@ const hook = (): Hook | undefined => (globalThis as unknown as { __lexiExtract?:
 
 /** Quota units per call (functions/src/config.ts extractTextCost / extractImageCost). */
 const COST = { text: 2, images: 3 } as const;
-const MAX_PDF_BYTES = 60 * 1024 * 1024;
+/** A whole book scanned is often 100+ MB; pdf.js reads it page by page, the file itself is held once in memory. */
+const MAX_PDF_BYTES = 150 * 1024 * 1024;
+/** AI quota per day (functions/src/config.ts dailyEnrich, shared by every AI call): a choice that costs more cannot finish today. */
+const DAILY_QUOTA = 300;
 
 const todayIso = () => {
   const d = new Date();
@@ -96,8 +99,6 @@ interface Picked {
   fileName: string;
   doc: PdfDoc;
   pages: PdfPage[];
-  key: Map<number, Letter>;
-  keyPages: number[];
 }
 
 function describeError(e: unknown): string {
@@ -114,32 +115,43 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
   const [loading, setLoading] = useState("");
   const [name, setName] = useState("");
   const [pastedKey, setPastedKey] = useState("");
+  const [range, setRange] = useState("");
+  /** Extra turn for scans fed into the copier upside down: 0 or 180. */
+  const [turn, setTurn] = useState(0);
+  const [thumb, setThumb] = useState<{ n: number; turn: number; src: string } | null>(null);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [draft, setDraft] = useState<{ set: Pick<TestSet, "passages" | "questions">; failed: number[]; stopped: string } | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const available = !!hook() || (firebaseConfigured && p.aiEnabled);
 
+  // Only the chosen pages are read, and the answer key is looked for among them: a book's key at the back numbers
+  // every unit from 1 again, so the learner includes the key page that belongs to the pages chosen.
+  const chosen = useMemo(() => (picked ? parsePageRange(range, picked.pages.length) : null), [picked, range]);
+  const pages = useMemo(() => (picked && chosen ? chosen.map((n) => picked.pages[n - 1]) : []), [picked, chosen]);
+  const found = useMemo(() => findKey(pages), [pages]);
   const key = useMemo(() => {
-    const k = new Map(picked?.key ?? []);
+    const k = new Map(found.key);
     for (const [n, l] of keyPairs(pastedKey)) k.set(n, l);
     return k;
-  }, [picked, pastedKey]);
-  const chunks: Chunk[] = useMemo(() => (picked ? chunkPages(picked.pages, new Set(picked.keyPages)) : []), [picked]);
+  }, [found, pastedKey]);
+  const chunks: Chunk[] = useMemo(() => chunkPages(pages, new Set(found.keyPages)), [pages, found]);
   const cost = chunks.reduce((a, c) => a + COST[c.kind], 0);
 
   async function pick(f: File | undefined) {
     if (!f) return;
     setError("");
     if (f.type !== "application/pdf" && !/\.pdf$/i.test(f.name)) return setError("Chọn một file PDF.");
-    if (f.size > MAX_PDF_BYTES) return setError("File lớn quá 60 MB. Tách riêng phần Reading rồi thử lại.");
+    if (f.size > MAX_PDF_BYTES) return setError("File lớn quá 150 MB. Tách file thành vài phần rồi thử lại.");
     setLoading("Đang mở PDF…");
     try {
       const doc = await openPdf(new Uint8Array(await f.arrayBuffer()));
       const pages = await readPages(doc, (n) => setLoading(`Đang đọc trang ${n}/${doc.numPages}…`));
-      const { key: k, keyPages } = findKey(pages);
       picked?.doc.close().catch(() => undefined);
-      setPicked({ fileName: f.name, doc, pages, key: k, keyPages });
+      setPicked({ fileName: f.name, doc, pages });
+      setRange("");
+      setTurn(0);
+      setThumb(null);
       setName(f.name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " ").trim().slice(0, 60) || "Bộ đề");
       setDraft(null);
     } catch {
@@ -161,7 +173,7 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
       try {
         const payload = c.kind === "text"
           ? { images: [], text: (c.text + keyNote(key, numbersIn(c.text))).slice(0, 12000) }
-          : { images: await Promise.all(c.pages.map((n) => renderPage(picked.doc, n))), text: keyNote(key, "all").trim() };
+          : { images: await Promise.all(c.pages.map((n) => renderPage(picked.doc, n, { turn }))), text: keyNote(key, "all").trim() };
         let r: Extracted | null = null;
         for (let attempt = 0; attempt < 2 && !r; attempt++) {
           try {
@@ -200,7 +212,7 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
       name: name.trim().slice(0, 60) || "Bộ đề",
       createdAt: now,
       updatedAt: now,
-      source: { fileName: picked.fileName.slice(0, 120), pages: picked.pages.length },
+      source: { fileName: picked.fileName.slice(0, 120), pages: pages.length, ...(range.trim() && chosen ? { range: formatPages(chosen) } : {}) },
       ...draft.set,
     };
     await saveTestSet(set);
@@ -213,11 +225,26 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
     setPicked(null);
     setDraft(null);
     setPastedKey("");
+    setRange("");
+    setTurn(0);
+    setThumb(null);
     setError("");
     setOpen(false);
   }
 
-  const scanned = picked?.pages.filter((x) => x.scanned).length ?? 0;
+  const scanned = pages.filter((x) => x.scanned).length;
+  const firstScan = pages.find((x) => x.scanned)?.n ?? null;
+
+  // The first scanned page of the choice, small, the way the AI will see it: upside down shows at a glance.
+  useEffect(() => {
+    if (!picked || firstScan === null || draft) return;
+    let live = true;
+    renderPage(picked.doc, firstScan, { turn, px: 420, quality: 0.7 })
+      .then((r) => live && setThumb({ n: firstScan, turn, src: `data:${r.mime};base64,${r.data}` }))
+      .catch(() => live && setThumb(null));
+    return () => void (live = false);
+  }, [picked, firstScan, turn, draft]);
+  const whole = !!picked && pages.length === picked.pages.length;
   const sum = draft ? summary(draft.set) : null;
 
   return (
@@ -240,21 +267,38 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
         <div class="col">
           <div class="chips" data-testid="pdf-facts">
             <span class="pill">{picked.fileName}</span>
-            <span class="pill">{picked.pages.length} trang</span>
+            <span class="pill" data-testid="pdf-pages">{whole ? `${picked.pages.length} trang` : `${pages.length}/${picked.pages.length} trang`}</span>
             {scanned > 0 && <span class="pill warn" data-testid="pdf-scanned">{scanned} trang scan: AI đọc từ ảnh</span>}
-            {picked.key.size > 0
-              ? <span class="pill ok" data-testid="pdf-key">Bảng đáp án: {picked.key.size} câu (trang {picked.keyPages.join(", ")})</span>
-              : <span class="pill warn" data-testid="pdf-nokey">Không thấy bảng đáp án trong file</span>}
+            {found.key.size > 0
+              ? <span class="pill ok" data-testid="pdf-key">Bảng đáp án: {found.key.size} câu (trang {found.keyPages.join(", ")})</span>
+              : <span class="pill warn" data-testid="pdf-nokey">{whole ? "Không thấy bảng đáp án trong file" : "Không thấy bảng đáp án trong các trang đã chọn"}</span>}
           </div>
+          <div class="field">
+            <label for="set-range">Trang cần đọc {picked.pages.length > 12 ? "(nên chọn: một bài hoặc một đề, kèm trang đáp án)" : "(để trống = cả file)"}</label>
+            <input id="set-range" class="input" value={range} placeholder={`vd: 45-60, ${Math.max(1, picked.pages.length - 2)}-${picked.pages.length}`} onInput={(e) => setRange(e.currentTarget.value)} data-testid="set-range" />
+            {!chosen && <span class="pill bad wrap" role="alert" data-testid="set-range-bad">Trang không hợp lệ: file có {picked.pages.length} trang, viết như “45-60, 290”.</span>}
+          </div>
+          {firstScan !== null && (
+            <div class="scan-check" data-testid="pdf-thumb">
+              {thumb && thumb.n === firstScan && thumb.turn === turn
+                ? <img src={thumb.src} alt={`Trang ${firstScan} như AI sẽ đọc`} data-testid="pdf-thumb-img" data-turn={turn} />
+                : <div class="scan-ph muted small">Đang dựng trang {firstScan}…</div>}
+              <div class="col" style={{ gap: "8px" }}>
+                <span class="small">Trang {firstScan} như AI sẽ đọc. Chữ bị ngược thì xoay lại cho đúng chiều.</span>
+                <button type="button" class="btn ghost sm" aria-pressed={turn === 180} onClick={() => setTurn(turn ? 0 : 180)} data-testid="pdf-turn"><Icon n="undo" size={16} /> {turn ? "Đã xoay 180°: bỏ xoay" : "Xoay 180°"}</button>
+              </div>
+            </div>
+          )}
           <div class="field">
             <label for="set-name">Tên bộ đề</label>
             <input id="set-name" class="input" maxLength={60} value={name} onInput={(e) => setName(e.currentTarget.value)} data-testid="set-name" />
           </div>
           <div class="field">
-            <label for="set-key">Dán bảng đáp án {picked.key.size ? "(bổ sung, không bắt buộc)" : "(nên có để chấm điểm)"}</label>
+            <label for="set-key">Dán bảng đáp án {found.key.size ? "(bổ sung, không bắt buộc)" : "(nên có để chấm điểm)"}</label>
             <textarea id="set-key" class="textarea" rows={2} value={pastedKey} placeholder="vd: 101 A 102 C 103 B …" onInput={(e) => setPastedKey(e.currentTarget.value)} data-testid="set-key" />
             {pastedKey.trim() && <span class="muted small" data-testid="set-key-count">Đọc được {keyPairs(pastedKey).size} đáp án</span>}
           </div>
+          {cost > DAILY_QUOTA && <p class="pill warn wrap" data-testid="pdf-over-quota">Chừng này trang cần ≈ {cost} lượt AI, quá hạn mức {DAILY_QUOTA} lượt/ngày: chọn ít trang hơn (vd một bài), phần còn lại nhập ngày sau.</p>}
           {!available && <p class="muted small" data-testid="pdf-off">Cần đăng nhập Google và bật “Điền bằng AI” trong Cài đặt để AI tách câu hỏi.</p>}
           {progress ? (
             <div class="col" style={{ gap: "6px" }} data-testid="pdf-progress">
@@ -263,7 +307,7 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
             </div>
           ) : (
             <div class="row">
-              <button type="button" class="btn primary" disabled={!available || !chunks.length} onClick={() => void read()} data-testid="pdf-read"><Icon n="sparkle" /> Tách câu hỏi ({chunks.length} phần, ≈ {cost} lượt AI)</button>
+              <button type="button" class="btn primary" disabled={!available || !chunks.length || cost > DAILY_QUOTA} onClick={() => void read()} data-testid="pdf-read"><Icon n="sparkle" /> Tách câu hỏi ({chunks.length} phần, ≈ {cost} lượt AI)</button>
               <button type="button" class="btn ghost" onClick={reset}>Huỷ</button>
             </div>
           )}

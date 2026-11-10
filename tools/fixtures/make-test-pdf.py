@@ -1,11 +1,12 @@
 """
 Builds the PDF fixtures of the "Bộ đề" import tests: a short TOEIC-style Reading test written for Lexi (no ETS or
 book content), laid out the way real test books are: Part 5 in two columns, Part 6 and 7 as passages, the answer
-key on the last page. Writes a text PDF and a "scanned" PDF (each page an image, no text layer).
+key on the last page. Writes a text PDF, a "scanned" PDF (each page an image, no text layer) and a copier scan of
+page 1 (1-bit CCITT, upside down).
 
     python tools/fixtures/make-test-pdf.py   (needs reportlab and pdftoppm/Pillow for the scanned copy)
 """
-import io, os, subprocess, tempfile
+import io, os, shutil, subprocess, tempfile
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
@@ -161,9 +162,24 @@ def scanned(text_pdf: bytes) -> bytes:
         return buf.getvalue()
 
 
+def copier(text_pdf: bytes) -> bytes:
+    """Page 1 the way an office copier scans a book: 1-bit, CCITT G4 (pdf.js decodes it with its jbig2 wasm), and
+    fed in upside down. Needs ImageMagick (`magick`, or `convert` on older installs)."""
+    with tempfile.TemporaryDirectory() as d:
+        src = os.path.join(d, "t.pdf")
+        open(src, "wb").write(text_pdf)
+        subprocess.run(["pdftoppm", "-r", "150", "-mono", "-f", "1", "-l", "1", src, os.path.join(d, "p")], check=True)
+        page = next(os.path.join(d, f) for f in os.listdir(d) if f.endswith(".pbm"))
+        out = os.path.join(d, "c.pdf")
+        tool = "magick" if shutil.which("magick") else "convert"
+        subprocess.run([tool, page, "-rotate", "180", "-compress", "Group4", "-density", "150", "-units", "PixelsPerInch", out], check=True)
+        return open(out, "rb").read()
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     pdf = build()
     open(os.path.join(OUT, "reading-test.pdf"), "wb").write(pdf)
     open(os.path.join(OUT, "reading-test-scan.pdf"), "wb").write(scanned(pdf))
+    open(os.path.join(OUT, "reading-test-copier.pdf"), "wb").write(copier(pdf))
     print("ok")
