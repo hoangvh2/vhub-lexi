@@ -2,7 +2,7 @@
 Builds the PDF fixtures of the "Bộ đề" import tests: a short TOEIC-style Reading test written for Lexi (no ETS or
 book content), laid out the way real test books are: Part 5 in two columns, Part 6 and 7 as passages, the answer
 key on the last page. Writes a text PDF, a "scanned" PDF (each page an image, no text layer) and a copier scan of
-page 1 (1-bit CCITT, upside down).
+page 1 (1-bit CCITT, upside down); a short Listening test with three mp3 tones (needs ffmpeg).
 
     python tools/fixtures/make-test-pdf.py   (needs reportlab and pdftoppm/Pillow for the scanned copy)
 """
@@ -176,10 +176,74 @@ def copier(text_pdf: bytes) -> bytes:
         return open(out, "rb").read()
 
 
+PART3 = (
+    "Questions 32-34 refer to the following conversation.",
+    [
+        (32, "Where most likely are the speakers?", ["At a bank", "At a hotel", "At a train station", "At a bookstore"], "D"),
+        (33, "What does the woman ask for?", ["A receipt", "A gift bag", "A discount", "A catalog"], "B"),
+        (34, "What will the man do next?", ["Check the storage room", "Call a manager", "Print a coupon", "Close the store"], "A"),
+    ],
+)
+
+
+def listening() -> bytes:
+    """A short Listening test laid out like the book: Part 1 photos (drawn boxes), Part 2 numbers only, Part 3 with
+    printed questions, and the answer key. Its audio is made by ffmpeg in `audio()`."""
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    c.setTitle("Lexi Practice Listening Test (fixture)")
+    c.setFont("Helvetica-Bold", 13)
+    c.drawString(40, H - 50, "LISTENING TEST")
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(40, H - 72, "PART 1")
+    for i in range(2):
+        y = H - 110 - i * 330
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(40, y, f"{i + 1}.")
+        c.setFillGray(0.85 - i * 0.3)
+        c.rect(70, y - 290, 440, 290, fill=1, stroke=1)
+        c.setFillGray(0)
+    c.showPage()
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(40, H - 50, "PART 2")
+    c.setFont("Helvetica", 10)
+    for k, n in enumerate(range(3, 6)):
+        c.drawString(40, H - 80 - k * 22, f"{n}. Mark your answer on your answer sheet.")
+    c.showPage()
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(40, H - 50, "PART 3")
+    c.setFont("Helvetica", 10)
+    c.drawString(40, H - 70, PART3[0])
+    y = H - 100
+    for n, stem, opts, _ in PART3[1]:
+        c.drawString(40, y, f"{n}. {stem}")
+        for k, o in enumerate(opts):
+            c.drawString(60, y - 14 * (k + 1), f"({'ABCD'[k]}) {o}")
+        y -= 90
+    c.showPage()
+    c.setFont("Helvetica-Bold", 13)
+    c.drawString(40, H - 50, "ANSWER KEY")
+    c.setFont("Helvetica", 11)
+    key = [(1, "A"), (2, "C"), (3, "B"), (4, "A"), (5, "C")] + [(n, a) for n, _, _, a in PART3[1]]
+    c.drawString(40, H - 80, "   ".join(f"{n} ({a})" for n, a in key))
+    c.save()
+    return buf.getvalue()
+
+
+def audio() -> None:
+    """Three short tones as the test's mp3 files (no speech: the e2e checks playing order, not listening)."""
+    for i, hz in enumerate((440, 554, 659), start=1):
+        out = os.path.join(OUT, f"listening-0{i}.mp3")
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", f"sine=frequency={hz}:duration=1.2",
+                        "-ac", "1", "-ar", "22050", "-b:a", "32k", "-map_metadata", "-1", out], check=True)
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     pdf = build()
     open(os.path.join(OUT, "reading-test.pdf"), "wb").write(pdf)
     open(os.path.join(OUT, "reading-test-scan.pdf"), "wb").write(scanned(pdf))
     open(os.path.join(OUT, "reading-test-copier.pdf"), "wb").write(copier(pdf))
+    open(os.path.join(OUT, "listening-test.pdf"), "wb").write(listening())
+    audio()
     print("ok")

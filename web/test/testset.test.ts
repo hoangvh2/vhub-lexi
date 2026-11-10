@@ -3,12 +3,12 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { Note } from "@shared/model.ts";
-import { deleteTestSet, loadTestSets, saveTestSet, testSets } from "../src/data/testsets.ts";
+import { deleteTestSet, loadMedia, loadTestSets, mediaKeys, saveMedia, saveTestSet, testSets } from "../src/data/testsets.ts";
 import type { Extracted, ExtractedQuestion } from "../src/lib/import.ts";
 import { layoutText, openPdf, readPages, type PdfJs, type TextItem } from "../src/lib/pdf.ts";
 import { toResult } from "../src/lib/practice.ts";
 import {
-  CHUNK_CHARS, CHUNK_IMAGES, chunkPages, findKey, formatPages, grade, isKeyPage, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, partOfNumber, resultFields, summary, wrongDrafts,
+  CHUNK_CHARS, CHUNK_IMAGES, chunkPages, lcPartOfNumber, lettersOf, parseNumberRange, sortTracks, findKey, formatPages, grade, isKeyPage, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, partOfNumber, resultFields, summary, wrongDrafts,
   type PdfPage, type TestSet,
 } from "../src/lib/testset.ts";
 
@@ -248,5 +248,62 @@ describe("page range (a big book: read only the chosen pages)", () => {
   it("writes the choice back short", () => {
     expect(formatPages([1, 2, 3, 7, 9, 10])).toBe("1-3, 7, 9-10");
     expect(formatPages([4])).toBe("4");
+  });
+});
+
+describe("Listening sets (Part 1–4 with the test's audio)", () => {
+  it("parts by number follow the TOEIC Listening layout, with the learner's own Part 1–2 ranges", () => {
+    expect([1, 6, 7, 31, 32, 70, 71, 100, 101].map((n) => lcPartOfNumber(n))).toEqual([1, 1, 2, 2, 3, 3, 4, 4, null]);
+    expect(lcPartOfNumber(5, { p1: null, p2: [1, 10] })).toBe(2);
+    expect([parseNumberRange("1-6"), parseNumberRange(" 7 – 31 "), parseNumberRange(""), parseNumberRange("5"), parseNumberRange("6-1"), parseNumberRange("a")]).toEqual([[1, 6], [7, 31], null, [5, 5], undefined, undefined]);
+  });
+
+  it("makes Part 1–2 from their numbers with the key, drops the model's reading of them, takes Part 3–4 from the model", () => {
+    const key = new Map([[1, "C"], [7, "B"], [8, "D"], [32, "A"]] as const);
+    const read: Extracted = {
+      passages: [],
+      questions: [
+        q({ number: 7, stem: "Mark your answer on your answer sheet." }),
+        q({ number: 32, kind: "reading", stem: "Where most likely are the speakers?", part: 5 }),
+        q({ number: 33, kind: "reading", stem: "What does the woman ask for?" }),
+      ],
+    };
+    const m = mergeExtracted([read], key, { p1: [1, 2], p2: [7, 8] });
+    expect(m.questions.map((x) => [x.number, x.part, x.kind])).toEqual([[1, 1, "listen"], [2, 1, "listen"], [7, 2, "listen"], [8, 2, "listen"], [32, 3, "reading"], [33, 3, "reading"]]);
+    expect(m.questions.map((x) => x.correct)).toEqual(["C", null, "B", null, "A", null]);
+    // Part 2 has three choices: a key letter D for it is no answer.
+    expect(m.questions[3].flags).toContain("no-answer");
+    expect(lettersOf(m.questions[0])).toEqual(["A", "B", "C", "D"]);
+    expect(lettersOf(m.questions[2])).toEqual(["A", "B", "C"]);
+    expect(lettersOf(m.questions[4])).toEqual(["A", "B", "C", "D"]);
+    expect(summary(m).byPart).toMatchObject({ p1: 2, p2: 2, p3: 2, p4: 0, p5: 0 });
+  });
+
+  it("grades Part 1–4 into the LC score of the result note; missed Part 1–2 make no cards", () => {
+    const m = mergeExtracted([], new Map([[1, "A"], [2, "B"], [7, "C"]] as const), { p1: [1, 2], p2: [7, 7] });
+    const g = grade(m, { 0: "A", 1: "A" });
+    expect(g.lc).toEqual({ right: 1, total: 3 });
+    expect(g.lcParts).toMatchObject({ p1: { right: 1, total: 2 }, p2: { right: 0, total: 1 }, p3: null });
+    expect(g.parts).toEqual({ p5: null, p6: null, p7: null });
+    expect(resultFields("Big Step LC", "2026-11-10", g, 65_000)).toEqual({ name: "Big Step LC", date: "2026-11-10", lc: "1/3", minutes: "1" });
+    expect(toResult({ id: "n", type: "test", fields: resultFields("x", "2026-11-10", g, 0) } as unknown as Note)?.lc).toEqual({ right: 1, total: 3 });
+    const w = wrongDrafts({ ...m, passages: [] }, g, new Set());
+    expect(w.drafts).toEqual([]);
+    expect(w.skipped).toBe(2);
+  });
+
+  it("plays audio files in the order of the number in their names", () => {
+    expect(sortTracks([{ name: "010.mp3" }, { name: "002 - EFIS English.mp3" }, { name: "001 - EFIS English.mp3" }, { name: "intro.mp3" }]).map((f) => f.name))
+      .toEqual(["001 - EFIS English.mp3", "002 - EFIS English.mp3", "010.mp3", "intro.mp3"]);
+  });
+
+  it("deleting a set removes its audio and pictures from the device, and only its own", async () => {
+    await saveMedia([{ key: "s1:a0", blob: new Blob(["mp3"]) }, { key: "s1:p3", blob: new Blob(["jpg"]) }, { key: "s2:a0", blob: new Blob(["other"]) }]);
+    await saveTestSet({ id: "s1", name: "LC", createdAt: 1, updatedAt: 0, section: "lc", source: { fileName: "a.pdf", pages: 1 }, passages: [], questions: [], tracks: [{ key: "s1:a0", name: "001.mp3", bytes: 3 }] });
+    expect(await mediaKeys("s1")).toEqual(["s1:a0", "s1:p3"]);
+    expect(await loadMedia("s1:a0")).not.toBeNull();
+    await deleteTestSet("s1");
+    expect(await mediaKeys("s1")).toEqual([]);
+    expect(await loadMedia("s2:a0")).not.toBeNull();
   });
 });
