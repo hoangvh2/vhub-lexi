@@ -47,4 +47,6 @@ functions/src/.memo-eval-*
 vh-lexi-*.json
 *.pdf
 !web/test/fixtures/*.pdf
+*.mp3
+!web/test/fixtures/*.mp3
 __pycache__/

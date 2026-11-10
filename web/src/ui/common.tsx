@@ -32,6 +32,7 @@ const PATHS: Record<string, string> = {
   cloud: "M7 18a4 4 0 0 1-.6-8A6 6 0 0 1 18 9.5 4 4 0 0 1 17 18z",
   sparkle: "M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z",
   pause: "M8 5v14M16 5v14",
+  play: "M7 4.5v15l12-7.5z",
   download: "M12 4v11M7 11l5 5 5-5M5 20h14",
   upload: "M12 16V5M7 9l5-5 5 5M5 20h14",
   logout: "M10 5H5v14h5M15 8l4 4-4 4M19 12H9",

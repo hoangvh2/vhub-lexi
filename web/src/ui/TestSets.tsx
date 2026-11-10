@@ -3,11 +3,12 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { addNote } from "../data/actions.ts";
 import { callExtract, firebaseConfigured } from "../data/firebase.ts";
 import { notes, prefs } from "../data/state.ts";
-import { deleteTestSet, loadTestSets, saveTestSet, testSets } from "../data/testsets.ts";
+import { deleteTestSet, loadMedia, loadTestSets, saveMedia, saveTestSet, testSets } from "../data/testsets.ts";
 import { LETTERS, existingSentences, type Extracted, type Letter } from "../lib/import.ts";
 import { openPdf, readPages, renderPage, type PdfDoc } from "../lib/pdf.ts";
 import { PARTS, formatScore } from "../lib/practice.ts";
 import { useStore } from "../lib/store.ts";
+import { LC_LAYOUT, LC_PARTS, lettersOf, parseNumberRange, sortTracks, type LcLayout, type SetTrack } from "../lib/testset.ts";
 import { chunkPages, findKey, formatPages, grade, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, reflow, resultFields, summary, wrongDrafts, type Chunk, type PdfPage, type SetQuestion, type TestSet } from "../lib/testset.ts";
 import { Icon, confirmDialog, toast } from "./common.tsx";
 import { DraftReview, type Review } from "./ImportPanel.tsx";
@@ -28,6 +29,7 @@ const todayIso = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
+const mb = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0).replace(".", ",")} MB`);
 const clock = (ms: number) => {
   const s = Math.floor(ms / 1000);
   const h = Math.floor(s / 3600);
@@ -72,7 +74,7 @@ function SetRow({ set, onOpen }: { set: TestSet; onOpen(): void }) {
   const a = set.attempt;
   const g = a?.finishedAt ? grade(set, a.answers) : null;
   async function remove() {
-    const ok = await confirmDialog({ title: "Xoá bộ đề?", message: `“${set.name}” và bài làm dở sẽ bị xoá khỏi máy này. Kết quả đã lưu và thẻ đã tạo vẫn giữ nguyên.`, confirm: "Xoá", danger: true });
+    const ok = await confirmDialog({ title: "Xoá bộ đề?", message: `“${set.name}”${set.tracks?.length ? ", file nghe" : ""} và bài làm dở sẽ bị xoá khỏi máy này. Kết quả đã lưu và thẻ đã tạo vẫn giữ nguyên.`, confirm: "Xoá", danger: true });
     if (ok) await deleteTestSet(set.id);
   }
   return (
@@ -80,7 +82,8 @@ function SetRow({ set, onOpen }: { set: TestSet; onOpen(): void }) {
       <div class="grow col" style={{ gap: "6px" }}>
         <b class="name">{set.name}</b>
         <div class="chips">
-          {PARTS.map((p) => sum.byPart[p.key] > 0 && <span class="pill" key={p.key}>{p.label}: {sum.byPart[p.key]}</span>)}
+          {set.section === "lc" && <span class="pill ok" data-testid="set-lc">Listening{set.tracks?.length ? ` · ${set.tracks.length} file nghe` : ""}</span>}
+          {[...LC_PARTS, ...PARTS].map((p) => sum.byPart[p.key] > 0 && <span class="pill" key={p.key}>{p.label}: {sum.byPart[p.key]}</span>)}
           {sum.byPart.other > 0 && <span class="pill">Khác: {sum.byPart.other}</span>}
           {g ? <span class="pill ok" data-testid="set-score">Đã làm: {g.right}/{g.total}</span> : a ? <span class="pill warn">Đang làm · {Object.keys(a.answers).length}/{sum.total} câu</span> : null}
         </div>
@@ -116,11 +119,19 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
   const [name, setName] = useState("");
   const [pastedKey, setPastedKey] = useState("");
   const [range, setRange] = useState("");
+  // Listening: the parts printed with nothing but their numbers, the pages kept as photos, and the audio files.
+  const [section, setSection] = useState<"rc" | "lc">("rc");
+  const [p1, setP1] = useState(`${LC_LAYOUT.p1![0]}-${LC_LAYOUT.p1![1]}`);
+  const [p2, setP2] = useState(`${LC_LAYOUT.p2![0]}-${LC_LAYOUT.p2![1]}`);
+  const [photoRange, setPhotoRange] = useState("");
+  const [audio, setAudio] = useState<File[]>([]);
+  const audioInput = useRef<HTMLInputElement>(null);
   /** Extra turn for scans fed into the copier upside down: 0 or 180. */
   const [turn, setTurn] = useState(0);
   const [thumb, setThumb] = useState<{ n: number; turn: number; src: string } | null>(null);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<{ set: Pick<TestSet, "passages" | "questions">; failed: number[]; stopped: string } | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const available = !!hook() || (firebaseConfigured && p.aiEnabled);
@@ -135,7 +146,18 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
     for (const [n, l] of keyPairs(pastedKey)) k.set(n, l);
     return k;
   }, [found, pastedKey]);
-  const chunks: Chunk[] = useMemo(() => chunkPages(pages, new Set(found.keyPages)), [pages, found]);
+  const layout: LcLayout | null = useMemo(() => {
+    const a = parseNumberRange(p1);
+    const b = parseNumberRange(p2);
+    return a === undefined || b === undefined ? null : { p1: a, p2: b };
+  }, [p1, p2]);
+  const photos = useMemo(() => (picked && photoRange.trim() ? parsePageRange(photoRange, picked.pages.length) : []), [picked, photoRange]);
+  const lcReady = section === "rc" || (!!layout && photos !== null);
+  // Photo pages are kept as pictures, not read: a Part 1 page has nothing but photos and numbers on it.
+  const chunks: Chunk[] = useMemo(
+    () => chunkPages(pages, new Set([...found.keyPages, ...(section === "lc" ? photos ?? [] : [])])),
+    [pages, found, section, photos],
+  );
   const cost = chunks.reduce((a, c) => a + COST[c.kind], 0);
 
   async function pick(f: File | undefined) {
@@ -162,7 +184,14 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
   }
 
   async function read() {
-    if (!picked || progress || !chunks.length) return;
+    if (!picked || progress || !lcReady) return;
+    // Listening with only Part 1–2 chosen: nothing for the AI, the questions come from their numbers.
+    if (!chunks.length && section === "lc") {
+      const set = mergeExtracted([], key, layout!);
+      if (!set.questions.length) return setError("Chưa có câu nào: điền khoảng số câu Part 1–2 hoặc chọn trang Part 3–4.");
+      return setDraft({ set, failed: [], stopped: "" });
+    }
+    if (!chunks.length) return;
     setError("");
     const call = hook() ?? ((i: { images: Array<{ mime: string; data: string }>; text: string }) => callExtract(i) as Promise<Extracted>);
     const results: Extracted[] = [];
@@ -195,7 +224,7 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
       setProgress({ done: i + 1, total: chunks.length });
     }
     setProgress(null);
-    const set = mergeExtracted(results, key);
+    const set = mergeExtracted(results, key, section === "lc" ? layout! : undefined);
     if (!set.questions.length) setError(stopped || "Không thấy câu hỏi nào trong file này.");
     else setDraft({ set, failed: [...new Set(failed)].sort((a, b) => a - b), stopped });
   }
@@ -205,19 +234,52 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
   }
 
   async function save() {
-    if (!picked || !draft) return;
+    if (!picked || !draft || saving) return;
     const now = Date.now();
-    const set: TestSet = {
-      id: crypto.randomUUID(),
-      name: name.trim().slice(0, 60) || "Bộ đề",
-      createdAt: now,
-      updatedAt: now,
-      source: { fileName: picked.fileName.slice(0, 120), pages: pages.length, ...(range.trim() && chosen ? { range: formatPages(chosen) } : {}) },
-      ...draft.set,
-    };
-    await saveTestSet(set);
-    onSaved(set);
-    reset();
+    const id = crypto.randomUUID();
+    let lc: Pick<TestSet, "section" | "tracks" | "pictures"> & { questions?: SetQuestion[] } = {};
+    setSaving(true);
+    try {
+      if (section === "lc") {
+        const tracks: SetTrack[] = audio.map((f, i) => ({ key: `${id}:a${i}`, name: f.name.slice(0, 120), bytes: f.size }));
+        const pictures = await Promise.all((photos ?? []).map(async (n) => {
+          const r = await renderPage(picked.doc, n, { turn });
+          // Decoded here, not with fetch(data:): the site's CSP connect-src has no data:.
+          return { part: 1 as const, page: n, key: `${id}:p${n}`, blob: new Blob([Uint8Array.from(atob(r.data), (c) => c.charCodeAt(0))], { type: r.mime }) };
+        }));
+        await saveMedia([...audio.map((f, i) => ({ key: tracks[i].key, blob: f as Blob })), ...pictures.map((p) => ({ key: p.key, blob: p.blob }))]);
+        // As many files as questions (a book with one file per question): each question plays its own.
+        const perQuestion = tracks.length > 1 && tracks.length === draft.set.questions.length;
+        lc = {
+          section: "lc",
+          tracks,
+          pictures: pictures.map(({ part, page, key }) => ({ part, page, key })),
+          ...(perQuestion ? { questions: draft.set.questions.map((q, i) => ({ ...q, track: i })) } : {}),
+        };
+      }
+      const set: TestSet = {
+        id,
+        name: name.trim().slice(0, 60) || "Bộ đề",
+        createdAt: now,
+        updatedAt: now,
+        source: { fileName: picked.fileName.slice(0, 120), pages: pages.length, ...(range.trim() && chosen ? { range: formatPages(chosen) } : {}) },
+        ...draft.set,
+        ...lc,
+      };
+      await saveTestSet(set);
+      onSaved(set);
+      reset();
+    } catch (e) {
+      console.warn("save test set", e);
+      setError("Không lưu được: bộ nhớ của trình duyệt có thể đã đầy. Thử bớt file nghe hoặc trang ảnh.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function pickAudio(list: FileList | null | undefined) {
+    const files = [...(list ?? [])].filter((f) => f.type.startsWith("audio/") || /\.(mp3|m4a|wav|ogg|aac)$/i.test(f.name));
+    setAudio(sortTracks(files));
   }
 
   function reset() {
@@ -228,6 +290,9 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
     setRange("");
     setTurn(0);
     setThumb(null);
+    setSection("rc");
+    setPhotoRange("");
+    setAudio([]);
     setError("");
     setOpen(false);
   }
@@ -273,6 +338,14 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
               ? <span class="pill ok" data-testid="pdf-key">Bảng đáp án: {found.key.size} câu (trang {found.keyPages.join(", ")})</span>
               : <span class="pill warn" data-testid="pdf-nokey">{whole ? "Không thấy bảng đáp án trong file" : "Không thấy bảng đáp án trong các trang đã chọn"}</span>}
           </div>
+          <div class="seg" role="radiogroup" aria-label="Loại đề" data-testid="set-section">
+            {(["rc", "lc"] as const).map((x) => (
+              <label key={x} class={`opt${section === x ? " on" : ""}`}>
+                <input type="radio" name="set-section" checked={section === x} onChange={() => setSection(x)} data-testid={`set-section-${x}`} />
+                {x === "rc" ? "Reading (Part 5–7)" : "Listening (Part 1–4)"}
+              </label>
+            ))}
+          </div>
           <div class="field">
             <label for="set-range">Trang cần đọc {picked.pages.length > 12 ? "(nên chọn: một bài hoặc một đề, kèm trang đáp án)" : "(để trống = cả file)"}</label>
             <input id="set-range" class="input" value={range} placeholder={`vd: 45-60, ${Math.max(1, picked.pages.length - 2)}-${picked.pages.length}`} onInput={(e) => setRange(e.currentTarget.value)} data-testid="set-range" />
@@ -286,6 +359,37 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
               <div class="col" style={{ gap: "8px" }}>
                 <span class="small">Trang {firstScan} như AI sẽ đọc. Chữ bị ngược thì xoay lại cho đúng chiều.</span>
                 <button type="button" class="btn ghost sm" aria-pressed={turn === 180} onClick={() => setTurn(turn ? 0 : 180)} data-testid="pdf-turn"><Icon n="undo" size={16} /> {turn ? "Đã xoay 180°: bỏ xoay" : "Xoay 180°"}</button>
+              </div>
+            </div>
+          )}
+          {section === "lc" && (
+            <div class="col lc-setup" data-testid="lc-setup">
+              <p class="muted small">Part 1–2 chỉ in số câu: Lexi tạo sẵn các câu này, AI chỉ đọc trang Part 3–4. Ở “Trang cần đọc” nên chọn trang Part 3–4 và trang đáp án.</p>
+              <div class="row lc-ranges">
+                <div class="field">
+                  <label for="lc-p1">Part 1: câu</label>
+                  <input id="lc-p1" class="input" value={p1} placeholder="để trống nếu không có" onInput={(e) => setP1(e.currentTarget.value)} data-testid="lc-p1" />
+                </div>
+                <div class="field">
+                  <label for="lc-p2">Part 2: câu</label>
+                  <input id="lc-p2" class="input" value={p2} placeholder="để trống nếu không có" onInput={(e) => setP2(e.currentTarget.value)} data-testid="lc-p2" />
+                </div>
+              </div>
+              {!layout && <span class="pill bad wrap" role="alert" data-testid="lc-layout-bad">Khoảng số câu viết như “1-6”, hoặc để trống.</span>}
+              <div class="field">
+                <label for="lc-photos">Trang ảnh Part 1 (giữ nguyên ảnh để xem khi làm bài)</label>
+                <input id="lc-photos" class="input" value={photoRange} placeholder="vd: 3-4" onInput={(e) => setPhotoRange(e.currentTarget.value)} data-testid="lc-photos" />
+                {photos === null && <span class="pill bad wrap" role="alert">Trang không hợp lệ: file có {picked.pages.length} trang.</span>}
+              </div>
+              <div class="field">
+                <span class="lbl">File nghe</span>
+                <div class="row" style={{ flexWrap: "wrap", gap: "8px" }}>
+                  <button type="button" class="btn sm" onClick={() => audioInput.current?.click()} data-testid="lc-audio-pick"><Icon n="plus" size={16} /> {audio.length ? "Chọn lại file nghe" : "Chọn file mp3"}</button>
+                  {audio.length > 0 && <span class="pill" data-testid="lc-audio-count">{audio.length} file · {mb(audio.reduce((a, f) => a + f.size, 0))}</span>}
+                </div>
+                <input ref={audioInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg" multiple hidden onChange={(e) => { pickAudio(e.currentTarget.files); e.currentTarget.value = ""; }} data-testid="lc-audio" />
+                {audio.length > 0 && <ol class="tracks small muted" data-testid="lc-audio-list">{audio.slice(0, 8).map((f) => <li key={f.name}>{f.name}</li>)}{audio.length > 8 && <li>… {audio.length - 8} file nữa</li>}</ol>}
+                <span class="muted small">Phát theo thứ tự số trong tên file. Số file bằng số câu thì mỗi câu có file nghe riêng.</span>
               </div>
             </div>
           )}
@@ -307,7 +411,9 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
             </div>
           ) : (
             <div class="row">
-              <button type="button" class="btn primary" disabled={!available || !chunks.length || cost > DAILY_QUOTA} onClick={() => void read()} data-testid="pdf-read"><Icon n="sparkle" /> Tách câu hỏi ({chunks.length} phần, ≈ {cost} lượt AI)</button>
+              {section === "lc" && !chunks.length
+                ? <button type="button" class="btn primary" disabled={!lcReady} onClick={() => void read()} data-testid="pdf-read"><Icon n="check" /> Tạo câu Part 1–2 (không cần AI)</button>
+                : <button type="button" class="btn primary" disabled={!available || !chunks.length || cost > DAILY_QUOTA || !lcReady} onClick={() => void read()} data-testid="pdf-read"><Icon n="sparkle" /> Tách câu hỏi ({chunks.length} phần, ≈ {cost} lượt AI)</button>}
               <button type="button" class="btn ghost" onClick={reset}>Huỷ</button>
             </div>
           )}
@@ -318,8 +424,9 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
         <div class="col" data-testid="pdf-preview">
           <div class="chips">
             <span class="pill ok" data-testid="pdf-total">{sum.total} câu</span>
-            {PARTS.map((x) => sum.byPart[x.key] > 0 && <span class="pill" key={x.key}>{x.label}: {sum.byPart[x.key]}</span>)}
-            <span class="pill">{draft.set.passages.length} đoạn đọc</span>
+            {[...LC_PARTS, ...PARTS].map((x) => sum.byPart[x.key] > 0 && <span class="pill" key={x.key} data-testid={`pdf-total-${x.key}`}>{x.label}: {sum.byPart[x.key]}</span>)}
+            {draft.set.passages.length > 0 && <span class="pill">{draft.set.passages.length} đoạn đọc</span>}
+            {section === "lc" && <span class="pill" data-testid="pdf-audio">{audio.length ? `${audio.length} file nghe${audio.length > 1 && audio.length === sum.total ? ", mỗi câu một file" : ""}` : "Chưa có file nghe"}</span>}
           </div>
           {draft.stopped && <p class="pill warn wrap" role="alert">{draft.stopped}</p>}
           {draft.failed.length > 0 && <p class="pill warn wrap" data-testid="pdf-failed">Chưa đọc được trang {draft.failed.join(", ")}. Có thể lưu phần đã có rồi nhập lại các trang này sau.</p>}
@@ -333,8 +440,8 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
                 <div class="opts" role="radiogroup" aria-label={`Đáp án câu ${q.number ?? q.i + 1}`}>
                   {LETTERS.map((l) => (
                     <label key={l} class={`opt${q.correct === l ? " on" : ""}`}>
-                      <input type="radio" name={`fix-${q.i}`} checked={q.correct === l} disabled={!q.options[l]} onChange={() => setAnswer(q.i, l)} />
-                      <b>{l}</b> <span lang="en">{q.options[l] || "—"}</span>
+                      <input type="radio" name={`fix-${q.i}`} checked={q.correct === l} disabled={!lettersOf(q).includes(l)} onChange={() => setAnswer(q.i, l)} />
+                      <b>{l}</b> <span lang="en">{q.options[l] || (q.kind === "listen" ? "" : "—")}</span>
                     </label>
                   ))}
                 </div>
@@ -342,7 +449,7 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
             ))}
           </ul>
           <div class="row">
-            <button type="button" class="btn primary" onClick={() => void save()} data-testid="pdf-save"><Icon n="check" /> Lưu bộ đề</button>
+            <button type="button" class="btn primary" disabled={saving} onClick={() => void save()} data-testid="pdf-save"><Icon n="check" /> {saving ? "Đang lưu…" : "Lưu bộ đề"}</button>
             <button type="button" class="btn ghost" onClick={reset}>Bỏ</button>
           </div>
         </div>
@@ -352,6 +459,127 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
 }
 
 // ------------------------------------------------------------------ taking the test
+
+interface Player {
+  /** The track playing or paused on, null before the first play. */
+  track: number | null;
+  playing: boolean;
+  at: number;
+  duration: number;
+  play(track: number, chain?: boolean): Promise<void>;
+  toggle(): void;
+  pause(): void;
+}
+
+/**
+ * One audio element for the set. `chain` plays the next file when one ends (a test whose Part is split over files);
+ * a file is read from the device store once and kept as an object URL while the test is open.
+ */
+function usePlayer(set: TestSet): Player | null {
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const urls = useRef(new Map<number, string>());
+  const chain = useRef(false);
+  const [state, setState] = useState({ track: null as number | null, playing: false, at: 0, duration: 0 });
+  const tracks = set.tracks ?? [];
+
+  useEffect(() => {
+    const a = new Audio();
+    a.preload = "auto";
+    audio.current = a;
+    const sync = () => setState((s) => ({ ...s, playing: !a.paused, at: a.currentTime, duration: Number.isFinite(a.duration) ? a.duration : 0 }));
+    for (const ev of ["play", "pause", "timeupdate", "loadedmetadata"]) a.addEventListener(ev, sync);
+    a.addEventListener("ended", () => {
+      const i = Number(a.dataset.track);
+      if (chain.current && i + 1 < tracks.length) void play(i + 1, true);
+      else sync();
+    });
+    const onHide = () => document.visibilityState === "hidden" && a.pause();
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      a.pause();
+      document.removeEventListener("visibilitychange", onHide);
+      for (const u of urls.current.values()) URL.revokeObjectURL(u);
+      urls.current.clear();
+    };
+  }, [set.id]);
+
+  async function play(track: number, keepGoing = false) {
+    const a = audio.current;
+    const t = tracks[track];
+    if (!a || !t) return;
+    chain.current = keepGoing;
+    let url = urls.current.get(track);
+    if (!url) {
+      const blob = await loadMedia(t.key);
+      if (!blob) return toast(`Không thấy file nghe “${t.name}” trên máy này`);
+      url = URL.createObjectURL(blob);
+      urls.current.set(track, url);
+    }
+    if (a.dataset.track !== String(track)) {
+      a.src = url;
+      a.dataset.track = String(track);
+    } else if (a.ended) a.currentTime = 0;
+    setState((s) => ({ ...s, track }));
+    await a.play().catch(() => toast("Trình duyệt chặn phát âm thanh: bấm phát lại"));
+  }
+
+  if (!tracks.length) return null;
+  return {
+    ...state,
+    play,
+    toggle: () => {
+      const a = audio.current;
+      if (!a) return;
+      if (state.track === null) void play(0, true);
+      else if (a.paused) void a.play();
+      else a.pause();
+    },
+    pause: () => audio.current?.pause(),
+  };
+}
+
+const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
+
+/** The test's audio played straight through, as in the exam room: play and pause, no seeking. */
+function ListenBar({ set, player }: { set: TestSet; player: Player }) {
+  const n = set.tracks!.length;
+  return (
+    <div class="listen-bar row" data-testid="listen-bar">
+      <button type="button" class="btn primary sm" onClick={player.toggle} aria-label={player.playing ? "Tạm dừng" : "Phát"} data-testid="listen-toggle">
+        <Icon n={player.playing ? "pause" : "play"} size={16} /> {player.playing ? "Tạm dừng" : player.track === null ? "Bắt đầu nghe" : "Nghe tiếp"}
+      </button>
+      <span class="muted small" data-testid="listen-pos">
+        {player.track === null ? `${n} file nghe` : `File ${player.track + 1}/${n} · ${mmss(player.at)} / ${mmss(player.duration)}`}
+      </span>
+    </div>
+  );
+}
+
+/** Part 1 photos (pages kept as pictures at import), read from the device store as data URLs (CSP img-src data:). */
+function Pictures({ set, part }: { set: TestSet; part: number }) {
+  const list = (set.pictures ?? []).filter((p) => p.part === part);
+  const [srcs, setSrcs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let live = true;
+    for (const p of list) {
+      void loadMedia(p.key).then((b) => {
+        if (!b || !live) return;
+        const r = new FileReader();
+        r.onload = () => live && setSrcs((x) => ({ ...x, [p.key]: String(r.result) }));
+        r.readAsDataURL(b);
+      });
+    }
+    return () => void (live = false);
+  }, [set.id, part]);
+  if (!list.length) return null;
+  return (
+    <div class="pictures" data-testid="runner-pictures">
+      {list.map((p) => (srcs[p.key]
+        ? <img key={p.key} src={srcs[p.key]} alt={`Trang ${p.page}`} loading="lazy" data-testid="runner-picture" />
+        : <div key={p.key} class="scan-ph muted small">Trang {p.page}…</div>))}
+    </div>
+  );
+}
 
 function Runner({ set, deck, deckPicker, onPassage, onExit }: { set: TestSet; deck: DeckSink; deckPicker: ComponentChildren; onPassage(text: string): void; onExit(): void }) {
   const [attempt, setAttempt] = useState(() => set.attempt ?? { startedAt: Date.now(), elapsedMs: 0, answers: {} });
@@ -387,12 +615,15 @@ function Runner({ set, deck, deckPicker, onPassage, onExit }: { set: TestSet; de
   }
 
   const choose = (q: SetQuestion, l: Letter) => persist({ ...attempt, answers: { ...attempt.answers, [q.i]: l } });
+  const player = usePlayer(set);
+  const perQuestion = set.questions.some((q) => q.track !== undefined);
   const answered = Object.keys(attempt.answers).length;
 
   async function submit() {
     const left = set.questions.length - answered;
     const ok = await confirmDialog({ title: "Nộp bài?", message: left ? `Còn ${left} câu chưa làm, sẽ tính là sai.` : "Lexi chấm ngay theo bảng đáp án.", confirm: "Nộp bài" });
     if (!ok) return;
+    player?.pause();
     persist({ ...attempt, elapsedMs: elapsed, finishedAt: Date.now() }, true);
     window.scrollTo?.({ top: 0 });
   }
@@ -412,17 +643,18 @@ function Runner({ set, deck, deckPicker, onPassage, onExit }: { set: TestSet; de
         {!finished && <span class="pill" data-testid="runner-count">{answered}/{set.questions.length}</span>}
         {!finished && <button type="button" class="btn primary sm" onClick={() => void submit()} data-testid="runner-submit">Nộp bài</button>}
       </div>
+      {player && !perQuestion && <ListenBar set={set} player={player} />}
       {finished ? (
-        <Result set={set} attempt={attempt} deck={deck} deckPicker={deckPicker} onPassage={onPassage} onAgain={() => void again()} onSaved={(id) => persist({ ...attempt, resultNoteId: id })} />
+        <Result set={set} attempt={attempt} deck={deck} deckPicker={deckPicker} onPassage={onPassage} onAgain={() => void again()} onSaved={(id) => persist({ ...attempt, resultNoteId: id })} player={player} />
       ) : (
-        <Questions set={set} answers={attempt.answers} onChoose={choose} />
+        <Questions set={set} answers={attempt.answers} onChoose={choose} player={player} />
       )}
     </div>
   );
 }
 
 /** The test in order: a part heading where the part changes, each passage once above its first question. */
-function Questions({ set, answers, onChoose, review }: { set: TestSet; answers: Record<number, Letter>; onChoose?(q: SetQuestion, l: Letter): void; review?: boolean }) {
+function Questions({ set, answers, onChoose, review, player }: { set: TestSet; answers: Record<number, Letter>; onChoose?(q: SetQuestion, l: Letter): void; review?: boolean; player?: Player | null }) {
   let lastPart: number | null | undefined;
   let lastPassage: number | null = null;
   return (
@@ -435,13 +667,14 @@ function Questions({ set, answers, onChoose, review }: { set: TestSet; answers: 
         return (
           <div key={q.i} class="col" style={{ gap: "10px" }}>
             {head !== undefined && <h3 class="part-head">{head ? `Part ${head}` : "Câu khác"}</h3>}
+            {head !== undefined && head !== null && head <= 4 && <Pictures set={set} part={head} />}
             {showPassage && (
               <article class="panel passage" data-testid="runner-passage">
                 {set.passages[q.passage!].label && <b class="muted small">{set.passages[q.passage!].label}</b>}
                 <p lang="en">{reflow(set.passages[q.passage!].text)}</p>
               </article>
             )}
-            <QuestionCard q={q} pick={answers[q.i]} onChoose={onChoose} review={review} />
+            <QuestionCard q={q} pick={answers[q.i]} onChoose={onChoose} review={review} player={player} />
           </div>
         );
       })}
@@ -449,19 +682,28 @@ function Questions({ set, answers, onChoose, review }: { set: TestSet; answers: 
   );
 }
 
-function QuestionCard({ q, pick, onChoose, review }: { q: SetQuestion; pick: Letter | undefined; onChoose?(q: SetQuestion, l: Letter): void; review?: boolean }) {
+function QuestionCard({ q, pick, onChoose, review, player }: { q: SetQuestion; pick: Letter | undefined; onChoose?(q: SetQuestion, l: Letter): void; review?: boolean; player?: Player | null }) {
   const wrong = review && q.correct && pick !== q.correct;
+  const letters = lettersOf(q);
+  const own = player && q.track !== undefined;
+  const mine = own && player.track === q.track;
   return (
-    <section class={`panel col qcard${wrong ? " missed" : ""}`} data-testid="runner-q">
-      <p class="stem"><b>{q.number ?? q.i + 1}.</b> <span lang="en">{q.stem}</span></p>
-      <div class="opts" role="radiogroup" aria-label={`Câu ${q.number ?? q.i + 1}`}>
-        {LETTERS.map((l) => {
-          if (!q.options[l]) return null;
+    <section class={`panel col qcard${wrong ? " missed" : ""}${q.kind === "listen" ? " listen" : ""}`} data-testid="runner-q">
+      <div class="row between" style={{ gap: "10px" }}>
+        <p class="stem"><b>{q.number ?? q.i + 1}.</b> {q.stem ? <span lang="en">{q.stem}</span> : <span class="muted">Nghe và chọn đáp án</span>}</p>
+        {own && (
+          <button type="button" class="btn ghost sm" onClick={() => (mine && player.playing ? player.pause() : void player.play(q.track!))} data-testid="q-play">
+            <Icon n={mine && player.playing ? "pause" : "play"} size={16} /> {mine && player.playing ? "Dừng" : "Nghe"}
+          </button>
+        )}
+      </div>
+      <div class={`opts${q.kind === "listen" ? " letters" : ""}`} role="radiogroup" aria-label={`Câu ${q.number ?? q.i + 1}`}>
+        {letters.map((l) => {
           const cls = review ? (l === q.correct ? " right" : l === pick ? " bad" : "") : pick === l ? " on" : "";
           return (
             <label key={l} class={`opt${cls}`}>
               <input type="radio" name={`q-${q.i}`} checked={pick === l} disabled={review} onChange={() => onChoose?.(q, l)} />
-              <b>{l}</b> <span lang="en">{q.options[l]}</span>
+              <b>{l}</b> {q.options[l] && <span lang="en">{q.options[l]}</span>}
             </label>
           );
         })}
@@ -473,8 +715,9 @@ function QuestionCard({ q, pick, onChoose, review }: { q: SetQuestion; pick: Let
   );
 }
 
-function Result({ set, attempt, deck, deckPicker, onPassage, onAgain, onSaved }: {
+function Result({ set, attempt, deck, deckPicker, onPassage, onAgain, onSaved, player }: {
   set: TestSet;
+  player: Player | null;
   deckPicker: ComponentChildren;
   attempt: NonNullable<TestSet["attempt"]>;
   deck: DeckSink;
@@ -516,6 +759,8 @@ function Result({ set, attempt, deck, deckPicker, onPassage, onAgain, onSaved }:
           <span class="pill" data-testid="result-time">{clock(attempt.elapsedMs)}</span>
         </div>
         <div class="chips">
+          {g.lc && <span class="pill ok" data-testid="result-lc">LC: {formatScore(g.lc)}</span>}
+          {LC_PARTS.map((p) => g.lcParts[p.key] && <span class="pill" key={p.key} data-testid={`result-${p.key}`}>{p.label}: {formatScore(g.lcParts[p.key]!)}</span>)}
           {PARTS.map((p) => g.parts[p.key] && <span class="pill" key={p.key} data-testid={`result-${p.key}`}>{p.label}: {formatScore(g.parts[p.key]!)}</span>)}
           {g.ungraded > 0 && <span class="pill">{g.ungraded} câu không chấm</span>}
         </div>
@@ -544,7 +789,7 @@ function Result({ set, attempt, deck, deckPicker, onPassage, onAgain, onSaved }:
         <h3 class="part-head">{onlyWrong ? `Câu sai (${g.wrong.length})` : `Tất cả (${set.questions.length})`}</h3>
         <button type="button" class="btn ghost sm" onClick={() => setOnlyWrong(!onlyWrong)} data-testid="result-toggle">{onlyWrong ? "Xem cả bài" : "Chỉ câu sai"}</button>
       </div>
-      <Questions set={shown} answers={attempt.answers} review />
+      <Questions set={shown} answers={attempt.answers} review player={player} />
     </div>
   );
 }

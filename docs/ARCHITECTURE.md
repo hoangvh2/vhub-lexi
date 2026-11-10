@@ -137,6 +137,8 @@ Một bài đề đầy đủ cần làm trọn trong Lexi, không chỉ mang c�
 - **Lưu trên máy, không đồng bộ** (`web/src/data/testsets.ts`, IndexedDB `lexi-private`): nội dung đề là bản sao để tự học nên không lên Firestore, không vào file Xuất JSON, không cần rules mới. Bài làm dở (lựa chọn, thời gian) lưu cùng bộ đề; rời màn hình hoặc ẩn tab thì đồng hồ dừng.
 - **Chấm** (`grade`): theo Part, câu bỏ trống tính sai, câu không có đáp án không chấm. "Lưu vào Kết quả bài" tạo ghi chú `test` như form nhập tay. `fullRc` chỉ đúng khi ba Part đủ 30/16/54 câu, nên một bộ đề ngắn không bị so với mục tiêu 70/100.
 - **Câu sai → thẻ**: câu `fill` sai đi vào đúng bảng duyệt của Nhập nhanh (`DraftReview`), gắn nhãn `de-<tên bộ đề>`; câu đọc hiểu / chèn câu sai thì đưa đoạn đọc sang tab Từ lạ.
+- **Listening (Part 1–4)**: khi nhập chọn "Listening". Part 1–2 chỉ in số câu nên Lexi tạo câu từ khoảng số câu (mặc định 1–6, 7–31; Part 1 bốn lựa chọn, Part 2 ba), đáp án lấy từ bảng đáp án; câu AI đọc trùng khoảng đó bị bỏ. Part 3–4 do `extract-questions` đọc như Reading (không đổi function), Part lấy theo số câu 32–70 / 71–100. Trang ảnh Part 1 được dựng JPEG và giữ lại, không gửi AI.
+- **Audio** (`usePlayer` trong `TestSets.tsx`): file mp3 người học chọn được sắp theo số trong tên file và lưu Blob trong store `media` của `lexi-private` (khoá `${setId}:a${i}`, ảnh `${setId}:p${n}`), xoá bộ đề xoá theo. Khi làm bài, thanh nghe phát nối tiếp các file, chỉ phát/tạm dừng, không tua; số file bằng số câu (sách tách mỗi câu một file) thì mỗi câu có nút Nghe riêng. CSP `media-src 'self' blob:` cho object URL; ảnh hiện bằng data URL (img-src đã có `data:`). Điểm: Part 1–4 cộng lại thành ô `lc` của ghi chú `test` (không đổi rules).
 
 ## Thêm nội dung TOEIC / IELTS
 

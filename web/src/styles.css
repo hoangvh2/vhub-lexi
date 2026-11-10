@@ -694,6 +694,20 @@ input[type="range"] { width: 100%; }
 .draft .btn.sm { align-self: flex-start; }
 /* ---- Bộ đề: a test imported from a PDF, taken in Lexi ---- */
 .drafts.compact .draft { gap: 8px; padding: 12px; }
+.import .seg { display: flex; flex-wrap: wrap; border-radius: 18px; }
+.import .seg .opt { flex: 1 1 auto; justify-content: center; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 14px; cursor: pointer; font-weight: 700; color: var(--muted); min-height: 40px; }
+.import .seg .opt input { position: absolute; opacity: 0; pointer-events: none; }
+.import .seg .opt.on { background: var(--surface); color: var(--ink); box-shadow: var(--clay-sm); }
+.lc-setup { gap: 10px; padding: 12px; border-radius: 16px; background: var(--surface-2); }
+.lc-ranges { gap: 10px; flex-wrap: wrap; }
+.lc-ranges .field { flex: 1 1 120px; min-width: 0; }
+.tracks { margin: 4px 0 0; padding-left: 20px; overflow-wrap: anywhere; }
+.listen-bar { position: sticky; top: 72px; z-index: 4; gap: 10px; padding: 8px 12px; border-radius: 16px; background: var(--surface); box-shadow: var(--clay-sm); flex-wrap: wrap; }
+.listen-bar .muted { font-variant-numeric: tabular-nums; }
+.pictures { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.pictures img { width: 100%; border-radius: 12px; background: #fff; box-shadow: var(--clay-sm); }
+.qcard .opts.letters { grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); }
+.qcard .opts.letters .opt { justify-content: center; }
 .scan-check { display: flex; gap: 14px; align-items: center; padding: 10px; border-radius: 16px; background: var(--surface-2); }
 .scan-check img, .scan-check .scan-ph { width: 120px; flex: none; aspect-ratio: 210 / 297; object-fit: contain; border-radius: 8px; background: #fff; box-shadow: var(--clay-sm); display: flex; align-items: center; justify-content: center; text-align: center; }
 .sets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }

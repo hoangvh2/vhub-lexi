@@ -1352,6 +1352,127 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await ctx.close();
   });
 
+  it("listening: Part 1–2 made from their numbers, Part 3 by the AI, the audio plays file after file, LC is graded and the media is deleted with the set", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    const shot = async (name) => shots && (await page.waitForTimeout(400), await page.screenshot({ path: join(shots, `${name}.png`), fullPage: false }));
+    const calls = [];
+    const PART3 = [
+      [32, "Where most likely are the speakers?", ["At a bank", "At a hotel", "At a train station", "At a bookstore"]],
+      [33, "What does the woman ask for?", ["A receipt", "A gift bag", "A discount", "A catalog"]],
+      [34, "What will the man do next?", ["Check the storage room", "Call a manager", "Print a coupon", "Close the store"]],
+    ];
+    // The model also "reads" question 4 of Part 2 from the page text: Lexi must drop it (Part 2 is made from numbers).
+    await page.exposeFunction("__stubExtract", (input) => (calls.push(input), {
+      passages: [],
+      questions: [
+        { number: 4, part: null, kind: "reading", stem: "Mark your answer on your answer sheet.", options: { A: "", B: "", C: "", D: "" }, correct: null, result: "unknown", passage: null, topic: "", rule: "", translation: "", flags: [] },
+        ...PART3.map(([n, stem, o]) => ({ number: n, part: 5, kind: "reading", stem, options: { A: o[0], B: o[1], C: o[2], D: o[3] }, correct: null, result: "unknown", passage: null, topic: "", rule: "", translation: "", flags: [] })),
+      ],
+    }));
+    await page.addInitScript(() => { window.__lexiExtract = (input) => window.__stubExtract(input); });
+    await importPdf(page, "listening-test.pdf");
+    await page.click('[data-testid=set-section] >> text=Listening');
+    await page.waitForSelector('[data-testid=lc-setup]');
+    await page.fill('[data-testid=lc-p1]', "1-2");
+    await page.fill('[data-testid=lc-p2]', "3-5");
+    await page.fill('[data-testid=lc-photos]', "1");
+    await page.fill('[data-testid=set-range]', "2-4");
+    await page.setInputFiles('[data-testid=lc-audio]', ["listening-03.mp3", "listening-01.mp3", "listening-02.mp3"].map((f) => join(FIXTURES, f)));
+    assert.match(await page.textContent('[data-testid=lc-audio-list]'), /listening-01.*listening-02.*listening-03/s);
+    assert.match(await page.textContent('[data-testid=lc-audio-count]'), /3 file/);
+    assert.match(await page.textContent('[data-testid=pdf-key]'), /8 câu \(trang 4\)/);
+    assert.match(await page.textContent('[data-testid=pdf-read]'), /1 phần, ≈ 2 lượt AI/);
+    assert.equal(await noOverflow(page), true);
+    await shot("9-lc-setup");
+    await page.click('[data-testid=pdf-read]');
+    await page.waitForSelector('[data-testid=pdf-preview]');
+    assert.equal(calls.length, 1);
+    assert.doesNotMatch(calls[0].text, /PART 1/, "the photo page went to the AI");
+    assert.match(calls[0].text, /32 \(D\)/);
+    assert.match(await page.textContent('[data-testid=pdf-total]'), /8 câu/);
+    assert.match(await page.textContent('[data-testid=pdf-total-p1]'), /Part 1: 2/);
+    assert.match(await page.textContent('[data-testid=pdf-total-p2]'), /Part 2: 3/);
+    assert.match(await page.textContent('[data-testid=pdf-total-p3]'), /Part 3: 3/);
+    assert.match(await page.textContent('[data-testid=pdf-audio]'), /^3 file nghe$/);
+    assert.equal(await page.locator('[data-testid=pdf-noanswer]').count(), 0);
+    await page.click('[data-testid=pdf-save]');
+    await page.waitForSelector('[data-testid=set-row]');
+    assert.match(await page.textContent('[data-testid=set-lc]'), /Listening · 3 file nghe/);
+
+    await page.click('[data-testid=set-open]');
+    await page.waitForSelector('[data-testid=runner]');
+    await page.waitForSelector('[data-testid=runner-picture]');
+    assert.equal(await page.locator('[data-testid=runner-picture]').count(), 1);
+    assert.deepEqual(await page.$$eval('[data-testid=runner-q] .opts', (els) => els.map((e) => e.querySelectorAll("input").length)), [4, 4, 3, 3, 3, 4, 4, 4]);
+    // Straight through, file after file, like the exam: the position moves to the second file by itself.
+    await page.click('[data-testid=listen-toggle]');
+    await page.waitForFunction(() => /File 1\/3/.test(document.querySelector('[data-testid=listen-pos]')?.textContent ?? ""));
+    await page.waitForFunction(() => /File 2\/3/.test(document.querySelector('[data-testid=listen-pos]')?.textContent ?? ""), null, { timeout: 10_000 });
+    await shot("10-lc-runner");
+    await page.click('[data-testid=listen-toggle]');
+    await page.waitForFunction(() => /Nghe tiếp/.test(document.querySelector('[data-testid=listen-toggle]')?.textContent ?? ""));
+    // Key: 1 A, 2 C, 3 B, 4 A, 5 C, 32 D, 33 B, 34 A. Right on 1, 3, 32; wrong on 2; the rest blank.
+    const qs = page.locator('[data-testid=runner-q]');
+    await qs.nth(0).locator('label:has-text("A")').click();
+    await qs.nth(1).locator('label:has-text("A")').click();
+    await qs.nth(2).locator('label:has-text("B")').click();
+    await qs.nth(5).locator('label:has-text("At a bookstore")').click();
+    await page.click('[data-testid=runner-submit]');
+    await page.click('[data-testid=confirm-ok]');
+    await page.waitForSelector('[data-testid=runner-result]');
+    assert.equal(await page.textContent('[data-testid=result-score]'), "3/8");
+    assert.match(await page.textContent('[data-testid=result-lc]'), /LC: 3\/8/);
+    assert.match(await page.textContent('[data-testid=result-p1]'), /Part 1: 1\/2/);
+    assert.match(await page.textContent('[data-testid=result-p2]'), /Part 2: 1\/3/);
+    assert.match(await page.textContent('[data-testid=result-p3]'), /Part 3: 1\/3/);
+    assert.equal(await page.locator('[data-testid=result-p5]').count(), 0);
+    await page.click('[data-testid=result-save]');
+    await page.waitForFunction(() => /Đã lưu/.test(document.querySelector('[data-testid=result-save]')?.textContent ?? ""));
+    await page.click('[data-testid=runner-exit]');
+
+    // Deleting asks first; "Xoá" takes the audio and the photo off the device too.
+    const media = () => page.evaluate(() => new Promise((res) => {
+      const r = indexedDB.open("lexi-private");
+      r.onsuccess = () => { const q = r.result.transaction("media").objectStore("media").count(); q.onsuccess = () => { res(q.result); r.result.close(); }; };
+    }));
+    assert.equal(await media(), 4);
+    await page.click('[data-testid=set-delete]');
+    await page.click('[data-testid=confirm-cancel]');
+    assert.equal(await media(), 4);
+    await page.click('[data-testid=set-delete]');
+    await page.click('[data-testid=confirm-ok]');
+    await page.waitForSelector('[data-testid=sets-empty]');
+    assert.equal(await media(), 0);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("listening without AI: Part 1 only, one audio file per question, each question plays its own", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 1280, height: 800 } });
+    await importPdf(page, "listening-test.pdf");
+    await page.click('[data-testid=set-section] >> text=Listening');
+    await page.fill('[data-testid=lc-p1]', "1-2");
+    await page.fill('[data-testid=lc-p2]', "");
+    await page.fill('[data-testid=set-range]', "4");
+    await page.setInputFiles('[data-testid=lc-audio]', ["listening-01.mp3", "listening-02.mp3"].map((f) => join(FIXTURES, f)));
+    assert.match(await page.textContent('[data-testid=pdf-read]'), /không cần AI/);
+    await page.click('[data-testid=pdf-read]');
+    await page.waitForSelector('[data-testid=pdf-preview]');
+    assert.match(await page.textContent('[data-testid=pdf-audio]'), /mỗi câu một file/);
+    await page.click('[data-testid=pdf-save]');
+    await page.click('[data-testid=set-open]');
+    await page.waitForSelector('[data-testid=runner]');
+    assert.equal(await page.locator('[data-testid=listen-bar]').count(), 0);
+    assert.equal(await page.locator('[data-testid=q-play]').count(), 2);
+    await page.locator('[data-testid=q-play]').nth(1).click();
+    await page.waitForFunction(() => /Dừng/.test(document.querySelectorAll('[data-testid=q-play]')[1]?.textContent ?? ""));
+    assert.match(await page.locator('[data-testid=q-play]').nth(0).textContent(), /Nghe/);
+    await page.locator('[data-testid=q-play]').nth(1).click();
+    await page.waitForFunction(() => /Nghe/.test(document.querySelectorAll('[data-testid=q-play]')[1]?.textContent ?? ""));
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
   it("the JSON backup says it is private and holds no imported test", async () => {
     const { ctx, page } = await open(browser, base);
     await page.goto(`${base}/#/settings`);
