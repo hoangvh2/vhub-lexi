@@ -395,8 +395,13 @@ describe("core flow (local-only mode)", () => {
     await page.goto(`${base}/#/today`);
     await page.goto(`${base}/#/study`);
     let answeredNew = false;
+    const seen = [];
     for (let i = 0; i < 12 && !answeredNew; i++) {
-      const ask = await page.waitForSelector('[data-testid=show-answer], [data-testid=type-input]');
+      // On a timeout, say which cards came and what the screen shows instead of a card (the failure is otherwise blind).
+      const ask = await page.waitForSelector('[data-testid=show-answer], [data-testid=type-input]', { timeout: 15000 }).catch(async (e) => {
+        throw new Error(`${e.message.split("\n")[0]}\ncards so far: ${seen.join(" | ")}\nscreen: ${(await page.textContent("#main"))?.replace(/\s+/g, " ").slice(0, 400)}`);
+      });
+      seen.push(`${await page.getAttribute('[data-testid=study-card]', "data-template")}: ${(await page.textContent('[data-testid=counts]'))?.replace(/\s+/g, " ")} ${(await page.textContent('[data-testid=study-card]'))?.replace(/\s+/g, " ").slice(0, 40)}`);
       answeredNew = (await page.locator('[data-testid=counts] .c-new.on').count()) > 0
         && (await page.getAttribute('[data-testid=study-card]', "data-template")) === "recognize";
       if ((await ask.getAttribute("data-testid")) === "show-answer") await ask.click();
@@ -404,7 +409,7 @@ describe("core flow (local-only mode)", () => {
       await page.click('[data-testid=rate-3]', { timeout: 5000 });
       await page.waitForSelector('[data-testid=rate-3]', { state: "detached" });
     }
-    assert.equal(answeredNew, true);
+    assert.equal(answeredNew, true, `no new recognize card among: ${seen.join(" | ")}`);
     // Importing the same file again adds nothing and keeps the progress.
     await page.goto(`${base}/#/settings`);
     await page.setInputFiles('[data-testid=import-anki-file]', fileURLToPath(new URL("../../web/test/fixtures/anki-fsrs.apkg", import.meta.url)));
