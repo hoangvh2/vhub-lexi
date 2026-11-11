@@ -124,21 +124,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.vh.lexi.core.CloudMeta
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.util.UUID
 
 /**
- * Bộ đề (web: ui/TestSets.tsx): a whole Reading test imported from a PDF, taken here with a clock, graded per part; the
- * result goes to "Kết quả bài" and the missed questions become cards through the same review as "Nhập câu sai". The
- * test itself stays on this phone (data/TestSets.kt).
+ * Bộ đề (web: ui/TestSets.tsx): a whole Reading or Listening test imported from a PDF, taken here with a clock, graded
+ * per part; the result goes to "Kết quả bài" and the missed questions become cards through the same review as "Nhập câu
+ * sai". Signed in, the test is in the account too, so every device lists it and continues the attempt (data/TestSets.kt).
  */
 @Composable
 fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
     val store = app.testSets
     val toast = LocalToaster.current
     val sets by store.sets.collectAsState()
+    val remote by store.remote.collectAsState()
+    val status by store.status.collectAsState()
     var ready by remember { mutableStateOf(false) }
     var running by rememberSaveable { mutableStateOf<String?>(null) }
     var cards by remember { mutableStateOf<Pair<String, WrongDrafts>?>(null) }
@@ -146,6 +149,8 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
         try { store.load() } catch (e: CancellationException) { throw e } catch (_: Exception) { toast("Không mở được kho bộ đề trên máy này") }
         ready = true
     }
+    // Again once the account is ready: sign-in can finish after the screen is up.
+    LaunchedEffect(status.on) { if (status.on) store.sync() }
 
     val cardsFor = cards
     if (cardsFor != null) {
@@ -168,17 +173,25 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
         Panel(Modifier.testTag("sets")) {
             // Title, then the pill under it: side by side they squeeze the title to three lines on a 320 dp phone.
             Text("Bộ đề của bạn", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
-            Pill("Riêng tư · chỉ trên máy này")
-            if (ready && sets.isEmpty()) Text("Chưa có bộ đề nào. Nhập một file PDF đề Reading ở trên để làm bài ngay trong Lexi.", fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("sets-empty"))
-            for (s in sets) SetRow(app, s) { running = s.id }
-            Text("Nội dung đề là bản sao để bạn tự học: chỉ nằm trong máy này, không đồng bộ, không sao lưu. Kết quả bài và thẻ tạo từ câu sai thì đồng bộ như mọi thẻ khác.", fontSize = 12.sp, color = c.muted)
+            if (status.on) Pill("Đồng bộ · mọi thiết bị của bạn", PillKind.OK, Modifier.testTag("sets-cloud"))
+            else Pill("Riêng tư · chỉ trên máy này")
+            val line = status.busy.ifEmpty { status.error }
+            if (line.isNotEmpty()) Text(line, fontSize = 13.sp, color = if (status.busy.isEmpty()) c.hard else c.muted, modifier = Modifier.testTag("sets-status"))
+            if (ready && sets.isEmpty() && remote.isEmpty()) Text("Chưa có bộ đề nào. Nhập một file PDF đề Reading hoặc Listening ở trên để làm bài ngay trong Lexi.", fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("sets-empty"))
+            for (s in sets) SetRow(app, s, status.on) { running = s.id }
+            for (m in remote) RemoteRow(app, m, busy = status.busy.isNotEmpty()) { running = m.id }
+            Text(
+                if (status.on) "Nội dung đề là bản sao để bạn tự học: lưu trong tài khoản của bạn (chỉ bạn đọc được) và trên các máy đã mở nó. Kết quả bài và thẻ tạo từ câu sai đồng bộ như mọi thẻ khác."
+                else "Nội dung đề là bản sao để bạn tự học: chỉ nằm trong máy này, không đồng bộ, không sao lưu. Kết quả bài và thẻ tạo từ câu sai thì đồng bộ như mọi thẻ khác.",
+                fontSize = 12.sp, color = c.muted,
+            )
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SetRow(app: LexiApp, set: TestSet, onOpen: () -> Unit) {
+private fun SetRow(app: LexiApp, set: TestSet, cloud: Boolean, onOpen: () -> Unit) {
     val scope = rememberCoroutineScope()
     val sum = remember(set) { summary(set.questions) }
     val a = set.attempt
@@ -194,6 +207,7 @@ private fun SetRow(app: LexiApp, set: TestSet, onOpen: () -> Unit) {
                 g != null -> Pill("Đã làm: ${g.right}/${g.total}", PillKind.OK, Modifier.testTag("set-score"))
                 a != null -> Pill("Đang làm · ${a.answers.size}/${sum.total} câu", PillKind.WARN)
             }
+            if (cloud && set.syncedAt == null) Pill("Chưa đồng bộ", PillKind.WARN, Modifier.testTag("set-unsynced"))
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onOpen, Modifier.weight(1f).testTag("set-open")) { Text(if (g != null) "Xem kết quả" else if (a != null) "Làm tiếp" else "Làm bài") }
@@ -202,9 +216,54 @@ private fun SetRow(app: LexiApp, set: TestSet, onOpen: () -> Unit) {
     }
     if (asking) ConfirmDialog(
         title = "Xoá bộ đề?",
-        message = "“${set.name}”${if (set.tracks.isNotEmpty()) ", file nghe" else ""} và bài làm dở sẽ bị xoá khỏi máy này. Kết quả đã lưu và thẻ đã tạo vẫn giữ nguyên.",
+        message = removeMessage(set.name, set.tracks.isNotEmpty(), cloud && set.syncedAt != null),
         confirm = "Xoá", destructive = true,
         onConfirm = { asking = false; scope.launch { app.testSets.delete(set.id) } },
+        onDismiss = { asking = false },
+    )
+}
+
+private fun removeMessage(name: String, lc: Boolean, everywhere: Boolean) =
+    "“$name”${if (lc) ", file nghe" else ""} và bài làm dở sẽ bị xoá ${if (everywhere) "khỏi tài khoản và mọi thiết bị" else "khỏi máy này"}. Kết quả đã lưu và thẻ đã tạo vẫn giữ nguyên."
+
+/** A set in the account that this phone has not downloaded yet. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RemoteRow(app: LexiApp, meta: CloudMeta, busy: Boolean, onOpened: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    val toast = LocalToaster.current
+    var asking by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Lexi.colors.surface2).padding(12.dp).testTag("set-remote"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(meta.name, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (meta.section == "lc") Pill("Listening", PillKind.OK)
+            Pill("${meta.questions} câu")
+            Pill("Trên tài khoản · ${mb(meta.bytes)}", modifier = Modifier.testTag("set-remote-size"))
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = {
+                    scope.launch {
+                        try {
+                            app.testSets.download(meta.id)
+                            onOpened()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            toast("Không tải được bộ đề. Kiểm tra mạng rồi thử lại.")
+                        }
+                    }
+                },
+                enabled = !busy, modifier = Modifier.weight(1f).testTag("set-download"),
+            ) { Text("Tải về và mở") }
+            IconButton(onClick = { asking = true }, Modifier.testTag("set-remote-delete")) { Icon(Icons.Filled.Delete, "Xoá ${meta.name}") }
+        }
+    }
+    if (asking) ConfirmDialog(
+        title = "Xoá bộ đề?",
+        message = removeMessage(meta.name, meta.section == "lc", true),
+        confirm = "Xoá", destructive = true,
+        onConfirm = { asking = false; scope.launch { app.testSets.delete(meta.id) } },
         onDismiss = { asking = false },
     )
 }

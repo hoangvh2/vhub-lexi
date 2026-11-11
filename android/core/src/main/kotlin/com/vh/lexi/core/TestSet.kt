@@ -270,6 +270,8 @@ data class TestSet(
     val tracks: List<SetTrack> = emptyList(),
     val pictures: List<SetPicture> = emptyList(),
     val attempt: Attempt? = null,
+    /** This device only: when the set was last known to be in the account (TestSetSync.kt). Never uploaded. */
+    val syncedAt: Long? = null,
 )
 
 /** Question numbers of the Listening parts printed with nothing but their number (Part 1, Part 2). */
@@ -664,6 +666,7 @@ fun TestSet.toJson(): JSONObject = JSONObject()
                 .put("answers", JSONObject().apply { a.answers.forEach { (k, v) -> put(k.toString(), v) } })
                 .apply { a.finishedAt?.let { put("finishedAt", it) }; a.resultNoteId?.let { put("resultNoteId", it) } })
         }
+        syncedAt?.let { put("syncedAt", it) }
     }
 
 fun testSetFromJson(o: JSONObject): TestSet {
@@ -685,6 +688,7 @@ fun testSetFromJson(o: JSONObject): TestSet {
                 finishedAt = it.longOrNull("finishedAt"), resultNoteId = it.strOr("resultNoteId").ifEmpty { null },
             )
         },
+        syncedAt = o.longOrNull("syncedAt"),
     )
 }
 
