@@ -428,9 +428,9 @@ class TestSetsTest {
         // Decoded on the phone, measured, split at its answer pauses. The fixture's questions start at 7 s, 15.5 s, 24 s.
         rule.onNodeWithTag("result-split").performScrollTo().performClick()
         waitFor("split", 30_000) { count("result-split") == 0 }
-        // Missed: 4 and 5 (left blank).
+        // Missed: 4 and 5 (left blank). Question 5 starts on a frame boundary (24.0 s): one 50 ms frame either way is 0:23 or 0:24.
         assertTrue(rangeOf(4), Regex("^File 1 · 0:1[56]–0:(19|20)$").matches(rangeOf(4)))
-        assertTrue(rangeOf(5), Regex("^File 1 · 0:2[45]–0:2[789]$").matches(rangeOf(5)))
+        assertTrue(rangeOf(5), Regex("^File 1 · 0:2[345]–0:2[789]$").matches(rangeOf(5)))
         rule.onNodeWithTag("runner-list").performScrollToNode(hasTestTag("result-toggle"))
         rule.onNodeWithTag("result-toggle").performClick()
         assertTrue(rangeOf(3), Regex("^File 1 · 0:0[67]–0:1[01]$").matches(rangeOf(3)))
