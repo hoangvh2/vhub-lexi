@@ -16,6 +16,8 @@ val IMPORT_TOPICS = listOf("Dạng từ", "Giới từ / liên từ", "Thì và 
 data class ExtractedQuestion(
     val number: Int?, val kind: String, val stem: String, val options: Map<String, String>, val correct: String?,
     val result: String, val topic: String, val rule: String, val translation: String, val flags: List<String>,
+    /** Reading part the model gave (5–7), and the id of the passage the question belongs to; used by Bộ đề (TestSet.kt). */
+    val part: Int? = null, val passage: Int? = null,
 )
 
 data class ExtractedPassage(val id: Int, val label: String, val text: String, val truncated: Boolean)
@@ -36,6 +38,7 @@ fun extractedFrom(raw: Map<*, *>): Extracted {
             options = LETTERS.associateWith { s(o?.get(it)) }, correct = s(q["correct"]).ifEmpty { null },
             result = s(q["result"]).ifEmpty { "unknown" }, topic = s(q["topic"]), rule = s(q["rule"]), translation = s(q["translation"]),
             flags = (q["flags"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+            part = num(q["part"]), passage = num(q["passage"]),
         )
     } ?: emptyList()
     return Extracted(passages, questions)

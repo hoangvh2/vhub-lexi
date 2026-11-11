@@ -144,7 +144,7 @@ private const val DAY_MS = 86_400_000L
 private fun lessonLabel(t: String, started: Int, total: Int) = "${lessonTitle(t)} · $started/$total" + if (started >= total) " ✓" else ""
 
 @Composable
-fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
+fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTestSets: () -> Unit = {}) {
     val data = app.data
     val toast = LocalToaster.current
     val scope = rememberCoroutineScope()
@@ -325,6 +325,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}) {
             onStart = { started = true; holder[0] = null },
             onLesson = { t -> tag = t; aheadDays = 0; started = true; holder[0] = null },
             onImport = onImport,
+            onTestSets = onTestSets,
         )
         return
     }

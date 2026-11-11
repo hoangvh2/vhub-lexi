@@ -5,10 +5,12 @@ import android.net.Uri
 import com.vh.lexi.cloud.Cloud
 import com.vh.lexi.core.AiBatch
 import com.vh.lexi.core.Enriched
+import com.vh.lexi.core.Extracted
 import com.vh.lexi.core.Dictionary
 import com.vh.lexi.core.ShardSource
 import com.vh.lexi.data.LexiData
 import com.vh.lexi.data.LexiDb
+import com.vh.lexi.data.TestSetStore
 import com.vh.lexi.util.Speech
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +42,15 @@ class LexiApp : Application() {
 
     /** Images shared into Lexi from another app (the share sheet): the import screen takes them and empties this. */
     val pendingShare = MutableStateFlow<List<Uri>>(emptyList())
+
+    /** Bộ đề: whole tests imported from PDF, kept on this phone only (never synced). */
+    val testSets: TestSetStore by lazy { TestSetStore(filesDir) }
+
+    /** A PDF handed to the Bộ đề screen from outside it (a test, or later the share sheet); the screen takes it and empties this. */
+    val pendingPdf = MutableStateFlow<Uri?>(null)
+
+    /** Tests replace the `extract-questions` function with a canned answer (there is no Gemini on the CI emulator). */
+    @Volatile var extractOverride: (suspend (images: List<String>, text: String) -> Extracted)? = null
 
     /** False when the APK was built without the dictionary pack (node tools/dict/build.ts --copy-android). */
     var hasDictionary: Boolean = false
