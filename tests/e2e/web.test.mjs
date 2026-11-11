@@ -1528,4 +1528,100 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     assert.match(await page.textContent('[data-testid=export-private]'), /không đưa lên repo/);
     await ctx.close();
   });
+
+  /**
+   * Two devices of one account: separate browser profiles (their own IndexedDB) over one in-memory account that
+   * stands in for Firestore + Cloud Storage (the real ones are covered by web/test-int/sets.int.test.ts).
+   */
+  async function device(account) {
+    const d = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    await d.page.exposeFunction("__stubExtract", (input) => fakeRead(input.text));
+    await d.page.exposeFunction("__acct", (op, ...a) => {
+      if (op === "list") return [...account.docs.values()];
+      if (op === "put") return void account.files.set(`${a[0]}/${a[1]}`, { b64: a[2], type: a[3] });
+      if (op === "get") return account.files.get(`${a[0]}/${a[1]}`) ?? null;
+      if (op === "meta") return void account.docs.set(a[0].id, a[0]);
+      if (op === "remove") {
+        account.docs.delete(a[0]);
+        for (const f of a[1]) account.files.delete(`${a[0]}/${f}`);
+      }
+    });
+    await d.page.addInitScript(() => {
+      window.__lexiExtract = (input) => window.__stubExtract(input);
+      const b64 = async (blob) => btoa(Array.from(new Uint8Array(await blob.arrayBuffer()), (c) => String.fromCharCode(c)).join(""));
+      window.__lexiSetsCloud = {
+        list: () => window.__acct("list"),
+        putFile: async (id, path, blob, onSent) => (await window.__acct("put", id, path, await b64(blob), blob.type), onSent?.(blob.size)),
+        getFile: async (id, path) => {
+          const f = await window.__acct("get", id, path);
+          if (!f) throw Object.assign(new Error("missing"), { code: "storage/object-not-found" });
+          return new Blob([Uint8Array.from(atob(f.b64), (c) => c.charCodeAt(0))], { type: f.type });
+        },
+        putMeta: (m) => window.__acct("meta", m),
+        remove: (id, files) => window.__acct("remove", id, files),
+      };
+    });
+    return d;
+  }
+
+  it("sync: a set imported on one device is listed on another, downloaded, continued there, and a delete reaches both", async () => {
+    const account = { docs: new Map(), files: new Map() };
+    const a = await device(account);
+    await importPdf(a.page, "reading-test.pdf");
+    await a.page.click('[data-testid=pdf-read]');
+    await a.page.waitForSelector('[data-testid=pdf-preview]');
+    await a.page.click('[data-testid=pdf-save]');
+    await a.page.waitForSelector('[data-testid=set-row]');
+    assert.match(await a.page.textContent('[data-testid=sets-cloud]'), /Đồng bộ · mọi thiết bị/);
+    // Uploaded a moment after saving: the questions file, then the document; the PDF itself never.
+    await a.page.waitForFunction(() => !document.querySelector('[data-testid=set-unsynced]'), null, { timeout: 10_000 });
+    assert.equal(account.docs.size, 1);
+    const [id] = account.docs.keys();
+    assert.deepEqual([...account.files.keys()], [`${id}/set.json`]);
+    assert.deepEqual(account.docs.get(id).files, ["set.json"]);
+    assert.equal(account.docs.get(id).questions, 17);
+
+    // Answer one question on A; the progress reaches the document.
+    await a.page.click('[data-testid=set-open]');
+    await a.page.waitForSelector('[data-testid=runner]');
+    const q = (page, n) => page.locator('[data-testid=runner-q]', { hasText: new RegExp(`^${n}\\.`) });
+    await q(a.page, 101).locator('label.opt', { hasText: "receipts" }).first().click();
+    await a.page.click('[data-testid=runner-exit]');
+    const deadline = Date.now() + 10_000;
+    while (!/"answers":\{"0":/.test(account.docs.get(id).state) && Date.now() < deadline) await a.page.waitForTimeout(200);
+    assert.match(account.docs.get(id).state, /"answers":\{"0":"[A-D]"\}/);
+
+    // B: listed from the account, downloaded on open, the answer from A is there.
+    const b = await device(account);
+    // Opened straight on this screen: the account is ready only after the screen is up, and it still syncs.
+    await b.page.goto(`${base}/#/practice?tab=sets`);
+    await b.page.waitForSelector('[data-testid=set-remote]');
+    assert.equal(await b.page.locator('[data-testid=set-row]').count(), 0);
+    assert.match(await b.page.textContent('[data-testid=set-remote]'), /17 câu/);
+    if (shots) await b.page.screenshot({ path: join(shots, "sync-1-remote.png") });
+    await b.page.click('[data-testid=set-download]');
+    await b.page.waitForSelector('[data-testid=runner]');
+    assert.equal(await q(b.page, 101).locator('input:checked').count(), 1);
+    await b.page.click('[data-testid=runner-exit]');
+    await b.page.waitForSelector('[data-testid=set-row]');
+    assert.match(await b.page.textContent('[data-testid=set-row]'), /Đang làm · 1\/17 câu/);
+    if (shots) await b.page.screenshot({ path: join(shots, "sync-2-downloaded.png") });
+
+    // Delete on B: Cancel keeps it everywhere, Delete removes it from the account; A drops it on its next sync.
+    await b.page.click('[data-testid=set-delete]');
+    assert.match(await b.page.textContent('.dialog, [role=dialog]'), /khỏi tài khoản và mọi thiết bị/);
+    await b.page.click('[data-testid=confirm-cancel]');
+    assert.equal(await b.page.locator('[data-testid=set-row]').count(), 1);
+    assert.equal(account.docs.size, 1);
+    await b.page.click('[data-testid=set-delete]');
+    await b.page.click('[data-testid=confirm-ok]');
+    await b.page.waitForSelector('[data-testid=sets-empty]');
+    assert.equal(account.docs.size, 0);
+    assert.equal(account.files.size, 0);
+    await a.page.reload();
+    await a.page.waitForSelector('[data-testid=sets-empty]');
+    assert.deepEqual([...a.errors, ...b.errors], []);
+    await a.ctx.close();
+    await b.ctx.close();
+  });
 });

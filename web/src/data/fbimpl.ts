@@ -75,3 +75,14 @@ export async function callExtract(input: { images: Array<{ mime: string; data: s
   const fn = httpsCallable(getFunctions(app, env.VITE_FUNCTIONS_REGION || "asia-southeast1"), "extract-questions", { timeout: 120_000 });
   return (await fn(input)).data;
 }
+
+/** Bộ đề in the account: the same app (auth + App Check), Firestore Lite and the test sets bucket. */
+export async function makeSetsCloud(uid: string) {
+  const { app } = firebase();
+  const [{ getFirestore }, { getStorage }, { makeSetsCloud: make, bucketOf }] = await Promise.all([
+    import("firebase/firestore/lite"),
+    import("firebase/storage"),
+    import("./setscloud.ts"),
+  ]);
+  return make(uid, getFirestore(app), getStorage(app, bucketOf(env.VITE_FIREBASE_PROJECT_ID)));
+}

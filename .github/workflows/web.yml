@@ -83,10 +83,10 @@ jobs:
         env:
           ALLOWED_EMAILS: owner@example.com
 
-      - name: CloudRepo against the Auth + Firestore emulators
+      - name: CloudRepo and Bộ đề sync against the Auth + Firestore + Storage emulators
         run: |
           node scripts/configure.mjs
-          tests/node_modules/.bin/firebase emulators:exec --only auth,firestore --project demo-lexi "npm --prefix web run test:int"
+          tests/node_modules/.bin/firebase emulators:exec --only auth,firestore,storage --project demo-lexi "npm --prefix web run test:int"
         env:
           ALLOWED_EMAILS: owner@example.com,second@example.com
 

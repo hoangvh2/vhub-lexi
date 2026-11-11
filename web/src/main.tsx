@@ -3,7 +3,9 @@ import { useEffect, useState } from "preact/hooks";
 import "./fonts.ts";
 import "./styles.css";
 import { LocalRepo } from "./data/local.ts";
-import { firebaseConfigured, makeCloudRepo, onUser } from "./data/firebase.ts";
+import { firebaseConfigured, makeCloudRepo, makeSetsCloud, onUser } from "./data/firebase.ts";
+import { useSetsCloud } from "./data/testsets.ts";
+import type { SetsCloud } from "./data/setscloud.ts";
 import { loadSeeds } from "./data/seed.ts";
 import { currentRepo, loaded, startRepo, stopRepo, sync } from "./data/state.ts";
 import { useStore } from "./lib/store.ts";
@@ -30,6 +32,9 @@ function Root() {
   useEffect(() => {
     if (!firebaseConfigured) {
       void startRepo(new LocalRepo());
+      // Tests: an in-memory account for Bộ đề (there is no Firebase in local-only mode).
+      const fake = (globalThis as unknown as { __lexiSetsCloud?: SetsCloud }).__lexiSetsCloud;
+      if (fake) useSetsCloud(fake);
       return;
     }
     let off = () => {};
@@ -39,8 +44,13 @@ function Root() {
 
   useEffect(() => {
     if (!firebaseConfigured) return;
-    if (who) void makeCloudRepo(who.uid).then((r) => startRepo(r));
-    else if (who === null) stopRepo();
+    if (who) {
+      void makeCloudRepo(who.uid).then((r) => startRepo(r));
+      void makeSetsCloud(who.uid).then(useSetsCloud, (e) => console.warn("[sets] cloud unavailable", e));
+    } else if (who === null) {
+      stopRepo();
+      useSetsCloud(null);
+    }
   }, [who?.uid]);
 
   if (firebaseConfigured) {

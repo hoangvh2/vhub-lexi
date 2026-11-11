@@ -29,3 +29,6 @@ export async function makeCloudRepo(uid: string) {
   const { CloudRepo } = await import("./cloud.ts");
   return new CloudRepo(uid);
 }
+export async function makeSetsCloud(uid: string) {
+  return (await impl()).makeSetsCloud(uid);
+}
