@@ -81,6 +81,7 @@ class TestSetsTest {
     fun setUp() {
         // A test stuck on a blocked main thread never reaches its own timeouts: log what the main thread is doing.
         android.util.Log.i("LEXI_PERF", "start ${testName.methodName}")
+        val testThread = Thread.currentThread()
         watchdog = Thread {
             try {
                 while (true) {
@@ -88,6 +89,8 @@ class TestSetsTest {
                     val main = android.os.Looper.getMainLooper().thread
                     android.util.Log.i("LEXI_PERF", "watchdog: main thread ${main.state}")
                     main.stackTrace.take(40).forEach { android.util.Log.i("LEXI_PERF", "watchdog |   at $it") }
+                    android.util.Log.i("LEXI_PERF", "watchdog: test thread ${testThread.state}")
+                    testThread.stackTrace.take(60).forEach { android.util.Log.i("LEXI_PERF", "watchdog test |   at $it") }
                 }
             } catch (_: InterruptedException) {
             }
@@ -117,6 +120,7 @@ class TestSetsTest {
     }
 
     private fun waitFor(label: String, ms: Long = 15_000, cond: () -> Boolean) {
+        android.util.Log.i("LEXI_PERF", "wait $label")
         try {
             rule.waitUntil(ms, cond)
         } catch (e: Throwable) {
