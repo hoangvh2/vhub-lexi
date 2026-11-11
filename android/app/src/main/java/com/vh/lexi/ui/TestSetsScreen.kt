@@ -825,7 +825,8 @@ private fun Pictures(app: LexiApp, set: TestSet, part: Int) {
     Column(Modifier.testTag("runner-pictures"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (p in list) {
             val img by produceState<ImageBitmap?>(null, p.key) {
-                value = withContext(Dispatchers.IO) { runCatching { android.graphics.BitmapFactory.decodeFile(app.testSets.mediaFile(p.key).path)?.asImageBitmap() }.getOrNull() }
+                val b = withContext(Dispatchers.IO) { runCatching { android.graphics.BitmapFactory.decodeFile(app.testSets.mediaFile(p.key).path)?.asImageBitmap() }.getOrNull() }
+                value = b
             }
             val b = img
             if (b != null) Image(b, "Trang ${p.page}", Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).border(1.dp, Lexi.colors.line, RoundedCornerShape(14.dp)).testTag("runner-picture"), contentScale = ContentScale.FillWidth)

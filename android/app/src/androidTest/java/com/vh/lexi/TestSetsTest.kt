@@ -68,8 +68,26 @@ class TestSetsTest {
         ),
     )
 
+    @get:Rule
+    val testName = org.junit.rules.TestName()
+
+    private var watchdog: Thread? = null
+
     @Before
     fun setUp() {
+        // A test stuck on a blocked main thread never reaches its own timeouts: log what the main thread is doing.
+        android.util.Log.i("LEXI_PERF", "start ${testName.methodName}")
+        watchdog = Thread {
+            try {
+                while (true) {
+                    Thread.sleep(60_000)
+                    val main = android.os.Looper.getMainLooper().thread
+                    android.util.Log.i("LEXI_PERF", "watchdog: main thread ${main.state}")
+                    main.stackTrace.take(40).forEach { android.util.Log.i("LEXI_PERF", "watchdog |   at $it") }
+                }
+            } catch (_: InterruptedException) {
+            }
+        }.apply { isDaemon = true; start() }
         File(app.filesDir, "testsets").deleteRecursively()
         runBlockingLoad()
         app.extractOverride = { images, text -> synchronized(calls) { calls += images to text }; if (images.isEmpty()) canned else Extracted(emptyList(), listOf(q(1, "fill", "She _____ to work by bus.", listOf("go", "goes", "going", "gone")))) }
@@ -77,6 +95,7 @@ class TestSetsTest {
 
     @After
     fun tearDown() {
+        watchdog?.interrupt()
         app.extractOverride = null
     }
 
