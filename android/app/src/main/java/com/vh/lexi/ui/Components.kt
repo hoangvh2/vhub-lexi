@@ -7,6 +7,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -78,18 +81,21 @@ fun Modifier.keepVisibleWhileTyping(): Modifier = composed {
     val requester = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
     var focused by remember { mutableStateOf(false) }
-    var focusedAt by remember { mutableStateOf(0L) }
+    // Pulled back only while focus or the keyboard has just changed (the resize can land a little after the inset):
+    // the learner (or a test) scrolling away from a focused field later is not pulled back, which kept the page moving
+    // and never idle.
+    val ime = WindowInsets.ime.getBottom(LocalDensity.current)
+    val last = remember { longArrayOf(-1L, 0L) } // keyboard height seen, when focus or that height last changed
+    if (last[0] != ime.toLong()) { last[0] = ime.toLong(); last[1] = android.os.SystemClock.uptimeMillis() }
     bringIntoViewRequester(requester)
         .onFocusEvent {
-            if (it.isFocused && !focused) focusedAt = android.os.SystemClock.uptimeMillis()
+            if (it.isFocused && !focused) last[1] = android.os.SystemClock.uptimeMillis()
             focused = it.isFocused
             if (focused) scope.launch { requester.bringIntoView() }
         }
         .onGloballyPositioned { c ->
-            // Clipped while the keyboard opens just after focus: scroll it back into full view. Only then: later on, the
-            // learner (or a test) scrolling the page away from a focused field must not be pulled back, which kept the
-            // page moving and never idle.
-            if (focused && android.os.SystemClock.uptimeMillis() - focusedAt < 1500 && c.boundsInWindow().height < c.size.height - 1) {
+            // Clipped while focused (the keyboard took the room): scroll it back into full view.
+            if (focused && android.os.SystemClock.uptimeMillis() - last[1] < 800 && c.boundsInWindow().height < c.size.height - 1) {
                 scope.launch { requester.bringIntoView() }
             }
         }
