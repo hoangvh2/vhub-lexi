@@ -71,6 +71,14 @@ class Cloud(private val context: Context, private val data: LexiData, private va
     private val db: FirebaseFirestore? = firebase?.let { FirebaseFirestore.getInstance(it) }
     private val functions: FirebaseFunctions? = firebase?.let { FirebaseFunctions.getInstance(it, BuildConfig.FUNCTIONS_REGION) }
 
+    /** Bộ đề in the account of [uid] (null in a phone-only build): Firestore documents + the test sets bucket. */
+    fun setsCloud(uid: String): SetsCloud? {
+        val app = firebase ?: return null
+        val fs = db ?: return null
+        return runCatching { FirebaseSetsCloud(uid, fs, com.google.firebase.storage.FirebaseStorage.getInstance(app, bucketOf(BuildConfig.FIREBASE_PROJECT_ID))) }
+            .onFailure { Log.w(TAG, "Storage did not start", it) }.getOrNull()
+    }
+
     private val _account = MutableStateFlow<Account>(if (firebase == null) Account.Off else Account.SignedOut)
     val account: StateFlow<Account> = _account
 

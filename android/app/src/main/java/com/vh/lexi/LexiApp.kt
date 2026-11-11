@@ -2,6 +2,7 @@ package com.vh.lexi
 
 import android.app.Application
 import android.net.Uri
+import com.vh.lexi.cloud.Account
 import com.vh.lexi.cloud.Cloud
 import com.vh.lexi.core.AiBatch
 import com.vh.lexi.core.Enriched
@@ -16,6 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 class LexiApp : Application() {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -43,8 +45,8 @@ class LexiApp : Application() {
     /** Images shared into Lexi from another app (the share sheet): the import screen takes them and empties this. */
     val pendingShare = MutableStateFlow<List<Uri>>(emptyList())
 
-    /** Bộ đề: whole tests imported from PDF, kept on this phone only (never synced). */
-    val testSets: TestSetStore by lazy { TestSetStore(filesDir) }
+    /** Bộ đề: whole tests imported from PDF, kept on this phone and, signed in, in the account (every device). */
+    val testSets: TestSetStore by lazy { TestSetStore(filesDir, scope) }
 
     /** A PDF handed to the Bộ đề screen from outside it (a test, or later the share sheet); the screen takes it and empties this. */
     val pendingPdf = MutableStateFlow<Uri?>(null)
@@ -63,6 +65,11 @@ class LexiApp : Application() {
         super.onCreate()
         data = LexiData(LexiDb.open(this), scope)
         cloud = Cloud(this, data, scope)
+        // Bộ đề follow the account: signed in = in the account too, signed out = this phone only.
+        scope.launch {
+            // A phone-only build (Account.Off) never touches it, so tests can hand the store an account of their own.
+            cloud.account.collect { a -> if (a != Account.Off) testSets.useCloud((a as? Account.SignedIn)?.let { cloud.setsCloud(it.uid) }) }
+        }
         speech = Speech(this)
         hasDictionary = try { assets.open("dict/meta.json").close(); true } catch (_: Exception) { false }
         dictionary = Dictionary(ShardSource { key ->
