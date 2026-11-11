@@ -78,14 +78,20 @@ fun Modifier.keepVisibleWhileTyping(): Modifier = composed {
     val requester = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
     var focused by remember { mutableStateOf(false) }
+    var focusedAt by remember { mutableStateOf(0L) }
     bringIntoViewRequester(requester)
         .onFocusEvent {
+            if (it.isFocused && !focused) focusedAt = android.os.SystemClock.uptimeMillis()
             focused = it.isFocused
             if (focused) scope.launch { requester.bringIntoView() }
         }
         .onGloballyPositioned { c ->
-            // Clipped by the viewport while focused: scroll it back into full view (a no-op once it fits).
-            if (focused && c.boundsInWindow().height < c.size.height - 1) scope.launch { requester.bringIntoView() }
+            // Clipped while the keyboard opens just after focus: scroll it back into full view. Only then: later on, the
+            // learner (or a test) scrolling the page away from a focused field must not be pulled back, which kept the
+            // page moving and never idle.
+            if (focused && android.os.SystemClock.uptimeMillis() - focusedAt < 1500 && c.boundsInWindow().height < c.size.height - 1) {
+                scope.launch { requester.bringIntoView() }
+            }
         }
 }
 
