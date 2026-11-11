@@ -7,6 +7,7 @@ Terraform + một lệnh deploy cho VH Lexi. Hướng dẫn từng bước (kèm
 | `apis.tf` | Bật API, danh sách email (`local.emails`) |
 | `firebase.tf` | Firebase project, web app, (tuỳ chọn) Android app + SHA-1 |
 | `firestore.tf` | Database `(default)` (PITR 7 ngày, chống xoá nhầm), rules sinh từ `../firestore.rules.tmpl` |
+| `storage.tf` | Bucket Bộ đề `<project>-lexi-testsets` ở us-central1 (free tier Cloud Storage), CORS cho web, rules sinh từ `../storage.rules.tmpl` |
 | `appcheck.tf` | reCAPTCHA Enterprise + App Check (chỉ ép buộc khi `enforce_app_check = true`) |
 | `secrets.tf` | Khoá Gemini (giới hạn Generative Language API) trong Secret Manager |
 | `function.tf` | Function `enrich`, tài khoản dịch vụ tối thiểu, bucket mã nguồn |
