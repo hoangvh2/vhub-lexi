@@ -420,6 +420,7 @@ class TestSetsTest {
         waitFor("lc-setup") { count("lc-setup") > 0 }
         rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("")
         rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("3-5")
+        doneTyping()
         pickAudio("listening-part2.mp3")
         waitFor("audio-1") { textOf("lc-audio-count").contains("1 file") }
         rule.onNodeWithTag("pdf-read").performScrollTo().performClick()
