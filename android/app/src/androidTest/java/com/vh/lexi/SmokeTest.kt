@@ -230,6 +230,9 @@ class SmokeTest {
         rule.onNodeWithTag("view-close").performClick()
         waitFor("note-view-closed") { rule.onAllNodesWithTagCount("note-view") == 0 }
         rule.onNodeWithTag("nav-stats").performClick()
+        waitFor("stats-screen") { rule.onAllNodesWithTagCount("stat-words") > 0 }
+        // With a vocabulary word in the library the roadmap is computed in the background: the shot waits for its chart.
+        if (rule.onAllNodesWithTagCount("stats-roadmap") > 0) waitFor("roadmap-chart") { rule.onAllNodesWithTagCount("rm-chart") > 0 }
         shot("08-stats")
         rule.onNodeWithTag("nav-settings").performClick()
         shot("09-settings")
