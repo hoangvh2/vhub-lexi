@@ -302,11 +302,15 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                 picked = r
                 range = ""; turn = 0; thumb = null; draft = null
                 name = fileName.replace(Regex("(?i)\\.pdf$"), "").replace(Regex("[_-]+"), " ").trim().take(60).ifEmpty { "Bộ đề" }
+                android.util.Log.i("Lexi", "pdf opened: ${r.pages.size} pages")
             } catch (e: CancellationException) {
+                // Only the screen closing should cancel this; anything else would leave the picker silently empty.
+                android.util.Log.w("Lexi", "pdf open cancelled", e)
                 throw e
             } catch (_: Pdf.TooLarge) {
                 error = "File lớn quá 150 MB. Tách file thành vài phần rồi thử lại."
-            } catch (_: Throwable) {
+            } catch (e: Throwable) {
+                android.util.Log.w("Lexi", "pdf open failed", e)
                 error = "Không mở được file này. File có thể bị khoá mật khẩu hoặc hỏng."
             } finally {
                 loading = ""
@@ -332,7 +336,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
         if (pendingAudio.isNotEmpty()) { val u = pendingAudio; app.pendingAudio.value = emptyList(); pickAudio(u) }
     }
     LaunchedEffect(pending) {
-        pending?.let { app.pendingPdf.value = null; open = true; pick(it) }
+        pending?.let { app.pendingPdf.value = null; open = true; android.util.Log.i("Lexi", "pdf handed in"); pick(it) }
     }
 
     // The first scanned page of the choice, small, the way the AI will see it: upside down shows at a glance.

@@ -130,6 +130,9 @@ class TestSetsTest {
             val tree = rule.onAllNodes(androidx.compose.ui.test.isRoot()).printToString(maxDepth = 14).take(6000)
             // CI prints the LEXI_PERF log tag after the run; the Gradle console shows only the first lines of a failure.
             tree.lines().forEach { android.util.Log.i("LEXI_PERF", "sets-$label | $it") }
+            // The app's own warnings (a PDF open that failed or was cancelled), copied under the tag CI prints.
+            val pfd = InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("logcat -d -t 400 -s Lexi:I AndroidRuntime:E")
+            ParcelFileDescriptor.AutoCloseInputStream(pfd).bufferedReader().readLines().takeLast(120).forEach { android.util.Log.i("LEXI_PERF", "sets-$label log | $it") }
             throw AssertionError("timeout waiting for $label\n$tree", e)
         }
     }
