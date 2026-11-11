@@ -407,11 +407,11 @@ class TestSetsTest {
     fun longFileIsSplitByItsAnswerPausesAndReplayed() {
         openSets()
         importFixture("listening-test.pdf")
+        rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("4")
         rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
         waitFor("lc-setup") { count("lc-setup") > 0 }
         rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("")
         rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("3-5")
-        rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("4")
         pickAudio("listening-part2.mp3")
         waitFor("audio-1") { textOf("lc-audio-count").contains("1 file") }
         rule.onNodeWithTag("pdf-read").performScrollTo().performClick()
