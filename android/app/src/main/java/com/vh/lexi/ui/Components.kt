@@ -53,7 +53,6 @@ import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -83,38 +82,26 @@ fun Modifier.keepVisibleWhileTyping(): Modifier = composed {
     val requester = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
     var focused by remember { mutableStateOf(false) }
-    // Pulled back while clipped, except after the page was scrolled by hand (or by a test) with the room unchanged: the
-    // field moved without the keyboard or the window changing, and pulling it back fought the scroll and never let the
-    // page go idle. Focus or a change of room (keyboard inset, window height) arms it again.
+    // At most a few pulls per focus and per change of room (keyboard inset, window height): a field that cannot be
+    // shown whole, or a page scrolled away from it (by hand or by a test), is otherwise pulled back on every layout, and
+    // the page never goes idle.
     val ime = WindowInsets.ime.getBottom(LocalDensity.current)
-    val st = remember { KeepVisible() }
+    val tries = remember { longArrayOf(-1L, 0L) } // room seen (keyboard inset, window height), pulls left
     bringIntoViewRequester(requester)
         .onFocusEvent {
-            if (it.isFocused && !focused) st.armed = true
+            if (it.isFocused && !focused) tries[1] = 3
             focused = it.isFocused
-            if (focused) scope.launch { st.pull(requester) }
+            if (focused) scope.launch { requester.bringIntoView() }
         }
         .onGloballyPositioned { c ->
-            val room = (ime.toLong() shl 32) or c.findRootCoordinates().size.height.toLong()
-            val y = c.positionInRoot().y
-            if (room != st.room) { st.room = room; st.armed = true }
-            else if (y != st.y && st.pulls == 0) st.armed = false
-            st.y = y
-            if (focused && st.armed && c.boundsInWindow().height < c.size.height - 1) scope.launch { st.pull(requester) }
+            val h = (ime.toLong() shl 32) or c.findRootCoordinates().size.height.toLong()
+            if (h != tries[0]) { tries[0] = h; tries[1] = 3 }
+            // Clipped by the viewport while focused: scroll it back into full view (a no-op once it fits).
+            if (focused && tries[1] > 0 && c.boundsInWindow().height < c.size.height - 1) {
+                tries[1]--
+                scope.launch { requester.bringIntoView() }
+            }
         }
-}
-
-private class KeepVisible {
-    var room = -1L
-    var y = Float.NaN
-    var armed = true
-    var pulls = 0
-
-    @OptIn(ExperimentalFoundationApi::class)
-    suspend fun pull(r: BringIntoViewRequester) {
-        pulls++
-        try { r.bringIntoView() } finally { pulls-- }
-    }
 }
 
 /**
