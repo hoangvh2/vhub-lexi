@@ -71,6 +71,10 @@ class TestSetsTest {
     @get:Rule
     val testName = org.junit.rules.TestName()
 
+    /** A stuck test fails in minutes instead of holding the whole CI job until its 25-minute limit. */
+    @get:Rule
+    val timeout: org.junit.rules.Timeout = org.junit.rules.Timeout.builder().withTimeout(4, java.util.concurrent.TimeUnit.MINUTES).build()
+
     private var watchdog: Thread? = null
 
     @Before

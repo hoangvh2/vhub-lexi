@@ -50,7 +50,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -618,7 +617,6 @@ private fun Runner(app: LexiApp, set: TestSet, onExit: () -> Unit, onCards: (Wro
     val player = remember(set.id) { if (set.tracks.isEmpty()) null else ListenPlayer(set.tracks, app.testSets::mediaFile) { toast(it) } }
     val perQuestion = set.questions.any { it.track != null }
     if (player != null) {
-        LaunchedEffect(player) { while (true) { player.tick(); delay(250) } }
         DisposableEffect(player) { onDispose { player.release() } }
     }
 
@@ -824,9 +822,9 @@ private fun Pictures(app: LexiApp, set: TestSet, part: Int) {
     if (list.isEmpty()) return
     Column(Modifier.testTag("runner-pictures"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (p in list) {
-            val img by produceState<ImageBitmap?>(null, p.key) {
-                val b = withContext(Dispatchers.IO) { runCatching { android.graphics.BitmapFactory.decodeFile(app.testSets.mediaFile(p.key).path)?.asImageBitmap() }.getOrNull() }
-                value = b
+            var img by remember(p.key) { mutableStateOf<ImageBitmap?>(null) }
+            LaunchedEffect(p.key) {
+                img = withContext(Dispatchers.IO) { runCatching { android.graphics.BitmapFactory.decodeFile(app.testSets.mediaFile(p.key).path)?.asImageBitmap() }.getOrNull() }
             }
             val b = img
             if (b != null) Image(b, "Trang ${p.page}", Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).border(1.dp, Lexi.colors.line, RoundedCornerShape(14.dp)).testTag("runner-picture"), contentScale = ContentScale.FillWidth)

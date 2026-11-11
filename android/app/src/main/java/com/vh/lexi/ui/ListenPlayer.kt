@@ -2,6 +2,8 @@ package com.vh.lexi.ui
 
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -12,7 +14,8 @@ import java.io.File
 /**
  * The audio of a Listening Bộ đề (web: usePlayer in TestSets.tsx): one MediaPlayer for the set. [play] with `chain` plays
  * the next file when one ends (a test whose Part is split over files); [playRange] plays one stretch and stops, a question
- * heard again. State is Compose state, refreshed by [tick] while the screen shows it. Main thread only.
+ * heard again. State is Compose state, refreshed about 4 times a second while sound plays, by a main-thread Handler in real
+ * time (a coroutine delay loop runs on virtual time under Compose tests and never lets the UI go idle). Main thread only.
  */
 class ListenPlayer(private val tracks: List<SetTrack>, private val fileOf: (String) -> File, private val onError: (String) -> Unit) {
     var track by mutableStateOf<Int?>(null)
@@ -28,6 +31,18 @@ class ListenPlayer(private val tracks: List<SetTrack>, private val fileOf: (Stri
     private var loaded: Int? = null
     private var chain = false
     private var stopAt: Int? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private val ticker = object : Runnable {
+        override fun run() {
+            tick()
+            if (playing) handler.postDelayed(this, 250)
+        }
+    }
+
+    private fun startTicking() {
+        handler.removeCallbacks(ticker)
+        handler.postDelayed(ticker, 250)
+    }
 
     private fun load(i: Int): MediaPlayer? {
         if (loaded == i) return mp
@@ -46,6 +61,7 @@ class ListenPlayer(private val tracks: List<SetTrack>, private val fileOf: (Stri
                 prepare()
                 setOnCompletionListener {
                     playing = false
+                    handler.removeCallbacks(ticker)
                     atMs = durationMs
                     if (chain && i + 1 < tracks.size) play(i + 1, chain = true)
                 }
@@ -75,6 +91,7 @@ class ListenPlayer(private val tracks: List<SetTrack>, private val fileOf: (Stri
         track = i
         p.start()
         playing = true
+        startTicking()
     }
 
     fun toggle() {
@@ -82,17 +99,19 @@ class ListenPlayer(private val tracks: List<SetTrack>, private val fileOf: (Stri
         when {
             track == null || p == null -> play(0, chain = true)
             p.isPlaying -> pause()
-            else -> { p.start(); playing = true }
+            else -> { p.start(); playing = true; startTicking() }
         }
     }
 
     fun pause() {
         mp?.takeIf { it.isPlaying }?.pause()
         playing = false
+        handler.removeCallbacks(ticker)
+        mp?.let { p -> atMs = runCatching { p.currentPosition }.getOrDefault(atMs) }
     }
 
-    /** Called about 4 times a second: the position shown, and the end of a stretch being heard again. */
-    fun tick() {
+    /** The position shown, and the end of a stretch being heard again. */
+    private fun tick() {
         val p = mp ?: return
         atMs = runCatching { p.currentPosition }.getOrDefault(atMs)
         val end = stopAt
@@ -104,6 +123,7 @@ class ListenPlayer(private val tracks: List<SetTrack>, private val fileOf: (Stri
     }
 
     fun release() {
+        handler.removeCallbacks(ticker)
         mp?.release()
         mp = null
         loaded = null
