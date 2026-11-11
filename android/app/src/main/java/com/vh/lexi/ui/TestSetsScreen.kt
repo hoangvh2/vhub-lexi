@@ -9,6 +9,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,6 +62,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -157,7 +160,9 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
     }
     BackHandler(onBack = onClose)
     val c = Lexi.colors
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp).testTag("testsets-screen"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val focus = LocalFocusManager.current
+    // A tap on an empty spot ends typing (closes the keyboard): a focused field keeps pulling the page back to itself.
+    Column(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { focus.clearFocus() } }.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp).testTag("testsets-screen"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeader("Bộ đề") { TextButton(onClick = onClose) { Text("Đóng") } }
         PdfImport(app) { s -> toast("Đã lưu bộ đề “${s.name}”") }
         Panel(Modifier.testTag("sets")) {
@@ -475,7 +480,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                 }
             }
             if (lc) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(c.surface2).padding(12.dp).testTag("lc-setup"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Part 1–2 chỉ in số câu: Lexi tạo sẵn các câu này, AI chỉ đọc trang Part 3–4. Ở “Trang cần đọc” nên chọn trang Part 3–4 và trang đáp án.", fontSize = 13.sp, color = c.muted)
+                Text("Part 1–2 chỉ in số câu: Lexi tạo sẵn các câu này, AI chỉ đọc trang Part 3–4. Ở “Trang cần đọc” nên chọn trang Part 3–4 và trang đáp án.", fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("lc-help"))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = p1, onValueChange = { p1 = it.take(12) }, singleLine = true, label = { Text("Part 1: câu") }, placeholder = { Text("trống nếu không có") }, modifier = Modifier.weight(1f).keepVisibleWhileTyping().testTag("lc-p1"))
                     OutlinedTextField(value = p2, onValueChange = { p2 = it.take(12) }, singleLine = true, label = { Text("Part 2: câu") }, placeholder = { Text("trống nếu không có") }, modifier = Modifier.weight(1f).keepVisibleWhileTyping().testTag("lc-p2"))
