@@ -214,7 +214,7 @@ private fun StatTile(title: String, value: String, sub: String, modifier: Modifi
     val c = Lexi.colors
     Column(modifier.clay(c, RoundedCornerShape(22.dp), elevation = 4.dp).padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(title, fontSize = 12.sp, color = c.muted, fontWeight = FontWeight.Bold)
-        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(value, style = MaterialTheme.typography.titleLarge, fontSize = 19.sp, fontWeight = FontWeight.Bold)
         Text(sub, fontSize = 12.sp, color = subColor, fontWeight = FontWeight.Bold)
     }
 }
