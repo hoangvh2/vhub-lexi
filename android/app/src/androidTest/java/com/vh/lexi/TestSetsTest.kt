@@ -285,12 +285,14 @@ class TestSetsTest {
         }
         openSets()
         importFixture("listening-test.pdf")
+        // Top to bottom: a focused field pulls the page back to itself (keepVisibleWhileTyping), so scrolling up from
+        // one to a field above it never settles.
+        rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("2-4")
         rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
         waitFor("lc-setup") { count("lc-setup") > 0 }
         rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("1-2")
         rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("3-5")
         rule.onNodeWithTag("lc-photos").performScrollTo().performTextReplacement("1")
-        rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("2-4")
         pickAudio("listening-03.mp3", "listening-01.mp3", "listening-02.mp3")
         waitFor("audio-count") { textOf("lc-audio-count").contains("3 file") }
         assertTrue(textOf("lc-audio-list"), Regex("listening-01.*listening-02.*listening-03").containsMatchIn(textOf("lc-audio-list")))
@@ -361,11 +363,11 @@ class TestSetsTest {
     fun listeningOneFilePerQuestionWithoutAi() {
         openSets()
         importFixture("listening-test.pdf")
+        rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("4")
         rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
         waitFor("lc-setup") { count("lc-setup") > 0 }
         rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("1-2")
         rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("")
-        rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("4")
         pickAudio("listening-01.mp3", "listening-02.mp3")
         waitFor("audio-2") { textOf("lc-audio-count").contains("2 file") }
         assertTrue(textOf("pdf-read"), textOf("pdf-read").contains("không cần AI"))

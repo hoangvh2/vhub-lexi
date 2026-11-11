@@ -7,9 +7,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -51,7 +48,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
@@ -82,25 +78,14 @@ fun Modifier.keepVisibleWhileTyping(): Modifier = composed {
     val requester = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
     var focused by remember { mutableStateOf(false) }
-    // At most a few pulls per focus and per change of room (keyboard inset, window height): a field that cannot be
-    // shown whole, or a page scrolled away from it (by hand or by a test), is otherwise pulled back on every layout, and
-    // the page never goes idle.
-    val ime = WindowInsets.ime.getBottom(LocalDensity.current)
-    val tries = remember { longArrayOf(-1L, 0L) } // room seen (keyboard inset, window height), pulls left
     bringIntoViewRequester(requester)
         .onFocusEvent {
-            if (it.isFocused && !focused) tries[1] = 3
             focused = it.isFocused
             if (focused) scope.launch { requester.bringIntoView() }
         }
         .onGloballyPositioned { c ->
-            val h = (ime.toLong() shl 32) or c.findRootCoordinates().size.height.toLong()
-            if (h != tries[0]) { tries[0] = h; tries[1] = 3 }
             // Clipped by the viewport while focused: scroll it back into full view (a no-op once it fits).
-            if (focused && tries[1] > 0 && c.boundsInWindow().height < c.size.height - 1) {
-                tries[1]--
-                scope.launch { requester.bringIntoView() }
-            }
+            if (focused && c.boundsInWindow().height < c.size.height - 1) scope.launch { requester.bringIntoView() }
         }
 }
 
