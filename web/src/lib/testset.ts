@@ -1,6 +1,6 @@
 /**
  * "Bộ đề": a whole Reading or Listening test the learner imported from a PDF (and, for Listening, its audio files),
- * kept on this device only, taken inside Lexi.
+ * kept on the device and, when signed in, in the learner's account (lib/testsync.ts), taken inside Lexi.
  * Pure helpers: finding the answer key in the PDF text, cutting the pages into pieces the `extract-questions` function
  * can read in one call, merging what it returns, and scoring an attempt. The PDF reading itself is in pdf.ts.
  */
@@ -234,6 +234,8 @@ export interface TestSet {
   passages: SetPassage[];
   questions: SetQuestion[];
   attempt?: Attempt;
+  /** This device only: when the set was last known to be in the account (lib/testsync.ts). Never uploaded. */
+  syncedAt?: number;
 }
 
 /** Question numbers of the Listening parts printed with nothing but their number (Part 1, Part 2). */

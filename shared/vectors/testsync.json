@@ -1,0 +1,931 @@
+{
+ "set": {
+  "id": "s1",
+  "name": "ETS Test 1 LC",
+  "createdAt": 1000,
+  "updatedAt": 2000,
+  "section": "lc",
+  "source": {
+   "fileName": "ets.pdf",
+   "pages": 40
+  },
+  "tracks": [
+   {
+    "key": "s1:a0",
+    "name": "01.mp3",
+    "bytes": 300
+   },
+   {
+    "key": "s1:a1",
+    "name": "02.mp3",
+    "bytes": 400
+   }
+  ],
+  "pictures": [
+   {
+    "part": 1,
+    "page": 3,
+    "key": "s1:p3"
+   }
+  ],
+  "passages": [],
+  "questions": [
+   {
+    "i": 0,
+    "number": 1,
+    "part": 2,
+    "kind": "listen",
+    "choices": 3,
+    "stem": "",
+    "options": {
+     "A": "",
+     "B": "",
+     "C": "",
+     "D": ""
+    },
+    "correct": "B",
+    "passage": null,
+    "topic": "",
+    "rule": "",
+    "translation": "",
+    "flags": [],
+    "clip": {
+     "track": 0,
+     "from": 1200,
+     "to": 9000
+    }
+   },
+   {
+    "i": 1,
+    "number": 2,
+    "part": 2,
+    "kind": "listen",
+    "choices": 3,
+    "stem": "",
+    "options": {
+     "A": "",
+     "B": "",
+     "C": "",
+     "D": ""
+    },
+    "correct": "B",
+    "passage": null,
+    "topic": "",
+    "rule": "",
+    "translation": "",
+    "flags": []
+   },
+   {
+    "i": 2,
+    "number": 3,
+    "part": 2,
+    "kind": "listen",
+    "choices": 3,
+    "stem": "",
+    "options": {
+     "A": "",
+     "B": "",
+     "C": "",
+     "D": ""
+    },
+    "correct": "B",
+    "passage": null,
+    "topic": "",
+    "rule": "",
+    "translation": "",
+    "flags": [],
+    "clip": {
+     "track": 1,
+     "from": 0,
+     "to": 5000
+    }
+   }
+  ],
+  "attempt": {
+   "startedAt": 5,
+   "elapsedMs": 60000,
+   "answers": {
+    "0": "A",
+    "2": "C"
+   }
+  }
+ },
+ "progress": [
+  {
+   "set": {
+    "id": "s1",
+    "name": "ETS Test 1 LC",
+    "createdAt": 1000,
+    "updatedAt": 2000,
+    "section": "lc",
+    "source": {
+     "fileName": "ets.pdf",
+     "pages": 40
+    },
+    "tracks": [
+     {
+      "key": "s1:a0",
+      "name": "01.mp3",
+      "bytes": 300
+     },
+     {
+      "key": "s1:a1",
+      "name": "02.mp3",
+      "bytes": 400
+     }
+    ],
+    "pictures": [
+     {
+      "part": 1,
+      "page": 3,
+      "key": "s1:p3"
+     }
+    ],
+    "passages": [],
+    "questions": [
+     {
+      "i": 0,
+      "number": 1,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": [],
+      "clip": {
+       "track": 0,
+       "from": 1200,
+       "to": 9000
+      }
+     },
+     {
+      "i": 1,
+      "number": 2,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": []
+     },
+     {
+      "i": 2,
+      "number": 3,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": [],
+      "clip": {
+       "track": 1,
+       "from": 0,
+       "to": 5000
+      }
+     }
+    ],
+    "attempt": {
+     "startedAt": 5,
+     "elapsedMs": 60000,
+     "answers": {
+      "0": "A",
+      "2": "C"
+     }
+    }
+   },
+   "out": {
+    "clips": {
+     "0": {
+      "track": 0,
+      "from": 1200,
+      "to": 9000
+     },
+     "2": {
+      "track": 1,
+      "from": 0,
+      "to": 5000
+     }
+    },
+    "attempt": {
+     "startedAt": 5,
+     "elapsedMs": 60000,
+     "answers": {
+      "0": "A",
+      "2": "C"
+     }
+    }
+   }
+  },
+  {
+   "set": {
+    "id": "s1",
+    "name": "ETS Test 1 LC",
+    "createdAt": 1000,
+    "updatedAt": 2000,
+    "section": "lc",
+    "source": {
+     "fileName": "ets.pdf",
+     "pages": 40
+    },
+    "tracks": [
+     {
+      "key": "s1:a0",
+      "name": "01.mp3",
+      "bytes": 300
+     },
+     {
+      "key": "s1:a1",
+      "name": "02.mp3",
+      "bytes": 400
+     }
+    ],
+    "pictures": [
+     {
+      "part": 1,
+      "page": 3,
+      "key": "s1:p3"
+     }
+    ],
+    "passages": [],
+    "questions": [
+     {
+      "i": 0,
+      "number": 1,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": [],
+      "clip": {
+       "track": 0,
+       "from": 1200,
+       "to": 9000
+      }
+     },
+     {
+      "i": 1,
+      "number": 2,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": []
+     },
+     {
+      "i": 2,
+      "number": 3,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": [],
+      "clip": {
+       "track": 1,
+       "from": 0,
+       "to": 5000
+      }
+     }
+    ]
+   },
+   "out": {
+    "clips": {
+     "0": {
+      "track": 0,
+      "from": 1200,
+      "to": 9000
+     },
+     "2": {
+      "track": 1,
+      "from": 0,
+      "to": 5000
+     }
+    }
+   }
+  },
+  {
+   "set": {
+    "id": "s1",
+    "name": "ETS Test 1 LC",
+    "createdAt": 1000,
+    "updatedAt": 2000,
+    "section": "lc",
+    "source": {
+     "fileName": "ets.pdf",
+     "pages": 40
+    },
+    "tracks": [
+     {
+      "key": "s1:a0",
+      "name": "01.mp3",
+      "bytes": 300
+     },
+     {
+      "key": "s1:a1",
+      "name": "02.mp3",
+      "bytes": 400
+     }
+    ],
+    "pictures": [
+     {
+      "part": 1,
+      "page": 3,
+      "key": "s1:p3"
+     }
+    ],
+    "passages": [],
+    "questions": [
+     {
+      "i": 0,
+      "number": 1,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": [],
+      "clip": {
+       "track": 0,
+       "from": 1200,
+       "to": 9000
+      }
+     },
+     {
+      "i": 1,
+      "number": 2,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": []
+     },
+     {
+      "i": 2,
+      "number": 3,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": [],
+      "clip": {
+       "track": 1,
+       "from": 0,
+       "to": 5000
+      }
+     }
+    ],
+    "attempt": {
+     "startedAt": 5,
+     "elapsedMs": 60000,
+     "answers": {
+      "0": "A",
+      "2": "C"
+     },
+     "finishedAt": 70,
+     "resultNoteId": "r"
+    }
+   },
+   "out": {
+    "clips": {
+     "0": {
+      "track": 0,
+      "from": 1200,
+      "to": 9000
+     },
+     "2": {
+      "track": 1,
+      "from": 0,
+      "to": 5000
+     }
+    },
+    "attempt": {
+     "startedAt": 5,
+     "elapsedMs": 60000,
+     "answers": {
+      "0": "A",
+      "2": "C"
+     },
+     "finishedAt": 70,
+     "resultNoteId": "r"
+    }
+   }
+  }
+ ],
+ "withProgress": [
+  {
+   "state": "{\"clips\":{}}",
+   "attempt": null,
+   "clips": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "state": "{\"attempt\":{\"startedAt\":7,\"elapsedMs\":120000,\"answers\":{\"1\":\"B\",\"9\":\"D\"},\"finishedAt\":99,\"resultNoteId\":\"n1\"},\"clips\":{\"1\":{\"track\":1,\"from\":10,\"to\":20}}}",
+   "attempt": {
+    "startedAt": 7,
+    "elapsedMs": 120000,
+    "answers": {
+     "1": "B",
+     "9": "D"
+    },
+    "finishedAt": 99,
+    "resultNoteId": "n1"
+   },
+   "clips": [
+    null,
+    {
+     "track": 1,
+     "from": 10,
+     "to": 20
+    },
+    null
+   ]
+  },
+  {
+   "state": "{\"attempt\":{\"startedAt\":7,\"elapsedMs\":1,\"answers\":{\"0\":\"E\",\"x\":\"A\",\"1\":5,\"2\":\"D\"}},\"clips\":{\"0\":{\"track\":\"0\",\"from\":1,\"to\":2},\"2\":{\"track\":1,\"from\":3,\"to\":4}}}",
+   "attempt": {
+    "startedAt": 7,
+    "elapsedMs": 1,
+    "answers": {
+     "2": "D"
+    }
+   },
+   "clips": [
+    null,
+    null,
+    {
+     "track": 1,
+     "from": 3,
+     "to": 4
+    }
+   ]
+  },
+  {
+   "state": "{\"attempt\":{\"startedAt\":\"7\",\"elapsedMs\":1,\"answers\":{}},\"clips\":{}}",
+   "attempt": {
+    "startedAt": 5,
+    "elapsedMs": 60000,
+    "answers": {
+     "0": "A",
+     "2": "C"
+    }
+   },
+   "clips": [
+    {
+     "track": 0,
+     "from": 1200,
+     "to": 9000
+    },
+    null,
+    {
+     "track": 1,
+     "from": 0,
+     "to": 5000
+    }
+   ]
+  },
+  {
+   "state": "{\"attempt\":\"x\"}",
+   "attempt": {
+    "startedAt": 5,
+    "elapsedMs": 60000,
+    "answers": {
+     "0": "A",
+     "2": "C"
+    }
+   },
+   "clips": [
+    {
+     "track": 0,
+     "from": 1200,
+     "to": 9000
+    },
+    null,
+    {
+     "track": 1,
+     "from": 0,
+     "to": 5000
+    }
+   ]
+  },
+  {
+   "state": "not json",
+   "attempt": {
+    "startedAt": 5,
+    "elapsedMs": 60000,
+    "answers": {
+     "0": "A",
+     "2": "C"
+    }
+   },
+   "clips": [
+    {
+     "track": 0,
+     "from": 1200,
+     "to": 9000
+    },
+    null,
+    {
+     "track": 1,
+     "from": 0,
+     "to": 5000
+    }
+   ]
+  },
+  {
+   "state": "[]",
+   "attempt": {
+    "startedAt": 5,
+    "elapsedMs": 60000,
+    "answers": {
+     "0": "A",
+     "2": "C"
+    }
+   },
+   "clips": [
+    {
+     "track": 0,
+     "from": 1200,
+     "to": 9000
+    },
+    null,
+    {
+     "track": 1,
+     "from": 0,
+     "to": 5000
+    }
+   ]
+  },
+  {
+   "state": "null",
+   "attempt": {
+    "startedAt": 5,
+    "elapsedMs": 60000,
+    "answers": {
+     "0": "A",
+     "2": "C"
+    }
+   },
+   "clips": [
+    {
+     "track": 0,
+     "from": 1200,
+     "to": 9000
+    },
+    null,
+    {
+     "track": 1,
+     "from": 0,
+     "to": 5000
+    }
+   ]
+  },
+  {
+   "state": "{}",
+   "attempt": {
+    "startedAt": 5,
+    "elapsedMs": 60000,
+    "answers": {
+     "0": "A",
+     "2": "C"
+    }
+   },
+   "clips": [
+    {
+     "track": 0,
+     "from": 1200,
+     "to": 9000
+    },
+    null,
+    {
+     "track": 1,
+     "from": 0,
+     "to": 5000
+    }
+   ]
+  }
+ ],
+ "files": [
+  "set.json",
+  "media/a0",
+  "media/a1",
+  "media/p3"
+ ],
+ "meta": {
+  "id": "s1",
+  "name": "ETS Test 1 LC",
+  "section": "lc",
+  "createdAt": 1000,
+  "updatedAt": 2000,
+  "files": [
+   "set.json",
+   "media/a0",
+   "media/a1",
+   "media/p3"
+  ],
+  "bytes": 1234,
+  "questions": 3,
+  "state": "{\"clips\":{\"0\":{\"track\":0,\"from\":1200,\"to\":9000},\"2\":{\"track\":1,\"from\":0,\"to\":5000}},\"attempt\":{\"startedAt\":5,\"elapsedMs\":60000,\"answers\":{\"0\":\"A\",\"2\":\"C\"}}}"
+ },
+ "paths": [
+  {
+   "key": "s1:a0",
+   "path": "media/a0"
+  },
+  {
+   "key": "s1:p12",
+   "path": "media/p12"
+  },
+  {
+   "key": "x:y:a1",
+   "path": "media/y:a1"
+  }
+ ],
+ "keys": [
+  {
+   "path": "media/a0",
+   "key": "s1:a0"
+  },
+  {
+   "path": "media/p3",
+   "key": "s1:p3"
+  },
+  {
+   "path": "set.json",
+   "key": null
+  }
+ ],
+ "plans": [
+  {
+   "local": [],
+   "remote": [],
+   "out": []
+  },
+  {
+   "local": [
+    {
+     "id": "new",
+     "updatedAt": 5
+    }
+   ],
+   "remote": [],
+   "out": [
+    {
+     "kind": "upload",
+     "id": "new"
+    }
+   ]
+  },
+  {
+   "local": [
+    {
+     "id": "gone",
+     "updatedAt": 5,
+     "syncedAt": 6
+    }
+   ],
+   "remote": [],
+   "out": [
+    {
+     "kind": "drop",
+     "id": "gone"
+    }
+   ]
+  },
+  {
+   "local": [
+    {
+     "id": "a",
+     "updatedAt": 9,
+     "syncedAt": 6
+    }
+   ],
+   "remote": [
+    {
+     "id": "a",
+     "updatedAt": 5
+    }
+   ],
+   "out": [
+    {
+     "kind": "push",
+     "id": "a"
+    }
+   ]
+  },
+  {
+   "local": [
+    {
+     "id": "a",
+     "updatedAt": 5,
+     "syncedAt": 6
+    }
+   ],
+   "remote": [
+    {
+     "id": "a",
+     "updatedAt": 9
+    }
+   ],
+   "out": [
+    {
+     "kind": "pull",
+     "id": "a"
+    }
+   ]
+  },
+  {
+   "local": [
+    {
+     "id": "a",
+     "updatedAt": 5,
+     "syncedAt": 6
+    }
+   ],
+   "remote": [
+    {
+     "id": "a",
+     "updatedAt": 5
+    }
+   ],
+   "out": []
+  },
+  {
+   "local": [
+    {
+     "id": "a",
+     "updatedAt": 5
+    }
+   ],
+   "remote": [
+    {
+     "id": "a",
+     "updatedAt": 5
+    }
+   ],
+   "out": [
+    {
+     "kind": "pull",
+     "id": "a"
+    }
+   ]
+  },
+  {
+   "local": [
+    {
+     "id": "a",
+     "updatedAt": 9
+    }
+   ],
+   "remote": [
+    {
+     "id": "a",
+     "updatedAt": 5
+    }
+   ],
+   "out": [
+    {
+     "kind": "push",
+     "id": "a"
+    }
+   ]
+  },
+  {
+   "local": [
+    {
+     "id": "b",
+     "updatedAt": 1,
+     "syncedAt": 1
+    },
+    {
+     "id": "c",
+     "updatedAt": 2
+    }
+   ],
+   "remote": [
+    {
+     "id": "z",
+     "updatedAt": 3
+    },
+    {
+     "id": "b",
+     "updatedAt": 1
+    },
+    {
+     "id": "y",
+     "updatedAt": 4
+    }
+   ],
+   "out": [
+    {
+     "kind": "upload",
+     "id": "c"
+    },
+    {
+     "kind": "remote",
+     "id": "z"
+    },
+    {
+     "kind": "remote",
+     "id": "y"
+    }
+   ]
+  }
+ ]
+}

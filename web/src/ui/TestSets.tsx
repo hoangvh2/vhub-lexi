@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { addNote } from "../data/actions.ts";
 import { callExtract, firebaseConfigured } from "../data/firebase.ts";
 import { notes, prefs } from "../data/state.ts";
-import { deleteTestSet, loadMedia, loadTestSets, saveMedia, saveTestSet, testSets } from "../data/testsets.ts";
+import { deleteTestSet, downloadTestSet, loadMedia, loadTestSets, remoteSets, saveMedia, saveTestSet, setsSync, syncTestSets, testSets } from "../data/testsets.ts";
+import type { CloudMeta } from "../lib/testsync.ts";
 import { LETTERS, existingSentences, type Extracted, type Letter } from "../lib/import.ts";
 import { decodeLevels, findGaps, mmss as clipTime, placeQuestions } from "../lib/audio.ts";
 import { openPdf, readPages, renderPage, type PdfDoc } from "../lib/pdf.ts";
@@ -40,16 +41,35 @@ const clock = (ms: number) => {
 };
 
 /**
- * Bộ đề: a whole Reading test imported from a PDF, taken here with a clock, graded per part; the result goes to
- * "Kết quả bài" and the missed questions become cards. The test itself stays on this device.
+ * Bộ đề: a whole Reading or Listening test imported from a PDF, taken here with a clock, graded per part; the result
+ * goes to "Kết quả bài" and the missed questions become cards. Signed in, the test is in the account too, so every
+ * device lists it and continues the attempt (data/testsets.ts).
  */
 export function TestSetsTab({ deck, deckPicker, onPassage }: { deck: DeckSink; deckPicker: ComponentChildren; onPassage(text: string): void }) {
   const sets = useStore(testSets);
+  const remote = useStore(remoteSets);
+  const status = useStore(setsSync);
   const [ready, setReady] = useState(false);
   const [running, setRunning] = useState<string | null>(null);
   useEffect(() => {
     loadTestSets().then(() => setReady(true), () => (setReady(true), toast("Không mở được kho bộ đề trên máy này")));
   }, []);
+  // Again once the account is ready: after a reload on this screen, sign-in finishes after the screen is up.
+  useEffect(() => {
+    if (!status.on) return;
+    void syncTestSets();
+    const again = () => void syncTestSets();
+    addEventListener("online", again);
+    return () => removeEventListener("online", again);
+  }, [status.on]);
+  async function openRemote(m: CloudMeta) {
+    try {
+      await downloadTestSet(m.id);
+      setRunning(m.id);
+    } catch {
+      toast("Không tải được bộ đề. Kiểm tra mạng rồi thử lại.");
+    }
+  }
   const current = sets.find((s) => s.id === running);
   if (current) return <Runner set={current} deck={deck} deckPicker={deckPicker} onPassage={onPassage} onExit={() => setRunning(null)} />;
   return (
@@ -58,25 +78,37 @@ export function TestSetsTab({ deck, deckPicker, onPassage }: { deck: DeckSink; d
       <section class="panel col" data-testid="sets">
         <div class="panel-head">
           <h2>Bộ đề của bạn</h2>
-          <span class="pill" title="Không đồng bộ lên cloud, không có trong file Xuất JSON">Riêng tư · chỉ trên máy này</span>
+          {status.on
+            ? <span class="pill ok" data-testid="sets-cloud" title="Nằm trong tài khoản của bạn, chỉ bạn đọc được. Không có trong file Xuất JSON">Đồng bộ · mọi thiết bị của bạn</span>
+            : <span class="pill" title="Không đồng bộ lên cloud, không có trong file Xuất JSON">Riêng tư · chỉ trên máy này</span>}
         </div>
-        {ready && !sets.length && <p class="muted small" data-testid="sets-empty">Chưa có bộ đề nào. Nhập một file PDF đề Reading ở trên để làm bài ngay trong Lexi.</p>}
+        {(status.busy || status.error) && <p class={`small ${status.error && !status.busy ? "warn-text" : "muted"}`} data-testid="sets-status" role="status">{status.busy || status.error}</p>}
+        {ready && !sets.length && !remote.length && <p class="muted small" data-testid="sets-empty">Chưa có bộ đề nào. Nhập một file PDF đề Reading hoặc Listening ở trên để làm bài ngay trong Lexi.</p>}
         <ul class="sets">
-          {sets.map((s) => <SetRow key={s.id} set={s} onOpen={() => setRunning(s.id)} />)}
+          {sets.map((s) => <SetRow key={s.id} set={s} cloud={status.on} onOpen={() => setRunning(s.id)} />)}
+          {remote.map((m) => <RemoteRow key={m.id} meta={m} busy={!!status.busy} onOpen={() => void openRemote(m)} />)}
         </ul>
-        <p class="muted small">Nội dung đề là bản sao để bạn tự học: chỉ nằm trong trình duyệt này. Kết quả bài và thẻ tạo từ câu sai thì đồng bộ như mọi thẻ khác.</p>
+        <p class="muted small">
+          {status.on
+            ? "Nội dung đề là bản sao để bạn tự học: lưu trong tài khoản của bạn (chỉ bạn đọc được) và trên các máy đã mở nó. Kết quả bài và thẻ tạo từ câu sai đồng bộ như mọi thẻ khác."
+            : "Nội dung đề là bản sao để bạn tự học: chỉ nằm trong trình duyệt này. Kết quả bài và thẻ tạo từ câu sai thì đồng bộ như mọi thẻ khác."}
+        </p>
       </section>
     </div>
   );
 }
 
-function SetRow({ set, onOpen }: { set: TestSet; onOpen(): void }) {
+async function confirmRemove(name: string, lc: boolean, everywhere: boolean): Promise<boolean> {
+  const where = everywhere ? "khỏi tài khoản và mọi thiết bị" : "khỏi máy này";
+  return confirmDialog({ title: "Xoá bộ đề?", message: `“${name}”${lc ? ", file nghe" : ""} và bài làm dở sẽ bị xoá ${where}. Kết quả đã lưu và thẻ đã tạo vẫn giữ nguyên.`, confirm: "Xoá", danger: true });
+}
+
+function SetRow({ set, cloud, onOpen }: { set: TestSet; cloud: boolean; onOpen(): void }) {
   const sum = summary(set);
   const a = set.attempt;
   const g = a?.finishedAt ? grade(set, a.answers) : null;
   async function remove() {
-    const ok = await confirmDialog({ title: "Xoá bộ đề?", message: `“${set.name}”${set.tracks?.length ? ", file nghe" : ""} và bài làm dở sẽ bị xoá khỏi máy này. Kết quả đã lưu và thẻ đã tạo vẫn giữ nguyên.`, confirm: "Xoá", danger: true });
-    if (ok) await deleteTestSet(set.id);
+    if (await confirmRemove(set.name, !!set.tracks?.length, cloud && !!set.syncedAt)) await deleteTestSet(set.id);
   }
   return (
     <li class="set" data-testid="set-row">
@@ -87,11 +119,35 @@ function SetRow({ set, onOpen }: { set: TestSet; onOpen(): void }) {
           {[...LC_PARTS, ...PARTS].map((p) => sum.byPart[p.key] > 0 && <span class="pill" key={p.key}>{p.label}: {sum.byPart[p.key]}</span>)}
           {sum.byPart.other > 0 && <span class="pill">Khác: {sum.byPart.other}</span>}
           {g ? <span class="pill ok" data-testid="set-score">Đã làm: {g.right}/{g.total}</span> : a ? <span class="pill warn">Đang làm · {Object.keys(a.answers).length}/{sum.total} câu</span> : null}
+          {cloud && !set.syncedAt && <span class="pill warn" data-testid="set-unsynced" title="Sẽ được đưa lên tài khoản khi có mạng">Chưa đồng bộ</span>}
         </div>
       </div>
       <div class="row" style={{ gap: "8px" }}>
         <button type="button" class="btn primary sm" onClick={onOpen} data-testid="set-open">{g ? "Xem kết quả" : a ? "Làm tiếp" : "Làm bài"}</button>
         <button type="button" class="icon-btn" aria-label={`Xoá ${set.name}`} onClick={() => void remove()} data-testid="set-delete"><Icon n="trash" size={18} /></button>
+      </div>
+    </li>
+  );
+}
+
+/** A set in the account that this device has not downloaded yet. */
+function RemoteRow({ meta, busy, onOpen }: { meta: CloudMeta; busy: boolean; onOpen(): void }) {
+  async function remove() {
+    if (await confirmRemove(meta.name, meta.section === "lc", true)) await deleteTestSet(meta.id);
+  }
+  return (
+    <li class="set" data-testid="set-remote">
+      <div class="grow col" style={{ gap: "6px" }}>
+        <b class="name">{meta.name}</b>
+        <div class="chips">
+          {meta.section === "lc" && <span class="pill ok">Listening</span>}
+          <span class="pill">{meta.questions} câu</span>
+          <span class="pill" data-testid="set-remote-size">Trên tài khoản · {mb(meta.bytes)}</span>
+        </div>
+      </div>
+      <div class="row" style={{ gap: "8px" }}>
+        <button type="button" class="btn primary sm" disabled={busy} onClick={onOpen} data-testid="set-download">Tải về và mở</button>
+        <button type="button" class="icon-btn" aria-label={`Xoá ${meta.name}`} onClick={() => void remove()} data-testid="set-remote-delete"><Icon n="trash" size={18} /></button>
       </div>
     </li>
   );
