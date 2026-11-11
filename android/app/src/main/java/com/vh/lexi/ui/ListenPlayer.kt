@@ -87,7 +87,8 @@ class ListenPlayer(private val tracks: List<SetTrack>, private val fileOf: (Stri
         val p = load(i) ?: return
         chain = keepGoing
         stopAt = to
-        if (from != null) p.seekTo(from) else if (atMs >= durationMs && durationMs > 0 && !p.isPlaying) p.seekTo(0)
+        // The position shown moves with the seek at once, not a tick later.
+        if (from != null) { p.seekTo(from); atMs = from } else if (atMs >= durationMs && durationMs > 0 && !p.isPlaying) { p.seekTo(0); atMs = 0 }
         track = i
         p.start()
         playing = true

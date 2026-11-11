@@ -51,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
@@ -81,21 +82,22 @@ fun Modifier.keepVisibleWhileTyping(): Modifier = composed {
     val requester = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
     var focused by remember { mutableStateOf(false) }
-    // Pulled back only while focus or the keyboard has just changed (the resize can land a little after the inset):
-    // the learner (or a test) scrolling away from a focused field later is not pulled back, which kept the page moving
-    // and never idle.
+    // One pull per room change (the keyboard inset on a screen, the window height in a resizing dialog), never because
+    // the page scrolled: the learner (or a test) scrolling away from a focused field is not pulled back, which kept the
+    // page moving and never idle.
     val ime = WindowInsets.ime.getBottom(LocalDensity.current)
-    val last = remember { longArrayOf(-1L, 0L) } // keyboard height seen, when focus or that height last changed
-    if (last[0] != ime.toLong()) { last[0] = ime.toLong(); last[1] = android.os.SystemClock.uptimeMillis() }
+    val pulledFor = remember { longArrayOf(-1L) }
     bringIntoViewRequester(requester)
         .onFocusEvent {
-            if (it.isFocused && !focused) last[1] = android.os.SystemClock.uptimeMillis()
+            if (it.isFocused && !focused) pulledFor[0] = -1L
             focused = it.isFocused
             if (focused) scope.launch { requester.bringIntoView() }
         }
         .onGloballyPositioned { c ->
             // Clipped while focused (the keyboard took the room): scroll it back into full view.
-            if (focused && android.os.SystemClock.uptimeMillis() - last[1] < 800 && c.boundsInWindow().height < c.size.height - 1) {
+            val room = (ime.toLong() shl 32) or c.findRootCoordinates().size.height.toLong()
+            if (focused && pulledFor[0] != room && c.boundsInWindow().height < c.size.height - 1) {
+                pulledFor[0] = room
                 scope.launch { requester.bringIntoView() }
             }
         }
