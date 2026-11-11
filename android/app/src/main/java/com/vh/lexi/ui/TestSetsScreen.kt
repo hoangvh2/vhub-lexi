@@ -76,6 +76,10 @@ import com.vh.lexi.LexiApp
 import com.vh.lexi.cloud.Account
 import com.vh.lexi.core.AiError
 import com.vh.lexi.core.Attempt
+import com.vh.lexi.core.AudioSplit
+import com.vh.lexi.core.Clip
+import com.vh.lexi.core.nudged
+import com.vh.lexi.core.replayOf
 import com.vh.lexi.core.Chunk
 import com.vh.lexi.core.DAILY_QUOTA
 import com.vh.lexi.core.Extracted
@@ -113,6 +117,7 @@ import com.vh.lexi.core.resultFields
 import com.vh.lexi.core.summary
 import com.vh.lexi.core.wrongDrafts
 import com.vh.lexi.ui.theme.Lexi
+import com.vh.lexi.util.AudioLevels
 import com.vh.lexi.util.Pdf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -297,11 +302,15 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                 picked = r
                 range = ""; turn = 0; thumb = null; draft = null
                 name = fileName.replace(Regex("(?i)\\.pdf$"), "").replace(Regex("[_-]+"), " ").trim().take(60).ifEmpty { "Bộ đề" }
+                android.util.Log.i("Lexi", "pdf opened: ${r.pages.size} pages")
             } catch (e: CancellationException) {
+                // Only the screen closing should cancel this; anything else would leave the picker silently empty.
+                android.util.Log.w("Lexi", "pdf open cancelled", e)
                 throw e
             } catch (_: Pdf.TooLarge) {
                 error = "File lớn quá 150 MB. Tách file thành vài phần rồi thử lại."
-            } catch (_: Throwable) {
+            } catch (e: Throwable) {
+                android.util.Log.w("Lexi", "pdf open failed", e)
                 error = "Không mở được file này. File có thể bị khoá mật khẩu hoặc hỏng."
             } finally {
                 loading = ""
@@ -327,7 +336,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
         if (pendingAudio.isNotEmpty()) { val u = pendingAudio; app.pendingAudio.value = emptyList(); pickAudio(u) }
     }
     LaunchedEffect(pending) {
-        pending?.let { app.pendingPdf.value = null; open = true; pick(it) }
+        pending?.let { app.pendingPdf.value = null; open = true; android.util.Log.i("Lexi", "pdf handed in"); pick(it) }
     }
 
     // The first scanned page of the choice, small, the way the AI will see it: upside down shows at a glance.
@@ -677,7 +686,7 @@ private fun Runner(app: LexiApp, set: TestSet, onExit: () -> Unit, onCards: (Wro
 }
 
 @Composable
-private fun Questions(app: LexiApp, set: TestSet, answers: Map<Int, String>, review: Boolean, player: ListenPlayer?, shown: List<SetQuestion> = set.questions, header: @Composable () -> Unit = {}, onChoose: (SetQuestion, String) -> Unit = { _, _ -> }) {
+private fun Questions(app: LexiApp, set: TestSet, answers: Map<Int, String>, review: Boolean, player: ListenPlayer?, shown: List<SetQuestion> = set.questions, onNudge: ((SetQuestion, Long) -> Unit)? = null, header: @Composable () -> Unit = {}, onChoose: (SetQuestion, String) -> Unit = { _, _ -> }) {
     val c = Lexi.colors
     val lines = remember(shown) { linesOf(shown) }
     LazyColumn(Modifier.fillMaxSize().testTag("runner-list"), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -694,14 +703,14 @@ private fun Questions(app: LexiApp, set: TestSet, answers: Map<Int, String>, rev
                     if (p.label.isNotEmpty()) Text(p.label, fontSize = 12.sp, color = c.muted, fontWeight = FontWeight.Bold)
                     Text(reflow(p.text), fontSize = 15.sp, lineHeight = 22.sp)
                 }
-                is Line.Question -> QuestionCard(l.q, answers[l.q.i], review, player) { onChoose(l.q, it) }
+                is Line.Question -> QuestionCard(l.q, answers[l.q.i], review, player, if (review) replayOf(set.questions, l.q) else null, onNudge) { onChoose(l.q, it) }
             }
         }
     }
 }
 
 @Composable
-private fun QuestionCard(q: SetQuestion, pick: String?, review: Boolean, player: ListenPlayer?, onChoose: (String) -> Unit) {
+private fun QuestionCard(q: SetQuestion, pick: String?, review: Boolean, player: ListenPlayer?, replay: Clip?, onNudge: ((SetQuestion, Long) -> Unit)?, onChoose: (String) -> Unit) {
     val c = Lexi.colors
     val wrong = review && q.correct != null && pick != q.correct
     Column(
@@ -733,6 +742,22 @@ private fun QuestionCard(q: SetQuestion, pick: String?, review: Boolean, player:
                 Text("  " + q.options[l].orEmpty(), fontSize = 14.sp)
             }
         }
+        // In review: the question heard again, a Part 3–4 one from the start of its conversation; ±2 s when the pause
+        // finder started it a little off.
+        if (review && player != null && replay != null && q.track == null) Column(Modifier.testTag("q-replay"), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { player.playRange(replay.track, replay.from, replay.to) }, Modifier.testTag("q-replay-play")) {
+                    Icon(Icons.Filled.PlayArrow, null)
+                    Text(" Nghe lại câu ${q.number ?: (q.i + 1)}")
+                }
+                Text("File ${replay.track + 1} · ${AudioSplit.mmss(replay.from)}–${AudioSplit.mmss(replay.to)}", Modifier.weight(1f).testTag("q-replay-range"), fontSize = 12.sp, color = c.muted)
+            }
+            if (onNudge != null) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { onNudge(q, -2000) }, Modifier.testTag("q-replay-earlier")) { Text("−2s") }
+                OutlinedButton(onClick = { onNudge(q, 2000) }, Modifier.testTag("q-replay-later")) { Text("+2s") }
+                Text("chỉnh điểm bắt đầu", Modifier.align(Alignment.CenterVertically), fontSize = 12.sp, color = c.muted)
+            }
+        }
         if (review && q.correct == null) Pill("Chưa có đáp án, không chấm")
         if (wrong && pick == null) Pill("Bỏ trống", PillKind.BAD)
         if (review && q.rule.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -755,6 +780,46 @@ private fun Result(app: LexiApp, set: TestSet, attempt: Attempt, player: ListenP
     val saved = attempt.resultNoteId != null && notes.any { it.id == attempt.resultNoteId }
     val wrongSet = g.wrong.toSet()
     val shown = if (onlyWrong) set.questions.filter { it.i in wrongSet } else set.questions
+    // Long files (a whole Part per file): found once on request, kept with the set.
+    val splittable = set.tracks.isNotEmpty() && set.questions.none { it.track != null }
+    val split = set.questions.any { it.clip != null }
+    var splitting by remember { mutableStateOf(false) }
+
+    /** The set as shown now (the attempt is written as it changes), with [change] applied, written to the device. */
+    fun update(change: (TestSet) -> TestSet) {
+        val latest = app.testSets.sets.value.firstOrNull { it.id == set.id } ?: set
+        app.testSets.saveSoon(app.scope, change(latest))
+    }
+
+    fun runSplit() {
+        if (splitting) return
+        splitting = true
+        scope.launch {
+            try {
+                val levels = withContext(Dispatchers.IO) {
+                    set.tracks.map { t ->
+                        val l = AudioLevels.read(app.testSets.mediaFile(t.key).takeIf { it.exists() } ?: error("missing audio"))
+                        AudioSplit.TrackLevels(AudioSplit.findGaps(l.levels), l.durationMs)
+                    }
+                }
+                val placed = AudioSplit.placeQuestions(levels, set.questions.map { it.part })
+                val found = placed.count { it != null }
+                if (found > 0) update { s -> s.copy(questions = s.questions.mapIndexed { i, q -> placed.getOrNull(i)?.let { q.copy(clip = it) } ?: q }) }
+                toast(if (found > 0) "Đã tách $found/${set.questions.size} câu trong file nghe" else "Không tách được: file nghe không có khoảng nghỉ rõ sau mỗi câu")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                toast("Không đọc được file nghe trên máy này")
+            } finally {
+                splitting = false
+            }
+        }
+    }
+
+    fun nudge(q: SetQuestion, ms: Long) {
+        if (q.clip == null) return
+        update { s -> s.copy(questions = s.questions.map { x -> if (x.i == q.i) x.clip?.let { x.copy(clip = nudged(it, ms)) } ?: x else x }) }
+    }
 
     fun saveResult() {
         scope.launch {
@@ -765,7 +830,7 @@ private fun Result(app: LexiApp, set: TestSet, attempt: Attempt, player: ListenP
         }
     }
 
-    Questions(app, set, attempt.answers, review = true, player = player, shown = shown, header = {
+    Questions(app, set, attempt.answers, review = true, player = player, shown = shown, onNudge = ::nudge, header = {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Panel(Modifier.testTag("runner-result")) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -791,6 +856,10 @@ private fun Result(app: LexiApp, set: TestSet, attempt: Attempt, player: ListenP
                     },
                     enabled = g.wrong.isNotEmpty(), modifier = Modifier.fillMaxWidth().testTag("result-cards"),
                 ) { Icon(Icons.Filled.AutoAwesome, null); Text("  Tạo thẻ từ ${g.wrong.size} câu sai") }
+                if (splittable && !split) OutlinedButton(onClick = ::runSplit, enabled = !splitting, modifier = Modifier.fillMaxWidth().testTag("result-split")) {
+                    Icon(Icons.Filled.PlayArrow, null)
+                    Text(if (splitting) "  Đang dò từng câu…" else "  Dò từng câu để nghe lại")
+                }
                 TextButton(onClick = onAgain, Modifier.testTag("result-again")) { Text("Làm lại") }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {

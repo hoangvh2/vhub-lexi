@@ -130,6 +130,9 @@ class TestSetsTest {
             val tree = rule.onAllNodes(androidx.compose.ui.test.isRoot()).printToString(maxDepth = 14).take(6000)
             // CI prints the LEXI_PERF log tag after the run; the Gradle console shows only the first lines of a failure.
             tree.lines().forEach { android.util.Log.i("LEXI_PERF", "sets-$label | $it") }
+            // The app's own warnings (a PDF open that failed or was cancelled), copied under the tag CI prints.
+            val pfd = InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("logcat -d -t 400 -s Lexi:I AndroidRuntime:E")
+            ParcelFileDescriptor.AutoCloseInputStream(pfd).bufferedReader().readLines().takeLast(120).forEach { android.util.Log.i("LEXI_PERF", "sets-$label log | $it") }
             throw AssertionError("timeout waiting for $label\n$tree", e)
         }
     }
@@ -395,6 +398,83 @@ class TestSetsTest {
         assertTrue(rule.textOfNth("q-play", 0).contains("Nghe"))
         plays[1].performClick()
         waitFor("own-stopped") { rule.textOfNth("q-play", 1).contains("Nghe") }
+    }
+
+    private fun card(n: Int) = hasTestTag("runner-q") and hasAnyDescendant(startsWith("$n. "))
+
+    /** The replay range shown on question [n], scrolled into view first (the list only composes what is on screen). */
+    private fun rangeOf(n: Int): String {
+        rule.onNodeWithTag("runner-list").performScrollToNode(card(n))
+        return rule.onAllNodes(hasTestTag("q-replay-range") and hasAnyAncestor(card(n)), useUnmergedTree = true).fetchSemanticsNodes()
+            .flatMap { it.allTexts() }.joinToString(" ")
+    }
+
+    private fun tapIn(n: Int, tag: String) {
+        rule.onNodeWithTag("runner-list").performScrollToNode(card(n))
+        rule.onAllNodes(hasTestTag(tag) and hasAnyAncestor(card(n)))[0].performClick()
+    }
+
+    @Test
+    fun longFileIsSplitByItsAnswerPausesAndReplayed() {
+        openSets()
+        importFixture("listening-test.pdf")
+        rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("4")
+        rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
+        waitFor("lc-setup") { count("lc-setup") > 0 }
+        rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("")
+        rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("3-5")
+        doneTyping()
+        pickAudio("listening-part2.mp3")
+        waitFor("audio-1") { textOf("lc-audio-count").contains("1 file") }
+        rule.onNodeWithTag("pdf-read").performScrollTo().performClick()
+        waitFor("p2-preview") { count("pdf-preview") > 0 }
+        rule.onNodeWithTag("pdf-save").performScrollTo().performClick()
+        waitFor("p2-row") { count("set-row") > 0 }
+        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        waitFor("p2-runner") { count("runner-list") > 0 && count("listen-bar") > 0 }
+        pick(3, "B")
+        rule.onNodeWithTag("runner-submit").performClick()
+        waitFor("p2-submit") { countText("Còn 2 câu chưa làm") > 0 }
+        dialogButton("Nộp bài").performClick()
+        waitFor("p2-result") { count("runner-result") > 0 }
+        assertEquals(0, count("q-replay"))
+
+        // Decoded on the phone, measured, split at its answer pauses. The fixture's questions start at 7 s, 15.5 s, 24 s.
+        rule.onNodeWithTag("result-split").performScrollTo().performClick()
+        waitFor("split", 30_000) { count("result-split") == 0 }
+        // Missed: 4 and 5 (left blank). Question 5 starts on a frame boundary (24.0 s): one 50 ms frame either way is 0:23 or 0:24.
+        assertTrue(rangeOf(4), Regex("^File 1 · 0:1[56]–0:(19|20)$").matches(rangeOf(4)))
+        assertTrue(rangeOf(5), Regex("^File 1 · 0:2[345]–0:2[789]$").matches(rangeOf(5)))
+        rule.onNodeWithTag("runner-list").performScrollToNode(hasTestTag("result-toggle"))
+        rule.onNodeWithTag("result-toggle").performClick()
+        assertTrue(rangeOf(3), Regex("^File 1 · 0:0[67]–0:1[01]$").matches(rangeOf(3)))
+        shot("sets-09-lc-replay")
+
+        // Heard again from its start, and it stops at the end of the question by itself, not running into the next one.
+        val before = rangeOf(4)
+        tapIn(4, "q-replay-play")
+        waitFor("replaying") { textOf("listen-toggle").contains("Tạm dừng") }
+        assertTrue(textOf("listen-pos"), Regex("File 1/1 · 0:1[5-7]").containsMatchIn(textOf("listen-pos")))
+        waitFor("stopped", 12_000) { textOf("listen-toggle").contains("Nghe tiếp") }
+        assertTrue(textOf("listen-pos"), Regex("File 1/1 · 0:(19|20)").containsMatchIn(textOf("listen-pos")))
+
+        // Started too late: 2 s earlier, kept in the file on the phone.
+        val from = Regex("0:(\\d\\d)–").find(before)!!.groupValues[1].toInt()
+        tapIn(4, "q-replay-earlier")
+        waitFor("nudged") { rangeOf(4).contains("0:${(from - 2).toString().padStart(2, '0')}–") }
+        val id = app.testSets.sets.value.first().id
+        waitFor("nudge-written") {
+            val f = File(app.filesDir, "testsets").listFiles { x -> x.name.endsWith(".json") }!!.first()
+            val q4 = com.vh.lexi.core.testSetFromJson(org.json.JSONObject(f.readText())).questions.first { it.number == 4 }
+            q4.clip != null && q4.clip!!.from / 1000 == (from - 2).toLong()
+        }
+        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("p2-list") { count("set-row") > 0 }
+        runBlockingLoad()
+        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        waitFor("p2-reopen") { count("runner-result") > 0 }
+        assertEquals(0, count("result-split"))
+        assertEquals(id, app.testSets.sets.value.first().id)
     }
 
     @Test
