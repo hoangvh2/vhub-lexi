@@ -85,3 +85,63 @@ fun heatLevel(count: Long, max: Long): Int {
     val r = count.toDouble() / max
     return if (r > 0.75) 4 else if (r > 0.5) 3 else if (r > 0.25) 2 else 1
 }
+
+/** Review/learning cards that were due before today started (they sit in the first bar of [forecast]). */
+fun overdueCount(cards: List<Card>, now: Long, dayStartHour: Int, zone: ZoneId = ZoneId.systemDefault()): Int {
+    val todayStart = nextDayStart(now, dayStartHour, zone) - 86_400_000L
+    return cards.count { !it.suspended && it.state != CardState.NEW && it.due < todayStart }
+}
+
+/** Fixed colour scale for the activity calendar: the same count always has the same shade. */
+val HEAT_STEPS = longArrayOf(1, 30, 60, 90)
+fun heatLevelFixed(count: Long): Int =
+    if (count <= 0) 0 else if (count >= HEAT_STEPS[3]) 4 else if (count >= HEAT_STEPS[2]) 3 else if (count >= HEAT_STEPS[1]) 2 else 1
+
+data class WeekSide(
+    /** Cards answered (new words + reviews). */
+    val answers: Long,
+    /** Study time in ms. */
+    val ms: Long,
+    /** Days with any answer. */
+    val activeDays: Int,
+    /** Share of answers that were not "Again"; null without answers. */
+    val retention: Double?,
+)
+
+data class WeekCompare(
+    /** Study days elapsed this week, today included (1..7): both sides cover exactly these days. */
+    val days: Int,
+    /** Answers per weekday, Monday first; null for days that have not come yet. */
+    val now: List<Long?>,
+    val prev: List<Long>,
+    val thisWeek: WeekSide,
+    val lastWeek: WeekSide,
+)
+
+/** This week (Monday first) against the same weekdays of last week, so a Wednesday is never compared with a full week. */
+fun weekCompare(daily: List<Daily>, now: Long, dayStartHour: Int, zone: ZoneId = ZoneId.systemDefault()): WeekCompare {
+    val byId = daily.associateBy { it.id }
+    val dow = java.time.Instant.ofEpochMilli(now - dayStartHour * 3_600_000L).atZone(zone).toLocalDate().dayOfWeek.value - 1
+    fun at(back: Int): Daily? = byId[dayId(now - back * 86_400_000L, dayStartHour, zone)]
+    fun answers(d: Daily?): Long = if (d == null) 0 else d.newCards + d.reviews
+    fun side(backs: List<Int>): WeekSide {
+        var a = 0L; var ms = 0L; var active = 0; var ok = 0L; var all = 0L
+        for (b in backs) {
+            val d = at(b) ?: continue
+            a += answers(d)
+            ms += d.ms
+            if (answers(d) > 0) active++
+            all += d.again + d.hard + d.good + d.easy
+            ok += d.hard + d.good + d.easy
+        }
+        return WeekSide(a, ms, active, if (all > 0) ok.toDouble() / all else null)
+    }
+    val idx = (0..dow).toList()
+    return WeekCompare(
+        days = dow + 1,
+        now = (0..6).map { i -> if (i <= dow) answers(at(dow - i)) else null },
+        prev = (0..6).map { i -> answers(at(dow + 7 - i)) },
+        thisWeek = side(idx.map { dow - it }),
+        lastWeek = side(idx.map { dow + 7 - it }),
+    )
+}

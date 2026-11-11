@@ -95,3 +95,68 @@ export function level(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
   const r = count / max;
   return r > 0.75 ? 4 : r > 0.5 ? 3 : r > 0.25 ? 2 : 1;
 }
+
+/** Review/learning cards that were due before today started (they sit in the first bar of `forecast`). */
+export function overdueCount(cards: readonly Card[], now: number, dayStartHour: number): number {
+  const todayStart = nextDayStart(now, dayStartHour) - 86_400_000;
+  let n = 0;
+  for (const c of cards) if (!c.suspended && c.state !== CardState.New && c.due < todayStart) n++;
+  return n;
+}
+
+/** Fixed colour scale for the activity calendar: the same count always has the same shade. */
+export const HEAT_STEPS = [1, 30, 60, 90] as const;
+export function heatLevelFixed(count: number): 0 | 1 | 2 | 3 | 4 {
+  if (count <= 0) return 0;
+  return count >= HEAT_STEPS[3] ? 4 : count >= HEAT_STEPS[2] ? 3 : count >= HEAT_STEPS[1] ? 2 : 1;
+}
+
+export interface WeekSide {
+  /** Cards answered (new words + reviews). */
+  answers: number;
+  /** Study time in ms. */
+  ms: number;
+  /** Days with any answer. */
+  activeDays: number;
+  /** Share of answers that were not "Again"; null without answers. */
+  retention: number | null;
+}
+
+export interface WeekCompare {
+  /** Study days elapsed this week, today included (1..7): both sides below cover exactly these days. */
+  days: number;
+  /** Answers per weekday, Monday first; null for days that have not come yet. */
+  now: (number | null)[];
+  prev: number[];
+  thisWeek: WeekSide;
+  lastWeek: WeekSide;
+}
+
+/** This week (Monday first) against the same weekdays of last week, so a Wednesday is never compared with a full week. */
+export function weekCompare(daily: readonly Daily[], now: number, dayStartHour: number): WeekCompare {
+  const byId = new Map(daily.map((d) => [d.id, d]));
+  const dow = (new Date(now - dayStartHour * 3_600_000).getDay() + 6) % 7;
+  const at = (back: number) => byId.get(dayId(now - back * 86_400_000, dayStartHour));
+  const answers = (d?: Daily) => (d ? d.newCards + d.reviews : 0);
+  const side = (backs: number[]): WeekSide => {
+    let a = 0, ms = 0, active = 0, ok = 0, all = 0;
+    for (const b of backs) {
+      const d = at(b);
+      if (!d) continue;
+      a += answers(d);
+      ms += d.ms;
+      if (answers(d) > 0) active++;
+      all += d.again + d.hard + d.good + d.easy;
+      ok += d.hard + d.good + d.easy;
+    }
+    return { answers: a, ms, activeDays: active, retention: all ? ok / all : null };
+  };
+  const idx = Array.from({ length: dow + 1 }, (_, i) => i);
+  return {
+    days: dow + 1,
+    now: Array.from({ length: 7 }, (_, i) => (i <= dow ? answers(at(dow - i)) : null)),
+    prev: Array.from({ length: 7 }, (_, i) => answers(at(dow + 7 - i))),
+    thisWeek: side(idx.map((i) => dow - i)),
+    lastWeek: side(idx.map((i) => dow + 7 - i)),
+  };
+}

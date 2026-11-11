@@ -20,6 +20,7 @@ import { analyze, sentenceAround } from "../src/lib/readcheck.ts";
 import { testTag } from "../src/lib/practice.ts";
 import { testsetVectors } from "./testset-vectors.ts";
 import { testsyncVectors } from "./testsync-vectors.ts";
+import { roadmapVectors } from "./roadmap-vectors.ts";
 import { flashWords, lettersShown, nextRung, otherPhrase, rungHint, type Rung } from "@shared/ladder.ts";
 import { hintCue, hintDependent, hintGateMs, maskHint, maxRating, meaningTerms, rotateExamples } from "@shared/hints.ts";
 
@@ -592,6 +593,7 @@ it("cross-platform vectors are up to date", () => {
     ["testtag.json", JSON.stringify(["Test 1 TOEIC NEW 2026", "Đề ETS 2026 — Test #2", "   ", "Kiểm tra giữa kỳ: Ôn tập rất dài của năm học 2026 lần thứ ba", "ĐĐ ñandú", "a--b"].map((n) => [n, testTag(n)]), null, 1)],
     ["testset.json", JSON.stringify(testsetVectors(), null, 1)],
     ["testsync.json", JSON.stringify(testsyncVectors(), null, 1)],
+    ["roadmap.json", JSON.stringify(roadmapVectors())],
     [join("../../android/core/src/main/kotlin/com/vh/lexi/core/Irregular.kt"), irregularKotlin()],
   ];
   for (const [name, text] of files) {
