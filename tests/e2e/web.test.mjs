@@ -1625,3 +1625,68 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await b.ctx.close();
   });
 });
+
+describe("stats: roadmap, forecast and week", () => {
+  /** A small library written straight into the local database: 30 words, 10 of them learned. */
+  async function seedLibrary(page, base) {
+    await page.goto(`${base}/#/stats`);
+    await page.evaluate(async () => {
+      const DAY = 86_400_000;
+      const now = Date.now();
+      const db = await new Promise((res, rej) => {
+        const r = indexedDB.open("vhub-lexi", 1);
+        r.onupgradeneeded = () => { for (const s of ["decks", "notes", "cards", "reviews", "daily", "kv"]) if (!r.result.objectStoreNames.contains(s)) r.result.createObjectStore(s, { keyPath: "id" }); };
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+      const tx = db.transaction(["decks", "notes", "cards", "daily", "kv"], "readwrite");
+      tx.objectStore("decks").put({ id: "d1", name: "Test", createdAt: now, updatedAt: now });
+      for (let i = 0; i < 30; i++) {
+        const id = `w${String(i).padStart(2, "0")}`;
+        const created = now - 30 * DAY + i * 1000;
+        tx.objectStore("notes").put({ id, type: "vocab", deckId: "d1", createdAt: created, updatedAt: created, fields: { word: `word${i}`, vi: `nghĩa ${i}`, pos: "noun", ipa: "", en: "", examples: [`This is word${i}.`], mnemonic: "" } });
+        for (const template of ["recognize", "cloze"]) {
+          const learned = i < 10;
+          tx.objectStore("cards").put({
+            id: `${id}.${template}`, noteId: id, deckId: "d1", template, state: learned ? 2 : 0, due: learned ? now + (i % 5) * DAY - DAY : now,
+            stability: learned ? 12 : 0, difficulty: learned ? 5 : 0, scheduledDays: learned ? 12 : 0, learningSteps: 0, reps: learned ? 4 : 0, lapses: 0,
+            ...(learned ? { lastReview: now - 10 * DAY } : {}), createdAt: created, updatedAt: created,
+          });
+        }
+      }
+      const id = (k) => { const d = new Date(now - k * DAY - 4 * 3_600_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+      for (let k = 1; k <= 12; k++) tx.objectStore("daily").put({ id: id(k), newCards: k <= 10 ? 1 : 0, reviews: 10 + k, again: 2, hard: 1, good: 8 + k, easy: 0, ms: 90_000, updatedAt: now });
+      tx.objectStore("kv").put({ id: "seeds", value: { "grammar-toeic": 99 } });
+      await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+      db.close();
+    });
+    await page.reload();
+  }
+
+  it("shows the dates the forecast gives, the numbers on every bar, and a week compared with the last one", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 2600 } });
+    await seedLibrary(page, base);
+    await page.goto(`${base}/#/stats`);
+    await page.waitForSelector(".rm-eta b");
+    await page.waitForFunction(() => document.querySelector(".chart text.v") && !document.body.textContent.includes("Đang tính"), null, { timeout: 30000 });
+    assert.equal(await page.textContent("[data-testid=stat-words]"), "30");
+    const eta = await page.locator(".rm-eta b").allTextContents();
+    assert.equal(eta.length, 2);
+    assert.match(eta[0], /^\d\d\/\d\d$|^Chưa rõ$|^Đã xong$/);
+    const text = await page.textContent(".page");
+    assert.match(text, /Học hết từ mới/);
+    assert.match(text, /Sắp đến hạn · 14 ngày/);
+    assert.match(text, /Tuần này/);
+    assert.match(text, /\d+ lượt ôn/);
+    // 12 days of history is enough for the learner's own pace; the "Thực tế" choice is offered and picked.
+    assert.equal(await page.locator('.chip[aria-pressed="true"]').textContent().then((t) => /Thực tế/.test(t)), true);
+    // Every one of the 14 bars carries its number.
+    assert.equal(await page.locator('svg[aria-label^="Số thẻ đến hạn"] text.v').count(), 14);
+    // Choosing another pace recomputes the forecast.
+    await page.click('.chip:has-text("25 từ/ngày")');
+    await page.waitForFunction(() => /Với 25 từ\/ngày/.test(document.querySelector(".whatif")?.textContent ?? ""), null, { timeout: 30000 });
+    assert.equal(await noOverflow(page), true);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+});
