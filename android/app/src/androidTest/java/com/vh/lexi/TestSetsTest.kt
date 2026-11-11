@@ -21,6 +21,10 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.printToString
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.core.Extracted
@@ -66,8 +70,33 @@ class TestSetsTest {
         ),
     )
 
+    @get:Rule
+    val testName = org.junit.rules.TestName()
+
+    /** A stuck test fails in minutes instead of holding the whole CI job until its 25-minute limit. */
+    @get:Rule
+    val timeout: org.junit.rules.Timeout = org.junit.rules.Timeout.builder().withTimeout(4, java.util.concurrent.TimeUnit.MINUTES).build()
+
+    private var watchdog: Thread? = null
+
     @Before
     fun setUp() {
+        // A test stuck on a blocked main thread never reaches its own timeouts: log what the main thread is doing.
+        android.util.Log.i("LEXI_PERF", "start ${testName.methodName}")
+        val testThread = Thread.currentThread()
+        watchdog = Thread {
+            try {
+                while (true) {
+                    Thread.sleep(60_000)
+                    val main = android.os.Looper.getMainLooper().thread
+                    android.util.Log.i("LEXI_PERF", "watchdog: main thread ${main.state}")
+                    main.stackTrace.take(40).forEach { android.util.Log.i("LEXI_PERF", "watchdog |   at $it") }
+                    android.util.Log.i("LEXI_PERF", "watchdog: test thread ${testThread.state}")
+                    testThread.stackTrace.take(60).forEach { android.util.Log.i("LEXI_PERF", "watchdog test |   at $it") }
+                }
+            } catch (_: InterruptedException) {
+            }
+        }.apply { isDaemon = true; start() }
         File(app.filesDir, "testsets").deleteRecursively()
         runBlockingLoad()
         app.extractOverride = { images, text -> synchronized(calls) { calls += images to text }; if (images.isEmpty()) canned else Extracted(emptyList(), listOf(q(1, "fill", "She _____ to work by bus.", listOf("go", "goes", "going", "gone")))) }
@@ -75,6 +104,7 @@ class TestSetsTest {
 
     @After
     fun tearDown() {
+        watchdog?.interrupt()
         app.extractOverride = null
     }
 
@@ -92,6 +122,7 @@ class TestSetsTest {
     }
 
     private fun waitFor(label: String, ms: Long = 15_000, cond: () -> Boolean) {
+        android.util.Log.i("LEXI_PERF", "wait $label")
         try {
             rule.waitUntil(ms, cond)
         } catch (e: Throwable) {
@@ -122,9 +153,14 @@ class TestSetsTest {
         waitFor("testsets-screen") { count("testsets-screen") > 0 }
     }
 
+    /** A text that starts with [prefix]: "3. " must not find question 33. */
+    private fun startsWith(prefix: String) = SemanticsMatcher("text starts with $prefix") { n ->
+        n.config.getOrElse(SemanticsProperties.Text) { emptyList() }.any { it.text.startsWith(prefix) }
+    }
+
     /** The answer [letter] of the question numbered [n] in the runner. */
     private fun pick(n: Int, letter: String) {
-        val card = hasTestTag("runner-q") and hasAnyDescendant(hasText("$n.", substring = true))
+        val card = hasTestTag("runner-q") and hasAnyDescendant(startsWith("$n. "))
         rule.onNodeWithTag("runner-list").performScrollToNode(card)
         rule.onAllNodes(hasTestTag("opt-$letter") and hasAnyAncestor(card))[0].performClick()
     }
@@ -223,6 +259,144 @@ class TestSetsTest {
         assertEquals(0, File(app.filesDir, "testsets").listFiles { f -> f.name.endsWith(".json") }!!.size)
     }
 
+    /** Ends typing as a learner would, with a tap on an empty spot: a focused field pulls the page back to itself. */
+    private fun doneTyping() {
+        rule.onNodeWithTag("lc-help").performTouchInput { click() } // no scroll: just above the fields being typed in
+        rule.waitForIdle()
+    }
+
+    /** Fixture files copied where the app can open them, handed to the screen as picked audio would be. */
+    private fun pickAudio(vararg names: String) {
+        app.pendingAudio.value = names.map { name ->
+            val file = File(app.cacheDir, name)
+            InstrumentationRegistry.getInstrumentation().context.assets.open(name).use { i -> file.outputStream().use { i.copyTo(it) } }
+            Uri.fromFile(file)
+        }
+    }
+
+    private fun lq(number: Int, stem: String, options: List<String>) = q(number, "reading", stem, options).copy(part = 5)
+
+    /** Every file kept for the set (audio and photos), in its own folder. */
+    private fun media(): Int = File(app.filesDir, "testsets/media").listFiles().orEmpty().sumOf { it.listFiles().orEmpty().size }
+
+    @Test
+    fun listeningPlaysFileAfterFileAndGradesLc() {
+        // The model also "reads" question 4 of Part 2 from the page text: Lexi must drop it (Part 2 is made from numbers).
+        app.extractOverride = { images, text ->
+            synchronized(calls) { calls += images to text }
+            Extracted(emptyList(), listOf(
+                q(4, "reading", "Mark your answer on your answer sheet.", listOf("", "", "", "")),
+                lq(32, "Where most likely are the speakers?", listOf("At a bank", "At a hotel", "At a train station", "At a bookstore")),
+                lq(33, "What does the woman ask for?", listOf("A receipt", "A gift bag", "A discount", "A catalog")),
+                lq(34, "What will the man do next?", listOf("Check the storage room", "Call a manager", "Print a coupon", "Close the store")),
+            ))
+        }
+        openSets()
+        importFixture("listening-test.pdf")
+        rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("2-4")
+        rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
+        waitFor("lc-setup") { count("lc-setup") > 0 }
+        rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("1-2")
+        rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("3-5")
+        rule.onNodeWithTag("lc-photos").performScrollTo().performTextReplacement("1")
+        doneTyping()
+        pickAudio("listening-03.mp3", "listening-01.mp3", "listening-02.mp3")
+        waitFor("audio-count") { textOf("lc-audio-count").contains("3 file") }
+        assertTrue(textOf("lc-audio-list"), Regex("listening-01.*listening-02.*listening-03").containsMatchIn(textOf("lc-audio-list")))
+        assertTrue(textOf("pdf-key"), textOf("pdf-key").contains("8 câu (trang 4)"))
+        assertTrue(textOf("pdf-read"), textOf("pdf-read").contains("1 phần, ≈ 2 lượt AI"))
+        shot("sets-06-lc-setup")
+        rule.onNodeWithTag("pdf-read").performScrollTo().performClick()
+        waitFor("lc-preview") { count("pdf-preview") > 0 }
+        assertEquals(1, calls.size)
+        assertTrue("the photo page went to the AI", !calls[0].second.contains("PART 1"))
+        assertTrue(calls[0].second.contains("32 (D)"))
+        assertTrue(textOf("pdf-total"), textOf("pdf-total").contains("8 câu"))
+        assertTrue(textOf("pdf-total-p1").contains("Part 1: 2"))
+        assertTrue(textOf("pdf-total-p2").contains("Part 2: 3"))
+        assertTrue(textOf("pdf-total-p3").contains("Part 3: 3"))
+        assertEquals("3 file nghe", textOf("pdf-audio").trim())
+        assertEquals(0, count("pdf-noanswer"))
+        rule.onNodeWithTag("pdf-save").performScrollTo().performClick()
+        waitFor("lc-row") { count("set-row") > 0 }
+        assertTrue(textOf("set-lc"), textOf("set-lc").contains("Listening · 3 file nghe"))
+        assertEquals(4, media())
+
+        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        waitFor("lc-runner") { count("runner-list") > 0 }
+        waitFor("picture", 20_000) { count("runner-picture") > 0 }
+        assertEquals(1, count("runner-picture"))
+        // Straight through, file after file, like the exam: the position moves to the second file by itself.
+        rule.onNodeWithTag("listen-toggle").performClick()
+        waitFor("file-1") { textOf("listen-pos").contains("File 1/3") }
+        waitFor("file-2", 15_000) { textOf("listen-pos").contains("File 2/3") }
+        shot("sets-07-lc-runner")
+        rule.onNodeWithTag("listen-toggle").performClick()
+        waitFor("paused") { textOf("listen-toggle").contains("Nghe tiếp") }
+        // Key: 1 A, 2 C, 3 B, 4 A, 5 C, 32 D, 33 B, 34 A. Right on 1, 3, 32; wrong on 2; the rest blank.
+        pick(1, "A")
+        pick(2, "A")
+        pick(3, "B")
+        pick(32, "D")
+        waitFor("lc-count") { textOf("runner-count").contains("4/8") }
+        rule.onNodeWithTag("runner-submit").performClick()
+        waitFor("lc-submit") { countText("Còn 4 câu chưa làm") > 0 }
+        dialogButton("Nộp bài").performClick()
+        waitFor("lc-result") { count("runner-result") > 0 }
+        assertEquals("3/8", textOf("result-score"))
+        assertTrue(textOf("result-lc"), textOf("result-lc").contains("LC: 3/8"))
+        assertTrue(textOf("result-p1"), textOf("result-p1").contains("Part 1: 1/2"))
+        assertTrue(textOf("result-p2"), textOf("result-p2").contains("Part 2: 1/3"))
+        assertTrue(textOf("result-p3"), textOf("result-p3").contains("Part 3: 1/3"))
+        assertEquals(0, count("result-p5"))
+        shot("sets-08-lc-result")
+        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
+
+        // Deleting asks first; "Xoá" takes the audio and the photo off the device too.
+        waitFor("lc-list") { count("set-row") > 0 }
+        rule.onNodeWithTag("set-delete").performScrollTo().performClick()
+        waitFor("lc-delete-dialog") { countText("Xoá bộ đề?") > 0 }
+        dialogButton("Huỷ").performClick()
+        waitFor("lc-not-deleted") { countText("Xoá bộ đề?") == 0 }
+        assertEquals(4, media())
+        rule.onNodeWithTag("set-delete").performScrollTo().performClick()
+        waitFor("lc-delete-dialog-2") { countText("Xoá bộ đề?") > 0 }
+        dialogButton("Xoá").performClick()
+        waitFor("lc-deleted") { count("sets-empty") > 0 }
+        assertEquals(0, media())
+    }
+
+    @Test
+    fun listeningOneFilePerQuestionWithoutAi() {
+        openSets()
+        importFixture("listening-test.pdf")
+        rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("4")
+        rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
+        waitFor("lc-setup") { count("lc-setup") > 0 }
+        rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("1-2")
+        rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("")
+        doneTyping()
+        pickAudio("listening-01.mp3", "listening-02.mp3")
+        waitFor("audio-2") { textOf("lc-audio-count").contains("2 file") }
+        assertTrue(textOf("pdf-read"), textOf("pdf-read").contains("không cần AI"))
+        rule.onNodeWithTag("pdf-read").performScrollTo().performClick()
+        waitFor("p1-preview") { count("pdf-preview") > 0 }
+        assertEquals(0, calls.size)
+        assertTrue(textOf("pdf-audio"), textOf("pdf-audio").contains("mỗi câu một file"))
+        rule.onNodeWithTag("pdf-save").performScrollTo().performClick()
+        waitFor("p1-row") { count("set-row") > 0 }
+        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        waitFor("p1-runner") { count("runner-list") > 0 }
+        assertEquals(0, count("listen-bar"))
+        waitFor("q-play") { count("q-play") == 2 }
+        val plays = rule.onAllNodes(hasTestTag("q-play"))
+        plays[1].performClick()
+        waitFor("own-playing") { rule.textOfNth("q-play", 1).contains("Dừng") }
+        assertTrue(rule.textOfNth("q-play", 0).contains("Nghe"))
+        plays[1].performClick()
+        waitFor("own-stopped") { rule.textOfNth("q-play", 1).contains("Nghe") }
+    }
+
     @Test
     fun copierScanIsDrawnAndTurned() {
         openSets()
@@ -253,6 +427,9 @@ class TestSetsTest {
 
 private fun AndroidComposeTestRule<*, *>.textOfTag(tag: String): String =
     onAllNodes(hasTestTag(tag), useUnmergedTree = true).fetchSemanticsNodes().flatMap { it.allTexts() }.joinToString(" ")
+
+private fun AndroidComposeTestRule<*, *>.textOfNth(tag: String, i: Int): String =
+    onAllNodes(hasTestTag(tag), useUnmergedTree = true).fetchSemanticsNodes()[i].allTexts().joinToString(" ")
 
 private fun androidx.compose.ui.semantics.SemanticsNode.allTexts(): List<String> =
     config.getOrElse(SemanticsProperties.Text) { emptyList() }.map { it.text } + children.flatMap { it.allTexts() }

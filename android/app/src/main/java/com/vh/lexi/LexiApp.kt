@@ -49,6 +49,9 @@ class LexiApp : Application() {
     /** A PDF handed to the Bộ đề screen from outside it (a test, or later the share sheet); the screen takes it and empties this. */
     val pendingPdf = MutableStateFlow<Uri?>(null)
 
+    /** Audio files handed to the Bộ đề import (tests; the screen's own picker otherwise). */
+    val pendingAudio = MutableStateFlow<List<Uri>>(emptyList())
+
     /** Tests replace the `extract-questions` function with a canned answer (there is no Gemini on the CI emulator). */
     @Volatile var extractOverride: (suspend (images: List<String>, text: String) -> Extracted)? = null
 

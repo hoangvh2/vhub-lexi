@@ -9,6 +9,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,9 +30,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -58,6 +62,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,7 +81,14 @@ import com.vh.lexi.core.DAILY_QUOTA
 import com.vh.lexi.core.Extracted
 import com.vh.lexi.core.FieldValue
 import com.vh.lexi.core.LETTERS
+import com.vh.lexi.core.LC_LAYOUT
 import com.vh.lexi.core.LC_PARTS
+import com.vh.lexi.core.LcLayout
+import com.vh.lexi.core.NumberRange
+import com.vh.lexi.core.SetPicture
+import com.vh.lexi.core.SetTrack
+import com.vh.lexi.core.parseNumberRange
+import com.vh.lexi.core.sortTracks
 import com.vh.lexi.core.MergedSet
 import com.vh.lexi.core.PdfPage
 import com.vh.lexi.core.RC_PARTS
@@ -142,7 +155,9 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
     }
     BackHandler(onBack = onClose)
     val c = Lexi.colors
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp).testTag("testsets-screen"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val focus = LocalFocusManager.current
+    // A tap on an empty spot ends typing (closes the keyboard): a focused field keeps pulling the page back to itself.
+    Column(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { focus.clearFocus() } }.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp).testTag("testsets-screen"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeader("Bộ đề") { TextButton(onClick = onClose) { Text("Đóng") } }
         PdfImport(app) { s -> toast("Đã lưu bộ đề “${s.name}”") }
         Panel(Modifier.testTag("sets")) {
@@ -167,7 +182,7 @@ private fun SetRow(app: LexiApp, set: TestSet, onOpen: () -> Unit) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Lexi.colors.surface2).padding(12.dp).testTag("set-row"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(set.name, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (set.section == "lc") Pill("Listening" + if (set.tracks.isNotEmpty()) " · ${set.tracks.size} file nghe" else "", PillKind.OK)
+            if (set.section == "lc") Pill("Listening" + if (set.tracks.isNotEmpty()) " · ${set.tracks.size} file nghe" else "", PillKind.OK, Modifier.testTag("set-lc"))
             for (p in LC_PARTS + RC_PARTS) if ((sum.byPart[p.key] ?: 0) > 0) Pill("${p.label}: ${sum.byPart[p.key]}")
             if ((sum.byPart["other"] ?: 0) > 0) Pill("Khác: ${sum.byPart["other"]}")
             when {
@@ -194,6 +209,12 @@ private fun SetRow(app: LexiApp, set: TestSet, onOpen: () -> Unit) {
 private class PdfPicked(val fileName: String, val file: File, val pages: List<PdfPage>)
 
 private class PdfDraft(val set: MergedSet, val failed: List<Int>, val stopped: String)
+
+private class AudioPick(val uri: Uri, val name: String, val bytes: Long)
+
+private fun mb(bytes: Long): String =
+    if (bytes < 1024 * 1024) "${maxOf(1, Math.round(bytes / 1024.0))} KB"
+    else String.format(java.util.Locale.ROOT, if (bytes < 10L * 1024 * 1024) "%.1f MB" else "%.0f MB", bytes / 1024.0 / 1024.0).replace(".", ",")
 
 private fun displayName(context: android.content.Context, uri: Uri): String =
     runCatching {
@@ -224,6 +245,13 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
     var progress by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var saving by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf<PdfDraft?>(null) }
+    // Listening: the parts printed with nothing but their numbers, the pages kept as photos, and the audio files.
+    var section by remember { mutableStateOf("rc") }
+    var p1 by remember { mutableStateOf("${LC_LAYOUT.p1!!.first}-${LC_LAYOUT.p1!!.last}") }
+    var p2 by remember { mutableStateOf("${LC_LAYOUT.p2!!.first}-${LC_LAYOUT.p2!!.last}") }
+    var photoRange by remember { mutableStateOf("") }
+    var audio by remember { mutableStateOf(listOf<AudioPick>()) }
+    val pendingAudio by app.pendingAudio.collectAsState()
 
     val p = picked
     // Only the chosen pages are read, and the answer key is looked for among them (a book's key restarts per unit).
@@ -231,7 +259,16 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
     val pages = remember(p, chosen) { if (p != null && chosen != null) chosen.map { p.pages[it - 1] } else emptyList() }
     val found = remember(pages) { findKey(pages) }
     val key = remember(found, pastedKey) { LinkedHashMap(found.key).apply { putAll(keyPairs(pastedKey)) } }
-    val chunks = remember(pages, found) { chunkPages(pages, found.keyPages.toSet()) }
+    val layout = remember(p1, p2) {
+        val a = parseNumberRange(p1)
+        val b = parseNumberRange(p2)
+        if (a is NumberRange.Invalid || b is NumberRange.Invalid) null else LcLayout((a as? NumberRange.Of)?.range, (b as? NumberRange.Of)?.range)
+    }
+    val photos = remember(p, photoRange) { if (p == null || photoRange.isBlank()) emptyList() else parsePageRange(photoRange, p.pages.size) }
+    val lc = section == "lc"
+    val lcReady = !lc || (layout != null && photos != null)
+    // Photo pages are kept as pictures, not read: a Part 1 page has nothing but photos and numbers on it.
+    val chunks = remember(pages, found, lc, photos) { chunkPages(pages, found.keyPages.toSet() + if (lc) photos.orEmpty() else emptyList()) }
     val units = cost(chunks)
     val scanned = pages.count { it.scanned }
     val firstScan = pages.firstOrNull { it.scanned }?.n
@@ -239,6 +276,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
 
     fun reset() {
         picked = null; draft = null; pastedKey = ""; range = ""; turn = 0; thumb = null; error = ""; open = false
+        section = "rc"; photoRange = ""; audio = emptyList()
     }
 
     fun pick(uri: Uri) {
@@ -272,6 +310,22 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
     }
 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) pick(uri) }
+
+    fun pickAudio(uris: List<Uri>) {
+        scope.launch {
+            val list = withContext(Dispatchers.IO) {
+                uris.map { u ->
+                    val size = runCatching { context.contentResolver.openAssetFileDescriptor(u, "r")?.use { it.length } }.getOrNull() ?: -1L
+                    AudioPick(u, displayName(context, u).take(120), size)
+                }.filter { a -> a.name.contains(Regex("(?i)\\.(mp3|m4a|wav|ogg|aac)$")) || context.contentResolver.getType(a.uri)?.startsWith("audio/") == true }
+            }
+            audio = sortTracks(list) { it.name }
+        }
+    }
+    val audioLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> if (uris.isNotEmpty()) pickAudio(uris) }
+    LaunchedEffect(pendingAudio) {
+        if (pendingAudio.isNotEmpty()) { val u = pendingAudio; app.pendingAudio.value = emptyList(); pickAudio(u) }
+    }
     LaunchedEffect(pending) {
         pending?.let { app.pendingPdf.value = null; open = true; pick(it) }
     }
@@ -286,7 +340,15 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
 
     fun read() {
         val pk = picked ?: return
-        if (progress != null || chunks.isEmpty()) return
+        if (progress != null || !lcReady) return
+        // Listening with only Part 1–2 chosen: nothing for the AI, the questions come from their numbers.
+        if (chunks.isEmpty() && lc) {
+            val set = mergeExtracted(emptyList(), key, layout)
+            if (set.questions.isEmpty()) error = "Chưa có câu nào: điền khoảng số câu Part 1–2 hoặc chọn trang Part 3–4."
+            else draft = PdfDraft(set, emptyList(), "")
+            return
+        }
+        if (chunks.isEmpty()) return
         error = ""
         scope.launch {
             val results = mutableListOf<Extracted>()
@@ -322,7 +384,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                 progress = (i + 1) to chunks.size
             }
             progress = null
-            val set = withContext(Dispatchers.Default) { mergeExtracted(results, key) }
+            val set = withContext(Dispatchers.Default) { mergeExtracted(results, key, if (lc) layout else null) }
             if (set.questions.isEmpty()) error = stopped.ifEmpty { "Không thấy câu hỏi nào trong file này." }
             else draft = PdfDraft(set, failed.toList(), stopped)
         }
@@ -336,10 +398,34 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
         scope.launch {
             try {
                 val now = System.currentTimeMillis()
+                val id = UUID.randomUUID().toString()
+                var questions = d.set.questions
+                var tracks = emptyList<SetTrack>()
+                var pictures = emptyList<SetPicture>()
+                if (lc) {
+                    val store = app.testSets
+                    tracks = withContext(Dispatchers.IO) {
+                        audio.mapIndexed { i, a ->
+                            val k = "$id:a$i"
+                            val out = store.mediaFile(k)
+                            val n = context.contentResolver.openInputStream(a.uri)?.use { input -> out.outputStream().use { input.copyTo(it) } } ?: error("audio")
+                            SetTrack(k, a.name, n)
+                        }
+                    }
+                    pictures = withContext(Dispatchers.IO) {
+                        photos.orEmpty().map { n ->
+                            val k = "$id:p$n"
+                            store.mediaFile(k).writeBytes(Pdf.renderJpeg(pk.file, n, turn))
+                            SetPicture(1, n, k)
+                        }
+                    }
+                    // As many files as questions (a book with one file per question): each question plays its own.
+                    if (tracks.size > 1 && tracks.size == questions.size) questions = questions.mapIndexed { i, q -> q.copy(track = i) }
+                }
                 val set = TestSet(
-                    id = UUID.randomUUID().toString(), name = name.trim().take(60).ifEmpty { "Bộ đề" }, createdAt = now, updatedAt = now, section = "rc",
+                    id = id, name = name.trim().take(60).ifEmpty { "Bộ đề" }, createdAt = now, updatedAt = now, section = section,
                     source = SetSource(pk.fileName.take(120), pages.size, if (range.isNotBlank() && chosen != null) formatPages(chosen) else null),
-                    passages = d.set.passages, questions = d.set.questions,
+                    passages = d.set.passages, questions = questions, tracks = tracks, pictures = pictures,
                 )
                 app.testSets.save(set)
                 onSaved(set)
@@ -347,7 +433,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
-                error = "Không lưu được: bộ nhớ máy có thể đã đầy."
+                error = "Không lưu được: bộ nhớ máy có thể đã đầy, hoặc không đọc được file nghe."
             } finally {
                 saving = false
             }
@@ -360,7 +446,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
             Text("  Nhập đề từ PDF", Modifier.weight(1f), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
             if (p == null) TextButton(onClick = { open = !open }, Modifier.testTag("pdf-toggle")) { Text(if (open) "Thu gọn" else "Mở") }
         }
-        if (!open && p == null) Text("Một file PDF đề Reading (Part 5–7): Lexi đọc chữ ngay trên máy, AI tách từng câu hỏi, bảng đáp án trong file được dò tự động. Xong là làm bài được ngay.", fontSize = 13.sp, color = c.muted)
+        if (!open && p == null) Text("Một file PDF đề Reading (Part 5–7) hoặc Listening (Part 1–4, kèm file mp3): Lexi đọc chữ ngay trên máy, AI tách từng câu hỏi, bảng đáp án trong file được dò tự động. Xong là làm bài được ngay.", fontSize = 13.sp, color = c.muted)
         if (open && p == null) {
             OutlinedButton(onClick = { launcher.launch(arrayOf("application/pdf")) }, enabled = loading.isEmpty(), modifier = Modifier.fillMaxWidth().testTag("pdf-pick")) { Text("+ Chọn file PDF") }
             if (loading.isNotEmpty()) Text(loading, fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("pdf-loading"))
@@ -383,6 +469,30 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                 modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping().testTag("set-range"),
             )
             if (chosen == null) Pill("Trang không hợp lệ: file có ${p.pages.size} trang, viết như “45-60, 290”.", PillKind.BAD, Modifier.testTag("set-range-bad"), wrap = true)
+            Row(Modifier.fillMaxWidth().testTag("set-section"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for ((x, label) in listOf("rc" to "Reading (Part 5–7)", "lc" to "Listening (Part 1–4)")) {
+                    FilterChip(selected = section == x, onClick = { section = x }, label = { Text(label, maxLines = 1) }, modifier = Modifier.weight(1f).testTag("set-section-$x"))
+                }
+            }
+            if (lc) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(c.surface2).padding(12.dp).testTag("lc-setup"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Part 1–2 chỉ in số câu: Lexi tạo sẵn các câu này, AI chỉ đọc trang Part 3–4. Ở “Trang cần đọc” nên chọn trang Part 3–4 và trang đáp án.", fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("lc-help"))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = p1, onValueChange = { p1 = it.take(12) }, singleLine = true, label = { Text("Part 1: câu") }, placeholder = { Text("trống nếu không có") }, modifier = Modifier.weight(1f).keepVisibleWhileTyping().testTag("lc-p1"))
+                    OutlinedTextField(value = p2, onValueChange = { p2 = it.take(12) }, singleLine = true, label = { Text("Part 2: câu") }, placeholder = { Text("trống nếu không có") }, modifier = Modifier.weight(1f).keepVisibleWhileTyping().testTag("lc-p2"))
+                }
+                if (layout == null) Pill("Khoảng số câu viết như “1-6”, hoặc để trống.", PillKind.BAD, Modifier.testTag("lc-layout-bad"), wrap = true)
+                OutlinedTextField(value = photoRange, onValueChange = { photoRange = it.take(60) }, singleLine = true, label = { Text("Trang ảnh Part 1 (giữ ảnh để xem khi làm bài)") }, placeholder = { Text("vd: 3-4") }, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping().testTag("lc-photos"))
+                if (photos == null) Pill("Trang không hợp lệ: file có ${p.pages.size} trang.", PillKind.BAD, wrap = true)
+                OutlinedButton(onClick = { audioLauncher.launch(arrayOf("audio/*")) }, Modifier.fillMaxWidth().testTag("lc-audio-pick")) { Text(if (audio.isNotEmpty()) "Chọn lại file nghe" else "+ Chọn file mp3") }
+                if (audio.isNotEmpty()) {
+                    Pill("${audio.size} file · ${mb(audio.sumOf { maxOf(0L, it.bytes) })}", modifier = Modifier.testTag("lc-audio-count"))
+                    Column(Modifier.testTag("lc-audio-list")) {
+                        audio.take(8).forEachIndexed { i, a -> Text("${i + 1}. ${a.name}", fontSize = 12.sp, color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        if (audio.size > 8) Text("… ${audio.size - 8} file nữa", fontSize = 12.sp, color = c.muted)
+                    }
+                }
+                Text("Phát theo thứ tự số trong tên file. Số file bằng số câu thì mỗi câu có file nghe riêng.", fontSize = 12.sp, color = c.muted)
+            }
             if (firstScan != null) Row(Modifier.testTag("pdf-thumb"), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 val t = thumb
                 Box(Modifier.size(width = 96.dp, height = 128.dp).clip(RoundedCornerShape(10.dp)).background(c.surface2).border(1.dp, c.line, RoundedCornerShape(10.dp))) {
@@ -413,7 +523,9 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                 Text("Đang đọc phần ${minOf(pr.first + 1, pr.second)}/${pr.second}…", fontSize = 13.sp, color = c.muted)
                 LinearProgressIndicator(progress = { pr.first.toFloat() / pr.second }, modifier = Modifier.fillMaxWidth())
             } else {
-                Button(onClick = ::read, enabled = available && chunks.isNotEmpty() && units <= DAILY_QUOTA, modifier = Modifier.fillMaxWidth().testTag("pdf-read")) {
+                if (lc && chunks.isEmpty()) Button(onClick = ::read, enabled = lcReady, modifier = Modifier.fillMaxWidth().testTag("pdf-read")) {
+                    Icon(Icons.Filled.Check, null); Text("  Tạo câu Part 1–2 (không cần AI)")
+                } else Button(onClick = ::read, enabled = available && chunks.isNotEmpty() && units <= DAILY_QUOTA && lcReady, modifier = Modifier.fillMaxWidth().testTag("pdf-read")) {
                     Icon(Icons.Filled.AutoAwesome, null); Text("  Tách câu hỏi (${chunks.size} phần, ≈ $units lượt AI)")
                 }
                 TextButton(onClick = ::reset) { Text("Huỷ") }
@@ -427,6 +539,10 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                     Pill("${sum.total} câu", PillKind.OK, Modifier.testTag("pdf-total"))
                     for (x in LC_PARTS + RC_PARTS) if ((sum.byPart[x.key] ?: 0) > 0) Pill("${x.label}: ${sum.byPart[x.key]}", modifier = Modifier.testTag("pdf-total-${x.key}"))
                     if (dr.set.passages.isNotEmpty()) Pill("${dr.set.passages.size} đoạn đọc")
+                    if (lc) Pill(
+                        if (audio.isEmpty()) "Chưa có file nghe" else "${audio.size} file nghe" + if (audio.size > 1 && audio.size == sum.total) ", mỗi câu một file" else "",
+                        modifier = Modifier.testTag("pdf-audio"),
+                    )
                 }
                 if (dr.stopped.isNotEmpty()) Pill(dr.stopped, PillKind.WARN, wrap = true)
                 if (dr.failed.isNotEmpty()) Pill("Chưa đọc được trang ${dr.failed.joinToString(", ")}. Có thể lưu phần đã có rồi nhập lại các trang này sau.", PillKind.WARN, Modifier.testTag("pdf-failed"), wrap = true)
@@ -446,7 +562,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 RadioButton(selected = q.correct == l, onClick = null, enabled = ok, modifier = Modifier.padding(6.dp))
-                                Text("$l  ${q.options[l].orEmpty().ifEmpty { "—" }}", fontSize = 14.sp, color = if (ok) c.ink else c.muted)
+                                Text("$l  ${q.options[l].orEmpty().ifEmpty { if (q.kind == "listen") "" else "—" }}", fontSize = 14.sp, color = if (ok) c.ink else c.muted)
                             }
                         }
                     }
@@ -502,6 +618,12 @@ private fun Runner(app: LexiApp, set: TestSet, onExit: () -> Unit, onCards: (Wro
     val elapsed = attempt.elapsedMs + if (finished) 0 else now - resumed
     var submitting by remember { mutableStateOf(false) }
     var restarting by remember { mutableStateOf(false) }
+    val toast = LocalToaster.current
+    val player = remember(set.id) { if (set.tracks.isEmpty()) null else ListenPlayer(set.tracks, app.testSets::mediaFile) { toast(it) } }
+    val perQuestion = set.questions.any { it.track != null }
+    if (player != null) {
+        DisposableEffect(player) { onDispose { player.release() } }
+    }
 
     fun persist(a: Attempt, rebase: Boolean = false) {
         if (rebase) resumed = System.currentTimeMillis()
@@ -517,7 +639,7 @@ private fun Runner(app: LexiApp, set: TestSet, onExit: () -> Unit, onCards: (Wro
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, finished) {
         val obs = LifecycleEventObserver { _, e ->
-            if (e == Lifecycle.Event.ON_STOP) pause() else if (e == Lifecycle.Event.ON_START) { resumed = System.currentTimeMillis(); now = resumed }
+            if (e == Lifecycle.Event.ON_STOP) { player?.pause(); pause() } else if (e == Lifecycle.Event.ON_START) { resumed = System.currentTimeMillis(); now = resumed }
         }
         lifecycle.addObserver(obs)
         onDispose { lifecycle.removeObserver(obs); pause() }
@@ -535,14 +657,15 @@ private fun Runner(app: LexiApp, set: TestSet, onExit: () -> Unit, onCards: (Wro
             Box(Modifier.weight(1f))
             if (!finished) Button(onClick = { submitting = true }, Modifier.testTag("runner-submit")) { Text("Nộp bài") }
         }
-        if (finished) Result(app, set, attempt, onCards = onCards, onAgain = { restarting = true }, onSaved = { id -> persist(attempt.copy(resultNoteId = id)) })
-        else Questions(set, attempt.answers, review = false) { q, l -> persist(attempt.copy(answers = attempt.answers + (q.i to l))) }
+        if (player != null && !perQuestion) ListenBar(set, player)
+        if (finished) Result(app, set, attempt, player, onCards = onCards, onAgain = { restarting = true }, onSaved = { id -> persist(attempt.copy(resultNoteId = id)) })
+        else Questions(app, set, attempt.answers, review = false, player = player) { q, l -> persist(attempt.copy(answers = attempt.answers + (q.i to l))) }
     }
     if (submitting) {
         val left = set.questions.size - attempt.answers.size
         ConfirmDialog(
             title = "Nộp bài?", message = if (left > 0) "Còn $left câu chưa làm, sẽ tính là sai." else "Lexi chấm ngay theo bảng đáp án.", confirm = "Nộp bài",
-            onConfirm = { submitting = false; persist(attempt.copy(elapsedMs = elapsed, finishedAt = System.currentTimeMillis()), rebase = true) },
+            onConfirm = { submitting = false; player?.pause(); persist(attempt.copy(elapsedMs = elapsed, finishedAt = System.currentTimeMillis()), rebase = true) },
             onDismiss = { submitting = false },
         )
     }
@@ -554,34 +677,48 @@ private fun Runner(app: LexiApp, set: TestSet, onExit: () -> Unit, onCards: (Wro
 }
 
 @Composable
-private fun Questions(set: TestSet, answers: Map<Int, String>, review: Boolean, shown: List<SetQuestion> = set.questions, header: @Composable () -> Unit = {}, onChoose: (SetQuestion, String) -> Unit = { _, _ -> }) {
+private fun Questions(app: LexiApp, set: TestSet, answers: Map<Int, String>, review: Boolean, player: ListenPlayer?, shown: List<SetQuestion> = set.questions, header: @Composable () -> Unit = {}, onChoose: (SetQuestion, String) -> Unit = { _, _ -> }) {
     val c = Lexi.colors
     val lines = remember(shown) { linesOf(shown) }
     LazyColumn(Modifier.fillMaxSize().testTag("runner-list"), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { header() }
         items(lines) { l ->
             when (l) {
-                is Line.Head -> Text(l.part?.let { "Part $it" } ?: "Câu khác", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, modifier = Modifier.padding(top = 6.dp))
+                is Line.Head -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(l.part?.let { "Part $it" } ?: "Câu khác", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, modifier = Modifier.padding(top = 6.dp))
+                    val part = l.part
+                    if (part != null && part <= 4) Pictures(app, set, part)
+                }
                 is Line.Passage -> Panel(Modifier.testTag("runner-passage")) {
                     val p = set.passages[l.index]
                     if (p.label.isNotEmpty()) Text(p.label, fontSize = 12.sp, color = c.muted, fontWeight = FontWeight.Bold)
                     Text(reflow(p.text), fontSize = 15.sp, lineHeight = 22.sp)
                 }
-                is Line.Question -> QuestionCard(l.q, answers[l.q.i], review) { onChoose(l.q, it) }
+                is Line.Question -> QuestionCard(l.q, answers[l.q.i], review, player) { onChoose(l.q, it) }
             }
         }
     }
 }
 
 @Composable
-private fun QuestionCard(q: SetQuestion, pick: String?, review: Boolean, onChoose: (String) -> Unit) {
+private fun QuestionCard(q: SetQuestion, pick: String?, review: Boolean, player: ListenPlayer?, onChoose: (String) -> Unit) {
     val c = Lexi.colors
     val wrong = review && q.correct != null && pick != q.correct
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(c.surface).border(if (wrong) 2.dp else 1.dp, if (wrong) c.againSoft else c.line, RoundedCornerShape(22.dp)).padding(14.dp).testTag("runner-q"),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text("${q.number ?: (q.i + 1)}. " + q.stem.ifEmpty { "Nghe và chọn đáp án" }, fontSize = 15.sp, lineHeight = 21.sp)
+        val own = q.track
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("${q.number ?: (q.i + 1)}. " + q.stem.ifEmpty { "Nghe và chọn đáp án" }, Modifier.weight(1f), fontSize = 15.sp, lineHeight = 21.sp)
+            if (player != null && own != null) {
+                val on = player.track == own && player.playing
+                TextButton(onClick = { if (on) player.pause() else player.play(own) }, Modifier.testTag("q-play")) {
+                    Icon(if (on) Icons.Filled.Pause else Icons.Filled.PlayArrow, null)
+                    Text(if (on) " Dừng" else " Nghe")
+                }
+            }
+        }
         for (l in q.letters()) {
             val right = review && l == q.correct
             val bad = review && l == pick && l != q.correct
@@ -607,7 +744,7 @@ private fun QuestionCard(q: SetQuestion, pick: String?, review: Boolean, onChoos
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Result(app: LexiApp, set: TestSet, attempt: Attempt, onCards: (WrongDrafts) -> Unit, onAgain: () -> Unit, onSaved: (String) -> Unit) {
+private fun Result(app: LexiApp, set: TestSet, attempt: Attempt, player: ListenPlayer?, onCards: (WrongDrafts) -> Unit, onAgain: () -> Unit, onSaved: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     val toast = LocalToaster.current
     val c = Lexi.colors
@@ -628,7 +765,7 @@ private fun Result(app: LexiApp, set: TestSet, attempt: Attempt, onCards: (Wrong
         }
     }
 
-    Questions(set, attempt.answers, review = true, shown = shown, header = {
+    Questions(app, set, attempt.answers, review = true, player = player, shown = shown, header = {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Panel(Modifier.testTag("runner-result")) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -662,4 +799,41 @@ private fun Result(app: LexiApp, set: TestSet, attempt: Attempt, onCards: (Wrong
             }
         }
     })
+}
+
+private fun mmss(ms: Int): String { val s = ms / 1000; return "${s / 60}:${(s % 60).toString().padStart(2, '0')}" }
+
+/** The test's audio played straight through, as in the exam room: play and pause, no seeking. */
+@Composable
+private fun ListenBar(set: TestSet, player: ListenPlayer) {
+    val n = set.tracks.size
+    val at = player.track
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("listen-bar"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Button(onClick = player::toggle, Modifier.testTag("listen-toggle")) {
+            Icon(if (player.playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, null)
+            Text(if (player.playing) " Tạm dừng" else if (at == null) " Bắt đầu nghe" else " Nghe tiếp")
+        }
+        Text(
+            if (at == null) "$n file nghe" else "File ${at + 1}/$n · ${mmss(player.atMs)} / ${mmss(player.durationMs)}",
+            Modifier.weight(1f).testTag("listen-pos"), fontSize = 13.sp, color = Lexi.colors.muted, maxLines = 2,
+        )
+    }
+}
+
+/** Part 1 photos, the pages kept as pictures at import, read from the set's own folder. */
+@Composable
+private fun Pictures(app: LexiApp, set: TestSet, part: Int) {
+    val list = remember(set.id, part) { set.pictures.filter { it.part == part } }
+    if (list.isEmpty()) return
+    Column(Modifier.testTag("runner-pictures"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (p in list) {
+            var img by remember(p.key) { mutableStateOf<ImageBitmap?>(null) }
+            LaunchedEffect(p.key) {
+                img = withContext(Dispatchers.IO) { runCatching { android.graphics.BitmapFactory.decodeFile(app.testSets.mediaFile(p.key).path)?.asImageBitmap() }.getOrNull() }
+            }
+            val b = img
+            if (b != null) Image(b, "Trang ${p.page}", Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).border(1.dp, Lexi.colors.line, RoundedCornerShape(14.dp)).testTag("runner-picture"), contentScale = ContentScale.FillWidth)
+            else Text("Trang ${p.page}…", fontSize = 13.sp, color = Lexi.colors.muted)
+        }
+    }
 }
