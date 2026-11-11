@@ -211,6 +211,23 @@ service cloud.firestore {
         && optInt(d, 'updatedAt');
     }
 
+    // ------------------------------------------------------------ test sets (Bộ đề)
+    // Only what every device needs to list a set and continue it: the questions, audio and pictures are files in
+    // Cloud Storage (storage.rules.tmpl, users/{uid}/testsets/{id}/...), named in `files`. `state` is the attempt in
+    // progress and the replay positions as JSON text, written while the learner works.
+    function validTestSet(d, id) {
+      return d.keys().hasAll(['id', 'name', 'section', 'createdAt', 'updatedAt', 'files', 'bytes'])
+        && d.keys().hasOnly(['id', 'name', 'section', 'createdAt', 'updatedAt', 'files', 'bytes', 'questions', 'state'])
+        && d.id == id && id.matches('^[A-Za-z0-9_-]{1,90}$')
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 200
+        && d.section in ['rc', 'lc']
+        && d.createdAt is int && d.updatedAt is int
+        && d.files is list && d.files.size() >= 1 && d.files.size() <= 400
+        && intIn(d.bytes, 0, 4000000000)
+        && (!('questions' in d) || intIn(d.questions, 0, 1000))
+        && optStr(d, 'state', 200000);
+    }
+
     // ------------------------------------------------------------ routes
     match /users/{uid}/decks/{id} {
       allow get: if owner(uid);
@@ -270,6 +287,17 @@ service cloud.firestore {
     }
     match /users/{uid}/settings/{other} {
       allow list: if owner(uid) && request.query.limit <= 5;
+    }
+
+    // Bộ đề: listed when the Bộ đề screen opens, never by a listener at start (Firestore cost stays ~0).
+    match /users/{uid}/testsets/{id} {
+      allow get: if owner(uid);
+      allow list: if owner(uid) && request.query.limit <= 200;
+      allow create: if owner(uid) && validTestSet(request.resource.data, id);
+      allow update: if owner(uid) && validTestSet(request.resource.data, id)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.section == resource.data.section;
+      allow delete: if owner(uid);
     }
 
     // Quota counters (users/{uid}/meta/*) and anything unknown: only the Cloud Functions (admin SDK) can touch them.

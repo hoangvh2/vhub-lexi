@@ -266,3 +266,54 @@ describe("list queries must be bounded", () => {
     await assertSucceeds(getDocs(query(collection(db, ...path("daily")), limit(800))));
   });
 });
+
+describe("Bộ đề (test sets): the small document every device lists", () => {
+  const ID = "0b9c6f1e-2f43-4a3a-9d0e-7a1c2b3d4e5f";
+  const set = () => ({
+    id: ID,
+    name: "ETS 2024 Test 1 LC",
+    section: "lc",
+    createdAt: 1762800000000,
+    updatedAt: 1762800000000,
+    files: ["set.json", "media/a0", "media/p1"],
+    bytes: 41_000_000,
+    questions: 100,
+    state: JSON.stringify({ attempt: { startedAt: 1, elapsedMs: 0, answers: { 0: "A" } }, clips: [] }),
+  });
+  const put = (d, id = ID) => setDoc(doc(me(), ...path("testsets", id)), d);
+
+  it("accepts the document the apps write, lists it, updates the state, deletes it", async () => {
+    await assertSucceeds(put(set()));
+    await assertSucceeds(getDocs(query(collection(me(), ...path("testsets")), limit(200))));
+    await assertSucceeds(put({ ...set(), updatedAt: 1762800009999, state: "{}" }));
+    await assertSucceeds(deleteDoc(doc(me(), ...path("testsets", ID))));
+  });
+  it("a set from before (no questions, no state) is fine", async () => {
+    const { questions, state, ...bare } = set();
+    await assertSucceeds(put(bare));
+  });
+  it("rejects wrong shapes, other ids, unknown fields, an oversized state", async () => {
+    await assertFails(put({ ...set(), id: "other" }));
+    await assertFails(put({ ...set(), id: "a b" }, "a b"));
+    await assertFails(put({ ...set(), section: "ielts" }));
+    await assertFails(put({ ...set(), name: "" }));
+    await assertFails(put({ ...set(), files: [] }));
+    await assertFails(put({ ...set(), files: "set.json" }));
+    await assertFails(put({ ...set(), bytes: -1 }));
+    await assertFails(put({ ...set(), questions: 1001 }));
+    await assertFails(put({ ...set(), pdf: "base64…" }));
+    await assertFails(put({ ...set(), state: "x".repeat(200_001) }));
+  });
+  it("createdAt and section cannot change on update", async () => {
+    await assertSucceeds(put(set()));
+    await assertFails(put({ ...set(), createdAt: 5 }));
+    await assertFails(put({ ...set(), section: "rc" }));
+  });
+  it("only the owner, and lists are bounded", async () => {
+    await assertSucceeds(put(set()));
+    const bob = env.authenticatedContext("bob", claims("owner@example.com")).firestore();
+    await assertFails(getDoc(doc(bob, ...path("testsets", ID))));
+    await assertFails(getDocs(query(collection(me(), ...path("testsets")), limit(201))));
+    await assertFails(getDocs(collection(me(), ...path("testsets"))));
+  });
+});

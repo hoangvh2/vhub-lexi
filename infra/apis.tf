@@ -19,6 +19,7 @@ locals {
     "artifactregistry.googleapis.com",
     "logging.googleapis.com",
     "storage.googleapis.com",
+    "firebasestorage.googleapis.com",
     "billingbudgets.googleapis.com",
   ]
 }

@@ -19,6 +19,7 @@ infra/tfplan
 
 # Generated
 firestore.rules
+storage.rules
 web/public/dict/
 web/.vite/
 functions/lib/

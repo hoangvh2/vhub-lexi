@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// GENERATED into storage.rules by scripts/configure.mjs; Terraform fills the same template at deploy time.
+// Same model as firestore.rules.tmpl: one allowlisted Google account, its own users/{uid}/ folder, nothing else.
+//
+// Bộ đề (test sets): users/{uid}/testsets/{setId}/set.json (the questions) and .../media/{name} (Listening audio,
+// page pictures). The PDF itself is never uploaded.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function allowedUser() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.auth.token.email.lower() in [__ALLOWED_EMAILS__];
+    }
+
+    function owner(uid) {
+      return allowedUser() && request.auth.uid == uid;
+    }
+
+    function okSet(id) {
+      return id.matches('^[A-Za-z0-9_-]{1,90}$');
+    }
+
+    match /users/{uid}/testsets/{setId}/set.json {
+      allow get, delete: if owner(uid) && okSet(setId);
+      allow create, update: if owner(uid) && okSet(setId)
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType == 'application/json';
+    }
+
+    // a0, a1… (audio files in play order), p3, p12… (page pictures by page number).
+    match /users/{uid}/testsets/{setId}/media/{name} {
+      allow get, delete: if owner(uid) && okSet(setId);
+      allow create, update: if owner(uid) && okSet(setId)
+        && name.matches('^[ap][0-9]{1,4}$')
+        && request.resource.size < 200 * 1024 * 1024
+        && (request.resource.contentType.matches('audio/.*') || request.resource.contentType.matches('image/.*')
+            || request.resource.contentType == 'application/octet-stream');
+    }
+
+    // No listing (the Firestore document names the files), nothing outside users/{uid}/testsets.
+    match /{all=**} {
+      allow read, write: if false;
+    }
+  }
+}
