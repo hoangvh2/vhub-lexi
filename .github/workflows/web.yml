@@ -12,6 +12,7 @@ on:
       - "infra/**"
       - "firebase.json"
       - "firestore.rules.tmpl"
+      - "storage.rules.tmpl"
       - "package.json"
       - ".github/workflows/web.yml"
   pull_request:
