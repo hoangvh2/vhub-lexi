@@ -30,7 +30,16 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.core.Extracted
 import com.vh.lexi.core.ExtractedPassage
 import com.vh.lexi.core.ExtractedQuestion
+import com.vh.lexi.cloud.SetsCloud
+import com.vh.lexi.core.Attempt
+import com.vh.lexi.core.CloudMeta
+import com.vh.lexi.core.SetQuestion
+import com.vh.lexi.core.SetSource
+import com.vh.lexi.core.TestSet
+import com.vh.lexi.core.contentOf
+import com.vh.lexi.core.metaOf
 import com.vh.lexi.core.str
+import com.vh.lexi.core.toJson
 import com.vh.lexi.ui.MainActivity
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -106,6 +115,27 @@ class TestSetsTest {
     fun tearDown() {
         watchdog?.interrupt()
         app.extractOverride = null
+        app.testSets.useCloud(null)
+    }
+
+    /** The account in memory (Firestore documents + Storage files), as the web would have filled it. */
+    private class FakeAccount : SetsCloud {
+        val docs = java.util.concurrent.ConcurrentHashMap<String, CloudMeta>()
+        val files = java.util.concurrent.ConcurrentHashMap<String, ByteArray>()
+        override suspend fun list() = docs.values.toList()
+        override suspend fun putFile(id: String, path: String, file: File, contentType: String, onSent: (Long) -> Unit) {
+            files["$id/$path"] = file.readBytes()
+            onSent(file.length())
+        }
+        override suspend fun getFile(id: String, path: String, into: File) {
+            into.parentFile?.mkdirs()
+            into.writeBytes(files["$id/$path"] ?: error("object-not-found"))
+        }
+        override suspend fun putMeta(meta: CloudMeta) { docs[meta.id] = meta }
+        override suspend fun remove(id: String, files: List<String>) {
+            docs.remove(id)
+            files.forEach { this.files.remove("$id/$it") }
+        }
     }
 
     private fun runBlockingLoad() = kotlinx.coroutines.runBlocking { app.testSets.load(force = true) }
@@ -502,6 +532,67 @@ class TestSetsTest {
         bmp.getPixels(px, 0, bmp.width, 0, 0, bmp.width, bmp.height)
         for (p in px) if (((p shr 16 and 0xff) + (p shr 8 and 0xff) + (p and 0xff)) / 3 < 128) dark++
         assertTrue("dark pixels $dark of ${px.size}", dark > px.size / 200)
+    }
+
+    @Test
+    fun syncWithTheAccount() {
+        val acct = FakeAccount()
+        // A set imported on another device (the web): its questions in set.json, the attempt in the document.
+        fun q(i: Int, n: Int, correct: String) = SetQuestion(
+            i = i, number = n, part = 5, kind = "fill", stem = "Question $n _____ here.", options = mapOf("A" to "one", "B" to "two", "C" to "three", "D" to "four"),
+            correct = correct, passage = null, topic = "Khác", rule = "", translation = "", flags = emptyList(),
+        )
+        val web = TestSet(
+            id = "web-set-1", name = "Đề từ máy tính", createdAt = 1_000, updatedAt = 2_000, section = "rc", source = SetSource("ets.pdf", 2),
+            passages = emptyList(), questions = listOf(q(0, 101, "A"), q(1, 102, "B")), attempt = Attempt(1_500, 60_000, mapOf(0 to "A")),
+        )
+        acct.files["web-set-1/set.json"] = contentOf(web).toJson().toString().toByteArray()
+        acct.docs["web-set-1"] = metaOf(web, 900)
+        app.testSets.useCloud(acct)
+
+        openSets()
+        waitFor("set-remote") { count("set-remote") > 0 }
+        assertEquals(0, count("set-row"))
+        assertTrue(textOf("set-remote-size"), textOf("set-remote-size").contains("Trên tài khoản"))
+        assertTrue(count("sets-cloud") > 0)
+        shot("sets-sync-1-remote")
+        rule.onNodeWithTag("set-download").performScrollTo().performClick()
+        waitFor("runner-after-download") { count("runner-list") > 0 }
+        val got = app.testSets.sets.value.single()
+        assertEquals(mapOf(0 to "A"), got.attempt?.answers)
+        assertTrue(got.syncedAt != null)
+
+        // Continue here: the answer goes back to the document.
+        pick(102, "C")
+        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("set-row") { count("set-row") > 0 }
+        kotlinx.coroutines.runBlocking { app.testSets.flushSync() }
+        val state = acct.docs.getValue("web-set-1").state
+        assertTrue(state, state.contains("\"1\":\"C\"") && state.contains("\"0\":\"A\""))
+        shot("sets-sync-2-continued")
+
+        // A set made on this phone is uploaded: its file, then its document.
+        kotlinx.coroutines.runBlocking {
+            app.testSets.save(web.copy(id = "phone-set-1", name = "Đề trên điện thoại", attempt = null, createdAt = 3_000))
+            app.testSets.flushSync()
+        }
+        assertTrue(acct.files.containsKey("phone-set-1/set.json"))
+        assertEquals(listOf("set.json"), acct.docs.getValue("phone-set-1").files)
+
+        // Delete asks first and says it is everywhere: Huỷ keeps it, Xoá removes it from the account.
+        rule.onAllNodes(hasTestTag("set-delete"))[0].performScrollTo().performClick()
+        waitFor("delete-dialog") { countText("khỏi tài khoản và mọi thiết bị") > 0 }
+        dialogButton("Huỷ").performClick()
+        assertEquals(2, acct.docs.size)
+        rule.onAllNodes(hasTestTag("set-delete"))[0].performScrollTo().performClick()
+        waitFor("delete-dialog-2") { countText("khỏi tài khoản và mọi thiết bị") > 0 }
+        dialogButton("Xoá").performClick()
+        waitFor("one-left") { acct.docs.size == 1 && count("set-row") == 1 }
+        // Deleted on another device: gone from the account, so this phone drops its copy on the next sync.
+        acct.docs.clear()
+        kotlinx.coroutines.runBlocking { app.testSets.sync() }
+        waitFor("sets-empty-after-sync") { count("sets-empty") > 0 }
+        assertTrue(app.testSets.sets.value.isEmpty())
     }
 }
 
