@@ -293,6 +293,16 @@ class TestSetsTest {
         assertEquals(0, File(app.filesDir, "testsets").listFiles { f -> f.name.endsWith(".json") }!!.size)
     }
 
+    /**
+     * Ends typing in "Trang cần đọc" with a tap on the answer-key pill right above it (always on screen with it): the
+     * Listening fields further down are reached by scrolling, and a focused field pulls the page back to itself.
+     */
+    private fun doneTypingRange() {
+        val tag = if (count("pdf-key") > 0) "pdf-key" else "pdf-nokey"
+        rule.onNodeWithTag(tag).performTouchInput { click() }
+        rule.waitForIdle()
+    }
+
     /** Ends typing as a learner would, with a tap on an empty spot: a focused field pulls the page back to itself. */
     private fun doneTyping() {
         rule.onNodeWithTag("lc-help").performTouchInput { click() } // no scroll: just above the fields being typed in
@@ -328,9 +338,9 @@ class TestSetsTest {
         openSets()
         importFixture("listening-test.pdf")
         rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("2-4")
+        doneTypingRange()
         rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
         waitFor("lc-setup") { count("lc-setup") > 0 }
-        doneTyping() // "Trang cần đọc" was typed in: a focused field pulls the page back when scrolled away from
         rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("1-2")
         rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("3-5")
         doneTyping()
@@ -414,9 +424,9 @@ class TestSetsTest {
         // A scanned book: no text layer, so Lexi cannot find the photo pages and asks for them.
         importFixture("reading-test-scan.pdf")
         rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("1-2")
+        doneTypingRange()
         rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
         waitFor("lc-setup") { count("lc-setup") > 0 }
-        doneTyping() // "Trang cần đọc" was typed in: a focused field pulls the page back when scrolled away from
         rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("1-2")
         rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("3-5")
         doneTyping()
@@ -449,9 +459,9 @@ class TestSetsTest {
         openSets()
         importFixture("listening-test.pdf")
         rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("4")
+        doneTypingRange()
         rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
         waitFor("lc-setup") { count("lc-setup") > 0 }
-        doneTyping() // "Trang cần đọc" was typed in: a focused field pulls the page back when scrolled away from
         rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("1-2")
         rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("")
         doneTyping()
@@ -495,9 +505,9 @@ class TestSetsTest {
         openSets()
         importFixture("listening-test.pdf")
         rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("4")
+        doneTypingRange()
         rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
         waitFor("lc-setup") { count("lc-setup") > 0 }
-        doneTyping() // "Trang cần đọc" was typed in: a focused field pulls the page back when scrolled away from
         rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("")
         rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("3-5")
         doneTyping()
