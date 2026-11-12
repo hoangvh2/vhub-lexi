@@ -50,6 +50,78 @@ export function isKeyPage(text: string): boolean {
   return covered / Math.max(1, rest) >= (titled ? 0.25 : 0.45);
 }
 
+// "PART 1" / "Part I" as a heading, not "Part 10" or "Part II"; the Part 1 directions ("statements about a picture").
+const PART1_RE = /(?<![A-Za-z])part\s*(?:1|I)(?![\dA-Za-z])|statements?\s+about\s+(?:a|the|each)\s+(?:picture|photo)/i;
+const PART2_RE = /(?<![A-Za-z])part\s*(?:2|II)(?![\dA-Za-z])/i;
+const PART34_RE = /(?<![A-Za-z])part\s*(?:3|4|III|IV)(?![\dA-Za-z])/i;
+/** A photo page of Part 1 holds little text: its number, maybe the directions. More than this is a page of questions. */
+const PHOTO_PAGE_CHARS = 600;
+/** Part 1 has 6 photos: printed 1–3 to a page, never more than this many pages. */
+const PHOTO_PAGES_MAX = 6;
+/** The first photo page may also carry the Listening directions and the Part 1 directions. */
+const PHOTO_START_CHARS = 1500;
+
+/**
+ * The Part 1 photo pages of a Listening PDF whose text layer says so: a page headed "PART 1" (or with the Part 1
+ * directions), then the pages after it that hold little text, until "PART 2" (its page kept when a photo is printed
+ * above the heading), a key or a page of questions. Only one
+ * such run counts: a book with a Part 1 in every unit, or a contents page, gives nothing and the learner types the
+ * pages. Scanned pages have no text, so a scanned book gives nothing either.
+ */
+export function findPhotoPages(pages: readonly PdfPage[]): number[] {
+  const runs: number[][] = [];
+  const size = (t: string) => t.replace(/\s/g, "").length;
+  for (let i = 0; i < pages.length; i++) {
+    const p = pages[i];
+    // A contents page names every part.
+    if (!PART1_RE.test(p.text) || PART34_RE.test(p.text) || isKeyPage(p.text) || size(p.text) > PHOTO_START_CHARS) continue;
+    const run = [p.n];
+    let j = i + 1;
+    if (!PART2_RE.test(p.text)) {
+      for (; j < pages.length && run.length < PHOTO_PAGES_MAX; j++) {
+        const q = pages[j];
+        if (q.n !== run[run.length - 1] + 1 || PART34_RE.test(q.text) || isKeyPage(q.text)) break;
+        const p2 = PART2_RE.exec(q.text);
+        if (p2) {
+          // The last photo above the Part 2 heading ("6." then "PART 2") keeps its page; a page headed PART 2 does not.
+          if (size(q.text.slice(0, p2.index)) >= 2) run.push(q.n);
+          j++;
+          break;
+        }
+        if (size(q.text) > PHOTO_PAGE_CHARS) break;
+        run.push(q.n);
+      }
+    }
+    runs.push(run);
+    i = j - 1;
+  }
+  return runs.length === 1 ? runs[0] : [];
+}
+
+/** The Part 1 numbers printed on a photo page ("1." / "2)" starting a line), within the Part 1 range. */
+export function photoNumbers(text: string, p1: readonly [number, number] | null): number[] {
+  if (!p1) return [];
+  const out = [...text.matchAll(/(?:^|\n)[^\S\n]*(\d{1,3})[^\S\n]*[.)](?=\s|$)/g)].map((x) => Number(x[1])).filter((n) => n >= p1[0] && n <= p1[1]);
+  return [...new Set(out)].sort((a, b) => a - b);
+}
+
+/**
+ * Where each Part 1 photo page shows in the test: the position, among the Part 1 questions (`part1`, their numbers
+ * in order), of the question it goes above, so a photo sits next to its answers instead of all photos above all
+ * questions. A page goes above the first question printed on it; a page with no number read (a scan, the directions
+ * page) is placed by spreading the pages evenly. Never before the page ahead of it.
+ */
+export function photoSlots(pictures: ReadonlyArray<{ numbers?: readonly number[] }>, part1: ReadonlyArray<number | null>): number[] {
+  const out: number[] = [];
+  const k = pictures.length;
+  for (const [i, p] of pictures.entries()) {
+    const at = (p.numbers ?? []).map((n) => part1.indexOf(n)).filter((x) => x >= 0);
+    const slot = at.length ? Math.min(...at) : Math.floor((i * part1.length) / k);
+    out.push(Math.max(slot, out[i - 1] ?? 0));
+  }
+  return out;
+}
+
 /** The answer key of the PDF: the pairs found on its key pages. */
 /**
  * Pages typed as "45-60, 290-292" (also "45–60", "45 đến 60", spaces or ";" between) → sorted page numbers within
@@ -230,7 +302,7 @@ export interface TestSet {
   /** Listening: the audio, played in this order during the test. */
   tracks?: SetTrack[];
   /** Listening: pages kept as pictures (Part 1 photos, graphics of Part 3–4), stored under `${id}:p${n}`. */
-  pictures?: Array<{ part: SetPart | null; page: number; key: string }>;
+  pictures?: Array<{ part: SetPart | null; page: number; key: string; numbers?: number[] }>;
   passages: SetPassage[];
   questions: SetQuestion[];
   attempt?: Attempt;

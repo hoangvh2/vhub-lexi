@@ -112,6 +112,78 @@ fun formatPages(pages: List<Int>): String {
     return out.joinToString(", ")
 }
 
+// "PART 1" / "Part I" as a heading, not "Part 10" or "Part II"; the Part 1 directions ("statements about a picture").
+private val PART1_RE = Regex("(?i)(?<![A-Za-z])part$WS*(?:1|I)(?![\\dA-Za-z])|statements?$WS+about$WS+(?:a|the|each)$WS+(?:picture|photo)")
+private val PART2_RE = Regex("(?i)(?<![A-Za-z])part$WS*(?:2|II)(?![\\dA-Za-z])")
+private val PART34_RE = Regex("(?i)(?<![A-Za-z])part$WS*(?:3|4|III|IV)(?![\\dA-Za-z])")
+/** A photo page of Part 1 holds little text: its number, maybe the directions. More than this is a page of questions. */
+private const val PHOTO_PAGE_CHARS = 600
+/** Part 1 has 6 photos: printed 1–3 to a page, never more than this many pages. */
+private const val PHOTO_PAGES_MAX = 6
+/** The first photo page may also carry the Listening directions and the Part 1 directions. */
+private const val PHOTO_START_CHARS = 1500
+
+/**
+ * The Part 1 photo pages of a Listening PDF whose text layer says so (web: lib/testset.ts findPhotoPages): a page
+ * headed "PART 1" (or with the Part 1 directions), then the pages after it that hold little text, until "PART 2" (its
+ * page kept when a photo is printed above the heading), a key or a page of questions. Only one such run counts.
+ */
+fun findPhotoPages(pages: List<PdfPage>): List<Int> {
+    val runs = mutableListOf<List<Int>>()
+    fun size(t: String) = t.replace(ANY_WS, "").length
+    var i = 0
+    while (i < pages.size) {
+        val p = pages[i]
+        // A contents page names every part.
+        if (!PART1_RE.containsMatchIn(p.text) || PART34_RE.containsMatchIn(p.text) || isKeyPage(p.text) || size(p.text) > PHOTO_START_CHARS) { i++; continue }
+        val run = mutableListOf(p.n)
+        var j = i + 1
+        if (!PART2_RE.containsMatchIn(p.text)) {
+            while (j < pages.size && run.size < PHOTO_PAGES_MAX) {
+                val q = pages[j]
+                if (q.n != run.last() + 1 || PART34_RE.containsMatchIn(q.text) || isKeyPage(q.text)) break
+                val p2 = PART2_RE.find(q.text)
+                if (p2 != null) {
+                    // The last photo above the Part 2 heading ("6." then "PART 2") keeps its page; a page headed PART 2 does not.
+                    if (size(q.text.substring(0, p2.range.first)) >= 2) run += q.n
+                    j++
+                    break
+                }
+                if (size(q.text) > PHOTO_PAGE_CHARS) break
+                run += q.n
+                j++
+            }
+        }
+        runs += run
+        i = j
+    }
+    return if (runs.size == 1) runs[0] else emptyList()
+}
+
+private val PHOTO_NUMBER = Regex("(?:^|\\n)[$WS_CHARS&&[^\\n]]*(\\d{1,3})[$WS_CHARS&&[^\\n]]*[.)](?=$WS|$)")
+
+/** The Part 1 numbers printed on a photo page ("1." / "2)" starting a line), within the Part 1 range (web: photoNumbers). */
+fun photoNumbers(text: String, p1: IntRange?): List<Int> {
+    if (p1 == null) return emptyList()
+    return PHOTO_NUMBER.findAll(text).map { it.groupValues[1].toInt() }.filter { it in p1 }.distinct().sorted().toList()
+}
+
+/**
+ * Where each Part 1 photo page shows in the test (web: photoSlots): the position, among the Part 1 questions ([part1],
+ * their numbers in order), of the question it goes above. A page goes above the first question printed on it; a page
+ * with no number read is placed by spreading the pages evenly. Never before the page ahead of it.
+ */
+fun photoSlots(pictures: List<List<Int>>, part1: List<Int?>): List<Int> {
+    val out = mutableListOf<Int>()
+    val k = pictures.size
+    pictures.forEachIndexed { i, numbers ->
+        val at = numbers.map { part1.indexOf(it) }.filter { it >= 0 }
+        val slot = if (at.isNotEmpty()) at.min() else (i.toLong() * part1.size / k).toInt()
+        out += maxOf(slot, out.lastOrNull() ?: 0)
+    }
+    return out
+}
+
 data class FoundKey(val key: LinkedHashMap<Int, String>, val keyPages: List<Int>)
 
 /** The answer key of the PDF: the pairs found on its key pages. */
@@ -253,7 +325,7 @@ data class Attempt(
 data class SetTrack(val key: String, val name: String, val bytes: Long)
 
 /** A page kept as a picture (Part 1 photos), stored under [key]. */
-data class SetPicture(val part: Int?, val page: Int, val key: String)
+data class SetPicture(val part: Int?, val page: Int, val key: String, val numbers: List<Int> = emptyList())
 
 data class SetSource(val fileName: String, val pages: Int, val range: String? = null)
 
@@ -659,7 +731,7 @@ fun TestSet.toJson(): JSONObject = JSONObject()
     .put("passages", JSONArray(passages.map { JSONObject().put("label", it.label).put("text", it.text).put("truncated", it.truncated) }))
     .put("questions", JSONArray(questions.map { it.toJson() }))
     .put("tracks", JSONArray(tracks.map { JSONObject().put("key", it.key).put("name", it.name).put("bytes", it.bytes) }))
-    .put("pictures", JSONArray(pictures.map { JSONObject().put("part", it.part ?: JSONObject.NULL).put("page", it.page).put("key", it.key) }))
+    .put("pictures", JSONArray(pictures.map { p -> JSONObject().put("part", p.part ?: JSONObject.NULL).put("page", p.page).put("key", p.key).apply { if (p.numbers.isNotEmpty()) put("numbers", JSONArray(p.numbers)) } }))
     .apply {
         attempt?.let { a ->
             put("attempt", JSONObject().put("startedAt", a.startedAt).put("elapsedMs", a.elapsedMs)
@@ -679,7 +751,7 @@ fun testSetFromJson(o: JSONObject): TestSet {
         passages = o.optJSONArray("passages")?.objs()?.map { SetPassage(it.strOr("label"), it.strOr("text"), it.optBoolean("truncated")) } ?: emptyList(),
         questions = o.optJSONArray("questions")?.objs()?.map(::setQuestionFromJson) ?: emptyList(),
         tracks = o.optJSONArray("tracks")?.objs()?.map { SetTrack(it.getString("key"), it.strOr("name"), it.optLong("bytes")) } ?: emptyList(),
-        pictures = o.optJSONArray("pictures")?.objs()?.map { SetPicture(it.intOrNull("part"), it.getInt("page"), it.getString("key")) } ?: emptyList(),
+        pictures = o.optJSONArray("pictures")?.objs()?.map { p -> SetPicture(p.intOrNull("part"), p.getInt("page"), p.getString("key"), p.optJSONArray("numbers")?.let { a -> List(a.length()) { a.getInt(it) } } ?: emptyList()) } ?: emptyList(),
         attempt = a?.let {
             val ans = it.optJSONObject("answers")
             Attempt(

@@ -10,7 +10,7 @@ import { decodeLevels, findGaps, mmss as clipTime, placeQuestions } from "../lib
 import { openPdf, readPages, renderPage, type PdfDoc } from "../lib/pdf.ts";
 import { PARTS, formatScore } from "../lib/practice.ts";
 import { useStore } from "../lib/store.ts";
-import { LC_LAYOUT, LC_PARTS, lettersOf, parseNumberRange, sortTracks, type LcLayout, type SetTrack } from "../lib/testset.ts";
+import { LC_LAYOUT, LC_PARTS, findPhotoPages, lettersOf, photoNumbers, photoSlots, parseNumberRange, sortTracks, type LcLayout, type SetTrack } from "../lib/testset.ts";
 import { chunkPages, findKey, formatPages, grade, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, reflow, resultFields, summary, wrongDrafts, type Chunk, type PdfPage, type SetQuestion, type TestSet } from "../lib/testset.ts";
 import { Icon, confirmDialog, toast } from "./common.tsx";
 import { DraftReview, type Review } from "./ImportPanel.tsx";
@@ -24,6 +24,8 @@ const hook = (): Hook | undefined => (globalThis as unknown as { __lexiExtract?:
 const COST = { text: 2, images: 3 } as const;
 /** A whole book scanned is often 100+ MB; pdf.js reads it page by page, the file itself is held once in memory. */
 const MAX_PDF_BYTES = 150 * 1024 * 1024;
+/** Photo pages shown small at import (Part 1 has at most 6 photos). */
+const PHOTO_THUMBS = 6;
 /** AI quota per day (functions/src/config.ts dailyEnrich, shared by every AI call): a choice that costs more cannot finish today. */
 const DAILY_QUOTA = 300;
 
@@ -181,6 +183,9 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
   const [p1, setP1] = useState(`${LC_LAYOUT.p1![0]}-${LC_LAYOUT.p1![1]}`);
   const [p2, setP2] = useState(`${LC_LAYOUT.p2![0]}-${LC_LAYOUT.p2![1]}`);
   const [photoRange, setPhotoRange] = useState("");
+  /** The learner typed the photo pages: Lexi's own guess no longer fills them in. */
+  const [photosTyped, setPhotosTyped] = useState(false);
+  const [photoThumbs, setPhotoThumbs] = useState<Record<string, string>>({});
   const [audio, setAudio] = useState<File[]>([]);
   const audioInput = useRef<HTMLInputElement>(null);
   /** Extra turn for scans fed into the copier upside down: 0 or 180. */
@@ -209,7 +214,13 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
     return a === undefined || b === undefined ? null : { p1: a, p2: b };
   }, [p1, p2]);
   const photos = useMemo(() => (picked && photoRange.trim() ? parsePageRange(photoRange, picked.pages.length) : []), [picked, photoRange]);
-  const lcReady = section === "rc" || (!!layout && photos !== null);
+  // Part 1 is answered by looking at its photos: without their pages the test cannot be taken, so they are asked for.
+  const needPhotos = section === "lc" && !!layout?.p1 && photos !== null && photos.length === 0;
+  const detected = useMemo(() => (picked ? findPhotoPages(picked.pages) : []), [picked]);
+  useEffect(() => {
+    if (section === "lc" && !photosTyped && detected.length) setPhotoRange(formatPages(detected));
+  }, [section, detected, photosTyped]);
+  const lcReady = section === "rc" || (!!layout && photos !== null && !needPhotos);
   // Photo pages are kept as pictures, not read: a Part 1 page has nothing but photos and numbers on it.
   const chunks: Chunk[] = useMemo(
     () => chunkPages(pages, new Set([...found.keyPages, ...(section === "lc" ? photos ?? [] : [])])),
@@ -231,6 +242,9 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
       setRange("");
       setTurn(0);
       setThumb(null);
+      setPhotoRange("");
+      setPhotosTyped(false);
+      setPhotoThumbs({});
       setName(f.name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " ").trim().slice(0, 60) || "Bộ đề");
       setDraft(null);
     } catch {
@@ -302,7 +316,9 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
         const pictures = await Promise.all((photos ?? []).map(async (n) => {
           const r = await renderPage(picked.doc, n, { turn });
           // Decoded here, not with fetch(data:): the site's CSP connect-src has no data:.
-          return { part: 1 as const, page: n, key: `${id}:p${n}`, blob: new Blob([Uint8Array.from(atob(r.data), (c) => c.charCodeAt(0))], { type: r.mime }) };
+          // The Part 1 numbers printed on the page place it above its own questions in the test.
+          const numbers = photoNumbers(picked.pages[n - 1]?.text ?? "", layout?.p1 ?? null);
+          return { part: 1 as const, page: n, key: `${id}:p${n}`, ...(numbers.length ? { numbers } : {}), blob: new Blob([Uint8Array.from(atob(r.data), (c) => c.charCodeAt(0))], { type: r.mime }) };
         }));
         await saveMedia([...audio.map((f, i) => ({ key: tracks[i].key, blob: f as Blob })), ...pictures.map((p) => ({ key: p.key, blob: p.blob }))]);
         // As many files as questions (a book with one file per question): each question plays its own.
@@ -310,7 +326,7 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
         lc = {
           section: "lc",
           tracks,
-          pictures: pictures.map(({ part, page, key }) => ({ part, page, key })),
+          pictures: pictures.map(({ blob: _, ...p }) => p),
           ...(perQuestion ? { questions: draft.set.questions.map((q, i) => ({ ...q, track: i })) } : {}),
         };
       }
@@ -349,6 +365,8 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
     setThumb(null);
     setSection("rc");
     setPhotoRange("");
+    setPhotosTyped(false);
+    setPhotoThumbs({});
     setAudio([]);
     setError("");
     setOpen(false);
@@ -366,6 +384,25 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
       .catch(() => live && setThumb(null));
     return () => void (live = false);
   }, [picked, firstScan, turn, draft]);
+  // The photo pages, small, as they will show in the test: the learner sees at once whether they are the right ones.
+  const shownPhotos = section === "lc" && photos ? photos.slice(0, PHOTO_THUMBS) : [];
+  useEffect(() => {
+    if (!picked || draft) return;
+    let live = true;
+    void (async () => {
+      for (const n of shownPhotos) {
+        const k = `${n}:${turn}`;
+        if (photoThumbs[k] || !live) continue;
+        try {
+          const r = await renderPage(picked.doc, n, { turn, px: 360, quality: 0.7 });
+          if (live) setPhotoThumbs((x) => ({ ...x, [k]: `data:${r.mime};base64,${r.data}` }));
+        } catch {
+          /* the page shows its number only */
+        }
+      }
+    })();
+    return () => void (live = false);
+  }, [picked, shownPhotos.join(","), turn, draft]);
   const whole = !!picked && pages.length === picked.pages.length;
   const sum = draft ? summary(draft.set) : null;
 
@@ -422,6 +459,7 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
           {section === "lc" && (
             <div class="col lc-setup" data-testid="lc-setup">
               <p class="muted small">Part 1–2 chỉ in số câu: Lexi tạo sẵn các câu này, AI chỉ đọc trang Part 3–4. Ở “Trang cần đọc” nên chọn trang Part 3–4 và trang đáp án.</p>
+              <p class="muted small" data-testid="lc-parts-help">Part 1: mỗi câu một ảnh, nghe 4 câu mô tả (A–D), nên cần trang ảnh bên dưới. Part 2: không có ảnh, không in câu hỏi, chỉ nghe một câu hỏi và 3 câu đáp (A–C).</p>
               <div class="row lc-ranges">
                 <div class="field">
                   <label for="lc-p1">Part 1: câu</label>
@@ -434,9 +472,18 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
               </div>
               {!layout && <span class="pill bad wrap" role="alert" data-testid="lc-layout-bad">Khoảng số câu viết như “1-6”, hoặc để trống.</span>}
               <div class="field">
-                <label for="lc-photos">Trang ảnh Part 1 (giữ nguyên ảnh để xem khi làm bài)</label>
-                <input id="lc-photos" class="input" value={photoRange} placeholder="vd: 3-4" onInput={(e) => setPhotoRange(e.currentTarget.value)} data-testid="lc-photos" />
+                <label for="lc-photos">Trang ảnh Part 1 (số trang trong file PDF, giữ nguyên ảnh để xem khi làm bài)</label>
+                <input id="lc-photos" class="input" value={photoRange} placeholder="vd: 3-4" onInput={(e) => { setPhotosTyped(true); setPhotoRange(e.currentTarget.value); }} data-testid="lc-photos" />
                 {photos === null && <span class="pill bad wrap" role="alert">Trang không hợp lệ: file có {picked.pages.length} trang.</span>}
+                {needPhotos && <span class="pill bad wrap" role="alert" data-testid="lc-photos-need">Part 1 cần trang ảnh: ghi số trang có ảnh (vd 3-4). Đề không có Part 1 thì xoá ô “Part 1: câu”.</span>}
+                {!photosTyped && detected.length > 0 && photoRange === formatPages(detected) && <span class="pill ok wrap" data-testid="lc-photos-found">Lexi thấy ảnh Part 1 ở trang {formatPages(detected)}. Xem ảnh dưới đây, sai thì sửa lại.</span>}
+                {shownPhotos.length > 0 && (
+                  <div class="photo-thumbs" data-testid="lc-photo-thumbs">
+                    {shownPhotos.map((n) => (photoThumbs[`${n}:${turn}`]
+                      ? <figure key={n}><img src={photoThumbs[`${n}:${turn}`]} alt={`Trang ${n}`} data-testid="lc-photo-thumb" /><figcaption class="muted small">Trang {n}</figcaption></figure>
+                      : <div key={n} class="scan-ph muted small">Trang {n}…</div>))}
+                  </div>
+                )}
               </div>
               <div class="field">
                 <span class="lbl">File nghe</span>
@@ -627,9 +674,24 @@ function ListenBar({ set, player }: { set: TestSet; player: Player }) {
   );
 }
 
+/** What a Part 1–2 question asks of the learner, said where the part starts (nothing of it is printed in the test). */
+function PartHelp({ set, part }: { set: TestSet; part: number | null }) {
+  if (part === 1) {
+    const photos = (set.pictures ?? []).some((p) => p.part === 1);
+    return (
+      <>
+        <p class="muted small part-help" data-testid="part-help-1">Mỗi câu một ảnh: nhìn ảnh, nghe 4 câu mô tả (A–D), chọn câu đúng với ảnh nhất.</p>
+        {!photos && <p class="pill warn wrap" role="note" data-testid="part1-no-photos">Bộ đề này lưu khi chưa có trang ảnh Part 1 nên không có ảnh. Nhập lại file PDF và điền “Trang ảnh Part 1” để có ảnh.</p>}
+      </>
+    );
+  }
+  if (part === 2) return <p class="muted small part-help" data-testid="part-help-2">Part 2 không có ảnh và không in câu hỏi: nghe một câu hỏi rồi 3 câu đáp (A–C), chọn câu đáp hợp nhất.</p>;
+  return null;
+}
+
 /** Part 1 photos (pages kept as pictures at import), read from the device store as data URLs (CSP img-src data:). */
-function Pictures({ set, part }: { set: TestSet; part: number }) {
-  const list = (set.pictures ?? []).filter((p) => p.part === part);
+function Pictures({ set, part, keys }: { set: TestSet; part: number; keys?: readonly string[] }) {
+  const list = (set.pictures ?? []).filter((p) => p.part === part && (!keys || keys.includes(p.key)));
   const [srcs, setSrcs] = useState<Record<string, string>>({});
   useEffect(() => {
     let live = true;
@@ -642,7 +704,7 @@ function Pictures({ set, part }: { set: TestSet; part: number }) {
       });
     }
     return () => void (live = false);
-  }, [set.id, part]);
+  }, [set.id, part, keys?.join(",")]);
   if (!list.length) return null;
   return (
     <div class="pictures" data-testid="runner-pictures">
@@ -738,6 +800,14 @@ function Questions({ set, answers, onChoose, review, player, onNudge, all }: {
 }) {
   let lastPart: number | null | undefined;
   let lastPassage: number | null = null;
+  // Part 1 photos above their own questions while taking the test; a review of some questions shows them all at the top.
+  const photos1 = (set.pictures ?? []).filter((p) => p.part === 1);
+  const part1 = set.questions.filter((q) => q.part === 1);
+  const slots = !all && photos1.length && part1.length ? photoSlots(photos1, part1.map((q) => q.number)) : null;
+  const photosAbove = (q: SetQuestion) => {
+    const k = slots ? part1.indexOf(q) : -1;
+    return k < 0 ? [] : photos1.filter((_, i) => slots![i] === k).map((p) => p.key);
+  };
   return (
     <div class="col">
       {set.questions.map((q) => {
@@ -748,7 +818,9 @@ function Questions({ set, answers, onChoose, review, player, onNudge, all }: {
         return (
           <div key={q.i} class="col" style={{ gap: "10px" }}>
             {head !== undefined && <h3 class="part-head">{head ? `Part ${head}` : "Câu khác"}</h3>}
-            {head !== undefined && head !== null && head <= 4 && <Pictures set={set} part={head} />}
+            {head !== undefined && q.kind === "listen" && !review && <PartHelp set={set} part={head} />}
+            {head !== undefined && head !== null && head <= 4 && !(head === 1 && slots) && <Pictures set={set} part={head} />}
+            {slots && photosAbove(q).length > 0 && <Pictures set={set} part={1} keys={photosAbove(q)} />}
             {showPassage && (
               <article class="panel passage" data-testid="runner-passage">
                 {set.passages[q.passage!].label && <b class="muted small">{set.passages[q.passage!].label}</b>}

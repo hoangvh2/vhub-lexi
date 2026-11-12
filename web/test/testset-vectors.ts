@@ -6,7 +6,7 @@ import type { Extracted, ExtractedQuestion, Letter } from "../src/lib/import.ts"
 import { layoutText, type TextItem } from "../src/lib/pdf.ts";
 import { findGaps, frameLevels, mmss, placeQuestions, questionSpans } from "../src/lib/audio.ts";
 import {
-  chunkPages, findKey, formatPages, grade, isKeyPage, keyNote, keyPairs, lcPartOfNumber, lettersOf, listenQuestions, mergeExtracted, numbersIn,
+  chunkPages, findKey, findPhotoPages, formatPages, photoNumbers, photoSlots, grade, isKeyPage, keyNote, keyPairs, lcPartOfNumber, lettersOf, listenQuestions, mergeExtracted, numbersIn,
   parseNumberRange, parsePageRange, partOfNumber, reflow, resultFields, sortTracks, summary, wrongDrafts, type LcLayout, type PdfPage,
 } from "../src/lib/testset.ts";
 
@@ -42,6 +42,23 @@ const pageSets: Array<{ pages: PdfPage[]; skip: number[] }> = [
   },
   { pages: [{ n: 1, text: longPage, scanned: false }, { n: 2, text: "147. What is the notice about?\n(A) A sale", scanned: false }], skip: [] },
   { pages: [{ n: 9, text: "x".repeat(6200), scanned: false }], skip: [] },
+];
+
+const pp = (n: number, text: string, scanned = false): PdfPage => ({ n, text, scanned });
+const lcDirections = "LISTENING TEST In the Listening test, you will be asked to demonstrate how well you understand spoken English.\nPART 1\nDirections: For each question in this part, you will hear four statements about a picture in your test book.";
+const photoPageSets: PdfPage[][] = [
+  [pp(1, "Lexi Practice Test 3"), pp(2, lcDirections), pp(3, "1.\n2."), pp(4, "3.\n4."), pp(5, "5.\n6."), pp(6, "PART 2\n7. Mark your answer on your answer sheet."), pp(7, "ANSWER KEY 1 A 2 B 3 C 4 D 5 A 6 B 7 C")],
+  [pp(2, lcDirections), pp(3, "", true), pp(4, "", true), pp(5, "PART 2")],
+  [pp(1, "PART 1\n1."), pp(2, "2. PART 2 7. Mark your answer"), pp(3, "")],
+  [pp(1, "Part I 1."), pp(2, "32. Where are the speakers? ".repeat(40))],
+  [pp(1, "Part 10 Part II and part in it")],
+  [pp(1, "Contents\nPart 1 .... 4\nPart 2 .... 9\nPart 3 .... 14"), pp(2, "")],
+  [pp(1, "", true), pp(2, "", true)],
+  [pp(1, "Unit 1 PART 1 1."), pp(2, "PART 2"), pp(9, "Unit 2 PART 1 1."), pp(10, "PART 2")],
+  Array.from({ length: 9 }, (_, k) => pp(k + 1, k ? `${k}.` : "PART 1")),
+  [pp(3, "PART 1 1."), pp(7, "2.")],
+  [pp(1, "PART\u00a01\u2003photos"), pp(2, "x".repeat(601)), pp(3, "")],
+  [pp(1, "y".repeat(1501) + " PART 1")],
 ];
 
 const results: Array<{ name: string; results: Extracted[]; key: Array<[number, Letter]>; lc?: LcLayout; answers: Record<number, Letter>; existing: string[] }> = [
@@ -171,6 +188,19 @@ export function testsetVectors() {
     lcParts: [null, 1, 2, 3, 5, 6, 7, 31, 32, 70, 71, 100, 101].map((n) => ({ n, default: lcPartOfNumber(n), custom: lcPartOfNumber(n, { p1: [1, 2], p2: [3, 5] }), none: lcPartOfNumber(n, { p1: null, p2: null }) })),
     numberRanges: ["1-6", " 7 – 31 ", "3 đến 5", "3 TO 5", "12", "", "6-1", "0-3", "1-201", "a-b", "1-2-3"].map((text) => ({ text, out: parseNumberRange(text) ?? (parseNumberRange(text) === null ? null : "invalid") })),
     listen: [{ p1: [1, 2], p2: [3, 5] }, { p1: null, p2: [7, 8] }].map((layout) => ({ layout, key: [[1, "A"], [2, "D"], [3, "D"], [4, "B"], [7, "C"]], out: listenQuestions(layout as LcLayout, new Map([[1, "A"], [2, "D"], [3, "D"], [4, "B"], [7, "C"]] as Array<[number, Letter]>)) })),
+    photoSlots: ([
+      [[{}, {}, {}, {}], [1, 2, 3, 4, 5, 6]],
+      [[{}, {}, {}], [1, 2, 3, 4, 5, 6]],
+      [[{ numbers: [1] }, { numbers: [2, 3] }, { numbers: [4, 5] }, { numbers: [6] }], [1, 2, 3, 4, 5, 6]],
+      [[{}, { numbers: [1, 2] }, { numbers: [3, 4] }, { numbers: [5, 6] }], [1, 2, 3, 4, 5, 6]],
+      [[{ numbers: [3] }, { numbers: [1] }], [1, 2, 3]],
+      [[{ numbers: [9] }, {}], [1, 2]],
+      [[{}], []],
+      [[], [1]],
+      [[{}, {}, {}, {}, {}, {}, {}], [1, 2, 3, 4, 5, 6]],
+    ] as Array<[Array<{ numbers?: number[] }>, number[]]>).map(([pictures, part1]) => ({ pictures, part1, out: photoSlots(pictures, part1) })),
+    photoNumbers: ([["1.\n2.", [1, 6]], ["LISTENING TEST\nPART 1\n\n1.\n\n2.", [1, 6]], ["6.\nPART 2\n7. Mark your answer", [1, 6]], [" 3)\n4 .\n 5.5 \n12. x", [1, 20]], ["1.\u00a0", null], ["3.\n1.\n3.", [1, 6]]] as Array<[string, [number, number] | null]>).map(([text, p1]) => ({ text, p1, out: photoNumbers(text, p1) })),
+    photoPages: photoPageSets.map((pages) => ({ pages, out: findPhotoPages(pages) })),
     tracks: [["010.mp3", "002 - intro.mp3", "Track 1.mp3", "b.mp3", "a.mp3", "mp3.mp3", "track10.MP3", "track9.mp3"]].map((names) => ({ names, out: sortTracks(names.map((name) => ({ name }))).map((t) => t.name) })),
     letters: [{ options: opts("a", "b", "", ""), choices: undefined }, { options: opts("", "", "", ""), choices: 3 }, { options: opts("", "", "", ""), choices: undefined }, { options: opts("a", "", "c", "d"), choices: 3 }].map((o) => ({ ...o, out: lettersOf(o) })),
     merges: results.map((c) => {
