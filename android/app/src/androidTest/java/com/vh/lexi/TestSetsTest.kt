@@ -330,6 +330,7 @@ class TestSetsTest {
         rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("2-4")
         rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
         waitFor("lc-setup") { count("lc-setup") > 0 }
+        doneTyping() // "Trang cần đọc" was typed in: a focused field pulls the page back when scrolled away from
         rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("1-2")
         rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("3-5")
         doneTyping()
@@ -415,6 +416,7 @@ class TestSetsTest {
         rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("1-2")
         rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
         waitFor("lc-setup") { count("lc-setup") > 0 }
+        doneTyping() // "Trang cần đọc" was typed in: a focused field pulls the page back when scrolled away from
         rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("1-2")
         rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("3-5")
         doneTyping()
@@ -449,6 +451,7 @@ class TestSetsTest {
         rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("4")
         rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
         waitFor("lc-setup") { count("lc-setup") > 0 }
+        doneTyping() // "Trang cần đọc" was typed in: a focused field pulls the page back when scrolled away from
         rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("1-2")
         rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("")
         doneTyping()
@@ -494,6 +497,7 @@ class TestSetsTest {
         rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("4")
         rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
         waitFor("lc-setup") { count("lc-setup") > 0 }
+        doneTyping() // "Trang cần đọc" was typed in: a focused field pulls the page back when scrolled away from
         rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("")
         rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("3-5")
         doneTyping()

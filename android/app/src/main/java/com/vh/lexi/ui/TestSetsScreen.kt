@@ -571,8 +571,8 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                 }
             }
             if (lc) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(c.surface2).padding(12.dp).testTag("lc-setup"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Part 1–2 chỉ in số câu: Lexi tạo sẵn các câu này, AI chỉ đọc trang Part 3–4. Ở “Trang cần đọc” nên chọn trang Part 3–4 và trang đáp án.", fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("lc-help"))
-                Text("Part 1: mỗi câu một ảnh, nghe 4 câu mô tả (A–D), nên cần trang ảnh bên dưới. Part 2: không có ảnh, không in câu hỏi, chỉ nghe một câu hỏi và 3 câu đáp (A–C).", fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("lc-parts-help"))
+                // One block of text right above the fields: the tests tap it to end typing (TestSetsTest.doneTyping).
+                Text("Part 1–2 chỉ in số câu: Lexi tạo sẵn các câu này, AI chỉ đọc trang Part 3–4. Ở “Trang cần đọc” nên chọn trang Part 3–4 và trang đáp án.\nPart 1: mỗi câu một ảnh, nghe 4 câu mô tả (A–D), nên cần trang ảnh bên dưới. Part 2: không có ảnh, không in câu hỏi, chỉ nghe một câu hỏi và 3 câu đáp (A–C).", fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("lc-help"))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = p1, onValueChange = { p1 = it.take(12) }, singleLine = true, label = { Text("Part 1: câu") }, placeholder = { Text("trống nếu không có") }, modifier = Modifier.weight(1f).keepVisibleWhileTyping().testTag("lc-p1"))
                     OutlinedTextField(value = p2, onValueChange = { p2 = it.take(12) }, singleLine = true, label = { Text("Part 2: câu") }, placeholder = { Text("trống nếu không có") }, modifier = Modifier.weight(1f).keepVisibleWhileTyping().testTag("lc-p2"))
