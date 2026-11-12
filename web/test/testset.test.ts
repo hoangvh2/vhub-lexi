@@ -8,7 +8,7 @@ import type { Extracted, ExtractedQuestion } from "../src/lib/import.ts";
 import { layoutText, openPdf, readPages, type PdfJs, type TextItem } from "../src/lib/pdf.ts";
 import { toResult } from "../src/lib/practice.ts";
 import {
-  CHUNK_CHARS, CHUNK_IMAGES, chunkPages, lcPartOfNumber, lettersOf, parseNumberRange, sortTracks, findKey, formatPages, grade, isKeyPage, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, partOfNumber, resultFields, summary, wrongDrafts,
+  CHUNK_CHARS, CHUNK_IMAGES, chunkPages, findPhotoPages, lcPartOfNumber, photoNumbers, photoSlots, lettersOf, parseNumberRange, sortTracks, findKey, formatPages, grade, isKeyPage, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, partOfNumber, resultFields, summary, wrongDrafts,
   type PdfPage, type TestSet,
 } from "../src/lib/testset.ts";
 
@@ -290,6 +290,45 @@ describe("Listening sets (Part 1–4 with the test's audio)", () => {
     const w = wrongDrafts({ ...m, passages: [] }, g, new Set());
     expect(w.drafts).toEqual([]);
     expect(w.skipped).toBe(2);
+  });
+
+  it("finds the Part 1 photo pages of a text PDF: the PART 1 page and the near-empty pages after it, up to PART 2", async () => {
+    expect(findPhotoPages(await pages("listening-test.pdf"))).toEqual([1]);
+    const page = (n: number, text: string, scanned = false): PdfPage => ({ n, text, scanned });
+    const directions = "LISTENING TEST In the Listening test, you will be asked to demonstrate how well you understand spoken English.\nPART 1\nDirections: For each question in this part, you will hear four statements about a picture in your test book.";
+    const test = [page(1, "Lexi Practice Test 3"), page(2, directions), page(3, "1.\n2."), page(4, "3.\n4."), page(5, "5.\n6."), page(6, "PART 2\n7. Mark your answer on your answer sheet."), page(7, "ANSWER KEY 1 A 2 B 3 C 4 D 5 A 6 B 7 C")];
+    expect(findPhotoPages(test)).toEqual([2, 3, 4, 5]);
+    // Photos that print no text at all (pdf.ts calls such a page scanned) still belong to the run.
+    expect(findPhotoPages([page(2, directions), page(3, "", true), page(4, "", true), page(5, "PART 2")])).toEqual([2, 3, 4]);
+    // Part 2 starting on the last photo page ends the run there; a page of questions ends it too.
+    expect(findPhotoPages([page(1, "PART 1\n1."), page(2, "2. PART 2 7. Mark your answer"), page(3, "")])).toEqual([1, 2]);
+    expect(findPhotoPages([page(1, "Part I 1."), page(2, "32. Where are the speakers? ".repeat(40))])).toEqual([1]);
+    // Not a heading: "Part 10", "Part II", "part in"; a contents page names every part; a scanned book has no text.
+    expect(findPhotoPages([page(1, "Part 10 Part II and part in it")])).toEqual([]);
+    expect(findPhotoPages([page(1, "Contents\nPart 1 .... 4\nPart 2 .... 9\nPart 3 .... 14"), page(2, "")])).toEqual([]);
+    expect(findPhotoPages([page(1, "", true), page(2, "", true)])).toEqual([]);
+    // A book with a Part 1 in every unit: which one is meant is the learner's to say.
+    expect(findPhotoPages([page(1, "Unit 1 PART 1 1."), page(2, "PART 2"), page(9, "Unit 2 PART 1 1."), page(10, "PART 2")])).toEqual([]);
+    // Never more than six pages, and the pages must follow one another.
+    expect(findPhotoPages(Array.from({ length: 9 }, (_, k) => page(k + 1, k ? `${k}.` : "PART 1")))).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(findPhotoPages([page(3, "PART 1 1."), page(7, "2.")])).toEqual([3]);
+  });
+
+  it("puts each Part 1 photo page above its own questions: by the numbers printed on it, else spread evenly", () => {
+    const six = [1, 2, 3, 4, 5, 6];
+    // Text PDF, photo 1 under the directions, two to a page, 6 above Part 2: 1 | 2 3 | 4 5 | 6.
+    const pages = ["PART 1 Directions ... statements about a picture\n1.", "2.\n3.", "4.\n5.", "6.\nPART 2\n7. Mark your answer on your answer sheet."];
+    const numbered = pages.map((t) => ({ numbers: photoNumbers(t, [1, 6]) }));
+    expect(numbered.map((p) => p.numbers)).toEqual([[1], [2, 3], [4, 5], [6]]);
+    expect(photoSlots(numbered, six)).toEqual([0, 1, 3, 5]);
+    // The directions page with only an example photo goes above question 1 too.
+    expect(photoSlots([{}, { numbers: [1, 2] }, { numbers: [3, 4] }, { numbers: [5, 6] }], six)).toEqual([0, 0, 2, 4]);
+    // Scans: no numbers, spread evenly (2 + 2 + 2, 3 + 3).
+    expect(photoSlots([{}, {}, {}], six)).toEqual([0, 2, 4]);
+    expect(photoSlots([{}, {}], six)).toEqual([0, 3]);
+    // Never above a question before the page ahead of it.
+    expect(photoSlots([{ numbers: [3] }, { numbers: [1] }], [1, 2, 3])).toEqual([2, 2]);
+    expect(photoNumbers("1.\n2.", null)).toEqual([]);
   });
 
   it("plays audio files in the order of the number in their names", () => {

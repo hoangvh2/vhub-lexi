@@ -58,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -104,6 +105,9 @@ import com.vh.lexi.core.chunkPages
 import com.vh.lexi.core.cost
 import com.vh.lexi.core.existingSentences
 import com.vh.lexi.core.findKey
+import com.vh.lexi.core.findPhotoPages
+import com.vh.lexi.core.photoNumbers
+import com.vh.lexi.core.photoSlots
 import com.vh.lexi.core.formatPages
 import com.vh.lexi.core.grade
 import com.vh.lexi.core.keyNote
@@ -188,6 +192,9 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
         }
     }
 }
+
+/** Photo pages shown small at import (Part 1 has at most 6 photos). */
+private const val PHOTO_THUMBS = 6
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -314,6 +321,9 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
     var p1 by remember { mutableStateOf("${LC_LAYOUT.p1!!.first}-${LC_LAYOUT.p1!!.last}") }
     var p2 by remember { mutableStateOf("${LC_LAYOUT.p2!!.first}-${LC_LAYOUT.p2!!.last}") }
     var photoRange by remember { mutableStateOf("") }
+    /** The learner typed the photo pages: Lexi's own guess no longer fills them in. */
+    var photosTyped by remember { mutableStateOf(false) }
+    var photoThumbs by remember { mutableStateOf(mapOf<String, ImageBitmap>()) }
     var audio by remember { mutableStateOf(listOf<AudioPick>()) }
     val pendingAudio by app.pendingAudio.collectAsState()
 
@@ -330,7 +340,13 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
     }
     val photos = remember(p, photoRange) { if (p == null || photoRange.isBlank()) emptyList() else parsePageRange(photoRange, p.pages.size) }
     val lc = section == "lc"
-    val lcReady = !lc || (layout != null && photos != null)
+    // Part 1 is answered by looking at its photos: without their pages the test cannot be taken, so they are asked for.
+    val needPhotos = lc && layout?.p1 != null && photos != null && photos.isEmpty()
+    val detected = remember(p) { p?.let { findPhotoPages(it.pages) } ?: emptyList() }
+    LaunchedEffect(lc, detected, photosTyped) {
+        if (lc && !photosTyped && detected.isNotEmpty()) photoRange = formatPages(detected)
+    }
+    val lcReady = !lc || (layout != null && photos != null && !needPhotos)
     // Photo pages are kept as pictures, not read: a Part 1 page has nothing but photos and numbers on it.
     val chunks = remember(pages, found, lc, photos) { chunkPages(pages, found.keyPages.toSet() + if (lc) photos.orEmpty() else emptyList()) }
     val units = cost(chunks)
@@ -340,7 +356,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
 
     fun reset() {
         picked = null; draft = null; pastedKey = ""; range = ""; turn = 0; thumb = null; error = ""; open = false
-        section = "rc"; photoRange = ""; audio = emptyList()
+        section = "rc"; photoRange = ""; photosTyped = false; photoThumbs = emptyMap(); audio = emptyList()
     }
 
     fun pick(uri: Uri) {
@@ -359,7 +375,7 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                     PdfPicked(fileName, file, Pdf.readPages(context, file) { n, of -> loading = "Đang đọc trang $n/$of…" })
                 }
                 picked = r
-                range = ""; turn = 0; thumb = null; draft = null
+                range = ""; turn = 0; thumb = null; draft = null; photoRange = ""; photosTyped = false; photoThumbs = emptyMap()
                 name = fileName.replace(Regex("(?i)\\.pdf$"), "").replace(Regex("[_-]+"), " ").trim().take(60).ifEmpty { "Bộ đề" }
                 android.util.Log.i("Lexi", "pdf opened: ${r.pages.size} pages")
             } catch (e: CancellationException) {
@@ -402,6 +418,17 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
     LaunchedEffect(p, firstScan, turn, draft) {
         if (p == null || firstScan == null || draft != null) return@LaunchedEffect
         thumb = runCatching { withContext(Dispatchers.IO) { Pdf.renderBitmap(p.file, firstScan, turn, 420).asImageBitmap() } }.getOrNull()?.let { Triple(firstScan, turn, it) }
+    }
+    // The photo pages, small, as they will show in the test: the learner sees at once whether they are the right ones.
+    val shownPhotos = if (lc) photos.orEmpty().take(PHOTO_THUMBS) else emptyList()
+    LaunchedEffect(p, shownPhotos, turn, draft) {
+        if (p == null || draft != null) return@LaunchedEffect
+        for (n in shownPhotos) {
+            val k = "$n:$turn"
+            if (photoThumbs.containsKey(k)) continue
+            val b = runCatching { withContext(Dispatchers.IO) { Pdf.renderBitmap(p.file, n, turn, 360).asImageBitmap() } }.getOrNull() ?: continue
+            photoThumbs = photoThumbs + (k to b)
+        }
     }
 
     suspend fun call(images: List<String>, text: String): Extracted = app.extractOverride?.invoke(images, text) ?: app.cloud.extractQuestions(images, text)
@@ -484,7 +511,8 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
                         photos.orEmpty().map { n ->
                             val k = "$id:p$n"
                             store.mediaFile(k).writeBytes(Pdf.renderJpeg(pk.file, n, turn))
-                            SetPicture(1, n, k)
+                            // The Part 1 numbers printed on the page place it above its own questions in the test.
+                            SetPicture(1, n, k, photoNumbers(pk.pages.getOrNull(n - 1)?.text.orEmpty(), layout?.p1))
                         }
                     }
                     // As many files as questions (a book with one file per question): each question plays its own.
@@ -544,13 +572,25 @@ private fun PdfImport(app: LexiApp, onSaved: (TestSet) -> Unit) {
             }
             if (lc) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(c.surface2).padding(12.dp).testTag("lc-setup"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Part 1–2 chỉ in số câu: Lexi tạo sẵn các câu này, AI chỉ đọc trang Part 3–4. Ở “Trang cần đọc” nên chọn trang Part 3–4 và trang đáp án.", fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("lc-help"))
+                Text("Part 1: mỗi câu một ảnh, nghe 4 câu mô tả (A–D), nên cần trang ảnh bên dưới. Part 2: không có ảnh, không in câu hỏi, chỉ nghe một câu hỏi và 3 câu đáp (A–C).", fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("lc-parts-help"))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = p1, onValueChange = { p1 = it.take(12) }, singleLine = true, label = { Text("Part 1: câu") }, placeholder = { Text("trống nếu không có") }, modifier = Modifier.weight(1f).keepVisibleWhileTyping().testTag("lc-p1"))
                     OutlinedTextField(value = p2, onValueChange = { p2 = it.take(12) }, singleLine = true, label = { Text("Part 2: câu") }, placeholder = { Text("trống nếu không có") }, modifier = Modifier.weight(1f).keepVisibleWhileTyping().testTag("lc-p2"))
                 }
                 if (layout == null) Pill("Khoảng số câu viết như “1-6”, hoặc để trống.", PillKind.BAD, Modifier.testTag("lc-layout-bad"), wrap = true)
-                OutlinedTextField(value = photoRange, onValueChange = { photoRange = it.take(60) }, singleLine = true, label = { Text("Trang ảnh Part 1 (giữ ảnh để xem khi làm bài)") }, placeholder = { Text("vd: 3-4") }, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping().testTag("lc-photos"))
+                OutlinedTextField(value = photoRange, onValueChange = { photosTyped = true; photoRange = it.take(60) }, singleLine = true, label = { Text("Trang ảnh Part 1 (số trang trong file PDF)") }, placeholder = { Text("vd: 3-4") }, modifier = Modifier.fillMaxWidth().keepVisibleWhileTyping().testTag("lc-photos"))
                 if (photos == null) Pill("Trang không hợp lệ: file có ${p.pages.size} trang.", PillKind.BAD, wrap = true)
+                if (needPhotos) Pill("Part 1 cần trang ảnh: ghi số trang có ảnh (vd 3-4). Đề không có Part 1 thì xoá ô “Part 1: câu”.", PillKind.BAD, Modifier.testTag("lc-photos-need"), wrap = true)
+                if (!photosTyped && detected.isNotEmpty() && photoRange == formatPages(detected)) Pill("Lexi thấy ảnh Part 1 ở trang ${formatPages(detected)}. Xem ảnh dưới đây, sai thì sửa lại.", PillKind.OK, Modifier.testTag("lc-photos-found"), wrap = true)
+                if (shownPhotos.isNotEmpty()) FlowRow(Modifier.testTag("lc-photo-thumbs"), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (n in shownPhotos) Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(Modifier.size(width = 72.dp, height = 100.dp).clip(RoundedCornerShape(8.dp)).background(Color.White).border(1.dp, c.line, RoundedCornerShape(8.dp))) {
+                            val b = photoThumbs["$n:$turn"]
+                            if (b != null) Image(b, "Trang $n", Modifier.fillMaxSize().testTag("lc-photo-thumb"), contentScale = ContentScale.Fit)
+                        }
+                        Text("Trang $n", fontSize = 11.sp, color = c.muted)
+                    }
+                }
                 OutlinedButton(onClick = { audioLauncher.launch(arrayOf("audio/*")) }, Modifier.fillMaxWidth().testTag("lc-audio-pick")) { Text(if (audio.isNotEmpty()) "Chọn lại file nghe" else "+ Chọn file mp3") }
                 if (audio.isNotEmpty()) {
                     Pill("${audio.size} file · ${mb(audio.sumOf { maxOf(0L, it.bytes) })}", modifier = Modifier.testTag("lc-audio-count"))
@@ -655,13 +695,18 @@ private fun clock(ms: Long): String {
 /** One row of the test: a part heading, a passage, or a question. */
 private sealed class Line {
     data class Head(val part: Int?) : Line()
+    /** Part 1 photo pages shown right above the question they belong to. */
+    data class Photos(val pictures: List<SetPicture>) : Line()
     data class Passage(val index: Int) : Line()
     data class Question(val q: SetQuestion) : Line()
 }
 
 /** The test in order: a part heading where the part changes, each passage once above its first question. */
-private fun linesOf(questions: List<SetQuestion>): List<Line> {
+private fun linesOf(questions: List<SetQuestion>, photos: List<SetPicture> = emptyList()): List<Line> {
     val out = mutableListOf<Line>()
+    // Part 1 photos above their own questions (web: Questions); without them the part's photos show under its heading.
+    val part1 = questions.filter { it.part == 1 }
+    val slots = if (photos.isNotEmpty() && part1.isNotEmpty()) photoSlots(photos.map { it.numbers }, part1.map { it.number }) else null
     var lastPart: Int? = -1
     var lastPassage: Int? = null
     for (q in questions) {
@@ -670,6 +715,11 @@ private fun linesOf(questions: List<SetQuestion>): List<Line> {
         if (passage != null && passage != lastPassage) out += Line.Passage(passage)
         lastPart = q.part
         lastPassage = q.passage
+        if (slots != null && q.part == 1) {
+            val k = part1.indexOf(q)
+            val above = photos.filterIndexed { i, _ -> slots[i] == k }
+            if (above.isNotEmpty()) out += Line.Photos(above)
+        }
         out += Line.Question(q)
     }
     return out
@@ -747,7 +797,10 @@ private fun Runner(app: LexiApp, set: TestSet, onExit: () -> Unit, onCards: (Wro
 @Composable
 private fun Questions(app: LexiApp, set: TestSet, answers: Map<Int, String>, review: Boolean, player: ListenPlayer?, shown: List<SetQuestion> = set.questions, onNudge: ((SetQuestion, Long) -> Unit)? = null, header: @Composable () -> Unit = {}, onChoose: (SetQuestion, String) -> Unit = { _, _ -> }) {
     val c = Lexi.colors
-    val lines = remember(shown) { linesOf(shown) }
+    // Taking the test: Part 1 photos next to their questions. A review of some questions shows them under the heading.
+    val interleave = !review && shown === set.questions
+    val photos1 = remember(set.id) { set.pictures.filter { it.part == 1 } }
+    val lines = remember(shown, interleave) { linesOf(shown, if (interleave) photos1 else emptyList()) }
     LazyColumn(Modifier.fillMaxSize().testTag("runner-list"), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { header() }
         items(lines) { l ->
@@ -755,8 +808,10 @@ private fun Questions(app: LexiApp, set: TestSet, answers: Map<Int, String>, rev
                 is Line.Head -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(l.part?.let { "Part $it" } ?: "Câu khác", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, modifier = Modifier.padding(top = 6.dp))
                     val part = l.part
-                    if (part != null && part <= 4) Pictures(app, set, part)
+                    if (!review && (part == 1 || part == 2) && shown.any { it.part == part && it.kind == "listen" }) PartHelp(set, part)
+                    if (part != null && part <= 4 && !(part == 1 && interleave && photos1.isNotEmpty())) Pictures(app, set, part)
                 }
+                is Line.Photos -> Pictures(app, set, 1, l.pictures)
                 is Line.Passage -> Panel(Modifier.testTag("runner-passage")) {
                     val p = set.passages[l.index]
                     if (p.label.isNotEmpty()) Text(p.label, fontSize = 12.sp, color = c.muted, fontWeight = FontWeight.Bold)
@@ -948,10 +1003,20 @@ private fun ListenBar(set: TestSet, player: ListenPlayer) {
     }
 }
 
+/** What a Part 1–2 question asks of the learner, said where the part starts (nothing of it is printed in the test). */
+@Composable
+private fun PartHelp(set: TestSet, part: Int) {
+    val c = Lexi.colors
+    if (part == 1) {
+        Text("Mỗi câu một ảnh: nhìn ảnh, nghe 4 câu mô tả (A–D), chọn câu đúng với ảnh nhất.", fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("part-help-1"))
+        if (set.pictures.none { it.part == 1 }) Pill("Bộ đề này lưu khi chưa có trang ảnh Part 1 nên không có ảnh. Nhập lại file PDF và điền “Trang ảnh Part 1” để có ảnh.", PillKind.WARN, Modifier.testTag("part1-no-photos"), wrap = true)
+    } else Text("Part 2 không có ảnh và không in câu hỏi: nghe một câu hỏi rồi 3 câu đáp (A–C), chọn câu đáp hợp nhất.", fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("part-help-2"))
+}
+
 /** Part 1 photos, the pages kept as pictures at import, read from the set's own folder. */
 @Composable
-private fun Pictures(app: LexiApp, set: TestSet, part: Int) {
-    val list = remember(set.id, part) { set.pictures.filter { it.part == part } }
+private fun Pictures(app: LexiApp, set: TestSet, part: Int, only: List<SetPicture>? = null) {
+    val list = remember(set.id, part, only) { only ?: set.pictures.filter { it.part == part } }
     if (list.isEmpty()) return
     Column(Modifier.testTag("runner-pictures"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (p in list) {

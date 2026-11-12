@@ -40,6 +40,21 @@ class TestSetVectorsTest {
     }
 
     @Test
+    fun photoPages() {
+        val cases = v.getJSONArray("photoPages").objects()
+        assertTrue(cases.size >= 10)
+        for (c in v.getJSONArray("photoSlots").objects()) {
+            val pics = c.getJSONArray("pictures").objects().map { it.optJSONArray("numbers")?.ints() ?: emptyList() }
+            assertEquals(c.getJSONArray("out").ints(), photoSlots(pics, c.getJSONArray("part1").ints()), c.toString())
+        }
+        for (c in v.getJSONArray("photoNumbers").objects()) {
+            val r = if (c.isNull("p1")) null else c.getJSONArray("p1").let { it.getInt(0)..it.getInt(1) }
+            assertEquals(c.getJSONArray("out").ints(), photoNumbers(c.getString("text"), r), c.toString())
+        }
+        for (c in cases) assertEquals(c.getJSONArray("out").ints(), findPhotoPages(c.getJSONArray("pages").objects().map(::page)), c.getJSONArray("pages").toString())
+    }
+
+    @Test
     fun pagesAndChunks() {
         for (c in v.getJSONArray("pageRanges").objects()) {
             val out = parsePageRange(c.getString("text"), c.getInt("numPages"))

@@ -25,6 +25,7 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.printToString
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.core.Extracted
@@ -331,6 +332,11 @@ class TestSetsTest {
         waitFor("lc-setup") { count("lc-setup") > 0 }
         rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("1-2")
         rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("3-5")
+        doneTyping()
+        // The photo page is found from its "PART 1" heading and shown small, the way it will show in the test.
+        waitFor("photos-found") { count("lc-photos-found") > 0 }
+        assertTrue(textOf("lc-photos-found"), textOf("lc-photos-found").contains("trang 1."))
+        waitFor("photo-thumb") { count("lc-photo-thumb") == 1 }
         rule.onNodeWithTag("lc-photos").performScrollTo().performTextReplacement("1")
         doneTyping()
         pickAudio("listening-03.mp3", "listening-01.mp3", "listening-02.mp3")
@@ -359,6 +365,8 @@ class TestSetsTest {
         waitFor("lc-runner") { count("runner-list") > 0 }
         waitFor("picture", 20_000) { count("runner-picture") > 0 }
         assertEquals(1, count("runner-picture"))
+        assertTrue(textOf("part-help-1"), textOf("part-help-1").contains("nhìn ảnh, nghe 4 câu"))
+        assertEquals(0, count("part1-no-photos"))
         // Straight through, file after file, like the exam: the position moves to the second file by itself.
         rule.onNodeWithTag("listen-toggle").performClick()
         waitFor("file-1") { textOf("listen-pos").contains("File 1/3") }
@@ -397,6 +405,41 @@ class TestSetsTest {
         dialogButton("Xoá").performClick()
         waitFor("lc-deleted") { count("sets-empty") > 0 }
         assertEquals(0, media())
+    }
+
+    @Test
+    fun listeningAsksForPart1PhotoPages() {
+        openSets()
+        // A scanned book: no text layer, so Lexi cannot find the photo pages and asks for them.
+        importFixture("reading-test-scan.pdf")
+        rule.onNodeWithTag("set-range").performScrollTo().performTextReplacement("1-2")
+        rule.onNodeWithTag("set-section-lc").performScrollTo().performClick()
+        waitFor("lc-setup") { count("lc-setup") > 0 }
+        rule.onNodeWithTag("lc-p1").performScrollTo().performTextReplacement("1-2")
+        rule.onNodeWithTag("lc-p2").performScrollTo().performTextReplacement("3-5")
+        doneTyping()
+        waitFor("photos-need") { count("lc-photos-need") > 0 }
+        assertEquals(0, count("lc-photos-found"))
+        rule.onNodeWithTag("pdf-read").performScrollTo().assertIsNotEnabled()
+        shot("sets-10-lc-photos-need")
+        rule.onNodeWithTag("lc-photos").performScrollTo().performTextReplacement("1-2")
+        doneTyping()
+        waitFor("photos-given") { count("lc-photos-need") == 0 }
+        waitFor("photo-thumbs", 20_000) { count("lc-photo-thumb") == 2 }
+        shot("sets-11-lc-photos-typed")
+        // Part 1 on photo pages 1-2, Part 2 numbers only: nothing for the AI to read.
+        assertTrue(textOf("pdf-read"), textOf("pdf-read").contains("không cần AI"))
+        rule.onNodeWithTag("pdf-read").performScrollTo().performClick()
+        waitFor("photo-preview") { count("pdf-preview") > 0 }
+        rule.onNodeWithTag("pdf-save").performScrollTo().performClick()
+        waitFor("photo-row") { count("set-row") > 0 }
+        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        waitFor("photo-runner") { count("runner-list") > 0 }
+        // Each photo page sits above its own questions (page 1 above 1, page 2 above 2): the list composes what is on screen.
+        waitFor("pictures", 20_000) { count("runner-picture") > 0 }
+        assertTrue(textOf("part-help-1"), textOf("part-help-1").contains("nghe 4 câu mô tả"))
+        assertEquals(0, count("part1-no-photos"))
+        shot("sets-12-lc-runner-photos")
     }
 
     @Test

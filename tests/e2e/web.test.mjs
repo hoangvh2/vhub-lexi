@@ -1375,7 +1375,11 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await page.waitForSelector('[data-testid=lc-setup]');
     await page.fill('[data-testid=lc-p1]', "1-2");
     await page.fill('[data-testid=lc-p2]', "3-5");
-    await page.fill('[data-testid=lc-photos]', "1");
+    // The photo page is found from its "PART 1" heading and shown small, the way it will show in the test.
+    assert.equal(await page.inputValue('[data-testid=lc-photos]'), "1");
+    assert.match(await page.textContent('[data-testid=lc-photos-found]'), /trang 1\./);
+    await page.waitForSelector('[data-testid=lc-photo-thumb]');
+    assert.match(await page.textContent('[data-testid=lc-parts-help]'), /Part 2: không có ảnh.*3 câu đáp \(A–C\)/);
     await page.fill('[data-testid=set-range]', "2-4");
     await page.setInputFiles('[data-testid=lc-audio]', ["listening-03.mp3", "listening-01.mp3", "listening-02.mp3"].map((f) => join(FIXTURES, f)));
     assert.match(await page.textContent('[data-testid=lc-audio-list]'), /listening-01.*listening-02.*listening-03/s);
@@ -1403,6 +1407,9 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await page.waitForSelector('[data-testid=runner]');
     await page.waitForSelector('[data-testid=runner-picture]');
     assert.equal(await page.locator('[data-testid=runner-picture]').count(), 1);
+    assert.match(await page.textContent('[data-testid=part-help-1]'), /nhìn ảnh, nghe 4 câu/);
+    assert.match(await page.textContent('[data-testid=part-help-2]'), /3 câu đáp \(A–C\)/);
+    assert.equal(await page.locator('[data-testid=part1-no-photos]').count(), 0);
     assert.deepEqual(await page.$$eval('[data-testid=runner-q] .opts', (els) => els.map((e) => e.querySelectorAll("input").length)), [4, 4, 3, 3, 3, 4, 4, 4]);
     // Straight through, file after file, like the exam: the position moves to the second file by itself.
     await page.click('[data-testid=listen-toggle]');
@@ -1443,6 +1450,75 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await page.click('[data-testid=confirm-ok]');
     await page.waitForSelector('[data-testid=sets-empty]');
     assert.equal(await media(), 0);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("listening: Part 1 cannot be saved without its photo pages; a set saved without them says so in the test", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    const shot = async (name) => shots && (await page.waitForTimeout(400), await page.screenshot({ path: join(shots, `${name}.png`), fullPage: true }));
+    // A scanned book: no text layer, so Lexi cannot find the photo pages and asks for them.
+    await importPdf(page, "reading-test-scan.pdf");
+    await page.click('[data-testid=set-section] >> text=Listening');
+    await page.fill('[data-testid=lc-p1]', "1-2");
+    await page.fill('[data-testid=lc-p2]', "");
+    await page.fill('[data-testid=set-range]', "3");
+    assert.equal(await page.inputValue('[data-testid=lc-photos]'), "");
+    assert.equal(await page.locator('[data-testid=lc-photos-found]').count(), 0);
+    assert.match(await page.textContent('[data-testid=lc-photos-need]'), /Part 1 cần trang ảnh/);
+    assert.equal(await page.isDisabled('[data-testid=pdf-read]'), true);
+    await shot("12-lc-photos-need");
+    await page.fill('[data-testid=lc-photos]', "1-2");
+    assert.equal(await page.locator('[data-testid=lc-photos-need]').count(), 0);
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid=lc-photo-thumb]').length === 2);
+    await shot("13-lc-photos-typed");
+    // No Part 1 in the test: nothing to ask.
+    await page.fill('[data-testid=lc-photos]', "");
+    await page.fill('[data-testid=lc-p1]', "");
+    assert.equal(await page.locator('[data-testid=lc-photos-need]').count(), 0);
+    // Part 1 on the photo pages 1-2, Part 2 numbers only: nothing for the AI to read.
+    await page.fill('[data-testid=lc-p1]', "1-2");
+    await page.fill('[data-testid=lc-p2]', "3-5");
+    await page.fill('[data-testid=lc-photos]', "1-2");
+    await page.fill('[data-testid=set-range]', "1-2");
+    assert.match(await page.textContent('[data-testid=pdf-read]'), /không cần AI/);
+    await page.click('[data-testid=pdf-read]');
+    await page.waitForSelector('[data-testid=pdf-preview]');
+    await page.click('[data-testid=pdf-save]');
+    await page.click('[data-testid=set-open]');
+    await page.waitForSelector('[data-testid=runner]');
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid=runner-picture]').length === 2);
+    assert.deepEqual(await page.$$eval('[data-testid=runner-q] .opts', (els) => els.map((e) => e.querySelectorAll("input").length)), [4, 4, 3, 3, 3]);
+    assert.match(await page.textContent('[data-testid=part-help-1]'), /nhìn ảnh, nghe 4 câu mô tả/);
+    assert.match(await page.textContent('[data-testid=part-help-2]'), /không có ảnh và không in câu hỏi/);
+    assert.equal(await page.locator('[data-testid=part1-no-photos]').count(), 0);
+    await shot("15-lc-runner-photos");
+    await page.click('[data-testid=runner-exit]');
+    // A set saved before photos were asked for (Part 1, no pictures): the test says why there is no photo.
+    await page.waitForSelector('[data-testid=set-open]');
+    await page.waitForTimeout(500); // leaving the test saves the attempt: let that write land first
+    await page.evaluate(() => new Promise((res, rej) => {
+      const r = indexedDB.open("lexi-private");
+      r.onsuccess = () => {
+        const db = r.result;
+        const store = db.transaction("testsets").objectStore("testsets");
+        const all = store.getAll();
+        all.onsuccess = () => {
+          const set = all.result[0];
+          set.pictures = [];
+          const tx = db.transaction("testsets", "readwrite");
+          tx.objectStore("testsets").put(set);
+          tx.oncomplete = () => { db.close(); res(); };
+          tx.onerror = () => rej(tx.error);
+        };
+      };
+    }));
+    await page.reload();
+    await page.waitForSelector('[data-testid=set-open]');
+    await page.click('[data-testid=set-open]');
+    await page.waitForSelector('[data-testid=part1-no-photos]');
+    assert.match(await page.textContent('[data-testid=part1-no-photos]'), /Nhập lại file PDF và điền “Trang ảnh Part 1”/);
+    await shot("14-lc-old-set-no-photos");
     assert.deepEqual(errors, []);
     await ctx.close();
   });
