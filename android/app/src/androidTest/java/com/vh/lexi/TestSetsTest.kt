@@ -479,8 +479,8 @@ class TestSetsTest {
         rule.onNodeWithTag("set-open").performScrollTo().performClick()
         waitFor("p1-runner") { count("runner-list") > 0 }
         assertEquals(0, count("listen-bar"))
-        // The photo page sits above question 1, so question 2 may be below the fold: each is scrolled to first.
-        waitFor("q-play") { count("q-play") > 0 }
+        // The photo page sits above question 1, so the questions may be below the fold: each is scrolled to first.
+        waitFor("q-play") { textIn(2, "q-play").contains("Nghe") }
         tapIn(2, "q-play")
         waitFor("own-playing") { textIn(2, "q-play").contains("Dừng") }
         assertTrue(textIn(1, "q-play").contains("Nghe"))
