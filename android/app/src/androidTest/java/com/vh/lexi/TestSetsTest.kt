@@ -435,9 +435,11 @@ class TestSetsTest {
         rule.onNodeWithTag("pdf-read").performScrollTo().assertIsNotEnabled()
         shot("sets-10-lc-photos-need")
         rule.onNodeWithTag("lc-photos").performScrollTo().performTextReplacement("1-2")
-        doneTyping()
         waitFor("photos-given") { count("lc-photos-need") == 0 }
         waitFor("photo-thumbs", 20_000) { count("lc-photo-thumb") == 2 }
+        // End typing with a tap on the thumbnails right under the field (the help text is above the fold by now).
+        rule.onNodeWithTag("lc-photo-thumbs").performTouchInput { click() }
+        rule.waitForIdle()
         shot("sets-11-lc-photos-typed")
         // Part 1 on photo pages 1-2, Part 2 numbers only: nothing for the AI to read.
         assertTrue(textOf("pdf-read"), textOf("pdf-read").contains("không cần AI"))
@@ -477,13 +479,13 @@ class TestSetsTest {
         rule.onNodeWithTag("set-open").performScrollTo().performClick()
         waitFor("p1-runner") { count("runner-list") > 0 }
         assertEquals(0, count("listen-bar"))
-        waitFor("q-play") { count("q-play") == 2 }
-        val plays = rule.onAllNodes(hasTestTag("q-play"))
-        plays[1].performClick()
-        waitFor("own-playing") { rule.textOfNth("q-play", 1).contains("Dừng") }
-        assertTrue(rule.textOfNth("q-play", 0).contains("Nghe"))
-        plays[1].performClick()
-        waitFor("own-stopped") { rule.textOfNth("q-play", 1).contains("Nghe") }
+        // The photo page sits above question 1, so question 2 may be below the fold: each is scrolled to first.
+        waitFor("q-play") { count("q-play") > 0 }
+        tapIn(2, "q-play")
+        waitFor("own-playing") { textIn(2, "q-play").contains("Dừng") }
+        assertTrue(textIn(1, "q-play").contains("Nghe"))
+        tapIn(2, "q-play")
+        waitFor("own-stopped") { textIn(2, "q-play").contains("Nghe") }
     }
 
     private fun card(n: Int) = hasTestTag("runner-q") and hasAnyDescendant(startsWith("$n. "))
@@ -492,6 +494,13 @@ class TestSetsTest {
     private fun rangeOf(n: Int): String {
         rule.onNodeWithTag("runner-list").performScrollToNode(card(n))
         return rule.onAllNodes(hasTestTag("q-replay-range") and hasAnyAncestor(card(n)), useUnmergedTree = true).fetchSemanticsNodes()
+            .flatMap { it.allTexts() }.joinToString(" ")
+    }
+
+    /** The text of [tag] inside question [n], scrolled into view first. */
+    private fun textIn(n: Int, tag: String): String {
+        rule.onNodeWithTag("runner-list").performScrollToNode(card(n))
+        return rule.onAllNodes(hasTestTag(tag) and hasAnyAncestor(card(n)), useUnmergedTree = true).fetchSemanticsNodes()
             .flatMap { it.allTexts() }.joinToString(" ")
     }
 
