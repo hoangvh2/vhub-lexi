@@ -1,0 +1,521 @@
+{
+ "notes": [
+  {
+   "id": "n01",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "postpone",
+    "vi": "hoãn lại; trì hoãn",
+    "pos": "verb"
+   },
+   "createdAt": 1,
+   "updatedAt": 1,
+   "forgot": [
+    "meaning"
+   ],
+   "forgotAt": 500
+  },
+  {
+   "id": "n02",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "delay",
+    "vi": "trì hoãn; sự chậm trễ",
+    "pos": "verb"
+   },
+   "createdAt": 1,
+   "updatedAt": 1
+  },
+  {
+   "id": "n03",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "receipt",
+    "vi": "biên lai, hoá đơn",
+    "pos": "noun"
+   },
+   "createdAt": 1,
+   "updatedAt": 1,
+   "forgot": [
+    "sound"
+   ],
+   "forgotAt": 900
+  },
+  {
+   "id": "n04",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "invoice",
+    "vi": "hoá đơn",
+    "pos": "noun"
+   },
+   "createdAt": 1,
+   "updatedAt": 1
+  },
+  {
+   "id": "n05",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "venue",
+    "vi": "địa điểm tổ chức",
+    "pos": "noun"
+   },
+   "createdAt": 1,
+   "updatedAt": 1,
+   "forgot": [
+    "meaning",
+    "sound"
+   ],
+   "forgotAt": 700
+  },
+  {
+   "id": "n06",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "attend",
+    "vi": "tham dự",
+    "pos": "verb"
+   },
+   "createdAt": 1,
+   "updatedAt": 1
+  },
+  {
+   "id": "n07",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "launch",
+    "vi": "ra mắt (sản phẩm)",
+    "pos": "verb"
+   },
+   "createdAt": 1,
+   "updatedAt": 1
+  },
+  {
+   "id": "n08",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "budget",
+    "vi": "ngân sách",
+    "pos": "noun"
+   },
+   "createdAt": 1,
+   "updatedAt": 1
+  },
+  {
+   "id": "n09",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "colleague",
+    "vi": "đồng nghiệp",
+    "pos": "noun"
+   },
+   "createdAt": 1,
+   "updatedAt": 1
+  },
+  {
+   "id": "n10",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "reimburse",
+    "vi": "hoàn tiền; bồi hoàn",
+    "pos": "verb"
+   },
+   "createdAt": 1,
+   "updatedAt": 1,
+   "forgot": [
+    "meaning"
+   ],
+   "forgotAt": 700
+  },
+  {
+   "id": "n11",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "nomeaning",
+    "vi": "",
+    "pos": "noun"
+   },
+   "createdAt": 1,
+   "updatedAt": 1,
+   "forgot": [
+    "meaning"
+   ],
+   "forgotAt": 100
+  },
+  {
+   "id": "n12",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "seat",
+    "vi": "chỗ ngồi; ghế",
+    "pos": "noun"
+   },
+   "createdAt": 1,
+   "updatedAt": 1,
+   "forgot": [
+    "spelling",
+    "sound"
+   ],
+   "forgotAt": 50
+  },
+  {
+   "id": "g1",
+   "type": "grammar",
+   "deckId": "d1",
+   "fields": {
+    "sentence": "x",
+    "answer": "y"
+   },
+   "forgot": [
+    "meaning"
+   ],
+   "forgotAt": 999,
+   "createdAt": 1,
+   "updatedAt": 1
+  },
+  {
+   "id": "n13",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "long",
+    "vi": "một nghĩa rất dài một nghĩa rất dài một nghĩa rất dài một nghĩa rất dài một nghĩa rất dài một nghĩa rất dài; nghĩa hai",
+    "pos": "adj"
+   },
+   "createdAt": 1,
+   "updatedAt": 1
+  }
+ ],
+ "forgotOf": [
+  [
+   "meaning"
+  ],
+  [],
+  [
+   "sound"
+  ],
+  [],
+  [
+   "meaning",
+   "sound"
+  ],
+  [],
+  [],
+  [],
+  [],
+  [
+   "meaning"
+  ],
+  [
+   "meaning"
+  ],
+  [
+   "sound"
+  ],
+  [
+   "meaning"
+  ],
+  []
+ ],
+ "shortMeaning": [
+  "hoãn lại",
+  "trì hoãn",
+  "biên lai, hoá đơn",
+  "hoá đơn",
+  "địa điểm tổ chức",
+  "tham dự",
+  "ra mắt (sản phẩm)",
+  "ngân sách",
+  "đồng nghiệp",
+  "hoàn tiền",
+  "",
+  "chỗ ngồi",
+  "",
+  "một nghĩa rất dài một nghĩa rất dài một nghĩa rất dài một nghĩa rất dài một ngh…"
+ ],
+ "forgotNotes": [
+  "n03",
+  "n05",
+  "n10",
+  "n01",
+  "n11",
+  "n12"
+ ],
+ "withForgot": [
+  {
+   "id": "n02",
+   "kind": "meaning",
+   "on": true,
+   "forgot": [
+    "meaning"
+   ],
+   "forgotAt": 2000,
+   "updatedAt": 2000
+  },
+  {
+   "id": "n01",
+   "kind": "meaning",
+   "on": false,
+   "forgot": null,
+   "forgotAt": null,
+   "updatedAt": 2000
+  },
+  {
+   "id": "n01",
+   "kind": "sound",
+   "on": true,
+   "forgot": [
+    "meaning",
+    "sound"
+   ],
+   "forgotAt": 2000,
+   "updatedAt": 2000
+  },
+  {
+   "id": "n05",
+   "kind": "sound",
+   "on": false,
+   "forgot": [
+    "meaning"
+   ],
+   "forgotAt": 700,
+   "updatedAt": 2000
+  },
+  {
+   "id": "n05",
+   "kind": "meaning",
+   "on": true,
+   "forgot": [
+    "meaning",
+    "sound"
+   ],
+   "forgotAt": 700,
+   "updatedAt": 2000
+  },
+  {
+   "id": "n03",
+   "kind": "sound",
+   "on": true,
+   "forgot": [
+    "sound"
+   ],
+   "forgotAt": 900,
+   "updatedAt": 2000
+  },
+  {
+   "id": "n12",
+   "kind": "sound",
+   "on": false,
+   "forgot": null,
+   "forgotAt": null,
+   "updatedAt": 2000
+  }
+ ],
+ "meaningOptions": [
+  {
+   "id": "n01",
+   "seed": "s",
+   "out": [
+    "n10",
+    "n01",
+    "n07",
+    "n06"
+   ]
+  },
+  {
+   "id": "n01",
+   "seed": "t",
+   "out": [
+    "n01",
+    "n06",
+    "n07",
+    "n10"
+   ]
+  },
+  {
+   "id": "n05",
+   "seed": "s",
+   "out": [
+    "n09",
+    "n08",
+    "n05",
+    "n12"
+   ]
+  },
+  {
+   "id": "n05",
+   "seed": "t",
+   "out": [
+    "n05",
+    "n08",
+    "n12",
+    "n09"
+   ]
+  },
+  {
+   "id": "n10",
+   "seed": "s",
+   "out": [
+    "n10",
+    "n07",
+    "n01",
+    "n02"
+   ]
+  },
+  {
+   "id": "n10",
+   "seed": "t",
+   "out": [
+    "n01",
+    "n02",
+    "n06",
+    "n10"
+   ]
+  },
+  {
+   "id": "n02",
+   "seed": "s",
+   "out": [
+    "n02",
+    "n06",
+    "n07",
+    "n10"
+   ]
+  },
+  {
+   "id": "n02",
+   "seed": "t",
+   "out": [
+    "n10",
+    "n02",
+    "n07",
+    "n06"
+   ]
+  },
+  {
+   "id": "n04",
+   "seed": "s",
+   "out": [
+    "n08",
+    "n04",
+    "n12",
+    "n05"
+   ]
+  },
+  {
+   "id": "n04",
+   "seed": "t",
+   "out": [
+    "n09",
+    "n08",
+    "n05",
+    "n04"
+   ]
+  }
+ ],
+ "meaningOptionsSmall": null,
+ "drillRound": [
+  {
+   "seed": "seed-a",
+   "out": [
+    "n01/meaning:n07,n10,n06,n01",
+    "n05/meaning:n12,n03,n05,n04",
+    "n12/say",
+    "n03/say",
+    "n10/meaning:n10,n02,n07,n06",
+    "n05/say",
+    "n10/recall",
+    "n03/listen",
+    "n01/recall",
+    "n12/listen",
+    "n05/recall",
+    "n05/listen"
+   ]
+  },
+  {
+   "seed": "seed-b",
+   "out": [
+    "n05/meaning:n05,n08,n12,n09",
+    "n12/say",
+    "n01/meaning:n01,n06,n07,n10",
+    "n10/meaning:n01,n02,n06,n10",
+    "n03/say",
+    "n10/recall",
+    "n05/say",
+    "n12/listen",
+    "n03/listen",
+    "n01/recall",
+    "n05/recall",
+    "n05/listen"
+   ]
+  },
+  {
+   "seed": "",
+   "out": [
+    "n03/say",
+    "n05/meaning:n04,n05,n08,n09",
+    "n12/say",
+    "n10/meaning:n06,n07,n02,n10",
+    "n01/meaning:n01,n06,n10,n07",
+    "n10/recall",
+    "n12/listen",
+    "n05/say",
+    "n01/recall",
+    "n03/listen",
+    "n05/recall",
+    "n05/listen"
+   ]
+  }
+ ],
+ "drillRoundSmall": [
+  "s1/recall"
+ ],
+ "afterAnswer": [
+  {
+   "right": true,
+   "out": [
+    "b",
+    "c",
+    "d",
+    "e"
+   ]
+  },
+  {
+   "right": false,
+   "out": [
+    "b",
+    "c",
+    "d",
+    "a",
+    "e"
+   ]
+  },
+  {
+   "right": false,
+   "short": true,
+   "out": [
+    "b",
+    "a"
+   ]
+  },
+  {
+   "right": false,
+   "single": true,
+   "out": [
+    "a"
+   ]
+  }
+ ]
+}

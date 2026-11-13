@@ -181,6 +181,21 @@ describe("shape checks reject bad data", () => {
     await assertFails(put("notes", fx.note.id, { ...fx.note, createdAt: fx.note.createdAt + 1 }));
     await assertSucceeds(put("notes", fx.note.id, { ...fx.note, updatedAt: fx.note.updatedAt + 1 }));
   });
+  it("notes: the \"hay quên\" mark (forgot + forgotAt) accepted when well formed, rejected otherwise", async () => {
+    const n = (extra) => ({ ...fx.note, ...extra });
+    await assertSucceeds(put("notes", fx.note.id, n({ forgot: ["meaning"], forgotAt: 5 })));
+    await assertSucceeds(put("notes", fx.note.id, n({ forgot: ["meaning", "sound"], forgotAt: 6 })));
+    await assertSucceeds(put("notes", fx.note.id, n({ forgot: ["sound"], forgotAt: 7 })));
+    // Clearing the last mark removes both fields.
+    await assertSucceeds(put("notes", fx.note.id, fx.note));
+    await assertFails(put("notes", fx.note.id, n({ forgot: ["meaning"] })));
+    await assertFails(put("notes", fx.note.id, n({ forgotAt: 5 })));
+    await assertFails(put("notes", fx.note.id, n({ forgot: [], forgotAt: 5 })));
+    await assertFails(put("notes", fx.note.id, n({ forgot: ["spelling"], forgotAt: 5 })));
+    await assertFails(put("notes", fx.note.id, n({ forgot: ["meaning", "sound", "meaning"], forgotAt: 5 })));
+    await assertFails(put("notes", fx.note.id, n({ forgot: "meaning", forgotAt: 5 })));
+    await assertFails(put("notes", fx.note.id, n({ forgot: ["meaning"], forgotAt: "5" })));
+  });
   it("cards: bad state, id not matching note+template, negative counters, extra field, createdAt/noteId immutable", async () => {
     const c = fx.cards.learning;
     await assertFails(put("cards", c.id, { ...c, state: 4 }));

@@ -144,7 +144,7 @@ private const val DAY_MS = 86_400_000L
 private fun lessonLabel(t: String, started: Int, total: Int) = "${lessonTitle(t)} · $started/$total" + if (started >= total) " ✓" else ""
 
 @Composable
-fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTestSets: () -> Unit = {}) {
+fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTestSets: () -> Unit = {}, onForgot: () -> Unit = {}) {
     val data = app.data
     val toast = LocalToaster.current
     val scope = rememberCoroutineScope()
@@ -326,6 +326,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTe
             onLesson = { t -> tag = t; aheadDays = 0; started = true; holder[0] = null },
             onImport = onImport,
             onTestSets = onTestSets,
+            onForgot = onForgot,
         )
         return
     }
@@ -397,15 +398,19 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTe
                         .then(if (!revealed && tpl.mode == AnswerMode.FLIP) Modifier.clickable { reveal() } else Modifier),
                 ) {
                   Column {
-                    // Hint buttons in their own row at the top of the card, so they never sit on the mode chip.
-                    if (hintable) key(card.id, session.shown) {
-                        HintButtons(
-                            note, levels, hintGateMs(card.state, card.stability), leaning,
-                            onOpen = { k -> levels = levels + (k to minOf(2, (levels[k] ?: 0) + 1)) },
-                            modifier = Modifier.align(Alignment.End).padding(top = 12.dp, end = 12.dp),
-                        )
+                    // Hint buttons and the "hay quên" mark in their own row at the top of the card, so they never sit on
+                    // the mode chip. The mark is on both sides of a word card and never part of the answer or its rating.
+                    val markable = note.type == "vocab"
+                    if (hintable || markable) Row(Modifier.align(Alignment.End).padding(top = 12.dp, end = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (hintable) key(card.id, session.shown) {
+                            HintButtons(
+                                note, levels, hintGateMs(card.state, card.stability), leaning,
+                                onOpen = { k -> levels = levels + (k to minOf(2, (levels[k] ?: 0) + 1)) },
+                            )
+                        }
+                        if (markable) key(note.id) { ForgotButton(app, note, onOpenList = onForgot) }
                     }
-                    Column(Modifier.padding(start = 20.dp, end = 20.dp, top = if (hintable) 4.dp else 24.dp, bottom = 24.dp).animateContentSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
+                    Column(Modifier.padding(start = 20.dp, end = 20.dp, top = if (hintable || markable) 4.dp else 24.dp, bottom = 24.dp).animateContentSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
                         // What the card asks for; once answered, the space goes to the answer so the rating row stays in view.
                         if (!revealed) ModeHeader(tpl.id, tpl.label, mode)
                         BlocksView(tpl.front(shown ?: note, prefs.layout), onSpeak = app.speech::speak, onSpeakSlow = app.speech::speakSlow, mode = mode)
@@ -567,7 +572,7 @@ private fun CountChip(text: String, color: Color, on: Boolean) {
 
 /** The answer's first letter(s) and its length: "c _ _ _ _ _ _ _", "8 chữ cái". */
 @Composable
-private fun AnswerHint(hint: String, note: String, mode: Color) {
+internal fun AnswerHint(hint: String, note: String, mode: Color) {
     val c = Lexi.colors
     // Narrower cells for long answers so "procrastination" still fits on one line of a phone card.
     val long = hint.length > 11

@@ -29,6 +29,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Bookmark
+import com.vh.lexi.core.forgotNotes
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -110,6 +112,7 @@ data class LessonProgress(val tag: String, val started: Int, val count: Int)
 internal fun TodayPanel(
     cards: List<Card>, notesById: Map<String, Note>, queue: Queue, daily: List<Daily>, dayStartHour: Int, newPerDay: Int, now: Long,
     lessons: List<LessonProgress>, onStart: () -> Unit, onLesson: (String) -> Unit, onImport: () -> Unit = {}, newMix: String? = null, onTestSets: () -> Unit = {},
+    onForgot: () -> Unit = {},
 ) {
     val c = Lexi.colors
     // Cards, not answers: a card answered today and not waiting again is done; one in the queue is left.
@@ -251,10 +254,26 @@ internal fun TodayPanel(
             SoftPill("Bộ đề: làm cả đề PDF trong Lexi", onTestSets, Modifier.fillMaxWidth().testTag("open-testsets"))
         }
 
-        // Words to watch
-        if (watch.isNotEmpty()) {
+        // Words to watch: FSRS's most forgotten, and the words the learner marked (ForgotUi.kt).
+        val marked = remember(notesById) { forgotNotes(notesById.values.toList()).size }
+        if (watch.isNotEmpty() || marked > 0) {
             Panel(Modifier.enter(4).testTag("today-watch")) {
-                PanelHead("Từ hay quên", null)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) { PanelHead("Từ hay quên", null) }
+                    TextButton(onClick = onForgot, modifier = Modifier.testTag("open-forgot")) { Text("Mở danh sách", fontWeight = FontWeight.Bold) }
+                }
+                if (marked > 0) Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(c.roseSoft).clickable(role = Role.Button, onClick = onForgot)
+                        .padding(horizontal = 14.dp, vertical = 12.dp).testTag("today-forgot-marked"),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Icon(Icons.Filled.Bookmark, null, tint = c.roseDeep, modifier = Modifier.size(20.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("$marked từ đã đánh dấu", fontWeight = FontWeight.ExtraBold, color = c.roseDeep)
+                        Text("Luyện chủ động, không tính vào lịch ôn", fontSize = 12.sp, color = c.ink.copy(alpha = 0.7f))
+                    }
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = c.roseDeep, modifier = Modifier.size(18.dp))
+                }
                 for (w in watch) {
                     Row(
                         Modifier.fillMaxWidth().background(c.surface2, RoundedCornerShape(16.dp)).padding(horizontal = 12.dp, vertical = 9.dp),
@@ -363,7 +382,7 @@ private fun SoftPill(label: String, onClick: () -> Unit, modifier: Modifier = Mo
 }
 
 /** Forgotten most often, recently forgotten first (Today.tsx `watch`). */
-private fun wordsToWatch(cards: List<Card>, notesById: Map<String, Note>): List<Pair<Note, Int>> {
+internal fun wordsToWatch(cards: List<Card>, notesById: Map<String, Note>, limit: Int = 5): List<Pair<Note, Int>> {
     val byNote = HashMap<String, Pair<Int, Long>>()
     for (card in cards) {
         if (card.suspended || card.lapses == 0) continue
@@ -373,7 +392,7 @@ private fun wordsToWatch(cards: List<Card>, notesById: Map<String, Note>): List<
     }
     return byNote.entries.filter { it.key in notesById }
         .sortedWith(compareByDescending<Map.Entry<String, Pair<Int, Long>>> { it.value.first }.thenByDescending { it.value.second })
-        .take(5).map { notesById.getValue(it.key) to it.value.first }
+        .take(limit).map { notesById.getValue(it.key) to it.value.first }
 }
 
 @Composable

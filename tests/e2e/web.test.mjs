@@ -1766,3 +1766,175 @@ describe("stats: roadmap, forecast and week", () => {
     await ctx.close();
   });
 });
+
+describe("từ hay quên: mark from the card, its own screen, practice outside FSRS", () => {
+  const WORDS = [
+    ["postpone", "hoãn lại; trì hoãn", "verb", 0, true],
+    ["receipt", "biên lai", "noun", 4, false],
+    ["venue", "địa điểm tổ chức", "noun", 2, false],
+    ["attend", "tham dự", "verb", 0, false],
+    ["budget", "ngân sách", "noun", 0, false],
+    ["colleague", "đồng nghiệp", "noun", 1, false],
+    ["launch", "ra mắt sản phẩm", "verb", 0, false],
+  ];
+  const backup = () => {
+    const now = Date.now();
+    const DAY = 86_400_000;
+    const notes = WORDS.map(([word, vi, pos], i) => ({ id: `f${i}`, type: "vocab", deckId: "d1", fields: { word, vi, pos, ipa: `/${word}/`, examples: [`We will ${word} it next week.`] }, createdAt: now - 30 * DAY, updatedAt: now - 30 * DAY }));
+    const cards = WORDS.map(([, , , lapses, isNew], i) => ({
+      id: `f${i}.recognize`, noteId: `f${i}`, deckId: "d1", template: "recognize", state: isNew ? 0 : 2, due: isNew ? now - DAY : now + 5 * DAY,
+      stability: isNew ? 0 : 12.5, difficulty: isNew ? 0 : 6.25, scheduledDays: isNew ? 0 : 9, learningSteps: 0, reps: isNew ? 0 : 6, lapses,
+      ...(isNew ? {} : { lastReview: now - 4 * DAY }), createdAt: now - 30 * DAY, updatedAt: now - 4 * DAY,
+    }));
+    const reviews = WORDS.flatMap(([, , , , isNew], i) => (isNew ? [] : [{ id: `f${i}.recognize@${now - 4 * DAY}`, cardId: `f${i}.recognize`, noteId: `f${i}`, deckId: "d1", rating: 3, state: 2, stability: 12.5, difficulty: 6.25, scheduledDays: 9, reviewedAt: now - 4 * DAY, durationMs: 4000, device: "web" }]));
+    return { app: "vhub-lexi", version: 1, exportedAt: now, decks: [{ id: "d1", name: "TOEIC", createdAt: now, updatedAt: now }], notes, cards, reviews, daily: [], prefs: null };
+  };
+  const shots = process.env.LEXI_SHOTS;
+  // Screenshots for the PR (LEXI_SHOTS=dir): after toasts and the card's ease-in have settled.
+  const shot = async (page, name) => {
+    if (!shots) return;
+    await page.waitForFunction(() => !document.querySelector(".toast"), null, { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(450);
+    await page.screenshot({ path: join(shots, `${name}.png`) });
+  };
+
+  /** Cards, review log and day counters from the JSON backup: what FSRS and the statistics read. */
+  async function fsrsState(page) {
+    await page.goto(`${base}/#/settings`);
+    const [dl] = await Promise.all([page.waitForEvent("download"), page.click("[data-testid=export]")]);
+    const data = JSON.parse(readFileSync(await dl.path(), "utf8"));
+    const sorted = (a) => [...(a ?? [])].sort((x, y) => (x.id < y.id ? -1 : 1));
+    return { file: data, fsrs: { cards: sorted(data.cards), reviews: sorted(data.reviews), daily: sorted(data.daily) } };
+  }
+
+  it("marks meaning and sound from a study card, lists them on their own screen, and a practice round changes no FSRS data", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, acceptDownloads: true });
+    const file = join(tmpdir(), `lexi-forgot-${process.pid}.json`);
+    writeFileSync(file, JSON.stringify(backup()));
+    await page.goto(`${base}/#/settings`);
+    await page.setInputFiles("[data-testid=import-file]", file);
+    await page.click("[data-testid=confirm-ok]");
+    await page.waitForFunction(() => !document.querySelector(".scrim"));
+    const before = (await fsrsState(page)).fsrs;
+    assert.equal(before.cards.length, WORDS.length);
+
+    // The mark sits next to the hint buttons on the front, and stays on the back.
+    await page.goto(`${base}/#/study`);
+    await page.waitForSelector("[data-testid=forgot-btn]");
+    assert.equal(await page.locator(".card-tools [data-testid=hint-memo]").count(), 1, "next to the hint buttons");
+    await page.click("[data-testid=forgot-btn]");
+    await page.click("[data-testid=forgot-meaning]");
+    await page.waitForSelector('[data-testid=forgot-meaning][aria-pressed="true"]');
+    await page.click("[data-testid=forgot-sound]");
+    await page.waitForSelector('[data-testid=forgot-btn][data-marked="meaning,sound"]');
+    await shot(page, "1-mark-front");
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("[data-testid=forgot-pop]", { state: "detached" });
+    await page.click("[data-testid=show-answer]");
+    await page.waitForSelector('[data-testid=study-card][data-revealed="true"] [data-testid=forgot-btn][data-marked="meaning,sound"]');
+    // Not rated: the card stays new.
+
+    // Today leads to the list; FSRS's most-forgotten words are suggested and marked with one tap.
+    await page.goto(`${base}/#/today`);
+    await page.waitForSelector("[data-testid=today-forgot-marked]");
+    assert.match(await page.textContent("[data-testid=today-forgot-marked]"), /1 từ đã đánh dấu/);
+    await page.click("[data-testid=open-forgot]");
+    await page.waitForSelector("[data-testid=forgot-list]");
+    assert.equal(await page.locator("[data-testid=forgot-row]").count(), 1);
+    const suggested = await page.locator("[data-testid=forgot-suggested] li b").allTextContents();
+    assert.deepEqual(suggested, ["receipt", "venue", "colleague"], "most lapses first, marked words left out");
+    await page.locator("[data-testid=forgot-suggest-add]").first().click();
+    await page.waitForFunction(() => document.querySelectorAll("[data-testid=forgot-row]").length === 2);
+    assert.deepEqual(await page.locator("[data-testid=forgot-row]").evaluateAll((r) => r.map((e) => e.dataset.word)), ["receipt", "postpone"], "newest mark first");
+    assert.match(await page.textContent("[data-testid=forgot-hero]"), /2 từ.*2 quên nghĩa · 1 quên phát âm/s);
+    await shot(page, "2-list-phone");
+    // Filter: sound only.
+    await page.click("[data-testid=forgot-filter-sound]");
+    assert.equal(await page.locator("[data-testid=forgot-row]").count(), 1);
+    await page.click("[data-testid=forgot-filter-all]");
+
+    // A practice round: one wrong choice, a typed word, a heard word, a self-graded pronunciation.
+    await page.click("[data-testid=drill-start]");
+    await page.waitForSelector("[data-testid=drill-card]");
+    const byMeaning = Object.fromEntries(WORDS.map(([w, vi]) => [vi.split(";")[0].trim(), w]));
+    let wrong = false;
+    const seen = new Set();
+    for (let step = 0; !(await page.locator("[data-testid=drill-done]").count()); step++) {
+      assert.ok(step < 30, "the round ends");
+      const mode = await page.getAttribute("[data-testid=drill]", "data-mode");
+      if (!seen.has(mode)) await shot(page, `3-drill-${mode}`);
+      seen.add(mode);
+      if (mode === "meaning") {
+        if (!wrong) {
+          await page.locator('[data-testid=drill-opt][data-right="false"]').first().click();
+          wrong = true;
+          await page.waitForSelector("[data-testid=drill-answer]");
+          assert.match(await page.textContent("[data-testid=drill-verdict]"), /sẽ hỏi lại/);
+          await shot(page, "4-drill-wrong");
+        } else await page.click('[data-testid=drill-opt][data-right="true"]');
+      } else if (mode === "recall") {
+        await page.fill("[data-testid=drill-input]", byMeaning[(await page.textContent("[data-testid=drill-meaning]")).trim()]);
+        await page.click("[data-testid=drill-check]");
+      } else if (mode === "listen") {
+        await page.fill("[data-testid=drill-input]", "postpone");
+        await page.click("[data-testid=drill-check]");
+      } else {
+        await page.click("[data-testid=drill-hear]");
+        await page.click("[data-testid=drill-say-yes]");
+      }
+      await page.click("[data-testid=drill-next]");
+    }
+    assert.deepEqual([...seen].sort(), ["listen", "meaning", "recall", "say"]);
+    // 2 words: postpone (meaning, say, recall, listen) + receipt (meaning, recall) = 6 exercises, one missed once.
+    assert.match(await page.textContent("[data-testid=drill-score]"), /6 bài, đúng ngay lần đầu 5\/6/);
+    assert.match(await page.textContent("[data-testid=drill-missed]"), /postpone|receipt/);
+    await shot(page, "5-drill-done");
+
+    // FSRS untouched: the same cards, review log and day counters as before anything was marked.
+    const after = await fsrsState(page);
+    assert.deepEqual(after.fsrs, before);
+    const marks = after.file.notes.filter((n) => n.forgot).map((n) => [n.id, n.forgot]).sort();
+    assert.deepEqual(marks, [["f0", ["meaning", "sound"]], ["f1", ["meaning"]]]);
+
+    // Clearing both marks of a word removes it from the list; it persists over a reload.
+    await page.goto(`${base}/#/forgot`);
+    const row = page.locator('[data-testid=forgot-row][data-word="postpone"]');
+    await row.locator("[data-testid=row-meaning]").click();
+    await row.locator("[data-testid=row-sound]").click();
+    await page.waitForFunction(() => document.querySelectorAll("[data-testid=forgot-row]").length === 1);
+    await page.reload();
+    await page.waitForSelector("[data-testid=forgot-row]");
+    assert.equal(await page.locator("[data-testid=forgot-row]").count(), 1);
+    assert.equal(await noOverflow(page), true);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("desktop: the list next to the round fits, dark theme readable", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 1280, height: 800 }, deviceScaleFactor: shots ? 2 : 1, colorScheme: "dark" });
+    const data = backup();
+    data.notes[0].forgot = ["meaning", "sound"];
+    data.notes[0].forgotAt = Date.now();
+    data.notes[2].forgot = ["sound"];
+    data.notes[2].forgotAt = Date.now() - 1000;
+    const file = join(tmpdir(), `lexi-forgot-d-${process.pid}.json`);
+    writeFileSync(file, JSON.stringify(data));
+    await page.goto(`${base}/#/settings`);
+    await page.setInputFiles("[data-testid=import-file]", file);
+    await page.click("[data-testid=confirm-ok]");
+    await page.goto(`${base}/#/forgot`);
+    await page.waitForFunction(() => document.querySelectorAll("[data-testid=forgot-row]").length === 2);
+    await shot(page, "6-list-desktop-dark");
+    await page.click("[data-testid=drill-start]");
+    await page.waitForSelector("[data-testid=drill-card]");
+    await shot(page, "7-drill-desktop-dark");
+    await page.goto(`${base}/#/study`);
+    await page.waitForSelector("[data-testid=forgot-btn]");
+    await page.click("[data-testid=forgot-btn]");
+    await page.waitForSelector("[data-testid=forgot-pop]");
+    await shot(page, "8-mark-desktop-dark");
+    assert.equal(await noOverflow(page), true);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+});

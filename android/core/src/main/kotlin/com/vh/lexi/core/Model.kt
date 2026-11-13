@@ -41,6 +41,10 @@ data class Note(
     val tags: List<String> = emptyList(),
     val createdAt: Long,
     val updatedAt: Long,
+    /** Marked "hay quên" (Drill.kt): "meaning", "sound" or both. Not used by FSRS. */
+    val forgot: List<String> = emptyList(),
+    /** When the latest mark was set; non-null exactly when [forgot] is not empty. */
+    val forgotAt: Long? = null,
 )
 
 data class Card(

@@ -113,15 +113,24 @@ service cloud.firestore {
           || (type == 'test' && testFields(f)));
     }
 
+    // "Từ hay quên" marks (shared/drill.ts): both fields or neither, only the two known kinds.
+    function validForgot(d) {
+      return (!('forgot' in d) && !('forgotAt' in d))
+        || (d.forgot is list && d.forgot.size() >= 1 && d.forgot.size() <= 2
+          && d.forgot.toSet().hasOnly(['meaning', 'sound'])
+          && d.forgotAt is int);
+    }
+
     function validNote(d, id) {
       return d.keys().hasAll(['id', 'type', 'deckId', 'fields', 'createdAt', 'updatedAt'])
-        && d.keys().hasOnly(['id', 'type', 'deckId', 'fields', 'aiFields', 'tags', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['id', 'type', 'deckId', 'fields', 'aiFields', 'tags', 'forgot', 'forgotAt', 'createdAt', 'updatedAt'])
         && d.id == id
         && d.type is string && d.type in ['vocab', 'grammar', 'pattern', 'test']
         && okId(d.deckId)
         && validFields(d.type, d.fields)
         && optList(d, 'aiFields', 12)
         && optList(d, 'tags', 10)
+        && validForgot(d)
         && d.createdAt is int && d.updatedAt is int;
     }
 

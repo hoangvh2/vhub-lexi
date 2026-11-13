@@ -45,6 +45,10 @@ export interface Note {
   /** Names of fields whose current value was written by AI (shown with an "AI" label). */
   aiFields?: string[];
   tags?: string[];
+  /** Marked "hay quên" by the learner (shared/drill.ts): the meaning, the pronunciation, or both. Not used by FSRS. */
+  forgot?: Array<"meaning" | "sound">;
+  /** When the latest mark was set; present exactly when `forgot` is. */
+  forgotAt?: number;
   createdAt: number;
   updatedAt: number;
 }

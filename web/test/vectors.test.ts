@@ -21,6 +21,7 @@ import { testTag } from "../src/lib/practice.ts";
 import { testsetVectors } from "./testset-vectors.ts";
 import { testsyncVectors } from "./testsync-vectors.ts";
 import { roadmapVectors } from "./roadmap-vectors.ts";
+import { drillVectors } from "./drill-vectors.ts";
 import { flashWords, lettersShown, nextRung, otherPhrase, rungHint, type Rung } from "@shared/ladder.ts";
 import { hintCue, hintDependent, hintGateMs, maskHint, maxRating, meaningTerms, rotateExamples } from "@shared/hints.ts";
 
@@ -594,6 +595,7 @@ it("cross-platform vectors are up to date", () => {
     ["testset.json", JSON.stringify(testsetVectors(), null, 1)],
     ["testsync.json", JSON.stringify(testsyncVectors(), null, 1)],
     ["roadmap.json", JSON.stringify(roadmapVectors())],
+    ["drill.json", JSON.stringify(drillVectors(), null, 1)],
     [join("../../android/core/src/main/kotlin/com/vh/lexi/core/Irregular.kt"), irregularKotlin()],
   ];
   for (const [name, text] of files) {
