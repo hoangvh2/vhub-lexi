@@ -754,9 +754,11 @@ input[type="range"] { width: 100%; }
 /* ------------------------------------------------------------------ hints while studying (shared/hints.ts) */
 /* Two round buttons in the card's corner. Asleep for --gate (a ring fills), then full colour. */
 .scard.has-hints { padding-top: 66px; }
-.hint-tools { position: absolute; top: 14px; right: 14px; display: flex; gap: 8px; z-index: 1; }
+.card-tools { position: absolute; top: 14px; right: 14px; display: flex; gap: 8px; z-index: 2; align-items: center; }
+.hint-tools { display: flex; gap: 8px; align-items: center; }
 .hint-btn { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; background: var(--accent-soft); color: var(--accent); transition: opacity 0.3s, transform 0.15s; }
-.hint-tools:not(.awake) .hint-btn, .hint-tools.locked .hint-btn, .hint-btn.empty { opacity: 0.4; }
+/* "blank", not "empty": .empty is the empty-state block (48px padding) and stretched an empty hint button into an oval. */
+.hint-tools:not(.awake) .hint-btn, .hint-tools.locked .hint-btn, .hint-btn.blank { opacity: 0.4; }
 .hint-btn:hover { transform: translateY(-1px); }
 .hint-btn.on { background: var(--accent); color: var(--accent-ink); }
 .hint-btn:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
@@ -913,3 +915,57 @@ input[type="range"] { width: 100%; }
 .kpis em.muted { color: var(--muted); }
 .heat.sw rect, .heat rect.l0 { fill: var(--surface-2); }
 .heat rect.l4 { fill: var(--accent); }
+
+/* ------------------------------------------------------------------ Từ hay quên (Forgot.tsx) */
+.forgot { position: relative; }
+.forgot-btn { color: var(--rose-deep); background: var(--rose-soft); }
+.forgot-btn.on { background: var(--rose-deep); color: var(--surface); }
+.forgot-btn.on .i path { fill: currentColor; }
+.forgot-pop { position: absolute; top: 48px; right: 0; width: 230px; display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 20px; background: var(--surface); box-shadow: var(--clay); cursor: default; animation: answer-in 0.18s ease-out; text-align: left; }
+.forgot-pop > b { font-size: 14px; padding: 0 4px 2px; }
+.forgot-pop small { padding: 2px 4px 0; line-height: 1.35; }
+.forgot-opt { display: flex; align-items: center; gap: 10px; border: 0; border-radius: 14px; padding: 10px 12px; min-height: 44px; background: var(--surface-2); color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+.forgot-opt .tick { width: 22px; height: 22px; border-radius: 8px; display: grid; place-items: center; background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line); flex: none; }
+.forgot-opt[aria-pressed="true"] { background: var(--rose-soft); color: var(--rose-deep); }
+.forgot-opt[aria-pressed="true"] .tick { background: var(--rose-deep); color: var(--surface); box-shadow: none; }
+.forgot-opt:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+.watch-marked { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; text-align: left; font: inherit; color: var(--rose-deep); background: var(--rose-soft); border-radius: 18px; padding: 12px 14px; margin-bottom: 10px; cursor: pointer; }
+.watch-marked .grow { display: flex; flex-direction: column; }
+.watch-marked small { color: var(--ink); opacity: 0.7; font-size: 12.5px; }
+.forgot-page { display: flex; flex-direction: column; gap: 16px; }
+.drill-hero { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.drill-hero .grow { display: flex; flex-direction: column; min-width: 150px; }
+.drill-hero .big { font-family: var(--f-display); font-size: 26px; }
+.forgot-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.forgot-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 20px; background: var(--surface); box-shadow: var(--clay-sm); }
+.forgot-row .grow { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
+.forgot-row .grow b { font-size: 17px; }
+.forgot-row .meaning { flex-basis: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
+.forgot-row .ipa { font-size: 13px; }
+.forgot-row .kinds { display: flex; gap: 4px; flex: none; }
+.forgot-row .kind { white-space: nowrap; border: 0; border-radius: 999px; padding: 6px 10px; min-height: 34px; font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; background: var(--surface-2); color: var(--muted); }
+.forgot-row .kind[aria-pressed="true"] { background: var(--rose-soft); color: var(--rose-deep); }
+.icon-btn { border: 0; width: 36px; height: 36px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--accent-soft); color: var(--accent); cursor: pointer; flex: none; vertical-align: middle; }
+.row.nowrap { flex-wrap: nowrap; gap: 6px; }
+.drill { display: flex; flex-direction: column; gap: 12px; }
+.drill-top { display: flex; justify-content: space-between; align-items: center; }
+.drill-card { cursor: default; gap: 18px; }
+.drill-word { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.drill-word > b { font-family: var(--f-display); font-size: 34px; line-height: 1.15; }
+.drill-word > b.vi { font-size: 24px; }
+.drill-options { display: grid; grid-template-columns: 1fr; gap: 8px; width: 100%; max-width: 460px; }
+.drill-opt { border: 0; border-radius: 18px; padding: 13px 16px; min-height: 50px; font: inherit; font-weight: 700; text-align: left; background: var(--surface-2); color: var(--ink); cursor: pointer; transition: background 0.2s, opacity 0.2s; }
+.drill-opt:hover:not(:disabled) { background: var(--accent-soft); }
+.drill-opt.right { background: var(--mint-soft); color: var(--mint-deep); }
+.drill-opt.wrong { background: var(--rose-soft); color: var(--rose-deep); }
+.drill-opt.dim { opacity: 0.55; }
+.drill-say { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.drill-answer { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; width: 100%; max-width: 460px; animation: answer-in 0.25s ease-out; }
+.drill-reveal { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; font-size: 22px; }
+.drill-vi { margin: 0; font-weight: 700; }
+.drill-ex { margin: 0; font-size: 14px; }
+.speak-big { min-height: 52px; padding: 0 22px; font-size: 16px; }
+.drill-done { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; color: var(--ink); }
+.drill-done > .i { color: var(--mint-deep); }
+@media (min-width: 700px) { .drill-options { grid-template-columns: 1fr 1fr; } }
+.forgot-page .sub { margin: -8px 0 12px; }

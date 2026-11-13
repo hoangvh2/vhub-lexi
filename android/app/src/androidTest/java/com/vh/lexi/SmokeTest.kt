@@ -102,6 +102,14 @@ class SmokeTest {
 
     private fun hideKeyboard() {
         rule.runOnUiThread { WindowCompat.getInsetsController(rule.activity.window, rule.activity.window.decorView).hide(WindowInsetsCompat.Type.ime()) }
+        // A field in a dialog has its keyboard attached to the dialog's window, which the activity's controller does not
+        // always reach (seen when another test class ran first in the same process). Back closes only the keyboard
+        // while it is shown, so it is sent only then.
+        try {
+            rule.waitUntil(3_000) { keyboardTop() == null }
+        } catch (_: Throwable) {
+            device.pressBack()
+        }
         waitFor("keyboard-hidden") { keyboardTop() == null }
     }
 

@@ -52,6 +52,8 @@ fun Note.toDoc(): Doc = buildMap {
     put("fields", fields.mapValues { (_, v) -> if (v is FieldValue.Items) v.value else (v as FieldValue.Text).value })
     if (aiFields.isNotEmpty()) put("aiFields", aiFields)
     if (tags.isNotEmpty()) put("tags", tags)
+    // "Hay quên" mark (core Drill.kt): both fields or neither, as firestore.rules expects.
+    if (forgot.isNotEmpty()) { put("forgot", forgot); put("forgotAt", forgotAt ?: updatedAt) }
     put("createdAt", createdAt); put("updatedAt", updatedAt)
 }
 
@@ -68,6 +70,7 @@ fun noteFromDoc(d: Doc): Note {
     return Note(
         id = d.s("id") ?: "", type = d.s("type") ?: "vocab", deckId = d.s("deckId") ?: "", fields = fields,
         aiFields = d.strings("aiFields"), tags = d.strings("tags"), createdAt = d.l("createdAt") ?: 0, updatedAt = d.l("updatedAt") ?: 0,
+        forgot = d.strings("forgot"), forgotAt = d.l("forgotAt"),
     )
 }
 

@@ -6,6 +6,7 @@ import {
   type Card, type DailyDelta, type Deck, type FieldValue, type Id, type Note, type Prefs, type Rating, type ReviewLog,
 } from "@shared/model.ts";
 import { NOTE_TYPES, noteType, wantedTemplates } from "@shared/notetypes.ts";
+import { forgotOf, withForgot, type ForgotKind } from "@shared/drill.ts";
 import type { Answer, FitResult } from "../lib/optimizer.ts";
 import type { WorkerReply, WorkerRequest } from "../lib/optimizer.worker.ts";
 import { answer, makeScheduler, newCard } from "../lib/scheduler.ts";
@@ -152,6 +153,16 @@ export async function moveNotes(noteIds: Iterable<Id>, deckId: Id): Promise<numb
   const plan = planMove(notes.get(), cards.get(), noteIds, deckId, Date.now());
   if (plan.notes.length) await currentRepo().saveMany(plan.notes, plan.cards);
   return plan.notes.length;
+}
+
+/**
+ * Marks a word "hay quên" (its meaning or its sound) or clears the mark: one write of the note document, nothing
+ * else. Cards, FSRS state and the review log are not touched (shared/drill.ts).
+ */
+export async function setForgot(note: Note, kind: ForgotKind, on: boolean) {
+  const latest = notes.get().find((n) => n.id === note.id) ?? note;
+  if (forgotOf(latest).includes(kind) === on) return;
+  await currentRepo().saveNote(withForgot(latest, kind, on, Date.now()), []);
 }
 
 export async function removeNote(note: Note) {

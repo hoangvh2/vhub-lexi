@@ -58,7 +58,7 @@ export function HintButtons(props: {
           <button
             type="button"
             key={kind}
-            class={`hint-btn${lvl ? " on" : ""}${has ? "" : " empty"}`}
+            class={`hint-btn${lvl ? " on" : ""}${has ? "" : " blank"}`}
             onClick={() => void tap(kind)}
             aria-busy={asking}
             aria-label={`${LABEL[kind]}${lvl === 1 ? ": xem đầy đủ" : lvl === 2 ? ": đang mở" : ": gợi ý"}`}

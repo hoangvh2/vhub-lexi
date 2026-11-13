@@ -20,6 +20,7 @@ import { Icon, go, toast } from "./common.tsx";
 import { Ladder } from "./Ladder.tsx";
 import { HintBoxes, HintButtons, MemoryEditor, MemoryPanel, type HintKind } from "./Hints.tsx";
 import { NoteEditor } from "./NoteEditor.tsx";
+import { ForgotButton } from "./Forgot.tsx";
 
 /** One answer of this session, for the summary at the end. */
 interface Answered {
@@ -177,6 +178,8 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
   const gateMs = card ? hintGateMs(card) : 0;
   const openHint = (kind: HintKind) => setLevels((l) => ({ ...l, [kind]: Math.min(2, l[kind] + 1) as HintLevel }));
   const hintable = !!note && note.type === "vocab" && !revealed;
+  // "Hay quên" mark: on both sides of a word card (shared/drill.ts); never part of the answer or its rating.
+  const markable = !!note && note.type === "vocab";
 
   // Read the front aloud when a card appears: always on listening cards, otherwise if the learner chose that.
   useEffect(() => {
@@ -288,6 +291,10 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
         return;
       }
       if (!card || !tpl || !note) return;
+      if (markable && e.key === "q") {
+        (document.querySelector('[data-testid="forgot-btn"]') as HTMLButtonElement | null)?.click();
+        return;
+      }
       if (hintable && (e.key === "h" || e.key === "g")) {
         // Same rules as the buttons: they handle the wait, the lock and the empty case.
         (document.querySelector(`[data-testid="hint-${e.key === "h" ? "memo" : "notes"}"]`) as HTMLButtonElement | null)?.click();
@@ -390,7 +397,7 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
         <div class="study">
           <div
             key={turn}
-            class={`scard mode-${tpl.id}${revealed ? " revealed" : ""}${hintable ? " has-hints" : ""}`}
+            class={`scard mode-${tpl.id}${revealed ? " revealed" : ""}${hintable || markable ? " has-hints" : ""}`}
             onClick={() => tpl.mode === "flip" && !revealed && reveal()}
             data-testid="study-card"
             data-template={tpl.id}
@@ -404,7 +411,12 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
               </div>
             )}
             {!revealed && MODE_Q[tpl.id] && <div class="mode-q">{MODE_Q[tpl.id]}</div>}
-            {hintable && <HintButtons key={turn} note={note} levels={levels} gateMs={gateMs} readLocked={readLocked} onOpen={openHint} />}
+            {(hintable || markable) && (
+              <div class="card-tools">
+                {hintable && <HintButtons key={turn} note={note} levels={levels} gateMs={gateMs} readLocked={readLocked} onOpen={openHint} />}
+                {markable && <ForgotButton key={note.id} note={note} />}
+              </div>
+            )}
             <Blocks blocks={tpl.front(shown ?? note, p.layout)} cloze={tpl.id === "cloze"} />
             {hintable && <HintBoxes note={note} templateId={tpl.id} levels={levels} />}
             {/* A grammar pattern shows its options: a first-letter hint would give the answer away. */}

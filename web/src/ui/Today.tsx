@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { meaningsByNote } from "@shared/confusables.ts";
 import { CardState, dayId, nextDayStart } from "@shared/model.ts";
 import { isMaterial, noteType } from "@shared/notetypes.ts";
+import { forgotNotes, wordsToWatch } from "@shared/drill.ts";
 import { cards, daily, decks, loaded, notes, prefs } from "../data/state.ts";
 import { isLesson, lessonName } from "../lib/lessons.ts";
 import { buildQueue, deckWeights, tagCounts } from "../lib/queue.ts";
@@ -52,23 +53,9 @@ export function Today() {
     for (const n of allNotes) if (studied.has(n.id)) for (const t of n.tags ?? []) started.set(t, (started.get(t) ?? 0) + 1);
     return tagCounts(allNotes).filter((t) => isLesson(t.tag)).map((t) => ({ ...t, started: started.get(t.tag) ?? 0 }));
   }, [allCards, allNotes]);
-  // Words to watch: forgotten most often, recently forgotten first.
-  const watch = useMemo(() => {
-    const byNote = new Map<string, { lapses: number; last: number }>();
-    for (const c of allCards) {
-      if (c.suspended || c.lapses === 0) continue;
-      const w = byNote.get(c.noteId) ?? { lapses: 0, last: 0 };
-      w.lapses += c.lapses;
-      w.last = Math.max(w.last, c.state === CardState.Relearning ? Number.MAX_SAFE_INTEGER : (c.lastReview ?? 0));
-      byNote.set(c.noteId, w);
-    }
-    const noteById = new Map(allNotes.map((n) => [n.id, n]));
-    return [...byNote.entries()]
-      .filter(([id]) => noteById.has(id))
-      .sort((a, b) => b[1].lapses - a[1].lapses || b[1].last - a[1].last)
-      .slice(0, 5)
-      .map(([id, w]) => ({ note: noteById.get(id)!, lapses: w.lapses }));
-  }, [allCards, allNotes]);
+  // Words to watch: forgotten most often, recently forgotten first; and the words the learner marked.
+  const watch = useMemo(() => wordsToWatch(allCards, allNotes, 5), [allCards, allNotes]);
+  const marked = useMemo(() => forgotNotes(allNotes).length, [allNotes]);
   const heat = useMemo(() => heatmap(dailies, now, p.dayStartHour, 18), [dailies, p.dayStartHour]);
 
   if (!ready) return <div class="page"><p class="muted">Đang tải dữ liệu…</p></div>;
@@ -251,13 +238,20 @@ export function Today() {
               ))}
             </svg>
           </section>
-          {watch.length > 0 && (
+          {(watch.length > 0 || marked > 0) && (
             <section class="panel" data-testid="today-watch" data-in>
               <div class="panel-head">
                 <h2>Từ hay quên</h2>
-                <button type="button" class="btn ghost sm" onClick={() => go("/library")}>Thư viện</button>
+                <button type="button" class="btn ghost sm" onClick={() => go("/forgot")} data-testid="open-forgot">Mở danh sách</button>
               </div>
-              <ul class="watch">
+              {marked > 0 && (
+                <button type="button" class="watch-marked" onClick={() => go("/forgot")} data-testid="today-forgot-marked">
+                  <Icon n="bookmark" size={18} />
+                  <span class="grow"><b>{marked} từ đã đánh dấu</b><small>Luyện chủ động, không tính vào lịch ôn</small></span>
+                  <Icon n="arrow" size={16} />
+                </button>
+              )}
+              {watch.length > 0 && <ul class="watch">
                 {watch.map(({ note, lapses }) => (
                   <li key={note.id}>
                     <b>{noteType(note.type)?.title(note) ?? ""}</b>
@@ -265,7 +259,7 @@ export function Today() {
                     <span class="pill bad">quên {lapses}</span>
                   </li>
                 ))}
-              </ul>
+              </ul>}
             </section>
           )}
         </div>

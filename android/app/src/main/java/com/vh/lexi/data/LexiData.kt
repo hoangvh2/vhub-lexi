@@ -11,6 +11,9 @@ import com.vh.lexi.core.isFreeNew
 import com.vh.lexi.core.liveRecognize
 import com.vh.lexi.ui.eligibility
 import com.vh.lexi.core.FieldValue
+import com.vh.lexi.core.ForgotKind
+import com.vh.lexi.core.forgotOf
+import com.vh.lexi.core.withForgot
 import com.vh.lexi.core.HintLog
 import com.vh.lexi.core.Id
 import com.vh.lexi.core.Note
@@ -257,6 +260,16 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
         }
         cloud?.setGroups(plan.batches().map { g -> g.notes.map { it.toDoc() } to g.cards.map { it.toDoc() } })
         return plan.notes.size
+    }
+
+    /**
+     * Marks a word "hay quên" (meaning or sound) or clears the mark: one write of the note, nothing else. Cards, FSRS
+     * state and the review log are not touched (core Drill.kt).
+     */
+    suspend fun setForgot(note: Note, kind: ForgotKind, on: Boolean) {
+        val latest = notes.value.firstOrNull { it.id == note.id } ?: note
+        if ((kind in forgotOf(latest)) == on) return
+        put(Col.NOTES, withForgot(latest, kind, on, System.currentTimeMillis()).toDoc())
     }
 
     suspend fun removeNote(note: Note) {

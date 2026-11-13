@@ -131,6 +131,7 @@ private fun Main(app: LexiApp) {
     // "Nhập từ đề thi" is a screen over the tabs, opened from Today or by sharing a screenshot to Lexi.
     var importing by rememberSaveable { mutableStateOf(false) }
     var testSets by rememberSaveable { mutableStateOf(false) }
+    var forgot by rememberSaveable { mutableStateOf(false) }
     val shared by app.pendingShare.collectAsState()
     LaunchedEffect(shared) { if (shared.isNotEmpty()) importing = true }
     val snackbar = remember { SnackbarHostState() }
@@ -189,7 +190,7 @@ private fun Main(app: LexiApp) {
                         containerColor = Color.Transparent, tonalElevation = 0.dp, windowInsets = WindowInsets(0, 0, 0, 0),
                     ) {
                         for (t in Tab.entries) NavigationBarItem(
-                            selected = tab == t && !importing && !testSets, onClick = { tab = t; importing = false; testSets = false }, modifier = Modifier.testTag("nav-${t.name.lowercase()}"),
+                            selected = tab == t && !importing && !testSets && !forgot, onClick = { tab = t; importing = false; testSets = false; forgot = false }, modifier = Modifier.testTag("nav-${t.name.lowercase()}"),
                             label = { Text(t.label, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = c.accent, selectedTextColor = c.accent, indicatorColor = c.accentSoft, unselectedIconColor = c.muted, unselectedTextColor = c.muted,
@@ -217,8 +218,8 @@ private fun Main(app: LexiApp) {
                         else Pill(syncLabel(SyncState.OFF))
                     }
                     Box(Modifier.weight(1f)) {
-                        if (importing) ImportScreen(app) { importing = false } else if (testSets) TestSetsScreen(app) { testSets = false } else when (tab) {
-                            Tab.STUDY -> StudyScreen(app, onAdd = { tab = Tab.ADD }, onImport = { importing = true }, onTestSets = { testSets = true })
+                        if (importing) ImportScreen(app) { importing = false } else if (testSets) TestSetsScreen(app) { testSets = false } else if (forgot) ForgotScreen(app) { forgot = false } else when (tab) {
+                            Tab.STUDY -> StudyScreen(app, onAdd = { tab = Tab.ADD }, onImport = { importing = true }, onTestSets = { testSets = true }, onForgot = { forgot = true })
                             Tab.ADD -> AddScreen(app)
                             Tab.LIBRARY -> LibraryScreen(app) { tab = Tab.ADD }
                             Tab.STATS -> StatsScreen(app)
