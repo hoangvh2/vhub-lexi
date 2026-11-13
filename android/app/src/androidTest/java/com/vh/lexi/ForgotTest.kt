@@ -24,6 +24,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 
@@ -109,6 +110,14 @@ class ForgotTest {
             val a = root.optJSONArray(k) ?: JSONArray()
             List(a.length()) { a.getJSONObject(it) }.sortedBy { it.optString("id") }.joinToString("\n") { "$k ${it.toString()}" }
         }
+    }
+
+    // The app's database outlives this class; SmokeTest expects a fresh app (one new word = "0/1").
+    @After
+    fun tearDown() {
+        val app = rule.activity.application as LexiApp
+        runBlocking { app.data.deleteDeckAndContents("d1") }
+        rule.waitUntil(10_000) { app.data.notes.value.none { it.id.startsWith("f") && it.deckId == "d1" } }
     }
 
     @Test
