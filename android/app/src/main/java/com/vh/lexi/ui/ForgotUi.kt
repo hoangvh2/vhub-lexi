@@ -93,7 +93,7 @@ private val ForgotKind.short get() = if (this == ForgotKind.MEANING) "Nghĩa" el
  * toggles (meaning, sound), each one write of the note. The card's FSRS state and the answer are not touched.
  */
 @Composable
-internal fun ForgotButton(app: LexiApp, note: Note, onOpenList: () -> Unit, modifier: Modifier = Modifier) {
+internal fun ForgotButton(app: LexiApp, note: Note, modifier: Modifier = Modifier) {
     val c = Lexi.colors
     val toast = LocalToaster.current
     val scope = rememberCoroutineScope()
@@ -124,7 +124,8 @@ internal fun ForgotButton(app: LexiApp, note: Note, onOpenList: () -> Unit, modi
                             .clickable(role = Role.Checkbox) {
                                 scope.launch {
                                     app.data.setForgot(live, k, !on)
-                                    if (!on) toast.show("Đã thêm vào Từ hay quên (${k.short.lowercase()})", "Xem") { open = false; onOpenList() }
+                                    // Once per word, when it joins the list; no action button: a snackbar with one stays until tapped.
+                                    if (!on && kinds.isEmpty()) toast("Đã thêm vào Từ hay quên")
                                 }
                             }
                             .semantics { selected = on }.testTag("forgot-${k.key}").padding(horizontal = 12.dp),
@@ -248,11 +249,10 @@ private fun ForgotRow(app: LexiApp, n: Note) {
     ) {
         IconButton(onClick = { app.speech.speak(word) }) { Icon(Icons.AutoMirrored.Filled.VolumeUp, "Nghe $word", tint = c.accent) }
         Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(word, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                if (ipa.isNotEmpty()) Text(ipa, fontSize = 12.sp, color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Text(shortMeaning(n).ifEmpty { "Chưa có nghĩa" }, fontSize = 13.sp, color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // The word gets the whole first line; the IPA goes with the meaning on the second, so a narrow phone never
+            // squeezes the word to "…".
+            Text(word, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(listOf(shortMeaning(n).ifEmpty { "Chưa có nghĩa" }, ipa).filter { it.isNotEmpty() }.joinToString(" · "), fontSize = 13.sp, color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         for (k in ForgotKind.entries) {
             val on = k in kinds
@@ -296,10 +296,8 @@ private fun DrillRun(app: LexiApp, items: List<DrillItem>, notesById: Map<String
                     Text("$total bài, đúng ngay lần đầu ${total - missed.size}/$total.", color = c.ink, modifier = Modifier.testTag("drill-score"))
                     if (words.isNotEmpty()) Text("Cần luyện thêm: " + words.joinToString(", ") { it.fields["word"].str() }, color = c.ink, textAlign = TextAlign.Center, modifier = Modifier.testTag("drill-missed"))
                     Text("Lịch ôn FSRS không đổi: vòng luyện này không ghi lượt ôn nào.", fontSize = 12.sp, color = c.muted, textAlign = TextAlign.Center)
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedButton(onClick = onExit, modifier = Modifier.testTag("drill-exit")) { Text("Về danh sách") }
-                        Button(onClick = onAgain, modifier = Modifier.testTag("drill-again")) { Text("Luyện vòng nữa") }
-                    }
+                    Button(onClick = onAgain, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("drill-again")) { Text("Luyện vòng nữa", fontWeight = FontWeight.Bold) }
+                    OutlinedButton(onClick = onExit, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("drill-exit")) { Text("Về danh sách") }
                 }
             }
             return@Column

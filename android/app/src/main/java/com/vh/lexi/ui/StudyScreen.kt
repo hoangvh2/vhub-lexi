@@ -408,7 +408,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTe
                                 onOpen = { k -> levels = levels + (k to minOf(2, (levels[k] ?: 0) + 1)) },
                             )
                         }
-                        if (markable) key(note.id) { ForgotButton(app, note, onOpenList = onForgot) }
+                        if (markable) key(note.id) { ForgotButton(app, note) }
                     }
                     Column(Modifier.padding(start = 20.dp, end = 20.dp, top = if (hintable || markable) 4.dp else 24.dp, bottom = 24.dp).animateContentSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
                         // What the card asks for; once answered, the space goes to the answer so the rating row stays in view.
