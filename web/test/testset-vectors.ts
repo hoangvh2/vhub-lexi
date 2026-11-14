@@ -6,6 +6,7 @@ import type { Extracted, ExtractedQuestion, Letter } from "../src/lib/import.ts"
 import { layoutText, type TextItem } from "../src/lib/pdf.ts";
 import { findGaps, frameLevels, mmss, placeQuestions, questionSpans } from "../src/lib/audio.ts";
 import {
+  attemptOf, canLogScope, partStates, partsOf, scopeName, scopeView, withAttempt, type Attempt, type SetPart, type SetQuestion, type TestSet,
   chunkPages, findKey, findPhotoPages, formatPages, photoNumbers, photoSlots, grade, isKeyPage, keyNote, keyPairs, lcPartOfNumber, lettersOf, listenQuestions, mergeExtracted, numbersIn,
   parseNumberRange, parsePageRange, partOfNumber, reflow, resultFields, sortTracks, summary, wrongDrafts, type LcLayout, type PdfPage,
 } from "../src/lib/testset.ts";
@@ -168,8 +169,39 @@ function audioVectors() {
   };
 }
 
+const sq = (i: number, part: SetPart | null, correct: Letter | null = "A"): SetQuestion => ({
+  i, number: i + 1, part, kind: "fill", stem: `Question ${i}`, options: opts("a", "b", "c", "d"), correct, passage: null, topic: "", rule: "", translation: "", flags: [],
+});
+const att = (answers: Record<number, Letter>, finishedAt?: number): Attempt => ({ startedAt: 1, elapsedMs: 5000, answers, ...(finishedAt ? { finishedAt } : {}) });
+const rc = [sq(0, 5), sq(1, 5), sq(2, 6), sq(3, 7), sq(4, 7, null), sq(5, null)];
+
+/** "Làm theo Part": which Parts a set has, where each stands, and attempts kept per scope. */
+function scopeVectors() {
+  const sets: Array<Pick<TestSet, "questions" | "attempt" | "parts">> = [
+    { questions: rc },
+    { questions: rc, parts: { "5": att({ 0: "A", 1: "B", 9: "C" }, 9), "6": att({}), "7": att({ 3: "A", 4: "B" }) } },
+    { questions: rc, parts: { "5": att({ 0: "A", 1: "A" }, 9), "7": att({ 3: "A" }, 10) }, attempt: att({ 0: "A" }) },
+    { questions: [sq(0, 2), sq(1, 1), sq(2, 2)], parts: { "2": att({ 0: "A" }) } },
+    { questions: [sq(0, null)] },
+    { questions: [] },
+  ];
+  return sets.map((set) => ({
+    set,
+    parts: partsOf(set),
+    states: partStates(set),
+    scopes: ([null, 1, 5, 6, 7] as Array<SetPart | null>).map((scope) => ({ scope, view: scopeView(set, scope).questions.map((q) => q.i), attempt: attemptOf(set, scope) ?? null })),
+    names: ([null, 2, 5] as Array<SetPart | null>).map((scope) => scopeName("Test 1", scope)),
+    set5: withAttempt(set, 5, att({ 1: "C" }, 77)),
+    set0: withAttempt(set, null, att({ 2: "D" })),
+    drop6: withAttempt(set, 6, undefined),
+    drop0: withAttempt(set, null, undefined),
+    canLog: ([null, 1, 4, 5, 7] as Array<SetPart | null>).map((scope) => canLogScope(scope)),
+  }));
+}
+
 export function testsetVectors() {
   return {
+    scopes: scopeVectors(),
     keys: keyTexts.map((text) => ({ text, pairs: [...keyPairs(text)], isKey: isKeyPage(text) })),
     findKey: (() => {
       const pages: PdfPage[] = keyTexts.map((text, k) => ({ n: k + 1, text, scanned: k === 5 }));

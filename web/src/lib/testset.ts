@@ -306,6 +306,8 @@ export interface TestSet {
   passages: SetPassage[];
   questions: SetQuestion[];
   attempt?: Attempt;
+  /** "Làm theo Part": the attempt at one Part on its own, keyed by the part number as text ("5"). Independent of `attempt`. */
+  parts?: Record<string, Attempt>;
   /** This device only: when the set was last known to be in the account (lib/testsync.ts). Never uploaded. */
   syncedAt?: number;
 }
@@ -480,6 +482,61 @@ export function summary(set: Pick<TestSet, "questions">) {
   for (const ns of groups.values()) for (let n = Math.min(...ns); n <= Math.max(...ns); n++) if (!s.has(n)) missing.push(n);
   missing.sort((a, b) => a - b);
   return { total: set.questions.length, byPart, noAnswer, missing };
+}
+
+// ------------------------------------------------------------------ one Part at a time
+
+/** What an attempt covers: the whole set (null) or the questions of one Part. */
+export type Scope = SetPart | null;
+
+/** The Parts a set has questions for, in order (questions with no part are only in the whole set). */
+export function partsOf(set: Pick<TestSet, "questions">): SetPart[] {
+  return [...new Set(set.questions.map((q) => q.part).filter((p): p is SetPart => p !== null))].sort((a, b) => a - b);
+}
+
+/** The attempt for `scope`, if there is one. */
+export const attemptOf = (set: Pick<TestSet, "attempt" | "parts">, scope: Scope): Attempt | undefined => (scope === null ? set.attempt : set.parts?.[String(scope)]);
+
+/** The set with the attempt for `scope` replaced (or removed when `a` is undefined); the other scopes are untouched. */
+export function withAttempt<T extends Pick<TestSet, "attempt" | "parts">>(set: T, scope: Scope, a: Attempt | undefined): T {
+  if (scope === null) {
+    const { attempt: _old, ...rest } = set;
+    return (a ? { ...rest, attempt: a } : rest) as T;
+  }
+  const { [String(scope)]: _old, ...others } = set.parts ?? {};
+  const { parts: _p, ...rest } = set;
+  const parts = a ? { ...others, [String(scope)]: a } : others;
+  return (Object.keys(parts).length ? { ...rest, parts } : rest) as T;
+}
+
+/** The set as seen by an attempt at `scope`: only that Part's questions (the position `i` of each is unchanged). */
+export const scopeView = <T extends Pick<TestSet, "questions">>(set: T, scope: Scope): T => (scope === null ? set : { ...set, questions: set.questions.filter((q) => q.part === scope) });
+
+/** Name under which an attempt is logged in Kết quả bài: a Part says which one. */
+export const scopeName = (name: string, scope: Scope): string => (scope === null ? name : `${name} · Part ${scope}`);
+
+/** Only Reading Parts have a place in Kết quả bài (its "LC" is a score for the whole Listening test, not one Part). */
+export const canLogScope = (scope: Scope): boolean => scope === null || scope >= 5;
+
+export interface PartState {
+  part: SetPart;
+  total: number;
+  /** Questions of this Part with an answer picked. */
+  answered: number;
+  state: "new" | "doing" | "done";
+  /** Right answers over graded questions, once the Part is submitted. */
+  score: Score | null;
+}
+
+/** Where each Part of a set stands: not started, in progress, submitted (with its score). */
+export function partStates(set: Pick<TestSet, "questions" | "parts">): PartState[] {
+  return partsOf(set).map((part) => {
+    const view = scopeView(set, part);
+    const a = set.parts?.[String(part)];
+    const answered = a ? view.questions.filter((q) => a.answers[q.i] !== undefined).length : 0;
+    const g = a?.finishedAt ? grade(view, a.answers) : null;
+    return { part, total: view.questions.length, answered, state: a?.finishedAt ? "done" : answered > 0 ? "doing" : "new", score: g ? { right: g.right, total: g.total } : null };
+  });
 }
 
 // ------------------------------------------------------------------ taking it

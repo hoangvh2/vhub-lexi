@@ -10,7 +10,7 @@ import { decodeLevels, findGaps, mmss as clipTime, placeQuestions } from "../lib
 import { openPdf, readPages, renderPage, type PdfDoc } from "../lib/pdf.ts";
 import { PARTS, formatScore } from "../lib/practice.ts";
 import { useStore } from "../lib/store.ts";
-import { LC_LAYOUT, LC_PARTS, findPhotoPages, lettersOf, photoNumbers, photoSlots, parseNumberRange, sortTracks, type LcLayout, type SetTrack } from "../lib/testset.ts";
+import { LC_LAYOUT, LC_PARTS, attemptOf, canLogScope, findPhotoPages, lettersOf, partStates, partsOf, photoNumbers, photoSlots, parseNumberRange, scopeName, scopeView, sortTracks, withAttempt, type LcLayout, type Scope, type SetTrack } from "../lib/testset.ts";
 import { chunkPages, findKey, formatPages, grade, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, reflow, resultFields, summary, wrongDrafts, type Chunk, type PdfPage, type SetQuestion, type TestSet } from "../lib/testset.ts";
 import { Icon, confirmDialog, toast } from "./common.tsx";
 import { DraftReview, type Review } from "./ImportPanel.tsx";
@@ -52,7 +52,9 @@ export function TestSetsTab({ deck, deckPicker, onPassage }: { deck: DeckSink; d
   const remote = useStore(remoteSets);
   const status = useStore(setsSync);
   const [ready, setReady] = useState(false);
-  const [running, setRunning] = useState<string | null>(null);
+  // The set whose Parts are listed, and what is being taken now: the whole set (scope null) or one Part.
+  const [home, setHome] = useState<string | null>(null);
+  const [running, setRunning] = useState<{ id: string; scope: Scope } | null>(null);
   useEffect(() => {
     loadTestSets().then(() => setReady(true), () => (setReady(true), toast("Không mở được kho bộ đề trên máy này")));
   }, []);
@@ -64,16 +66,25 @@ export function TestSetsTab({ deck, deckPicker, onPassage }: { deck: DeckSink; d
     addEventListener("online", again);
     return () => removeEventListener("online", again);
   }, [status.on]);
+  /** A set with several Parts opens on its Part list; one with a single Part goes straight to the test. */
+  function open(s: TestSet) {
+    if (partsOf(s).length >= 2) setHome(s.id);
+    else setRunning({ id: s.id, scope: null });
+  }
   async function openRemote(m: CloudMeta) {
     try {
       await downloadTestSet(m.id);
-      setRunning(m.id);
+      const s = testSets.get().find((x) => x.id === m.id);
+      if (s) open(s);
+      else setRunning({ id: m.id, scope: null });
     } catch {
       toast("Không tải được bộ đề. Kiểm tra mạng rồi thử lại.");
     }
   }
-  const current = sets.find((s) => s.id === running);
-  if (current) return <Runner set={current} deck={deck} deckPicker={deckPicker} onPassage={onPassage} onExit={() => setRunning(null)} />;
+  const current = sets.find((s) => s.id === running?.id);
+  if (current && running) return <Runner key={`${running.id}:${running.scope}`} set={current} scope={running.scope} deck={deck} deckPicker={deckPicker} onPassage={onPassage} onExit={() => setRunning(null)} />;
+  const homeSet = sets.find((s) => s.id === home);
+  if (homeSet) return <SetHome set={homeSet} onBack={() => setHome(null)} onRun={(scope) => setRunning({ id: homeSet.id, scope })} />;
   return (
     <div class="col">
       <PdfImport onSaved={(s) => toast(`Đã lưu bộ đề “${s.name}”`)} />
@@ -87,7 +98,7 @@ export function TestSetsTab({ deck, deckPicker, onPassage }: { deck: DeckSink; d
         {(status.busy || status.error) && <p class={`small ${status.error && !status.busy ? "warn-text" : "muted"}`} data-testid="sets-status" role="status">{status.busy || status.error}</p>}
         {ready && !sets.length && !remote.length && <p class="muted small" data-testid="sets-empty">Chưa có bộ đề nào. Nhập một file PDF đề Reading hoặc Listening ở trên để làm bài ngay trong Lexi.</p>}
         <ul class="sets">
-          {sets.map((s) => <SetRow key={s.id} set={s} cloud={status.on} onOpen={() => setRunning(s.id)} />)}
+          {sets.map((s) => <SetRow key={s.id} set={s} cloud={status.on} onOpen={() => open(s)} />)}
           {remote.map((m) => <RemoteRow key={m.id} meta={m} busy={!!status.busy} onOpen={() => void openRemote(m)} />)}
         </ul>
         <p class="muted small">
@@ -95,6 +106,54 @@ export function TestSetsTab({ deck, deckPicker, onPassage }: { deck: DeckSink; d
             ? "Nội dung đề là bản sao để bạn tự học: lưu trong tài khoản của bạn (chỉ bạn đọc được) và trên các máy đã mở nó. Kết quả bài và thẻ tạo từ câu sai đồng bộ như mọi thẻ khác."
             : "Nội dung đề là bản sao để bạn tự học: chỉ nằm trong trình duyệt này. Kết quả bài và thẻ tạo từ câu sai thì đồng bộ như mọi thẻ khác."}
         </p>
+      </section>
+    </div>
+  );
+}
+
+/** The Parts of a set: one row each (not started, in progress, submitted with its score), and the whole set as before. */
+function SetHome({ set, onBack, onRun }: { set: TestSet; onBack(): void; onRun(scope: Scope): void }) {
+  const states = partStates(set);
+  const full = set.attempt;
+  const fullGraded = full?.finishedAt ? grade(set, full.answers) : null;
+  return (
+    <div class="col" data-testid="set-home">
+      <div class="runner-bar panel row between">
+        <button type="button" class="btn ghost sm" onClick={onBack} data-testid="home-back"><Icon n="arrow" size={16} /> Bộ đề</button>
+        <b class="grow name">{set.name}</b>
+        <span class="pill">{set.questions.length} câu</span>
+      </div>
+      <section class="panel col">
+        <div class="row between">
+          <h2>Làm theo Part</h2>
+          <span class="muted small">khi rảnh, không cần làm hết một lần</span>
+        </div>
+        <ul class="part-list">
+          {states.map((p) => {
+            const pct = p.state === "done" ? 100 : Math.round((p.answered / Math.max(1, p.total)) * 100);
+            const a = set.parts?.[String(p.part)];
+            return (
+              <li key={p.part} class="part-row" data-testid={`home-part-${p.part}`} data-state={p.state}>
+                <b class="part-no">Part {p.part}</b>
+                <div class="grow col" style={{ gap: "4px", minWidth: 0 }}>
+                  <span class="small">
+                    {p.state === "done" ? <b>Đã nộp · {p.score ? `${p.score.right}/${p.score.total}` : "chưa có đáp án"}</b> : p.state === "doing" ? <b>Đang làm · {p.answered}/{p.total}</b> : <span>Chưa làm · {p.total} câu</span>}
+                    {a && a.elapsedMs > 0 && <span class="muted"> · {clock(a.elapsedMs)}</span>}
+                  </span>
+                  <div class="meter"><i style={{ width: `${pct}%` }} /></div>
+                </div>
+                <button type="button" class={`btn sm${p.state === "done" ? "" : " primary"}`} onClick={() => onRun(p.part)} data-testid={`home-run-${p.part}`}>{p.state === "done" ? "Xem" : p.state === "doing" ? "Tiếp" : "Bắt đầu"}</button>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+      <section class="panel row between" style={{ gap: "10px" }}>
+        <div class="col" style={{ gap: "2px" }}>
+          <b>Cả bộ</b>
+          <span class="muted small">{fullGraded ? `Đã nộp · ${fullGraded.right}/${fullGraded.total}` : full ? `Đang làm · ${Object.keys(full.answers).length}/${set.questions.length} câu` : "Làm liền mọi Part, một đồng hồ"}</span>
+        </div>
+        <button type="button" class="btn sm" onClick={() => onRun(null)} data-testid="home-full">{fullGraded ? "Xem kết quả" : full ? "Làm tiếp" : "Làm cả bộ"}</button>
       </section>
     </div>
   );
@@ -109,6 +168,10 @@ function SetRow({ set, cloud, onOpen }: { set: TestSet; cloud: boolean; onOpen()
   const sum = summary(set);
   const a = set.attempt;
   const g = a?.finishedAt ? grade(set, a.answers) : null;
+  const multi = partsOf(set).length >= 2;
+  const states = partStates(set);
+  const doneParts = states.filter((p) => p.state === "done").length;
+  const doingParts = states.filter((p) => p.state === "doing").length;
   async function remove() {
     if (await confirmRemove(set.name, !!set.tracks?.length, cloud && !!set.syncedAt)) await deleteTestSet(set.id);
   }
@@ -121,11 +184,13 @@ function SetRow({ set, cloud, onOpen }: { set: TestSet; cloud: boolean; onOpen()
           {[...LC_PARTS, ...PARTS].map((p) => sum.byPart[p.key] > 0 && <span class="pill" key={p.key}>{p.label}: {sum.byPart[p.key]}</span>)}
           {sum.byPart.other > 0 && <span class="pill">Khác: {sum.byPart.other}</span>}
           {g ? <span class="pill ok" data-testid="set-score">Đã làm: {g.right}/{g.total}</span> : a ? <span class="pill warn">Đang làm · {Object.keys(a.answers).length}/{sum.total} câu</span> : null}
+          {multi && doneParts > 0 && <span class="pill ok" data-testid="set-parts-done">Đã nộp {doneParts}/{states.length} Part</span>}
+          {multi && doingParts > 0 && <span class="pill warn">{doingParts} Part đang làm</span>}
           {cloud && !set.syncedAt && <span class="pill warn" data-testid="set-unsynced" title="Sẽ được đưa lên tài khoản khi có mạng">Chưa đồng bộ</span>}
         </div>
       </div>
       <div class="row" style={{ gap: "8px" }}>
-        <button type="button" class="btn primary sm" onClick={onOpen} data-testid="set-open">{g ? "Xem kết quả" : a ? "Làm tiếp" : "Làm bài"}</button>
+        <button type="button" class="btn primary sm" onClick={onOpen} data-testid="set-open">{multi ? "Mở" : g ? "Xem kết quả" : a ? "Làm tiếp" : "Làm bài"}</button>
         <button type="button" class="icon-btn" aria-label={`Xoá ${set.name}`} onClick={() => void remove()} data-testid="set-delete"><Icon n="trash" size={18} /></button>
       </div>
     </li>
@@ -715,8 +780,10 @@ function Pictures({ set, part, keys }: { set: TestSet; part: number; keys?: read
   );
 }
 
-function Runner({ set, deck, deckPicker, onPassage, onExit }: { set: TestSet; deck: DeckSink; deckPicker: ComponentChildren; onPassage(text: string): void; onExit(): void }) {
-  const [attempt, setAttempt] = useState(() => set.attempt ?? { startedAt: Date.now(), elapsedMs: 0, answers: {} });
+function Runner({ set, scope, deck, deckPicker, onPassage, onExit }: { set: TestSet; scope: Scope; deck: DeckSink; deckPicker: ComponentChildren; onPassage(text: string): void; onExit(): void }) {
+  // One Part on its own sees only its questions; its attempt is kept apart from the whole-set attempt.
+  const view = useMemo(() => scopeView(set, scope), [set, scope]);
+  const [attempt, setAttempt] = useState(() => attemptOf(set, scope) ?? { startedAt: Date.now(), elapsedMs: 0, answers: {} });
   const resumed = useRef(Date.now());
   const [now, setNow] = useState(Date.now());
   const finished = !!attempt.finishedAt;
@@ -745,16 +812,17 @@ function Runner({ set, deck, deckPicker, onPassage, onExit }: { set: TestSet; de
     if (rebase) resumed.current = Date.now();
     latest.current = a;
     setAttempt(a);
-    void saveTestSet({ ...set, attempt: a });
+    // The stored set, not the one this render started with: another Part's attempt or the replay clips may have changed meanwhile.
+    void saveTestSet(withAttempt(testSets.get().find((x) => x.id === set.id) ?? set, scope, a));
   }
 
   const choose = (q: SetQuestion, l: Letter) => persist({ ...attempt, answers: { ...attempt.answers, [q.i]: l } });
   const player = usePlayer(set);
-  const perQuestion = set.questions.some((q) => q.track !== undefined);
+  const perQuestion = view.questions.some((q) => q.track !== undefined);
   const answered = Object.keys(attempt.answers).length;
 
   async function submit() {
-    const left = set.questions.length - answered;
+    const left = view.questions.length - answered;
     const ok = await confirmDialog({ title: "Nộp bài?", message: left ? `Còn ${left} câu chưa làm, sẽ tính là sai.` : "Lexi chấm ngay theo bảng đáp án.", confirm: "Nộp bài" });
     if (!ok) return;
     player?.pause();
@@ -772,16 +840,16 @@ function Runner({ set, deck, deckPicker, onPassage, onExit }: { set: TestSet; de
     <div class="col runner" data-testid="runner">
       <div class="runner-bar panel row between">
         <button type="button" class="btn ghost sm" onClick={onExit} data-testid="runner-exit"><Icon n="arrow" size={16} /> Bộ đề</button>
-        <b class="grow name">{set.name}</b>
+        <b class="grow name" title={set.name} data-testid="runner-name">{scope === null ? set.name : `Part ${scope}`}</b>
         <span class="pill" data-testid="runner-clock">{clock(elapsed)}</span>
-        {!finished && <span class="pill" data-testid="runner-count">{answered}/{set.questions.length}</span>}
+        {!finished && <span class="pill" data-testid="runner-count">{answered}/{view.questions.length}</span>}
         {!finished && <button type="button" class="btn primary sm" onClick={() => void submit()} data-testid="runner-submit">Nộp bài</button>}
       </div>
       {player && !perQuestion && <ListenBar set={set} player={player} />}
       {finished ? (
-        <Result set={set} attempt={attempt} deck={deck} deckPicker={deckPicker} onPassage={onPassage} onAgain={() => void again()} onSaved={(id) => persist({ ...attempt, resultNoteId: id })} player={player} />
+        <Result set={set} scope={scope} attempt={attempt} deck={deck} deckPicker={deckPicker} onPassage={onPassage} onAgain={() => void again()} onSaved={(id) => persist({ ...attempt, resultNoteId: id })} player={player} />
       ) : (
-        <Questions set={set} answers={attempt.answers} onChoose={choose} player={player} />
+        <Questions set={view} answers={attempt.answers} onChoose={choose} player={player} />
       )}
     </div>
   );
@@ -919,8 +987,9 @@ async function splitAudio(set: TestSet): Promise<number> {
   return found;
 }
 
-function Result({ set, attempt, deck, deckPicker, onPassage, onAgain, onSaved, player }: {
+function Result({ set, scope, attempt, deck, deckPicker, onPassage, onAgain, onSaved, player }: {
   set: TestSet;
+  scope: Scope;
   player: Player | null;
   deckPicker: ComponentChildren;
   attempt: NonNullable<TestSet["attempt"]>;
@@ -930,7 +999,8 @@ function Result({ set, attempt, deck, deckPicker, onPassage, onAgain, onSaved, p
   onSaved(noteId: string): void;
 }) {
   const allNotes = useStore(notes);
-  const g = useMemo(() => grade(set, attempt.answers), [set, attempt]);
+  const view = useMemo(() => scopeView(set, scope), [set, scope]);
+  const g = useMemo(() => grade(view, attempt.answers), [view, attempt]);
   const existing = useMemo(() => existingSentences(allNotes), [allNotes]);
   const [review, setReview] = useState<Review | null>(null);
   const [onlyWrong, setOnlyWrong] = useState(true);
@@ -939,18 +1009,18 @@ function Result({ set, attempt, deck, deckPicker, onPassage, onAgain, onSaved, p
   async function saveResult() {
     const date = new Date(attempt.finishedAt ?? Date.now());
     const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-    const n = await addNote({ type: "test", fields: resultFields(set.name, iso || todayIso(), g, attempt.elapsedMs) });
+    const n = await addNote({ type: "test", fields: resultFields(scopeName(set.name, scope), iso || todayIso(), g, attempt.elapsedMs) });
     onSaved(n.id);
     toast("Đã lưu vào Kết quả bài");
   }
 
   function makeCards() {
-    const w = wrongDrafts(set, g, existing);
+    const w = wrongDrafts(view, g, existing);
     if (!w.drafts.length && !w.passages.length) return toast("Không có câu sai nào để tạo thẻ");
     setReview({ drafts: w.drafts, passages: w.passages, skipped: w.skipped });
   }
 
-  const shown = onlyWrong ? { ...set, questions: set.questions.filter((q) => g.wrong.includes(q.i)) } : set;
+  const shown = onlyWrong ? { ...view, questions: view.questions.filter((q) => g.wrong.includes(q.i)) } : view;
   // Long files (a whole Part per file): found once on request, kept with the set.
   const splittable = !!set.tracks?.length && !set.questions.some((q) => q.track !== undefined);
   const split = set.questions.some((q) => q.clip);
@@ -983,13 +1053,13 @@ function Result({ set, attempt, deck, deckPicker, onPassage, onAgain, onSaved, p
           <span class="pill" data-testid="result-time">{clock(attempt.elapsedMs)}</span>
         </div>
         <div class="chips">
-          {g.lc && <span class="pill ok" data-testid="result-lc">LC: {formatScore(g.lc)}</span>}
+          {scope === null && g.lc && <span class="pill ok" data-testid="result-lc">LC: {formatScore(g.lc)}</span>}
           {LC_PARTS.map((p) => g.lcParts[p.key] && <span class="pill" key={p.key} data-testid={`result-${p.key}`}>{p.label}: {formatScore(g.lcParts[p.key]!)}</span>)}
           {PARTS.map((p) => g.parts[p.key] && <span class="pill" key={p.key} data-testid={`result-${p.key}`}>{p.label}: {formatScore(g.parts[p.key]!)}</span>)}
           {g.ungraded > 0 && <span class="pill">{g.ungraded} câu không chấm</span>}
         </div>
         <div class="row" style={{ flexWrap: "wrap", gap: "8px" }}>
-          <button type="button" class="btn primary" disabled={saved} onClick={() => void saveResult()} data-testid="result-save">{saved ? <><Icon n="check" /> Đã lưu vào Kết quả bài</> : "Lưu vào Kết quả bài"}</button>
+          {canLogScope(scope) && <button type="button" class="btn primary" disabled={saved} onClick={() => void saveResult()} data-testid="result-save">{saved ? <><Icon n="check" /> Đã lưu vào Kết quả bài</> : "Lưu vào Kết quả bài"}</button>}
           <button type="button" class="btn" disabled={!g.wrong.length} onClick={makeCards} data-testid="result-cards"><Icon n="sparkle" /> Tạo thẻ từ {g.wrong.length} câu sai</button>
           <button type="button" class="btn ghost" onClick={onAgain} data-testid="result-again">Làm lại</button>
           {splittable && !split && (
@@ -1015,7 +1085,7 @@ function Result({ set, attempt, deck, deckPicker, onPassage, onAgain, onSaved, p
         </section>
       )}
       <div class="row between">
-        <h3 class="part-head">{onlyWrong ? `Câu sai (${g.wrong.length})` : `Tất cả (${set.questions.length})`}</h3>
+        <h3 class="part-head">{onlyWrong ? `Câu sai (${g.wrong.length})` : `Tất cả (${view.questions.length})`}</h3>
         <button type="button" class="btn ghost sm" onClick={() => setOnlyWrong(!onlyWrong)} data-testid="result-toggle">{onlyWrong ? "Xem cả bài" : "Chỉ câu sai"}</button>
       </div>
       <Questions set={shown} answers={attempt.answers} review player={player} all={set.questions} onNudge={(q, ms) => void nudge(q, ms)} />

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -49,6 +50,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,6 +79,14 @@ import com.vh.lexi.LexiApp
 import com.vh.lexi.cloud.Account
 import com.vh.lexi.core.AiError
 import com.vh.lexi.core.Attempt
+import com.vh.lexi.core.PartState
+import com.vh.lexi.core.attemptOf
+import com.vh.lexi.core.canLogScope
+import com.vh.lexi.core.partStates
+import com.vh.lexi.core.partsOf
+import com.vh.lexi.core.scopeName
+import com.vh.lexi.core.scopeQuestions
+import com.vh.lexi.core.withAttempt
 import com.vh.lexi.core.AudioSplit
 import com.vh.lexi.core.Clip
 import com.vh.lexi.core.nudged
@@ -147,7 +157,10 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
     val remote by store.remote.collectAsState()
     val status by store.status.collectAsState()
     var ready by remember { mutableStateOf(false) }
+    // The set whose Parts are listed, and what is being taken now: the whole set (WHOLE) or one Part.
+    var home by rememberSaveable { mutableStateOf<String?>(null) }
     var running by rememberSaveable { mutableStateOf<String?>(null) }
+    var runScope by rememberSaveable { mutableStateOf(WHOLE) }
     var cards by remember { mutableStateOf<Pair<String, WrongDrafts>?>(null) }
     LaunchedEffect(Unit) {
         try { store.load() } catch (e: CancellationException) { throw e } catch (_: Exception) { toast("Không mở được kho bộ đề trên máy này") }
@@ -155,6 +168,17 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
     }
     // Again once the account is ready: sign-in can finish after the screen is up.
     LaunchedEffect(status.on) { if (status.on) store.sync() }
+    /** A set with several Parts opens on its Part list; one with a single Part goes straight to the test. */
+    fun open(s: TestSet) {
+        if (partsOf(s.questions).size >= 2) home = s.id else { runScope = WHOLE; running = s.id }
+    }
+    // A set just downloaded from the account opens as soon as the store has it.
+    var pendingOpen by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(pendingOpen, sets) {
+        val s = sets.firstOrNull { it.id == pendingOpen } ?: return@LaunchedEffect
+        pendingOpen = null
+        open(s)
+    }
 
     val cardsFor = cards
     if (cardsFor != null) {
@@ -164,7 +188,14 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
     val current = sets.firstOrNull { it.id == running }
     if (current != null) {
         BackHandler { running = null }
-        Runner(app, current, onExit = { running = null }, onCards = { cards = current.name to it })
+        val part = runScope.takeIf { it != WHOLE }
+        key(current.id, runScope) { Runner(app, current, part, onExit = { running = null }, onCards = { cards = current.name to it }) }
+        return
+    }
+    val homeSet = sets.firstOrNull { it.id == home }
+    if (homeSet != null) {
+        BackHandler { home = null }
+        SetHome(homeSet, onBack = { home = null }, onRun = { scopeOrNull -> runScope = scopeOrNull ?: WHOLE; running = homeSet.id })
         return
     }
     BackHandler(onBack = onClose)
@@ -182,8 +213,8 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
             val line = status.busy.ifEmpty { status.error }
             if (line.isNotEmpty()) Text(line, fontSize = 13.sp, color = if (status.busy.isEmpty()) c.hard else c.muted, modifier = Modifier.testTag("sets-status"))
             if (ready && sets.isEmpty() && remote.isEmpty()) Text("Chưa có bộ đề nào. Nhập một file PDF đề Reading hoặc Listening ở trên để làm bài ngay trong Lexi.", fontSize = 13.sp, color = c.muted, modifier = Modifier.testTag("sets-empty"))
-            for (s in sets) SetRow(app, s, status.on) { running = s.id }
-            for (m in remote) RemoteRow(app, m, busy = status.busy.isNotEmpty()) { running = m.id }
+            for (s in sets) SetRow(app, s, status.on) { open(s) }
+            for (m in remote) RemoteRow(app, m, busy = status.busy.isNotEmpty()) { pendingOpen = m.id }
             Text(
                 if (status.on) "Nội dung đề là bản sao để bạn tự học: lưu trong tài khoản của bạn (chỉ bạn đọc được) và trên các máy đã mở nó. Kết quả bài và thẻ tạo từ câu sai đồng bộ như mọi thẻ khác."
                 else "Nội dung đề là bản sao để bạn tự học: chỉ nằm trong máy này, không đồng bộ, không sao lưu. Kết quả bài và thẻ tạo từ câu sai thì đồng bộ như mọi thẻ khác.",
@@ -192,6 +223,9 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
         }
     }
 }
+
+/** `runScope` while the whole test is being taken (a Part is its number). */
+private const val WHOLE = -1
 
 /** Photo pages shown small at import (Part 1 has at most 6 photos). */
 private const val PHOTO_THUMBS = 6
@@ -203,6 +237,10 @@ private fun SetRow(app: LexiApp, set: TestSet, cloud: Boolean, onOpen: () -> Uni
     val sum = remember(set) { summary(set.questions) }
     val a = set.attempt
     val g = remember(set) { if (a?.finishedAt != null) grade(set.questions, a.answers) else null }
+    val multi = remember(set.questions) { partsOf(set.questions).size >= 2 }
+    val states = remember(set) { partStates(set) }
+    val doneParts = states.count { it.state == "done" }
+    val doingParts = states.count { it.state == "doing" }
     var asking by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Lexi.colors.surface2).padding(12.dp).testTag("set-row"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(set.name, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -214,10 +252,12 @@ private fun SetRow(app: LexiApp, set: TestSet, cloud: Boolean, onOpen: () -> Uni
                 g != null -> Pill("Đã làm: ${g.right}/${g.total}", PillKind.OK, Modifier.testTag("set-score"))
                 a != null -> Pill("Đang làm · ${a.answers.size}/${sum.total} câu", PillKind.WARN)
             }
+            if (multi && doneParts > 0) Pill("Đã nộp $doneParts/${states.size} Part", PillKind.OK, Modifier.testTag("set-parts-done"))
+            if (multi && doingParts > 0) Pill("$doingParts Part đang làm", PillKind.WARN)
             if (cloud && set.syncedAt == null) Pill("Chưa đồng bộ", PillKind.WARN, Modifier.testTag("set-unsynced"))
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = onOpen, Modifier.weight(1f).testTag("set-open")) { Text(if (g != null) "Xem kết quả" else if (a != null) "Làm tiếp" else "Làm bài") }
+            Button(onClick = onOpen, Modifier.weight(1f).testTag("set-open")) { Text(if (multi) "Mở" else if (g != null) "Xem kết quả" else if (a != null) "Làm tiếp" else "Làm bài") }
             IconButton(onClick = { asking = true }, Modifier.testTag("set-delete")) { Icon(Icons.Filled.Delete, "Xoá ${set.name}") }
         }
     }
@@ -228,6 +268,55 @@ private fun SetRow(app: LexiApp, set: TestSet, cloud: Boolean, onOpen: () -> Uni
         onConfirm = { asking = false; scope.launch { app.testSets.delete(set.id) } },
         onDismiss = { asking = false },
     )
+}
+
+/** The Parts of a set: one row each (not started, in progress, submitted with its score), and the whole set as before. */
+@Composable
+private fun SetHome(set: TestSet, onBack: () -> Unit, onRun: (Int?) -> Unit) {
+    val c = Lexi.colors
+    val states = remember(set) { partStates(set) }
+    val full = set.attempt
+    val fullGraded = remember(set) { if (full?.finishedAt != null) grade(set.questions, full.answers) else null }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp).testTag("set-home"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack, Modifier.testTag("home-back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Bộ đề") }
+            Text(set.name, Modifier.weight(1f), fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        Panel {
+            Text("Làm theo Part", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+            Text("khi rảnh, không cần làm hết một lần", fontSize = 13.sp, color = c.muted)
+            for (p in states) PartRow(set, p) { onRun(p.part) }
+        }
+        Panel {
+            Text("Cả bộ", fontWeight = FontWeight.Bold)
+            Text(
+                if (fullGraded != null) "Đã nộp · ${fullGraded.right}/${fullGraded.total}" else if (full != null) "Đang làm · ${full.answers.size}/${set.questions.size} câu" else "Làm liền mọi Part, một đồng hồ",
+                fontSize = 13.sp, color = c.muted,
+            )
+            OutlinedButton(onClick = { onRun(null) }, Modifier.fillMaxWidth().testTag("home-full")) { Text(if (fullGraded != null) "Xem kết quả" else if (full != null) "Làm tiếp" else "Làm cả bộ") }
+        }
+    }
+}
+
+@Composable
+private fun PartRow(set: TestSet, p: PartState, onRun: () -> Unit) {
+    val c = Lexi.colors
+    val a = set.attemptOf(p.part)
+    val pct = if (p.state == "done") 1f else p.answered.toFloat() / maxOf(1, p.total)
+    val text = when (p.state) {
+        "done" -> "Đã nộp · " + (p.score?.toString() ?: "chưa có đáp án")
+        "doing" -> "Đang làm · ${p.answered}/${p.total}"
+        else -> "Chưa làm · ${p.total} câu"
+    } + if (a != null && a.elapsedMs > 0) " · ${clock(a.elapsedMs)}" else ""
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(c.surface2).padding(horizontal = 12.dp, vertical = 10.dp).testTag("home-part-${p.part}"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Part ${p.part}", fontWeight = FontWeight.ExtraBold)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text, fontSize = 13.sp, fontWeight = if (p.state == "new") FontWeight.Normal else FontWeight.Bold)
+            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(c.line)) { Box(Modifier.fillMaxWidth(pct).height(6.dp).background(c.accent)) }
+        }
+        if (p.state == "done") OutlinedButton(onClick = onRun, Modifier.testTag("home-run-${p.part}")) { Text("Xem") }
+        else Button(onClick = onRun, Modifier.testTag("home-run-${p.part}")) { Text(if (p.state == "doing") "Tiếp" else "Bắt đầu") }
+    }
 }
 
 private fun removeMessage(name: String, lc: Boolean, everywhere: Boolean) =
@@ -726,19 +815,21 @@ private fun linesOf(questions: List<SetQuestion>, photos: List<SetPicture> = emp
 }
 
 @Composable
-private fun Runner(app: LexiApp, set: TestSet, onExit: () -> Unit, onCards: (WrongDrafts) -> Unit) {
+private fun Runner(app: LexiApp, set: TestSet, part: Int?, onExit: () -> Unit, onCards: (WrongDrafts) -> Unit) {
     val scope = rememberCoroutineScope()
     val c = Lexi.colors
-    var attempt by remember(set.id) { mutableStateOf(set.attempt ?: Attempt(System.currentTimeMillis(), 0, emptyMap())) }
+    // One Part on its own sees only its questions; its attempt is kept apart from the whole-set attempt.
+    val view = remember(set.questions, part) { if (part == null) set else set.copy(questions = scopeQuestions(set.questions, part)) }
+    var attempt by remember(set.id, part) { mutableStateOf(set.attemptOf(part) ?: Attempt(System.currentTimeMillis(), 0, emptyMap())) }
     val finished = attempt.finishedAt != null
-    var resumed by remember(set.id) { mutableLongStateOf(System.currentTimeMillis()) }
+    var resumed by remember(set.id, part) { mutableLongStateOf(System.currentTimeMillis()) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val elapsed = attempt.elapsedMs + if (finished) 0 else now - resumed
     var submitting by remember { mutableStateOf(false) }
     var restarting by remember { mutableStateOf(false) }
     val toast = LocalToaster.current
     val player = remember(set.id) { if (set.tracks.isEmpty()) null else ListenPlayer(set.tracks, app.testSets::mediaFile) { toast(it) } }
-    val perQuestion = set.questions.any { it.track != null }
+    val perQuestion = view.questions.any { it.track != null }
     if (player != null) {
         DisposableEffect(player) { onDispose { player.release() } }
     }
@@ -747,7 +838,9 @@ private fun Runner(app: LexiApp, set: TestSet, onExit: () -> Unit, onCards: (Wro
         if (rebase) resumed = System.currentTimeMillis()
         attempt = a
         // The app's scope, not the screen's: the last answer is still written when the screen closes.
-        app.testSets.saveSoon(app.scope, set.copy(attempt = a))
+        // The stored set, not the one this screen started with: another Part's attempt or the replay clips may have changed meanwhile.
+        val latest = app.testSets.sets.value.firstOrNull { it.id == set.id } ?: set
+        app.testSets.saveSoon(app.scope, latest.withAttempt(part, a))
     }
     // Leaving the screen (or the app) pauses the clock and keeps the answers.
     fun pause() {
@@ -767,20 +860,20 @@ private fun Runner(app: LexiApp, set: TestSet, onExit: () -> Unit, onCards: (Wro
         // Two rows: on a narrow phone the name, the clock, the count and "Nộp bài" do not fit on one.
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onExit, Modifier.testTag("runner-exit")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Bộ đề") }
-            Text(set.name, Modifier.weight(1f), fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(if (part == null) set.name else "Part $part", Modifier.weight(1f).testTag("runner-name"), fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Pill(clock(elapsed), modifier = Modifier.testTag("runner-clock"))
-            if (!finished) Pill("${attempt.answers.size}/${set.questions.size} câu", modifier = Modifier.testTag("runner-count"))
+            if (!finished) Pill("${attempt.answers.size}/${view.questions.size} câu", modifier = Modifier.testTag("runner-count"))
             Box(Modifier.weight(1f))
             if (!finished) Button(onClick = { submitting = true }, Modifier.testTag("runner-submit")) { Text("Nộp bài") }
         }
         if (player != null && !perQuestion) ListenBar(set, player)
-        if (finished) Result(app, set, attempt, player, onCards = onCards, onAgain = { restarting = true }, onSaved = { id -> persist(attempt.copy(resultNoteId = id)) })
-        else Questions(app, set, attempt.answers, review = false, player = player) { q, l -> persist(attempt.copy(answers = attempt.answers + (q.i to l))) }
+        if (finished) Result(app, set, part, attempt, player, onCards = onCards, onAgain = { restarting = true }, onSaved = { id -> persist(attempt.copy(resultNoteId = id)) })
+        else Questions(app, view, attempt.answers, review = false, player = player) { q, l -> persist(attempt.copy(answers = attempt.answers + (q.i to l))) }
     }
     if (submitting) {
-        val left = set.questions.size - attempt.answers.size
+        val left = view.questions.size - attempt.answers.size
         ConfirmDialog(
             title = "Nộp bài?", message = if (left > 0) "Còn $left câu chưa làm, sẽ tính là sai." else "Lexi chấm ngay theo bảng đáp án.", confirm = "Nộp bài",
             onConfirm = { submitting = false; player?.pause(); persist(attempt.copy(elapsedMs = elapsed, finishedAt = System.currentTimeMillis()), rebase = true) },
@@ -883,17 +976,18 @@ private fun QuestionCard(q: SetQuestion, pick: String?, review: Boolean, player:
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Result(app: LexiApp, set: TestSet, attempt: Attempt, player: ListenPlayer?, onCards: (WrongDrafts) -> Unit, onAgain: () -> Unit, onSaved: (String) -> Unit) {
+private fun Result(app: LexiApp, set: TestSet, part: Int?, attempt: Attempt, player: ListenPlayer?, onCards: (WrongDrafts) -> Unit, onAgain: () -> Unit, onSaved: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     val toast = LocalToaster.current
     val c = Lexi.colors
     val notes by app.data.notes.collectAsState()
-    val g = remember(set, attempt) { grade(set.questions, attempt.answers) }
+    val view = remember(set.questions, part) { if (part == null) set else set.copy(questions = scopeQuestions(set.questions, part)) }
+    val g = remember(view, attempt) { grade(view.questions, attempt.answers) }
     val existing = remember(notes) { existingSentences(notes) }
     var onlyWrong by remember { mutableStateOf(true) }
     val saved = attempt.resultNoteId != null && notes.any { it.id == attempt.resultNoteId }
     val wrongSet = g.wrong.toSet()
-    val shown = if (onlyWrong) set.questions.filter { it.i in wrongSet } else set.questions
+    val shown = if (onlyWrong) view.questions.filter { it.i in wrongSet } else view.questions
     // Long files (a whole Part per file): found once on request, kept with the set.
     val splittable = set.tracks.isNotEmpty() && set.questions.none { it.track != null }
     val split = set.questions.any { it.clip != null }
@@ -938,13 +1032,13 @@ private fun Result(app: LexiApp, set: TestSet, attempt: Attempt, player: ListenP
     fun saveResult() {
         scope.launch {
             val date = Instant.ofEpochMilli(attempt.finishedAt ?: System.currentTimeMillis()).atZone(ZoneId.systemDefault()).toLocalDate().toString()
-            val n = app.data.addNote("test", resultFields(set.name, date, g, attempt.elapsedMs).mapValues { FieldValue.Text(it.value) })
+            val n = app.data.addNote("test", resultFields(scopeName(set.name, part), date, g, attempt.elapsedMs).mapValues { FieldValue.Text(it.value) })
             onSaved(n.id)
             toast("Đã lưu vào Kết quả bài")
         }
     }
 
-    Questions(app, set, attempt.answers, review = true, player = player, shown = shown, onNudge = ::nudge, header = {
+    Questions(app, view, attempt.answers, review = true, player = player, shown = shown, onNudge = ::nudge, header = {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Panel(Modifier.testTag("runner-result")) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -955,17 +1049,17 @@ private fun Result(app: LexiApp, set: TestSet, attempt: Attempt, player: ListenP
                     Pill(clock(attempt.elapsedMs), modifier = Modifier.testTag("result-time"))
                 }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    g.lc?.let { Pill("LC: $it", PillKind.OK, Modifier.testTag("result-lc")) }
+                    if (part == null) g.lc?.let { Pill("LC: $it", PillKind.OK, Modifier.testTag("result-lc")) }
                     for (p in LC_PARTS) g.lcParts[p.key]?.let { Pill("${p.label}: $it", modifier = Modifier.testTag("result-${p.key}")) }
                     for (p in RC_PARTS) g.parts[p.key]?.let { Pill("${p.label}: $it", modifier = Modifier.testTag("result-${p.key}")) }
                     if (g.ungraded > 0) Pill("${g.ungraded} câu không chấm")
                 }
-                Button(onClick = ::saveResult, enabled = !saved, modifier = Modifier.fillMaxWidth().testTag("result-save")) {
+                if (canLogScope(part)) Button(onClick = ::saveResult, enabled = !saved, modifier = Modifier.fillMaxWidth().testTag("result-save")) {
                     if (saved) { Icon(Icons.Filled.Check, null); Text("  Đã lưu vào Kết quả bài") } else Text("Lưu vào Kết quả bài")
                 }
                 OutlinedButton(
                     onClick = {
-                        val w = wrongDrafts(set, g, existing)
+                        val w = wrongDrafts(view, g, existing)
                         if (w.drafts.isEmpty() && w.passages.isEmpty()) toast("Không có câu sai nào để tạo thẻ") else onCards(w)
                     },
                     enabled = g.wrong.isNotEmpty(), modifier = Modifier.fillMaxWidth().testTag("result-cards"),
@@ -977,7 +1071,7 @@ private fun Result(app: LexiApp, set: TestSet, attempt: Attempt, player: ListenP
                 TextButton(onClick = onAgain, Modifier.testTag("result-again")) { Text("Làm lại") }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (onlyWrong) "Câu sai (${g.wrong.size})" else "Tất cả (${set.questions.size})", Modifier.weight(1f), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                Text(if (onlyWrong) "Câu sai (${g.wrong.size})" else "Tất cả (${view.questions.size})", Modifier.weight(1f), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
                 TextButton(onClick = { onlyWrong = !onlyWrong }, Modifier.testTag("result-toggle")) { Text(if (onlyWrong) "Xem cả bài" else "Chỉ câu sai") }
             }
         }

@@ -61,3 +61,33 @@ describe("Bộ đề sync: planSync", () => {
     expect(planSync([], [{ id: "z", updatedAt: 1 }])).toEqual([{ kind: "remote", id: "z" }]);
   });
 });
+
+describe("Bộ đề sync: attempts per Part", () => {
+  const base = { questions: [], attempt: undefined, parts: undefined } as Pick<TestSet, "questions" | "attempt" | "parts">;
+  const a = { startedAt: 3, elapsedMs: 900, answers: { 1: "B", 0: "A" } as Record<number, "A" | "B">, finishedAt: 5, resultNoteId: "n" };
+
+  it("writes the Part attempts into state and reads them back on another device", () => {
+    const state = progressOf({ ...base, parts: { "7": { ...a, finishedAt: undefined, resultNoteId: undefined }, "5": a } });
+    expect(Object.keys(JSON.parse(state).parts)).toEqual(["5", "7"]);
+    const back = withProgress({ ...base }, state);
+    expect(back.parts!["5"]).toEqual(a);
+    expect(back.parts!["7"].finishedAt).toBeUndefined();
+  });
+
+  it("a state with no Part attempts clears this device's (the other device is newer), and a bad one changes nothing", () => {
+    const mine = { ...base, parts: { "5": a } };
+    expect(withProgress(mine, '{"clips":{}}').parts).toBeUndefined();
+    expect(withProgress(mine, '{"clips":{},"parts":{"5":{"startedAt":"x"}}}')).toBe(mine);
+    expect(withProgress(mine, '{"clips":{},"parts":[]}')).toBe(mine);
+  });
+
+  it("an old state (before Parts) has no `parts` key, so what an older device writes is unchanged", () => {
+    expect(JSON.parse(progressOf({ ...base, attempt: a })).parts).toBeUndefined();
+  });
+
+  it("the set uploaded once carries no attempts", () => {
+    const set = { id: "s", name: "x", createdAt: 1, updatedAt: 2, source: { fileName: "f", pages: 1 }, passages: [], questions: [], attempt: a, parts: { "5": a }, syncedAt: 4 } as TestSet;
+    const c = contentOf(set);
+    expect("attempt" in c || "parts" in c || "syncedAt" in c).toBe(false);
+  });
+});

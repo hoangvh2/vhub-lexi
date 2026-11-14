@@ -33,19 +33,22 @@ fun mediaKey(id: String, path: String): String? = if (path.startsWith("media/"))
 
 fun filesOf(set: TestSet): List<String> = listOf(SET_FILE) + set.tracks.map { mediaPath(it.key) } + set.pictures.map { mediaPath(it.key) }
 
+private fun attemptState(a: Attempt): JSONObject {
+    val answers = JSONObject()
+    for (k in a.answers.keys.sorted()) answers.put(k.toString(), a.answers[k])
+    return JSONObject().put("startedAt", a.startedAt).put("elapsedMs", a.elapsedMs).put("answers", answers).apply {
+        a.finishedAt?.let { put("finishedAt", it) }
+        a.resultNoteId?.let { put("resultNoteId", it) }
+    }
+}
+
 /** What changes while the learner works, as stored in `state`. Clips by question position. */
 fun progressOf(set: TestSet): String {
     val clips = JSONObject()
     for (q in set.questions) q.clip?.let { clips.put(q.i.toString(), JSONObject().put("track", it.track).put("from", it.from).put("to", it.to)) }
     val p = JSONObject().put("clips", clips)
-    set.attempt?.let { a ->
-        val answers = JSONObject()
-        for (k in a.answers.keys.sorted()) answers.put(k.toString(), a.answers[k])
-        p.put("attempt", JSONObject().put("startedAt", a.startedAt).put("elapsedMs", a.elapsedMs).put("answers", answers).apply {
-            a.finishedAt?.let { put("finishedAt", it) }
-            a.resultNoteId?.let { put("resultNoteId", it) }
-        })
-    }
+    set.attempt?.let { p.put("attempt", attemptState(it)) }
+    if (set.parts.isNotEmpty()) p.put("parts", JSONObject().apply { set.parts.toSortedMap().forEach { (k, a) -> put(k.toString(), attemptState(a)) } })
     return p.toString()
 }
 
@@ -60,9 +63,23 @@ private fun JSONObject.int(k: String): Long? {
     return if (d.isFinite() && d == Math.floor(d)) d.toLong() else null
 }
 
+/** One attempt as `state` has it; null when it is not one (a time that is not a whole number). */
+private fun readAttempt(x: JSONObject): Attempt? {
+    val startedAt = x.int("startedAt") ?: return null
+    val elapsedMs = x.int("elapsedMs") ?: return null
+    val ans = x.opt("answers") as? JSONObject
+    val answers = sortedMapOf<Int, String>()
+    ans?.keys()?.forEach { k ->
+        val v = ans.opt(k)
+        if (DIGITS.matches(k) && v is String && LETTER.matches(v)) answers[k.toInt()] = v
+    }
+    val rid = x.opt("resultNoteId")
+    return Attempt(startedAt, elapsedMs, answers, x.int("finishedAt"), (rid as? String)?.ifEmpty { null })
+}
+
 /**
- * The set with the progress in [state] in place of its own: the attempt replaced (or gone), every question's clip as
- * [state] has it. Text that does not parse, or has the wrong shape, changes nothing.
+ * The set with the progress in [state] in place of its own: the attempt and the per-Part attempts replaced (or gone),
+ * every question's clip as [state] has it. Text that does not parse, or has the wrong shape, changes nothing.
  */
 fun withProgress(set: TestSet, state: String): TestSet {
     val p = try {
@@ -75,17 +92,15 @@ fun withProgress(set: TestSet, state: String): TestSet {
     val clips = p.opt("clips") as? JSONObject ?: return set
     val attempt: Attempt? = when (val x = p.opt("attempt")) {
         null -> null
-        is JSONObject -> {
-            val startedAt = x.int("startedAt") ?: return set
-            val elapsedMs = x.int("elapsedMs") ?: return set
-            val ans = x.opt("answers") as? JSONObject
-            val answers = sortedMapOf<Int, String>()
-            ans?.keys()?.forEach { k ->
-                val v = ans.opt(k)
-                if (DIGITS.matches(k) && v is String && LETTER.matches(v)) answers[k.toInt()] = v
-            }
-            val rid = x.opt("resultNoteId")
-            Attempt(startedAt, elapsedMs, answers, x.int("finishedAt"), (rid as? String)?.ifEmpty { null })
+        is JSONObject -> readAttempt(x) ?: return set
+        else -> return set
+    }
+    val parts = sortedMapOf<Int, Attempt>()
+    when (val x = p.opt("parts")) {
+        null -> {}
+        is JSONObject -> x.keys().forEach { k ->
+            if (!DIGITS.matches(k)) return@forEach
+            parts[k.toInt()] = readAttempt(x.opt(k) as? JSONObject ?: return set) ?: return set
         }
         else -> return set
     }
@@ -94,11 +109,11 @@ fun withProgress(set: TestSet, state: String): TestSet {
         val t = v?.int("track"); val f = v?.int("from"); val e = v?.int("to")
         q.copy(clip = if (t != null && f != null && e != null) Clip(t.toInt(), f, e) else null)
     }
-    return set.copy(questions = questions, attempt = attempt)
+    return set.copy(questions = questions, attempt = attempt, parts = parts)
 }
 
-/** The set as uploaded in set.json: without the attempt (in `state`) and this device's sync mark. */
-fun contentOf(set: TestSet): TestSet = set.copy(attempt = null, syncedAt = null)
+/** The set as uploaded in set.json: without the attempts (in `state`) and this device's sync mark. */
+fun contentOf(set: TestSet): TestSet = set.copy(attempt = null, parts = emptyMap(), syncedAt = null)
 
 fun metaOf(set: TestSet, bytes: Long): CloudMeta = CloudMeta(
     id = set.id, name = set.name.take(200).ifEmpty { "Bộ đề" }, section = set.section.ifEmpty { "rc" }, createdAt = set.createdAt,

@@ -344,6 +344,8 @@ data class TestSet(
     val attempt: Attempt? = null,
     /** This device only: when the set was last known to be in the account (TestSetSync.kt). Never uploaded. */
     val syncedAt: Long? = null,
+    /** "Làm theo Part": the attempt at one Part on its own, by part number. Independent of [attempt]. */
+    val parts: Map<Int, Attempt> = emptyMap(),
 )
 
 /** Question numbers of the Listening parts printed with nothing but their number (Part 1, Part 2). */
@@ -698,6 +700,7 @@ private fun lines(items: List<TextItem>): String {
 
 // ------------------------------------------------------------------ stored as JSON on the device (same shape as the web)
 
+private val DIGITS_ONLY = Regex("^\\d+$")
 private fun JSONObject.strOr(k: String, d: String = "") = if (has(k) && !isNull(k)) optString(k, d) else d
 private fun JSONObject.intOrNull(k: String): Int? = if (has(k) && !isNull(k)) getInt(k) else null
 private fun JSONObject.longOrNull(k: String): Long? = if (has(k) && !isNull(k)) getLong(k) else null
@@ -733,13 +736,23 @@ fun TestSet.toJson(): JSONObject = JSONObject()
     .put("tracks", JSONArray(tracks.map { JSONObject().put("key", it.key).put("name", it.name).put("bytes", it.bytes) }))
     .put("pictures", JSONArray(pictures.map { p -> JSONObject().put("part", p.part ?: JSONObject.NULL).put("page", p.page).put("key", p.key).apply { if (p.numbers.isNotEmpty()) put("numbers", JSONArray(p.numbers)) } }))
     .apply {
-        attempt?.let { a ->
-            put("attempt", JSONObject().put("startedAt", a.startedAt).put("elapsedMs", a.elapsedMs)
-                .put("answers", JSONObject().apply { a.answers.forEach { (k, v) -> put(k.toString(), v) } })
-                .apply { a.finishedAt?.let { put("finishedAt", it) }; a.resultNoteId?.let { put("resultNoteId", it) } })
-        }
+        attempt?.let { put("attempt", it.toJson()) }
+        if (parts.isNotEmpty()) put("parts", JSONObject().apply { parts.toSortedMap().forEach { (k, a) -> put(k.toString(), a.toJson()) } })
         syncedAt?.let { put("syncedAt", it) }
     }
+
+fun Attempt.toJson(): JSONObject = JSONObject().put("startedAt", startedAt).put("elapsedMs", elapsedMs)
+    .put("answers", JSONObject().apply { answers.forEach { (k, v) -> put(k.toString(), v) } })
+    .apply { finishedAt?.let { put("finishedAt", it) }; resultNoteId?.let { put("resultNoteId", it) } }
+
+fun attemptFromJson(it: JSONObject): Attempt {
+    val ans = it.optJSONObject("answers")
+    return Attempt(
+        startedAt = it.getLong("startedAt"), elapsedMs = it.optLong("elapsedMs"),
+        answers = ans?.keys()?.asSequence()?.associate { k -> k.toInt() to ans.getString(k) } ?: emptyMap(),
+        finishedAt = it.longOrNull("finishedAt"), resultNoteId = it.strOr("resultNoteId").ifEmpty { null },
+    )
+}
 
 fun testSetFromJson(o: JSONObject): TestSet {
     val src = o.getJSONObject("source")
@@ -752,16 +765,43 @@ fun testSetFromJson(o: JSONObject): TestSet {
         questions = o.optJSONArray("questions")?.objs()?.map(::setQuestionFromJson) ?: emptyList(),
         tracks = o.optJSONArray("tracks")?.objs()?.map { SetTrack(it.getString("key"), it.strOr("name"), it.optLong("bytes")) } ?: emptyList(),
         pictures = o.optJSONArray("pictures")?.objs()?.map { p -> SetPicture(p.intOrNull("part"), p.getInt("page"), p.getString("key"), p.optJSONArray("numbers")?.let { a -> List(a.length()) { a.getInt(it) } } ?: emptyList()) } ?: emptyList(),
-        attempt = a?.let {
-            val ans = it.optJSONObject("answers")
-            Attempt(
-                startedAt = it.getLong("startedAt"), elapsedMs = it.optLong("elapsedMs"),
-                answers = ans?.keys()?.asSequence()?.associate { k -> k.toInt() to ans.getString(k) } ?: emptyMap(),
-                finishedAt = it.longOrNull("finishedAt"), resultNoteId = it.strOr("resultNoteId").ifEmpty { null },
-            )
-        },
+        attempt = a?.let(::attemptFromJson),
+        parts = o.optJSONObject("parts")?.let { ps -> ps.keys().asSequence().filter { k -> DIGITS_ONLY.matches(k) }.associate { k -> k.toInt() to attemptFromJson(ps.getJSONObject(k)) } } ?: emptyMap(),
         syncedAt = o.longOrNull("syncedAt"),
     )
+}
+
+// ------------------------------------------------------------------ one Part at a time (web: testset.ts "Làm theo Part")
+
+/** The Parts a set has questions for, in order (questions with no part are only in the whole set). */
+fun partsOf(questions: List<SetQuestion>): List<Int> = questions.mapNotNull { it.part }.distinct().sorted()
+
+/** The attempt for [scope] (null = the whole set, else one Part), if there is one. */
+fun TestSet.attemptOf(scope: Int?): Attempt? = if (scope == null) attempt else parts[scope]
+
+/** The set with the attempt for [scope] replaced (removed when [a] is null); the other scopes are untouched. */
+fun TestSet.withAttempt(scope: Int?, a: Attempt?): TestSet =
+    if (scope == null) copy(attempt = a) else copy(parts = if (a == null) parts - scope else parts + (scope to a))
+
+/** The questions an attempt at [scope] sees: only that Part's (the position `i` of each is unchanged). */
+fun scopeQuestions(questions: List<SetQuestion>, scope: Int?): List<SetQuestion> = if (scope == null) questions else questions.filter { it.part == scope }
+
+/** Name under which an attempt is logged in Kết quả bài: a Part says which one. */
+fun scopeName(name: String, scope: Int?): String = if (scope == null) name else "$name · Part $scope"
+
+/** Only Reading Parts have a place in Kết quả bài (its "LC" is a score for the whole Listening test, not one Part). */
+fun canLogScope(scope: Int?): Boolean = scope == null || scope >= 5
+
+/** [state]: "new", "doing" or "done"; [score] once submitted. */
+data class PartState(val part: Int, val total: Int, val answered: Int, val state: String, val score: Score?)
+
+/** Where each Part of a set stands: not started, in progress, submitted (with its score). */
+fun partStates(set: TestSet): List<PartState> = partsOf(set.questions).map { part ->
+    val qs = scopeQuestions(set.questions, part)
+    val a = set.parts[part]
+    val answered = if (a == null) 0 else qs.count { a.answers.containsKey(it.i) }
+    val g = if (a?.finishedAt != null) grade(qs, a.answers) else null
+    PartState(part, qs.size, answered, if (a?.finishedAt != null) "done" else if (answered > 0) "doing" else "new", g?.let { Score(it.right, it.total) })
 }
 
 /**

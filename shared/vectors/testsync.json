@@ -503,12 +503,319 @@
      "resultNoteId": "r"
     }
    }
+  },
+  {
+   "set": {
+    "id": "s1",
+    "name": "ETS Test 1 LC",
+    "createdAt": 1000,
+    "updatedAt": 2000,
+    "section": "lc",
+    "source": {
+     "fileName": "ets.pdf",
+     "pages": 40
+    },
+    "tracks": [
+     {
+      "key": "s1:a0",
+      "name": "01.mp3",
+      "bytes": 300
+     },
+     {
+      "key": "s1:a1",
+      "name": "02.mp3",
+      "bytes": 400
+     }
+    ],
+    "pictures": [
+     {
+      "part": 1,
+      "page": 3,
+      "key": "s1:p3"
+     }
+    ],
+    "passages": [],
+    "questions": [
+     {
+      "i": 0,
+      "number": 1,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": [],
+      "clip": {
+       "track": 0,
+       "from": 1200,
+       "to": 9000
+      }
+     },
+     {
+      "i": 1,
+      "number": 2,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": []
+     },
+     {
+      "i": 2,
+      "number": 3,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": [],
+      "clip": {
+       "track": 1,
+       "from": 0,
+       "to": 5000
+      }
+     }
+    ],
+    "attempt": {
+     "startedAt": 5,
+     "elapsedMs": 60000,
+     "answers": {
+      "0": "A",
+      "2": "C"
+     }
+    },
+    "parts": {
+     "5": {
+      "startedAt": 1,
+      "elapsedMs": 4,
+      "answers": {}
+     },
+     "7": {
+      "startedAt": 2,
+      "elapsedMs": 5,
+      "answers": {
+       "0": "A",
+       "1": "B"
+      },
+      "finishedAt": 9,
+      "resultNoteId": "r7"
+     }
+    }
+   },
+   "out": {
+    "clips": {
+     "0": {
+      "track": 0,
+      "from": 1200,
+      "to": 9000
+     },
+     "2": {
+      "track": 1,
+      "from": 0,
+      "to": 5000
+     }
+    },
+    "attempt": {
+     "startedAt": 5,
+     "elapsedMs": 60000,
+     "answers": {
+      "0": "A",
+      "2": "C"
+     }
+    },
+    "parts": {
+     "5": {
+      "startedAt": 1,
+      "elapsedMs": 4,
+      "answers": {}
+     },
+     "7": {
+      "startedAt": 2,
+      "elapsedMs": 5,
+      "answers": {
+       "0": "A",
+       "1": "B"
+      },
+      "finishedAt": 9,
+      "resultNoteId": "r7"
+     }
+    }
+   }
+  },
+  {
+   "set": {
+    "id": "s1",
+    "name": "ETS Test 1 LC",
+    "createdAt": 1000,
+    "updatedAt": 2000,
+    "section": "lc",
+    "source": {
+     "fileName": "ets.pdf",
+     "pages": 40
+    },
+    "tracks": [
+     {
+      "key": "s1:a0",
+      "name": "01.mp3",
+      "bytes": 300
+     },
+     {
+      "key": "s1:a1",
+      "name": "02.mp3",
+      "bytes": 400
+     }
+    ],
+    "pictures": [
+     {
+      "part": 1,
+      "page": 3,
+      "key": "s1:p3"
+     }
+    ],
+    "passages": [],
+    "questions": [
+     {
+      "i": 0,
+      "number": 1,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": [],
+      "clip": {
+       "track": 0,
+       "from": 1200,
+       "to": 9000
+      }
+     },
+     {
+      "i": 1,
+      "number": 2,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": []
+     },
+     {
+      "i": 2,
+      "number": 3,
+      "part": 2,
+      "kind": "listen",
+      "choices": 3,
+      "stem": "",
+      "options": {
+       "A": "",
+       "B": "",
+       "C": "",
+       "D": ""
+      },
+      "correct": "B",
+      "passage": null,
+      "topic": "",
+      "rule": "",
+      "translation": "",
+      "flags": [],
+      "clip": {
+       "track": 1,
+       "from": 0,
+       "to": 5000
+      }
+     }
+    ],
+    "parts": {
+     "2": {
+      "startedAt": 3,
+      "elapsedMs": 6,
+      "answers": {
+       "2": "C"
+      }
+     }
+    }
+   },
+   "out": {
+    "clips": {
+     "0": {
+      "track": 0,
+      "from": 1200,
+      "to": 9000
+     },
+     "2": {
+      "track": 1,
+      "from": 0,
+      "to": 5000
+     }
+    },
+    "parts": {
+     "2": {
+      "startedAt": 3,
+      "elapsedMs": 6,
+      "answers": {
+       "2": "C"
+      }
+     }
+    }
+   }
   }
  ],
  "withProgress": [
   {
    "state": "{\"clips\":{}}",
    "attempt": null,
+   "parts": null,
    "clips": [
     null,
     null,
@@ -527,6 +834,7 @@
     "finishedAt": 99,
     "resultNoteId": "n1"
    },
+   "parts": null,
    "clips": [
     null,
     {
@@ -546,6 +854,7 @@
      "2": "D"
     }
    },
+   "parts": null,
    "clips": [
     null,
     null,
@@ -566,6 +875,7 @@
      "2": "C"
     }
    },
+   "parts": null,
    "clips": [
     {
      "track": 0,
@@ -590,6 +900,7 @@
      "2": "C"
     }
    },
+   "parts": null,
    "clips": [
     {
      "track": 0,
@@ -614,6 +925,7 @@
      "2": "C"
     }
    },
+   "parts": null,
    "clips": [
     {
      "track": 0,
@@ -638,6 +950,7 @@
      "2": "C"
     }
    },
+   "parts": null,
    "clips": [
     {
      "track": 0,
@@ -662,6 +975,7 @@
      "2": "C"
     }
    },
+   "parts": null,
    "clips": [
     {
      "track": 0,
@@ -686,6 +1000,7 @@
      "2": "C"
     }
    },
+   "parts": null,
    "clips": [
     {
      "track": 0,
@@ -698,6 +1013,143 @@
      "from": 0,
      "to": 5000
     }
+   ]
+  },
+  {
+   "state": "{\"clips\":{},\"parts\":{\"5\":{\"startedAt\":3,\"elapsedMs\":9000,\"answers\":{\"0\":\"A\",\"1\":\"B\"},\"finishedAt\":50,\"resultNoteId\":\"n5\"},\"7\":{\"startedAt\":4,\"elapsedMs\":10,\"answers\":{\"2\":\"D\"}}}}",
+   "attempt": null,
+   "parts": {
+    "5": {
+     "startedAt": 3,
+     "elapsedMs": 9000,
+     "answers": {
+      "0": "A",
+      "1": "B"
+     },
+     "finishedAt": 50,
+     "resultNoteId": "n5"
+    },
+    "7": {
+     "startedAt": 4,
+     "elapsedMs": 10,
+     "answers": {
+      "2": "D"
+     }
+    }
+   },
+   "clips": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "state": "{\"clips\":{},\"parts\":{\"5\":{\"startedAt\":3,\"elapsedMs\":9000,\"answers\":{\"0\":\"E\",\"x\":\"A\"}},\"abc\":{\"startedAt\":1},\"6\":{\"startedAt\":1.5,\"elapsedMs\":2,\"answers\":{}}}}",
+   "attempt": {
+    "startedAt": 5,
+    "elapsedMs": 60000,
+    "answers": {
+     "0": "A",
+     "2": "C"
+    }
+   },
+   "parts": null,
+   "clips": [
+    {
+     "track": 0,
+     "from": 1200,
+     "to": 9000
+    },
+    null,
+    {
+     "track": 1,
+     "from": 0,
+     "to": 5000
+    }
+   ]
+  },
+  {
+   "state": "{\"clips\":{},\"parts\":{\"5\":{\"startedAt\":3,\"elapsedMs\":9000,\"answers\":{}},\"6\":{\"startedAt\":\"x\",\"elapsedMs\":2,\"answers\":{}}}}",
+   "attempt": {
+    "startedAt": 5,
+    "elapsedMs": 60000,
+    "answers": {
+     "0": "A",
+     "2": "C"
+    }
+   },
+   "parts": null,
+   "clips": [
+    {
+     "track": 0,
+     "from": 1200,
+     "to": 9000
+    },
+    null,
+    {
+     "track": 1,
+     "from": 0,
+     "to": 5000
+    }
+   ]
+  },
+  {
+   "state": "{\"clips\":{},\"parts\":[]}",
+   "attempt": {
+    "startedAt": 5,
+    "elapsedMs": 60000,
+    "answers": {
+     "0": "A",
+     "2": "C"
+    }
+   },
+   "parts": null,
+   "clips": [
+    {
+     "track": 0,
+     "from": 1200,
+     "to": 9000
+    },
+    null,
+    {
+     "track": 1,
+     "from": 0,
+     "to": 5000
+    }
+   ]
+  },
+  {
+   "state": "{\"clips\":{},\"parts\":{}}",
+   "attempt": null,
+   "parts": null,
+   "clips": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "state": "{\"attempt\":{\"startedAt\":7,\"elapsedMs\":1,\"answers\":{\"2\":\"A\"}},\"clips\":{},\"parts\":{\"6\":{\"startedAt\":2,\"elapsedMs\":3,\"answers\":{\"1\":\"C\"}}}}",
+   "attempt": {
+    "startedAt": 7,
+    "elapsedMs": 1,
+    "answers": {
+     "2": "A"
+    }
+   },
+   "parts": {
+    "6": {
+     "startedAt": 2,
+     "elapsedMs": 3,
+     "answers": {
+      "1": "C"
+     }
+    }
+   },
+   "clips": [
+    null,
+    null,
+    null
    ]
   }
  ],

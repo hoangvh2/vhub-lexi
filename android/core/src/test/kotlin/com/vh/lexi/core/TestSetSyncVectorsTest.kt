@@ -43,6 +43,8 @@ class TestSetSyncVectorsTest {
             val state = c.getString("state")
             val out = withProgress(set, state)
             same(c.get("attempt"), attemptJson(out.attempt).let { if (it == JSONObject.NULL) null else it }, "attempt for $state")
+            val parts = if (out.parts.isEmpty()) null else JSONObject().apply { out.parts.toSortedMap().forEach { (k, a) -> put(k.toString(), attemptJson(a)) } }
+            same(c.get("parts"), parts, "parts for $state")
             same(c.getJSONArray("clips"), JSONArray(out.questions.map { clipJson(it.clip) }), "clips for $state")
         }
     }
@@ -67,6 +69,7 @@ class TestSetSyncVectorsTest {
         val content = contentOf(set.copy(syncedAt = 9))
         assertEquals(null, content.attempt)
         assertEquals(null, content.syncedAt)
+        assertEquals(emptyMap(), contentOf(set.copy(parts = mapOf(5 to Attempt(1, 2, emptyMap())))).parts)
         assertEquals(set.questions, testSetFromJson(content.toJson()).questions)
     }
 

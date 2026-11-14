@@ -16,6 +16,19 @@ after(async () => {
   server?.close();
 });
 
+/** A set with several Parts opens on its Part list: "Làm cả bộ" is the whole test as before. */
+async function openSet(page) {
+  await page.click('[data-testid=set-open]');
+  const el = await page.waitForSelector('[data-testid=set-home], [data-testid=runner]');
+  if ((await el.getAttribute('data-testid')) === 'set-home') await page.click('[data-testid=home-full]');
+}
+/** Leaves the test; a set with several Parts goes back to its Part list, then to the list of sets. */
+async function exitRunner(page) {
+  await page.click('[data-testid=runner-exit]');
+  const el = await page.waitForSelector('[data-testid=set-home], [data-testid=set-row]');
+  if ((await el.getAttribute('data-testid')) === 'set-home') await page.click('[data-testid=home-back]');
+}
+
 const noOverflow = (page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
 
 describe("core flow (local-only mode)", () => {
@@ -1238,7 +1251,7 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     assert.match(await page.textContent('[data-testid=sets]'), /Riêng tư · chỉ trên máy này/);
 
     // Take it: passages show once above their questions; answers are kept when the screen is left and reopened.
-    await page.click('[data-testid=set-open]');
+    await openSet(page);
     await page.waitForSelector('[data-testid=runner]');
     assert.equal(await page.locator('[data-testid=runner-q]').count(), 17);
     assert.equal(await page.locator('[data-testid=runner-passage]').count(), 2);
@@ -1249,10 +1262,10 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await pick(102, "very"); // wrong
     await pick(103, "Despite"); // right
     await shot("3-runner-part5");
-    await page.click('[data-testid=runner-exit]');
+    await exitRunner(page);
     await page.waitForSelector('[data-testid=set-row]');
     assert.match(await page.textContent('[data-testid=set-row]'), /Đang làm · 3\/17 câu/);
-    await page.click('[data-testid=set-open]');
+    await openSet(page);
     await page.waitForSelector('[data-testid=runner]');
     assert.equal(await q(102).locator('input:checked').count(), 1);
     await pick(131, "parks"); // wrong (fill inside the e-mail)
@@ -1304,10 +1317,118 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     assert.equal(await page.locator('[data-testid=runner-q] input:checked').count(), 0);
 
     // The result is a test note: "Kết quả bài" lists it.
-    await page.click('[data-testid=runner-exit]');
+    await exitRunner(page);
     await page.click('[data-testid=tab-result]');
     await page.waitForFunction(() => /Đề PDF mẫu/.test(document.querySelector('[data-testid=practice]').textContent));
     assert.match(await page.textContent('[data-testid=practice]'), /RC 3\/17/);
+    assert.equal(await noOverflow(page), true);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("one Part at a time: its own answers and clock, paused and resumed, submitted and logged apart from the other Parts and the whole test", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    const shot = async (name) => shots && (await page.waitForTimeout(400), await page.screenshot({ path: join(shots, `${name}.png`), fullPage: false }));
+    await page.exposeFunction("__stubExtract", (input) => fakeRead(input.text));
+    await page.addInitScript(() => { window.__lexiExtract = (input) => window.__stubExtract(input); });
+    await importPdf(page, "reading-test.pdf");
+    await page.fill('[data-testid=set-name]', "Đề theo Part");
+    await page.click('[data-testid=pdf-read]');
+    await page.waitForSelector('[data-testid=pdf-preview]');
+    await page.click('[data-testid=pdf-save]');
+    await page.waitForSelector('[data-testid=set-row]');
+
+    // Three Parts: the set opens on its Part list and nothing is started.
+    await page.click('[data-testid=set-open]');
+    await page.waitForSelector('[data-testid=set-home]');
+    for (const p of [5, 6, 7]) assert.equal(await page.getAttribute(`[data-testid=home-part-${p}]`, 'data-state'), 'new');
+    assert.match(await page.textContent('[data-testid=home-part-5]'), /Chưa làm · 10 câu/);
+    assert.match(await page.textContent('[data-testid=home-part-7]'), /3 câu/);
+    assert.match(await page.textContent('[data-testid=home-full]'), /Làm cả bộ/);
+    await shot("part-1-home");
+
+    // Part 5 alone: only its ten questions, its own counter and name.
+    const q = (n) => page.locator('[data-testid=runner-q]', { hasText: new RegExp(`^${n}\\.`) });
+    const pick = async (n, text) => q(n).locator('label.opt', { hasText: text }).first().click();
+    await page.click('[data-testid=home-run-5]');
+    await page.waitForSelector('[data-testid=runner]');
+    assert.equal(await page.locator('[data-testid=runner-q]').count(), 10);
+    assert.match(await page.textContent('[data-testid=runner-count]'), /0\/10/);
+    assert.equal(await page.textContent('[data-testid=runner-name]'), "Part 5");
+    await pick(101, "receipts"); // right
+    await pick(102, "very"); // wrong
+    await pick(103, "Despite"); // right
+    await shot("part-2-runner");
+    await page.click('[data-testid=runner-exit]'); // back to the Part list, not the list of sets
+    await page.waitForSelector('[data-testid=set-home]');
+
+    // Paused: Part 5 is in progress, the others untouched; it survives a reload and is the same on reopening.
+    await page.reload();
+    await page.waitForSelector('[data-testid=set-row]');
+    await page.click('[data-testid=set-open]');
+    await page.waitForSelector('[data-testid=set-home]');
+    assert.equal(await page.getAttribute('[data-testid=home-part-5]', 'data-state'), 'doing');
+    assert.match(await page.textContent('[data-testid=home-part-5]'), /Đang làm · 3\/10/);
+    assert.equal(await page.getAttribute('[data-testid=home-part-6]', 'data-state'), 'new');
+    assert.match(await page.textContent('[data-testid=home-full]'), /Làm cả bộ/); // the whole-test attempt is not started
+    await shot("part-3-home-doing");
+    await page.click('[data-testid=home-run-5]');
+    await page.waitForSelector('[data-testid=runner]');
+    assert.equal(await q(102).locator('input:checked').count(), 1);
+
+    // Submit the Part: it grades only its own questions (blank = wrong) and has no other Part's score.
+    await page.click('[data-testid=runner-submit]');
+    assert.match(await page.textContent('.modal'), /Còn 7 câu chưa làm/);
+    await page.click('[data-testid=confirm-ok]');
+    await page.waitForSelector('[data-testid=runner-result]');
+    assert.equal(await page.textContent('[data-testid=result-score]'), "2/10");
+    assert.match(await page.textContent('[data-testid=result-p5]'), /2\/10/);
+    assert.equal(await page.locator('[data-testid=result-p6], [data-testid=result-p7]').count(), 0);
+    await shot("part-4-result");
+
+    // Logged on its own line, named with its Part, and as a short test (not compared with the full-RC target).
+    await page.click('[data-testid=result-save]');
+    await page.waitForFunction(() => /Đã lưu vào Kết quả bài/.test(document.querySelector('[data-testid=result-save]').textContent));
+    await exitRunner(page);
+    assert.match(await page.textContent('[data-testid=set-row]'), /Đã nộp 1\/3 Part/);
+    await page.click('[data-testid=tab-result]');
+    await page.waitForFunction(() => /Đề theo Part · Part 5/.test(document.querySelector('[data-testid=practice]').textContent));
+    await page.click('[data-testid=tab-sets]');
+    await page.waitForSelector('[data-testid=set-row]');
+
+    // The whole test is a separate attempt: still 0/17 after Part 5 was submitted.
+    await page.click('[data-testid=set-open]');
+    await page.click('[data-testid=home-full]');
+    await page.waitForSelector('[data-testid=runner]');
+    assert.equal(await page.locator('[data-testid=runner-q]').count(), 17);
+    assert.match(await page.textContent('[data-testid=runner-count]'), /0\/17/);
+    await exitRunner(page);
+    await page.click('[data-testid=set-open]');
+
+    // Part 6 on its own, then Part 5 again: "Làm lại" asks, and only wipes Part 5.
+    await page.click('[data-testid=home-run-6]');
+    await page.waitForSelector('[data-testid=runner]');
+    assert.equal(await page.locator('[data-testid=runner-q]').count(), 4);
+    await page.click('[data-testid=runner-submit]');
+    await page.click('[data-testid=confirm-ok]');
+    await page.waitForSelector('[data-testid=runner-result]');
+    assert.match(await page.textContent('[data-testid=result-p6]'), /0\/4/);
+    await page.click('[data-testid=runner-exit]');
+    await page.waitForSelector('[data-testid=set-home]');
+    assert.equal(await page.getAttribute('[data-testid=home-part-6]', 'data-state'), 'done');
+    await page.click('[data-testid=home-run-5]');
+    await page.waitForSelector('[data-testid=runner-result]');
+    await page.click('[data-testid=result-again]');
+    await page.click('[data-testid=confirm-cancel]');
+    assert.equal(await page.textContent('[data-testid=result-score]'), "2/10"); // "Không" keeps it
+    await page.click('[data-testid=result-again]');
+    await page.click('[data-testid=confirm-ok]');
+    await page.waitForSelector('[data-testid=runner-submit]');
+    assert.match(await page.textContent('[data-testid=runner-count]'), /0\/10/);
+    await page.click('[data-testid=runner-exit]');
+    await page.waitForSelector('[data-testid=set-home]');
+    assert.equal(await page.getAttribute('[data-testid=home-part-5]', 'data-state'), 'new');
+    assert.equal(await page.getAttribute('[data-testid=home-part-6]', 'data-state'), 'done');
     assert.equal(await noOverflow(page), true);
     assert.deepEqual(errors, []);
     await ctx.close();
@@ -1481,7 +1602,7 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await page.waitForSelector('[data-testid=set-row]');
     assert.match(await page.textContent('[data-testid=set-lc]'), /Listening · 3 file nghe/);
 
-    await page.click('[data-testid=set-open]');
+    await openSet(page);
     await page.waitForSelector('[data-testid=runner]');
     await page.waitForSelector('[data-testid=runner-picture]');
     assert.equal(await page.locator('[data-testid=runner-picture]').count(), 1);
@@ -1513,7 +1634,7 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     assert.equal(await page.locator('[data-testid=result-p5]').count(), 0);
     await page.click('[data-testid=result-save]');
     await page.waitForFunction(() => /Đã lưu/.test(document.querySelector('[data-testid=result-save]')?.textContent ?? ""));
-    await page.click('[data-testid=runner-exit]');
+    await exitRunner(page);
 
     // Deleting asks first; "Xoá" takes the audio and the photo off the device too.
     const media = () => page.evaluate(() => new Promise((res) => {
@@ -1563,7 +1684,7 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await page.click('[data-testid=pdf-read]');
     await page.waitForSelector('[data-testid=pdf-preview]');
     await page.click('[data-testid=pdf-save]');
-    await page.click('[data-testid=set-open]');
+    await openSet(page);
     await page.waitForSelector('[data-testid=runner]');
     await page.waitForFunction(() => document.querySelectorAll('[data-testid=runner-picture]').length === 2);
     assert.deepEqual(await page.$$eval('[data-testid=runner-q] .opts', (els) => els.map((e) => e.querySelectorAll("input").length)), [4, 4, 3, 3, 3]);
@@ -1571,7 +1692,7 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     assert.match(await page.textContent('[data-testid=part-help-2]'), /không có ảnh và không in câu hỏi/);
     assert.equal(await page.locator('[data-testid=part1-no-photos]').count(), 0);
     await shot("15-lc-runner-photos");
-    await page.click('[data-testid=runner-exit]');
+    await exitRunner(page);
     // A set saved before photos were asked for (Part 1, no pictures): the test says why there is no photo.
     await page.waitForSelector('[data-testid=set-open]');
     await page.waitForTimeout(500); // leaving the test saves the attempt: let that write land first
@@ -1593,7 +1714,7 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     }));
     await page.reload();
     await page.waitForSelector('[data-testid=set-open]');
-    await page.click('[data-testid=set-open]');
+    await openSet(page);
     await page.waitForSelector('[data-testid=part1-no-photos]');
     assert.match(await page.textContent('[data-testid=part1-no-photos]'), /Nhập lại file PDF và điền “Trang ảnh Part 1”/);
     await shot("14-lc-old-set-no-photos");
@@ -1614,7 +1735,7 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await page.waitForSelector('[data-testid=pdf-preview]');
     assert.match(await page.textContent('[data-testid=pdf-audio]'), /mỗi câu một file/);
     await page.click('[data-testid=pdf-save]');
-    await page.click('[data-testid=set-open]');
+    await openSet(page);
     await page.waitForSelector('[data-testid=runner]');
     assert.equal(await page.locator('[data-testid=listen-bar]').count(), 0);
     assert.equal(await page.locator('[data-testid=q-play]').count(), 2);
@@ -1638,7 +1759,7 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await page.click('[data-testid=pdf-read]');
     await page.waitForSelector('[data-testid=pdf-preview]');
     await page.click('[data-testid=pdf-save]');
-    await page.click('[data-testid=set-open]');
+    await openSet(page);
     await page.waitForSelector('[data-testid=listen-bar]');
     await page.locator('[data-testid=runner-q]').nth(0).locator('label:has-text("B")').click();
     await page.click('[data-testid=runner-submit]');
@@ -1665,7 +1786,7 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await page.locator('[data-testid=q-replay-earlier]').nth(1).click();
     await page.waitForFunction(() => document.querySelectorAll('[data-testid=q-replay-range]')[1]?.textContent === "File 1 · 0:13–0:19");
     await page.reload();
-    await page.click('[data-testid=set-open]');
+    await openSet(page);
     await page.waitForSelector('[data-testid=runner-result]');
     await page.click('[data-testid=result-toggle]');
     await page.waitForFunction(() => document.querySelectorAll('[data-testid=q-replay-range]')[1]?.textContent === "File 1 · 0:13–0:19");
@@ -1736,11 +1857,11 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     assert.equal(account.docs.get(id).questions, 17);
 
     // Answer one question on A; the progress reaches the document.
-    await a.page.click('[data-testid=set-open]');
+    await openSet(a.page);
     await a.page.waitForSelector('[data-testid=runner]');
     const q = (page, n) => page.locator('[data-testid=runner-q]', { hasText: new RegExp(`^${n}\\.`) });
     await q(a.page, 101).locator('label.opt', { hasText: "receipts" }).first().click();
-    await a.page.click('[data-testid=runner-exit]');
+    await exitRunner(a.page);
     const deadline = Date.now() + 10_000;
     while (!/"answers":\{"0":/.test(account.docs.get(id).state) && Date.now() < deadline) await a.page.waitForTimeout(200);
     assert.match(account.docs.get(id).state, /"answers":\{"0":"[A-D]"\}/);
@@ -1754,9 +1875,13 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     assert.match(await b.page.textContent('[data-testid=set-remote]'), /17 câu/);
     if (shots) await b.page.screenshot({ path: join(shots, "sync-1-remote.png") });
     await b.page.click('[data-testid=set-download]');
+    // A set with several Parts opens on its Part list: B sees A's progress there, then opens the whole test.
+    await b.page.waitForSelector('[data-testid=set-home]');
+    assert.match(await b.page.textContent('[data-testid=home-full]'), /Làm tiếp/);
+    await b.page.click('[data-testid=home-full]');
     await b.page.waitForSelector('[data-testid=runner]');
     assert.equal(await q(b.page, 101).locator('input:checked').count(), 1);
-    await b.page.click('[data-testid=runner-exit]');
+    await exitRunner(b.page);
     await b.page.waitForSelector('[data-testid=set-row]');
     assert.match(await b.page.textContent('[data-testid=set-row]'), /Đang làm · 1\/17 câu/);
     if (shots) await b.page.screenshot({ path: join(shots, "sync-2-downloaded.png") });

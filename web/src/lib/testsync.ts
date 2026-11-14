@@ -31,6 +31,8 @@ export interface CloudMeta {
 type Clip = NonNullable<SetQuestion["clip"]>;
 interface Progress {
   attempt?: Attempt;
+  /** One attempt per Part taken on its own, by part number. Absent when there is none. */
+  parts?: Record<string, Attempt>;
   clips: Record<string, Clip>;
 }
 
@@ -44,67 +46,95 @@ export function filesOf(set: Pick<TestSet, "tracks" | "pictures">): string[] {
   return [SET_FILE, ...(set.tracks ?? []).map((t) => mediaPath(t.key)), ...(set.pictures ?? []).map((p) => mediaPath(p.key))];
 }
 
+const attemptJson = (a: Attempt): Attempt => {
+  const answers: Record<string, string> = {};
+  for (const k of Object.keys(a.answers).map(Number).sort((x, y) => x - y)) answers[String(k)] = a.answers[k];
+  const out: Attempt = { startedAt: a.startedAt, elapsedMs: a.elapsedMs, answers: answers as Attempt["answers"] };
+  if (a.finishedAt !== undefined) out.finishedAt = a.finishedAt;
+  if (a.resultNoteId !== undefined) out.resultNoteId = a.resultNoteId;
+  return out;
+};
+
 /** What changes while the learner works, as stored in `state`. Clips by question position. */
-export function progressOf(set: Pick<TestSet, "attempt" | "questions">): string {
+export function progressOf(set: Pick<TestSet, "attempt" | "parts" | "questions">): string {
   const clips: Record<string, Clip> = {};
   for (const q of set.questions) if (q.clip) clips[String(q.i)] = { track: q.clip.track, from: q.clip.from, to: q.clip.to };
   const p: Progress = { clips };
-  if (set.attempt) {
-    const a = set.attempt;
-    const answers: Record<string, string> = {};
-    for (const k of Object.keys(a.answers).map(Number).sort((x, y) => x - y)) answers[String(k)] = a.answers[k];
-    p.attempt = { startedAt: a.startedAt, elapsedMs: a.elapsedMs, answers: answers as Attempt["answers"] };
-    if (a.finishedAt !== undefined) p.attempt.finishedAt = a.finishedAt;
-    if (a.resultNoteId !== undefined) p.attempt.resultNoteId = a.resultNoteId;
+  if (set.attempt) p.attempt = attemptJson(set.attempt);
+  const keys = Object.keys(set.parts ?? {}).filter((k) => /^\d+$/.test(k)).sort((x, y) => Number(x) - Number(y));
+  if (keys.length) {
+    p.parts = {};
+    for (const k of keys) p.parts[k] = attemptJson(set.parts![k]);
   }
   return JSON.stringify(p);
 }
 
 const isInt = (x: unknown): x is number => typeof x === "number" && Number.isInteger(x);
 
+const isObj = (x: unknown): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x);
+
+/** One attempt as `state` has it; null when it is not one (a time that is not a whole number). */
+function readAttempt(x: Record<string, unknown>): Attempt | null {
+  if (!isInt(x.startedAt) || !isInt(x.elapsedMs)) return null;
+  const answers: Record<number, Attempt["answers"][number]> = {};
+  for (const [k, v] of Object.entries(isObj(x.answers) ? x.answers : {})) {
+    if (/^\d+$/.test(k) && typeof v === "string" && /^[A-D]$/.test(v)) answers[Number(k)] = v as Attempt["answers"][number];
+  }
+  const a: Attempt = { startedAt: x.startedAt, elapsedMs: x.elapsedMs, answers };
+  if (isInt(x.finishedAt)) a.finishedAt = x.finishedAt;
+  if (typeof x.resultNoteId === "string" && x.resultNoteId) a.resultNoteId = x.resultNoteId;
+  return a;
+}
+
 /**
- * The set with the progress in `state` (another device's) in place of its own: the attempt replaced (or gone),
- * every question's clip as `state` has it. Text that does not parse, or has the wrong shape, changes nothing.
+ * The set with the progress in `state` (another device's) in place of its own: the attempt and the per-Part attempts
+ * replaced (or gone), every question's clip as `state` has it. Text that does not parse, or has the wrong shape,
+ * changes nothing.
  */
-export function withProgress<T extends Pick<TestSet, "attempt" | "questions">>(set: T, state: string): T {
+export function withProgress<T extends Pick<TestSet, "attempt" | "parts" | "questions">>(set: T, state: string): T {
   let p: unknown;
   try {
     p = JSON.parse(state);
   } catch {
     return set;
   }
-  const obj = (x: unknown): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x);
   // progressOf always writes `clips`: without it this is not a state.
-  if (!obj(p) || !obj(p.clips)) return set;
+  if (!isObj(p) || !isObj(p.clips)) return set;
   const { attempt } = p;
   const c = p.clips;
   let a: Attempt | undefined;
-  if (obj(attempt)) {
-    const x = attempt;
-    if (!isInt(x.startedAt) || !isInt(x.elapsedMs)) return set;
-    const answers: Record<number, Attempt["answers"][number]> = {};
-    for (const [k, v] of Object.entries(obj(x.answers) ? x.answers : {})) {
-      if (/^\d+$/.test(k) && typeof v === "string" && /^[A-D]$/.test(v)) answers[Number(k)] = v as Attempt["answers"][number];
-    }
-    a = { startedAt: x.startedAt, elapsedMs: x.elapsedMs, answers };
-    if (isInt(x.finishedAt)) a.finishedAt = x.finishedAt;
-    if (typeof x.resultNoteId === "string" && x.resultNoteId) a.resultNoteId = x.resultNoteId;
+  if (isObj(attempt)) {
+    const r = readAttempt(attempt);
+    if (!r) return set;
+    a = r;
   } else if (attempt !== undefined) return set;
+  let parts: Record<string, Attempt> | undefined;
+  if (p.parts !== undefined) {
+    if (!isObj(p.parts)) return set;
+    for (const [k, v] of Object.entries(p.parts)) {
+      if (!/^\d+$/.test(k)) continue;
+      const r = isObj(v) ? readAttempt(v) : null;
+      if (!r) return set;
+      (parts ??= {})[k] = r;
+    }
+  }
   const questions = set.questions.map((q) => {
     const v = c[String(q.i)];
-    const clip = obj(v) && isInt(v.track) && isInt(v.from) && isInt(v.to) ? { track: v.track, from: v.from, to: v.to } : undefined;
+    const clip = isObj(v) && isInt(v.track) && isInt(v.from) && isInt(v.to) ? { track: v.track, from: v.from, to: v.to } : undefined;
     const { clip: _old, ...rest } = q;
     return clip ? { ...rest, clip } : rest;
   });
   const out = { ...set, questions };
   if (a) out.attempt = a;
   else delete out.attempt;
+  if (parts) out.parts = parts;
+  else delete out.parts;
   return out;
 }
 
-/** The set as uploaded in set.json: without what only this device knows or what `state` carries. */
+/** The set as uploaded in set.json: without what only this device knows or what `state` carries (the attempts). */
 export function contentOf(set: TestSet): TestSet {
-  const { attempt: _a, syncedAt: _s, ...rest } = set;
+  const { attempt: _a, parts: _p, syncedAt: _s, ...rest } = set;
   return rest;
 }
 
