@@ -13,7 +13,9 @@ import java.text.Normalizer
  */
 
 private val MARKS = Regex("\\p{M}+")
-private val SPACES = Regex("(?U)\\s+")
+// White space as JavaScript's \s sees it, spelled out: "(?U)" (UNICODE_CHARACTER_CLASS) throws on Android's ICU regex,
+// and a plain \s is ASCII-only on the JVM but Unicode on Android.
+private val SPACES = Regex("[\\t\\n\\u000B\\f\\r \\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]+")
 
 fun foldSearch(s: String): String =
     Normalizer.normalize(s, Normalizer.Form.NFD).replace(MARKS, "").replace('đ', 'd').replace('Đ', 'd').lowercase().replace(SPACES, " ").trim()
