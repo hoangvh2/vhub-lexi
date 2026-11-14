@@ -27,8 +27,9 @@ class LexiApp : Application() {
         private set
     lateinit var dictionary: Dictionary
         private set
+    /** Replaced only by instrumented tests (AutoSpeakTest records what would be said). */
     lateinit var speech: Speech
-        private set
+        internal set
 
     /** AI fill for a list of words. Lives here, not in a screen, so it keeps running while the learner switches tabs. */
     val aiBatch: AiBatch by lazy {
