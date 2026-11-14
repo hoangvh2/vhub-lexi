@@ -977,3 +977,10 @@ input[type="range"] { width: 100%; }
 .lib-forgot { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--rose-soft); color: var(--rose-deep); flex: none; }
 .lib-forgot .i path { fill: currentColor; }
 .nv-top .forgot-btn { width: 36px; height: 36px; }
+
+/* Bộ đề: ⚑ and "Ôn câu sai" */
+.qcard .flag { flex: none; }
+.qcard .flag.on { color: var(--hard); border-color: var(--hard); background: var(--hard-soft); }
+.cause-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cause-chip { font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line, currentColor); background: transparent; color: inherit; cursor: pointer; }
+.cause-chip.on { background: var(--hard-soft); border-color: var(--hard); color: var(--hard); }
