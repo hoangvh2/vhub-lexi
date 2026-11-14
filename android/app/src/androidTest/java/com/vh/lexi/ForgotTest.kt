@@ -201,8 +201,15 @@ class ForgotTest {
                 else -> throw AssertionError("unknown drill state\n" + rule.onAllNodes(isRoot()).printToString(maxDepth = 14).take(4000))
             }
             waitFor("answer $steps") { exists("drill-next") }
-            rule.onNodeWithTag("drill-next").performScrollTo().performClick()
-            rule.waitForIdle()
+            // After typing, the keyboard closes as the field goes away and the screen resizes under the tap; a tap that
+            // lands while it moves can miss "Tiếp", so it is tapped again only while the answer is still showing.
+            rule.runOnUiThread { WindowCompat.getInsetsController(rule.activity.window, rule.activity.window.decorView).hide(WindowInsetsCompat.Type.ime()) }
+            for (tap in 1..3) {
+                rule.waitForIdle()
+                if (!exists("drill-next")) break
+                rule.onNodeWithTag("drill-next").performScrollTo().performClick()
+                try { rule.waitUntil(2_000) { !exists("drill-answer") } } catch (_: Throwable) { Log.i("LEXI_PERF", "drill-next tap $tap missed at step $steps") }
+            }
         }
         shot("22-drill-done")
         assertTrue("the wrong choice is counted", textOf("drill-score").contains("đúng ngay lần đầu"))
