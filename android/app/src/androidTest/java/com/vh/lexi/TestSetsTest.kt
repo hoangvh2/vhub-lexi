@@ -331,7 +331,8 @@ class TestSetsTest {
         waitFor("part 5 runner") { count("runner-list") > 0 }
         assertEquals("Part 5", textOf("runner-name"))
         assertTrue(textOf("runner-count"), textOf("runner-count").contains("0/2"))
-        assertEquals(2, count("runner-q"))
+        // The list shows what fits on the screen: the second question is reached by scrolling.
+        rule.onNodeWithTag("runner-list").performScrollToNode(hasTestTag("runner-q") and hasAnyDescendant(startsWith("102. ")))
         pick(101, "A") // right
         waitFor("count-1") { textOf("runner-count").contains("1/2") }
         shot("sets-21-part-runner")
@@ -407,6 +408,7 @@ class TestSetsTest {
         assertEquals(0, count("wrong-entry")) // nothing to review yet
         val name = app.testSets.sets.value.single().name
         val today = com.vh.lexi.core.dayNumber(System.currentTimeMillis())
+        val reviewedBefore = app.data.cards.value.sumOf { (it.lastReview ?: 0L) + it.reps }
 
         // Part 5: 101 right but flagged ⚑, 102 wrong. Submitting queues both for tomorrow.
         rule.onNodeWithTag("set-open").performScrollTo().performClick()
@@ -463,7 +465,7 @@ class TestSetsTest {
         shot("sets-32-review-wrong")
         rule.onNodeWithTag("wrong-next").performScrollTo().performClick()
         waitFor("done") { count("wrong-done") > 0 }
-        assertEquals(0, app.data.cards.value.count { (it.lastReview ?: 0L) > 0 }) // no FSRS review was made
+        assertEquals(reviewedBefore, app.data.cards.value.sumOf { (it.lastReview ?: 0L) + it.reps }) // no FSRS review was made
     }
 
     /**
