@@ -953,6 +953,7 @@ private fun Questions(app: LexiApp, set: TestSet, answers: Map<Int, String>, rev
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun QuestionCard(
     q: SetQuestion, pick: String?, review: Boolean, player: ListenPlayer?, replay: Clip?, onNudge: ((SetQuestion, Long) -> Unit)?,
