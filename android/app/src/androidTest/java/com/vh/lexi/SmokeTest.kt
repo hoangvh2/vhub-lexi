@@ -444,8 +444,9 @@ class SmokeTest {
         runBlocking { app.data.importJson(backup.toString()) }
         waitFor("imported") { app.data.notes.value.size >= 28 }
 
-        // Leave and come back so the study tab opens on Today again.
+        // Leave and come back: the unfinished session resumes on its card; tapping the tab again opens Today.
         rule.onNodeWithTag("nav-library").performClick()
+        rule.onNodeWithTag("nav-study").performClick()
         rule.onNodeWithTag("nav-study").performClick()
         waitFor("today-path") { rule.onAllNodesWithTagCount("today-lesson") > 0 }
         shot("13-today-hero")

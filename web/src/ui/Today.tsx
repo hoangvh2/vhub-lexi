@@ -10,7 +10,7 @@ import { eligibility } from "../lib/select.ts";
 import { enter, orb } from "../lib/motion.ts";
 import { forecast, heatmap, level, streak } from "../lib/stats.ts";
 import { useStore } from "../lib/store.ts";
-import { Icon, go } from "./common.tsx";
+import { Icon, go, studyResume } from "./common.tsx";
 import { TargetPanel } from "./Readiness.tsx";
 
 const DAY_MS = 86_400_000;
@@ -38,6 +38,8 @@ export function Today() {
   const root = useRef<HTMLDivElement>(null);
   const now = Date.now();
   const hasNotes = allNotes.some(isMaterial);
+  // Today is the tab's home: once it is open, the tab no longer jumps back into the session left before.
+  useEffect(() => studyResume.set(null), []);
   useEffect(() => {
     const stops = [enter(root.current), orb(root.current?.querySelector(".orb") ?? null)];
     return () => stops.forEach((s) => s());

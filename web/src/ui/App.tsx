@@ -6,7 +6,7 @@ import { buildQueue, deckWeights } from "../lib/queue.ts";
 import { eligibility } from "../lib/select.ts";
 import { useStore } from "../lib/store.ts";
 import { Add } from "./Add.tsx";
-import { ConfirmHost, Icon, Toasts, route, syncLabel, toast } from "./common.tsx";
+import { ConfirmHost, Icon, Toasts, route, studyResume, syncLabel, toast } from "./common.tsx";
 import { ForgotPage } from "./Forgot.tsx";
 import { Library } from "./Library.tsx";
 import { Practice } from "./Practice.tsx";
@@ -32,6 +32,7 @@ export function App({ email }: { email: string | null }) {
   const allDecks = useStore(decks);
   const dailies = useStore(daily);
   const warning = useStore(warnings);
+  const resume = useStore(studyResume);
 
   useEffect(() => {
     const el = document.documentElement;
@@ -70,6 +71,8 @@ export function App({ email }: { email: string | null }) {
     section === "study" ? <Study deckId={arg || null} initialTag={new URLSearchParams(query).get("tag") ?? ""} key={r} /> :
     <Today />;
 
+  // The "Ôn tập" tab: back into a session left with a card on screen; on the study screen itself it leads to Today.
+  const href = (p: string) => `#${p === "/today" && resume && section !== "study" ? resume : p}`;
   const pillClass = s === "synced" || s === "local" ? "ok" : s === "denied" || s === "error" ? "bad" : "warn";
 
   return (
@@ -77,7 +80,7 @@ export function App({ email }: { email: string | null }) {
       <aside class="side" aria-label="Điều hướng">
         <div class="brand"><i>L</i>VH Lexi</div>
         {NAV.map((n) => (
-          <a key={n.path} class="nav-item" href={`#${n.path}`} aria-current={current === n.path ? "page" : undefined} data-testid={`nav-${n.path.slice(1)}`}>
+          <a key={n.path} class="nav-item" href={href(n.path)} aria-current={current === n.path ? "page" : undefined} data-testid={`nav-${n.path.slice(1)}`}>
             <Icon n={n.icon} /> {n.label}
             {n.path === "/today" && due > 0 && <span class="badge" data-testid="due-badge">{due}</span>}
           </a>
@@ -95,7 +98,7 @@ export function App({ email }: { email: string | null }) {
       <main class="main" id="main">{page}</main>
       <nav class="tabbar" aria-label="Điều hướng">
         {NAV.map((n) => (
-          <a key={n.path} class="tab" href={`#${n.path}`} aria-current={current === n.path ? "page" : undefined}>
+          <a key={n.path} class="tab" href={href(n.path)} aria-current={current === n.path ? "page" : undefined}>
             <Icon n={n.icon} />
             {n.label}
             {n.path === "/today" && due > 0 && <span class="badge">{due}</span>}

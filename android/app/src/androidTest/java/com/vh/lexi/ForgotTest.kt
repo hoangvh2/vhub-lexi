@@ -152,7 +152,9 @@ class ForgotTest {
         waitFor("menu closed") { !exists("forgot-pop") }
 
         // Today: the panel leads to the list; a word FSRS says is forgotten often is suggested and marked with one tap.
+        // Coming back resumes the session on its card; a second tap on the tab opens Today.
         rule.onNodeWithTag("nav-library").performClick()
+        rule.onNodeWithTag("nav-study").performClick()
         rule.onNodeWithTag("nav-study").performClick()
         waitFor("today-watch", 20_000) { exists("open-forgot") }
         rule.onNodeWithTag("open-forgot").performScrollTo().performClick()

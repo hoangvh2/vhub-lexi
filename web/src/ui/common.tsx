@@ -170,6 +170,8 @@ export function ConfirmHost() {
 // ------------------------------------------------------------------ routing
 export const route = createStore<string>(location.hash.replace(/^#/, "") || "/today");
 addEventListener("hashchange", () => route.set(location.hash.replace(/^#/, "") || "/today"));
+/** The study route of a session left with a card on screen: the "Ôn tập" tab resumes it instead of opening Today. */
+export const studyResume = createStore<string | null>(null);
 export const go = (path: string) => {
   location.hash = path;
 };
