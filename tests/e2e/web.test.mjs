@@ -1910,6 +1910,44 @@ describe("từ hay quên: mark from the card, its own screen, practice outside F
     await ctx.close();
   });
 
+  it("a word met before is marked from its read view in the Library, without waiting for its review", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, acceptDownloads: true });
+    const file = join(tmpdir(), `lexi-forgot-lib-${process.pid}.json`);
+    writeFileSync(file, JSON.stringify(backup()));
+    await page.goto(`${base}/#/settings`);
+    await page.setInputFiles("[data-testid=import-file]", file);
+    await page.click("[data-testid=confirm-ok]");
+    await page.waitForFunction(() => !document.querySelector(".scrim"));
+    const before = (await fsrsState(page)).fsrs;
+
+    // "venue" is in review, due in 5 days: open it in the Library and mark its sound.
+    await page.goto(`${base}/#/library`);
+    await page.locator("[data-testid=lib-item]", { hasText: "venue" }).click();
+    await page.waitForSelector("[data-testid=note-view] [data-testid=forgot-btn]");
+    await page.click("[data-testid=note-view] [data-testid=forgot-btn]");
+    await page.click("[data-testid=forgot-sound]");
+    await page.waitForSelector('[data-testid=note-view] [data-testid=forgot-btn][data-marked="sound"]');
+    await shot(page, "9-library-view-mark");
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("[data-testid=forgot-pop]", { state: "detached" });
+    assert.equal(await page.locator("[data-testid=note-view]").count(), 1, "Escape closes the menu, not the view");
+    await page.click("[data-testid=view-close]");
+
+    // The row shows the mark and the "Hay quên" filter lists it.
+    await page.locator(".seg button, button", { hasText: /^Hay quên$/ }).first().click();
+    assert.deepEqual(await page.locator("[data-testid=lib-item] .t").allTextContents(), ["venue"]);
+    assert.equal(await page.locator("[data-testid=lib-item] [data-testid=lib-forgot]").count(), 1);
+    await shot(page, "10-library-filter");
+
+    // It is on the practice screen at once, and nothing in FSRS moved.
+    await page.goto(`${base}/#/forgot`);
+    assert.deepEqual(await page.locator("[data-testid=forgot-row]").evaluateAll((r) => r.map((e) => e.dataset.word)), ["venue"]);
+    assert.deepEqual((await fsrsState(page)).fsrs, before);
+    assert.equal(await noOverflow(page), true);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
   it("desktop: the list next to the round fits, dark theme readable", async () => {
     const { ctx, page, errors } = await open(browser, base, { viewport: { width: 1280, height: 800 }, deviceScaleFactor: shots ? 2 : 1, colorScheme: "dark" });
     const data = backup();

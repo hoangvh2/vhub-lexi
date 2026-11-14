@@ -13,6 +13,9 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.uiautomator.UiDevice
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.printToString
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.test.platform.app.InstrumentationRegistry
@@ -204,5 +207,28 @@ class ForgotTest {
         assertEquals(before, after)
         val marked = app.data.notes.value.filter { it.forgot.isNotEmpty() }.map { it.id }.sorted()
         assertEquals(listOf("f0", "f1"), marked)
+
+        // Library: "venue" is due in 5 days; its read view marks it now, and the "Hay quên" filter lists the marked words.
+        rule.onNodeWithTag("nav-library").performClick()
+        waitFor("library") { exists("lib-item") }
+        rule.onAllNodes(hasSetTextAction()).onFirst().performTextInput("venue")
+        waitFor("venue row") { rule.onAllNodes(hasTestTag("lib-item"), useUnmergedTree = true).fetchSemanticsNodes().size == 1 }
+        rule.onNodeWithTag("lib-item").performClick()
+        waitFor("note-view") { exists("note-view") && exists("forgot-btn") }
+        rule.onNodeWithTag("forgot-btn").performClick()
+        waitFor("view menu") { exists("forgot-sound") }
+        rule.onNodeWithTag("forgot-sound").performClick()
+        waitFor("venue marked") { forgotOf(app.data.notes.value.first { it.id == "f2" }) == listOf(ForgotKind.SOUND) }
+        shot("23-library-view-mark")
+        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
+        waitFor("view menu closed") { !exists("forgot-pop") }
+        rule.onNodeWithTag("view-close").performClick()
+        waitFor("view closed") { !exists("note-view") }
+        rule.onAllNodes(hasSetTextAction()).onFirst().performTextClearance()
+        rule.onNodeWithText("Hay quên").performScrollTo().performClick()
+        waitFor("forgot filter") { rule.onAllNodes(hasTestTag("lib-item"), useUnmergedTree = true).fetchSemanticsNodes().size == 3 }
+        assertEquals(3, rule.onAllNodes(hasTestTag("lib-forgot"), useUnmergedTree = true).fetchSemanticsNodes().size)
+        shot("24-library-filter")
+        assertEquals(before, fsrsState(app))
     }
 }

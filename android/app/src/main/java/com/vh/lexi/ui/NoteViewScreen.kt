@@ -75,6 +75,8 @@ fun NoteViewScreen(
     note: Note, cards: List<Card>, decks: List<Deck>, prefs: Prefs, index: Int, total: Int,
     covered: Boolean, onCover: (Boolean) -> Unit, onSpeak: (String) -> Unit,
     onPrev: () -> Unit, onNext: () -> Unit, onEdit: () -> Unit, onClose: () -> Unit,
+    /** Next to "Sửa": the "hay quên" mark of a word (ForgotButton), so a word met before joins the practice list now. */
+    mark: (@Composable () -> Unit)? = null,
 ) {
     val c = Lexi.colors
     val def = noteType(note.type)
@@ -116,6 +118,7 @@ fun NoteViewScreen(
                         fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = c.muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     )
                     RoundIcon(Icons.Filled.ChevronRight, "Từ sau", "view-next", enabled = total > 0 && index != total - 1, onClick = onNext)
+                    mark?.invoke()
                     Button(onClick = onEdit, modifier = Modifier.testTag("view-edit"), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp)) {
                         Icon(Icons.Filled.Edit, null, Modifier.size(16.dp))
                         Spacer(Modifier.size(6.dp))

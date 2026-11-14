@@ -8,6 +8,7 @@ import { aiBatch, confirmAndRun, stopBatch, type BatchMode, type BatchProgress }
 import { hasAi, hasPhrases, type Enriched } from "../lib/enrich.ts";
 import { dueLabel } from "../lib/format.ts";
 import { isLeech } from "../lib/queue.ts";
+import { FORGOT_LABEL, forgotOf } from "@shared/drill.ts";
 import { useStore } from "../lib/store.ts";
 import { Icon, Modal, confirmDialog, go, toast } from "./common.tsx";
 import { NoteEditor } from "./NoteEditor.tsx";
@@ -33,15 +34,16 @@ const DAILY_AI = 300;
 
 const NEW_DECK = "__new__";
 
-type Filter = "all" | "new" | "learning" | "review" | "suspended" | "leech" | "noai" | "nophrase";
+type Filter = "all" | "new" | "learning" | "review" | "suspended" | "leech" | "forgot" | "noai" | "nophrase";
 type Sort = "recent" | "alpha" | "due";
 
 const FILTERS: Array<[Filter, string]> = [
-  ["all", "Tất cả"], ["new", "Mới"], ["learning", "Đang học"], ["review", "Ôn tập"], ["suspended", "Đã ẩn"], ["leech", "Thẻ khó"], ["noai", "Chưa có AI"], ["nophrase", "Chưa có cụm ngắn"],
+  ["all", "Tất cả"], ["new", "Mới"], ["learning", "Đang học"], ["review", "Ôn tập"], ["suspended", "Đã ẩn"], ["leech", "Thẻ khó"], ["forgot", "Hay quên"], ["noai", "Chưa có AI"], ["nophrase", "Chưa có cụm ngắn"],
 ];
 
 function matches(f: Filter, n: Note, cs: Card[]): boolean {
   if (f === "all") return true;
+  if (f === "forgot") return forgotOf(n).length > 0;
   if (f === "noai") return n.type === "vocab" && !hasAi(n.aiFields);
   if (f === "nophrase") return n.type === "vocab" && !hasPhrases(n.fields);
   if (f === "new") return cs.some((c) => c.state === CardState.New);
@@ -289,6 +291,7 @@ export function Library() {
                 <span class="row" style={{ gap: "6px", flexWrap: "nowrap" }}>
                   {hasAi(n.aiFields) && <span class="ai-tag">AI</span>}
                   {cs.some(isLeech) && <span class="pill bad">Khó</span>}
+                  {forgotOf(n).length > 0 && <span class="lib-forgot" title={`Hay quên: ${forgotOf(n).map((k) => FORGOT_LABEL[k].replace("Quên ", "")).join(", ")}`} data-testid="lib-forgot"><Icon n="bookmark" size={15} /></span>}
                   <span class="pill">{soon ? dueLabel(soon, now) : cs.every((c) => c.suspended) && cs.length ? "Đã ẩn" : "Mới"}</span>
                 </span>
               </button>
