@@ -68,6 +68,11 @@ import com.vh.lexi.core.hasAi
 import com.vh.lexi.core.hasPhrases
 import com.vh.lexi.core.Fsrs
 import com.vh.lexi.core.isLeech
+import com.vh.lexi.core.forgotOf
+import androidx.compose.runtime.key
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.filled.Bookmark
 import com.vh.lexi.core.isMaterial
 import com.vh.lexi.core.noteType
 import com.vh.lexi.ui.theme.Lexi
@@ -75,7 +80,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-private enum class Filter(val label: String) { ALL("Tất cả"), NEW("Mới"), LEARNING("Đang học"), REVIEW("Ôn tập"), SUSPENDED("Đã ẩn"), LEECH("Thẻ khó"), NO_AI("Chưa có AI"), NO_PHRASES("Chưa có cụm ngắn") }
+private enum class Filter(val label: String) { ALL("Tất cả"), NEW("Mới"), LEARNING("Đang học"), REVIEW("Ôn tập"), SUSPENDED("Đã ẩn"), LEECH("Thẻ khó"), FORGOT("Hay quên"), NO_AI("Chưa có AI"), NO_PHRASES("Chưa có cụm ngắn") }
 
 /** The AI dialog: skip words already filled, replace existing meanings (full mode only), and what the AI writes. */
 private data class AiDialog(val skipDone: Boolean, val overwrite: Boolean, val mode: BatchMode)
@@ -93,6 +98,7 @@ private fun matches(f: Filter, n: Note, cs: List<Card>) = when (f) {
     Filter.REVIEW -> cs.any { it.state == CardState.REVIEW }
     Filter.SUSPENDED -> cs.any { it.suspended }
     Filter.LEECH -> cs.any(::isLeech)
+    Filter.FORGOT -> forgotOf(n).isNotEmpty()
 }
 
 private fun dueLabel(c: Card, now: Long): String = when {
@@ -217,7 +223,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
                 if (notes.none { isMaterial(it) }) Button(onClick = onAdd) { Text("Thêm từ") }
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize()) {
+            LazyColumn(Modifier.fillMaxSize().testTag("lib-list")) {
                 items(rows, key = { it.id }) { n ->
                     val def = noteType(n.type)!!
                     val cs = byNote[n.id].orEmpty()
@@ -238,6 +244,9 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
                         }
                         if (hasAi(n.aiFields)) Pill("AI", PillKind.AI)
                         if (cs.any(::isLeech)) Pill("Khó", PillKind.BAD)
+                        if (forgotOf(n).isNotEmpty()) Box(Modifier.size(26.dp).background(c.roseSoft, CircleShape).testTag("lib-forgot"), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.Bookmark, "Hay quên", tint = c.roseDeep, modifier = Modifier.size(15.dp))
+                        }
                         Pill(if (soon != null) dueLabel(soon, now) else if (cs.isNotEmpty() && cs.all { it.suspended }) "Đã ẩn" else "Mới")
                     }
                     HorizontalDivider(color = c.line)
@@ -257,6 +266,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
                 note = n, cards = byNote[n.id].orEmpty(), decks = decks, prefs = prefs, index = i, total = rows.size,
                 covered = covered, onCover = { covered = it }, onSpeak = app.speech::speak,
                 onPrev = { step(-1) }, onNext = { step(1) }, onEdit = { editing = id }, onClose = { viewing = null },
+                mark = if (n.type == "vocab") ({ key(n.id) { ForgotButton(app, n) } }) else null,
             )
         }
     }

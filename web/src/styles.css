@@ -969,3 +969,6 @@ input[type="range"] { width: 100%; }
 .drill-done > .i { color: var(--mint-deep); }
 @media (min-width: 700px) { .drill-options { grid-template-columns: 1fr 1fr; } }
 .forgot-page .sub { margin: -8px 0 12px; }
+.lib-forgot { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--rose-soft); color: var(--rose-deep); flex: none; }
+.lib-forgot .i path { fill: currentColor; }
+.nv-top .forgot-btn { width: 36px; height: 36px; }

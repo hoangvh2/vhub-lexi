@@ -43,7 +43,8 @@ describe("actions on the local repo", () => {
   it("the daily new quota counts words: a typing card of a recognised word is answered as a review", async () => {
     await addNote({ type: "vocab", fields: vocab });
     const rec = cards.get().find((c) => c.template === "recognize")!;
-    const t = Date.now();
+    // Noon, not now: run a minute before the 4 AM day start and the second answer lands on the next study day.
+    const t = new Date().setHours(12, 0, 0, 0);
     const learned = await reviewCard(rec, 3, 1000, t);
     // The recognize card reached Review (it is the word being known); its typing sibling is not a new word.
     await currentRepo().saveCard({ ...learned.next, state: CardState.Review, scheduledDays: 3, updatedAt: t });

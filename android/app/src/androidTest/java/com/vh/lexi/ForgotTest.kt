@@ -3,6 +3,7 @@ package com.vh.lexi
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
@@ -13,8 +14,13 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.uiautomator.UiDevice
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.printToString
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.core.ForgotKind
 import com.vh.lexi.core.forgotOf
@@ -56,7 +62,8 @@ class ForgotTest {
         try {
             rule.waitUntil(ms, cond)
         } catch (e: Throwable) {
-            shot("fail-forgot-$label")
+            shot("fail-forgot-" + label.replace(' ', '-'))
+            rule.onAllNodes(isRoot()).printToString(maxDepth = 14).take(6000).lines().forEach { Log.i("LEXI_PERF", "dump $label: $it") }
             throw AssertionError("timeout waiting for $label\n" + rule.onAllNodes(isRoot()).printToString(maxDepth = 14).take(6000), e)
         }
     }
@@ -167,18 +174,23 @@ class ForgotTest {
         val seen = HashSet<String>()
         while (!exists("drill-done")) {
             assertTrue("round ends", steps++ < 30)
+            // "Tiếp" must have moved on: the answer panel still showing means the old card, whose typing field is gone.
+            waitFor("question $steps") { exists("drill-done") || (exists("drill-card") && !exists("drill-answer")) }
+            if (exists("drill-done")) break
             when {
                 exists("drill-opt-right") -> {
                     if (!wrongDone) { shot("19-drill-meaning"); rule.onAllNodes(hasTestTag("drill-opt")).onFirst().performScrollTo().performClick(); wrongDone = true; waitFor("wrong") { exists("drill-answer") }; shot("20-drill-wrong") }
                     else rule.onNodeWithTag("drill-opt-right").performScrollTo().performClick()
                 }
                 exists("drill-meaning") -> {
+                    waitFor("recall input $steps") { exists("drill-input") }
                     val w = byMeaning.getValue(textOf("drill-meaning"))
                     rule.onNodeWithTag("drill-input").performTextInput(w)
                     if (seen.add("recall")) shot("21-drill-recall")
                     rule.onNodeWithTag("drill-check").performScrollTo().performClick()
                 }
                 exists("drill-play") -> {
+                    waitFor("listen input $steps") { exists("drill-input") }
                     rule.onNodeWithTag("drill-input").performTextInput("postpone")
                     if (seen.add("listen")) shot("21b-drill-listen")
                     rule.onNodeWithTag("drill-check").performScrollTo().performClick()
@@ -191,8 +203,15 @@ class ForgotTest {
                 else -> throw AssertionError("unknown drill state\n" + rule.onAllNodes(isRoot()).printToString(maxDepth = 14).take(4000))
             }
             waitFor("answer $steps") { exists("drill-next") }
-            rule.onNodeWithTag("drill-next").performScrollTo().performClick()
-            rule.waitForIdle()
+            // After typing, the keyboard closes as the field goes away and the screen resizes under the tap; a tap that
+            // lands while it moves can miss "Tiếp", so it is tapped again only while the answer is still showing.
+            rule.runOnUiThread { WindowCompat.getInsetsController(rule.activity.window, rule.activity.window.decorView).hide(WindowInsetsCompat.Type.ime()) }
+            for (tap in 1..3) {
+                rule.waitForIdle()
+                if (!exists("drill-next")) break
+                rule.onNodeWithTag("drill-next").performScrollTo().performClick()
+                try { rule.waitUntil(2_000) { !exists("drill-answer") } } catch (_: Throwable) { Log.i("LEXI_PERF", "drill-next tap $tap missed at step $steps") }
+            }
         }
         shot("22-drill-done")
         assertTrue("the wrong choice is counted", textOf("drill-score").contains("đúng ngay lần đầu"))
@@ -204,5 +223,38 @@ class ForgotTest {
         assertEquals(before, after)
         val marked = app.data.notes.value.filter { it.forgot.isNotEmpty() }.map { it.id }.sorted()
         assertEquals(listOf("f0", "f1"), marked)
+
+        // Library: "venue" is due in 5 days; its read view marks it now, and the "Hay quên" filter lists the marked words.
+        rule.onNodeWithTag("nav-library").performClick()
+        waitFor("library") { exists("lib-item") }
+        rule.onAllNodes(hasSetTextAction()).onFirst().performTextInput("venue")
+        waitFor("venue row") { rule.onAllNodes(hasTestTag("lib-item"), useUnmergedTree = true).fetchSemanticsNodes().size == 1 }
+        rule.onNodeWithTag("lib-item").performClick()
+        waitFor("note-view") { exists("note-view") && exists("forgot-btn") }
+        rule.onNodeWithTag("forgot-btn").performClick()
+        waitFor("view menu") { exists("forgot-sound") }
+        rule.onNodeWithTag("forgot-sound").performClick()
+        waitFor("venue marked") { forgotOf(app.data.notes.value.first { it.id == "f2" }) == listOf(ForgotKind.SOUND) }
+        shot("23-library-view-mark")
+        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
+        waitFor("view menu closed") { !exists("forgot-pop") }
+        rule.onNodeWithTag("view-close").performClick()
+        waitFor("view closed") { !exists("note-view") }
+        rule.onAllNodes(hasSetTextAction()).onFirst().performTextClearance()
+        // The search keyboard leaves room for one or two rows on a 320x640 screen, and the list composes only what it shows.
+        rule.runOnUiThread { WindowCompat.getInsetsController(rule.activity.window, rule.activity.window.decorView).hide(WindowInsetsCompat.Type.ime()) }
+        rule.waitForIdle()
+        rule.onNodeWithText("Hay quên").performScrollTo().performClick()
+        // The list composes only the rows on screen, so the rows shown must all be marked, and each marked word must be
+        // reachable by scrolling; an unmarked word is not in the list at all.
+        fun count(tag: String) = rule.onAllNodes(hasTestTag(tag), useUnmergedTree = true).fetchSemanticsNodes().size
+        waitFor("forgot filter") { count("lib-item") > 0 && count("lib-item") == count("lib-forgot") }
+        shot("24-library-filter")
+        for (w in listOf("postpone", "receipt", "venue")) {
+            rule.onNodeWithTag("lib-list").performScrollToNode(hasText(w))
+            waitFor("filter row $w") { rule.onAllNodes(hasText(w), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        }
+        assertTrue("an unmarked word is filtered out", runCatching { rule.onNodeWithTag("lib-list").performScrollToNode(hasText("attend")) }.isFailure)
+        assertEquals(before, fsrsState(app))
     }
 }

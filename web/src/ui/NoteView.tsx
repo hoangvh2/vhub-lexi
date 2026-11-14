@@ -6,6 +6,7 @@ import { dateLabel, dueLabel } from "../lib/format.ts";
 import { isLeech } from "../lib/queue.ts";
 import { makeScheduler, retrievability } from "../lib/scheduler.ts";
 import { useStore } from "../lib/store.ts";
+import { ForgotButton } from "./Forgot.tsx";
 import { Blocks } from "./Blocks.tsx";
 import { Icon } from "./common.tsx";
 
@@ -68,10 +69,11 @@ export function NoteView({ note, index, total, docked, onPrev, onNext, onEdit, o
       else if (e.key === "ArrowLeft" || e.key === "ArrowUp") (e.preventDefault(), onPrev());
       else if (e.key === "Escape") onClose();
       else if (e.key === "e" || e.key === "E") (e.preventDefault(), onEdit());
+      else if ((e.key === "q" || e.key === "Q") && note.type === "vocab") (document.querySelector('[data-testid="note-view"] [data-testid="forgot-btn"]') as HTMLButtonElement | null)?.click();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [paused, onNext, onPrev, onClose, onEdit]);
+  }, [paused, onNext, onPrev, onClose, onEdit, note.type]);
 
   const toggleCover = () => {
     setCovered(!covered);
@@ -97,6 +99,8 @@ export function NoteView({ note, index, total, docked, onPrev, onNext, onEdit, o
         <button type="button" class="nv-ib" onClick={onNext} disabled={total === 0 || index === total - 1} aria-label="Từ sau" data-testid="view-next">
           <Icon n="chevR" size={18} />
         </button>
+        {/* "Hay quên" mark, as on the study card: a word met before can join the practice list without waiting for its next review. */}
+        {note.type === "vocab" && <ForgotButton key={note.id} note={note} />}
         <button type="button" class="btn primary sm" onClick={onEdit} data-testid="view-edit">
           <Icon n="edit" size={15} /> Sửa
         </button>
