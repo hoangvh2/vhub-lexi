@@ -8,7 +8,7 @@ import type { Extracted, ExtractedQuestion } from "../src/lib/import.ts";
 import { layoutText, openPdf, readPages, type PdfJs, type TextItem } from "../src/lib/pdf.ts";
 import { toResult } from "../src/lib/practice.ts";
 import {
-  CHUNK_CHARS, CHUNK_IMAGES, chunkPages, findPhotoPages, lcPartOfNumber, photoNumbers, photoSlots, lettersOf, parseNumberRange, sortTracks, findKey, formatPages, grade, isKeyPage, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, partOfNumber, resultFields, summary, wrongDrafts,
+  CHUNK_CHARS, CHUNK_IMAGES, attemptOf, canLogScope, partStates, partsOf, scopeName, scopeView, withAttempt, chunkPages, findPhotoPages, lcPartOfNumber, photoNumbers, photoSlots, lettersOf, parseNumberRange, sortTracks, findKey, formatPages, grade, isKeyPage, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, partOfNumber, resultFields, summary, wrongDrafts,
   type PdfPage, type TestSet,
 } from "../src/lib/testset.ts";
 
@@ -344,5 +344,53 @@ describe("Listening sets (Part 1–4 with the test's audio)", () => {
     await deleteTestSet("s1");
     expect(await mediaKeys("s1")).toEqual([]);
     expect(await loadMedia("s2:a0")).not.toBeNull();
+  });
+});
+
+describe("Làm theo Part", () => {
+  const mk = (i: number, part: 5 | 6 | 7 | null, correct: "A" | null = "A") => ({
+    i, number: i + 1, part, kind: "fill" as const, stem: "s", options: { A: "a", B: "b", C: "c", D: "d" }, correct, passage: null, topic: "", rule: "", translation: "", flags: [],
+  });
+  const set = { questions: [mk(0, 5), mk(1, 5), mk(2, 6), mk(3, 7), mk(4, null)] };
+  const att = (answers: Record<number, "A" | "B" | "C" | "D">, finishedAt?: number) => ({ startedAt: 1, elapsedMs: 5000, answers, ...(finishedAt ? { finishedAt } : {}) });
+
+  it("lists the Parts a set has and shows only one Part's questions", () => {
+    expect(partsOf(set)).toEqual([5, 6, 7]);
+    expect(scopeView(set, 5).questions.map((x) => x.i)).toEqual([0, 1]);
+    expect(scopeView(set, null).questions).toHaveLength(5);
+  });
+
+  it("keeps an attempt per Part apart from the whole-set one", () => {
+    let s: Pick<TestSet, "questions" | "attempt" | "parts"> = { ...set };
+    s = withAttempt(s, 5, att({ 0: "A" }));
+    s = withAttempt(s, null, att({ 3: "B" }));
+    s = withAttempt(s, 6, att({}));
+    expect(Object.keys(s.parts!)).toEqual(["5", "6"]);
+    expect(attemptOf(s, 5)!.answers).toEqual({ 0: "A" });
+    expect(attemptOf(s, null)!.answers).toEqual({ 3: "B" });
+    expect(attemptOf(s, 7)).toBeUndefined();
+    // Removing the last Part attempt leaves no empty `parts`.
+    s = withAttempt(withAttempt(s, 5, undefined), 6, undefined);
+    expect("parts" in s).toBe(false);
+    expect(s.attempt).toBeDefined();
+  });
+
+  it("says where each Part stands: not started, in progress, submitted with its score", () => {
+    const states = partStates({ ...set, parts: { "5": att({ 0: "A", 1: "B", 9: "C" }, 9), "6": att({}), "7": att({ 3: "A" }) } });
+    expect(states).toEqual([
+      { part: 5, total: 2, answered: 2, state: "done", score: { right: 1, total: 2 } },
+      { part: 6, total: 1, answered: 0, state: "new", score: null }, // opened and left with nothing picked
+      { part: 7, total: 1, answered: 1, state: "doing", score: null },
+    ]);
+  });
+
+  it("logs a Part under its own name; Listening Parts have no place in Kết quả bài", () => {
+    expect(scopeName("ETS 1", null)).toBe("ETS 1");
+    expect(scopeName("ETS 1", 5)).toBe("ETS 1 · Part 5");
+    expect([1, 2, 3, 4].map((p) => canLogScope(p as 1))).toEqual([false, false, false, false]);
+    expect([null, 5, 6, 7].map((p) => canLogScope(p as 5 | null))).toEqual([true, true, true, true]);
+    // Only the Part taken is in the note: no other Part's score is invented.
+    const g = grade(scopeView(set, 5), { 0: "A", 1: "A" });
+    expect(resultFields(scopeName("ETS 1", 5), "2026-11-14", g, 600_000)).toEqual({ name: "ETS 1 · Part 5", date: "2026-11-14", p5: "2/2", minutes: "10" });
   });
 });

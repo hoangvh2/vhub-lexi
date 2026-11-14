@@ -30,6 +30,12 @@ const states = [
   "[]",
   "null",
   "{}",
+  '{"clips":{},"parts":{"5":{"startedAt":3,"elapsedMs":9000,"answers":{"0":"A","1":"B"},"finishedAt":50,"resultNoteId":"n5"},"7":{"startedAt":4,"elapsedMs":10,"answers":{"2":"D"}}}}',
+  '{"clips":{},"parts":{"5":{"startedAt":3,"elapsedMs":9000,"answers":{"0":"E","x":"A"}},"abc":{"startedAt":1},"6":{"startedAt":1.5,"elapsedMs":2,"answers":{}}}}',
+  '{"clips":{},"parts":{"5":{"startedAt":3,"elapsedMs":9000,"answers":{}},"6":{"startedAt":"x","elapsedMs":2,"answers":{}}}}',
+  '{"clips":{},"parts":[]}',
+  '{"clips":{},"parts":{}}',
+  '{"attempt":{"startedAt":7,"elapsedMs":1,"answers":{"2":"A"}},"clips":{},"parts":{"6":{"startedAt":2,"elapsedMs":3,"answers":{"1":"C"}}}}',
 ];
 
 export function testsyncVectors() {
@@ -37,10 +43,10 @@ export function testsyncVectors() {
   const { attempt: _a, ...noAttempt } = set;
   return {
     set,
-    progress: [set, noAttempt, { ...set, attempt: { ...set.attempt!, finishedAt: 70, resultNoteId: "r" } }].map((s) => ({ set: s, out: JSON.parse(progressOf(s)) })),
+    progress: ([set, noAttempt, { ...set, attempt: { ...set.attempt!, finishedAt: 70, resultNoteId: "r" } }, { ...set, parts: { "7": { startedAt: 2, elapsedMs: 5, answers: { 1: "B", 0: "A" }, finishedAt: 9, resultNoteId: "r7" }, "5": { startedAt: 1, elapsedMs: 4, answers: {} } } }, { ...noAttempt, parts: { "2": { startedAt: 3, elapsedMs: 6, answers: { 2: "C" } } } }] as TestSet[]).map((s) => ({ set: s, out: JSON.parse(progressOf(s)) })),
     withProgress: states.map((state) => {
       const out = withProgress(set, state);
-      return { state, attempt: out.attempt ?? null, clips: out.questions.map((x) => x.clip ?? null) };
+      return { state, attempt: out.attempt ?? null, parts: out.parts ?? null, clips: out.questions.map((x) => x.clip ?? null) };
     }),
     files: filesOf(set),
     meta: metaOf(set, 1234),

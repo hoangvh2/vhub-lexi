@@ -722,6 +722,11 @@ input[type="range"] { width: 100%; }
 .set { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--surface-2); flex-wrap: wrap; }
 .set .name { overflow-wrap: anywhere; }
 .runner { gap: 14px; }
+.part-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.part-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: var(--surface-2); }
+.part-row .part-no { min-width: 58px; font-family: var(--f-display); }
+.part-row .meter { height: 6px; border-radius: 9px; background: var(--line); overflow: hidden; }
+.part-row .meter i { display: block; height: 100%; background: var(--accent); }
 .runner-bar { position: sticky; top: 8px; z-index: 5; gap: 10px; padding: 10px 12px; flex-wrap: nowrap; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
 .runner-bar .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .runner-bar .pill { font-variant-numeric: tabular-nums; }
