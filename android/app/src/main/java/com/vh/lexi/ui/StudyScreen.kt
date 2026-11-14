@@ -83,6 +83,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vh.lexi.LexiApp
+import com.vh.lexi.core.dueOf
 import com.vh.lexi.core.AnswerMode
 import com.vh.lexi.core.Card
 import com.vh.lexi.core.CardState
@@ -146,7 +147,7 @@ private fun lessonLabel(t: String, started: Int, total: Int) = "${lessonTitle(t)
 
 @Composable
 fun StudyScreen(
-    app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTestSets: () -> Unit = {}, onForgot: () -> Unit = {},
+    app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTestSets: () -> Unit = {}, onForgot: () -> Unit = {}, onWrong: () -> Unit = {},
     resume: Boolean = false, onResume: (Boolean) -> Unit = {},
 ) {
     val data = app.data
@@ -312,6 +313,11 @@ fun StudyScreen(
         }
     }
 
+    // "Ôn câu sai" due today, from the Bộ đề files on this device (no cloud read).
+    val testSets by app.testSets.sets.collectAsState()
+    LaunchedEffect(Unit) { try { app.testSets.load() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { } }
+    val wrongDue = remember(testSets) { val today = com.vh.lexi.core.dayNumber(System.currentTimeMillis()); testSets.sumOf { it.marks.dueOf(today).size } }
+
     if (!loaded) return Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Đang tải dữ liệu…", color = Lexi.colors.muted) }
 
     if (notes.none { isMaterial(it) }) {
@@ -334,6 +340,7 @@ fun StudyScreen(
             onImport = onImport,
             onTestSets = onTestSets,
             onForgot = onForgot,
+            wrongDue = wrongDue, onWrong = onWrong,
         )
         return
     }

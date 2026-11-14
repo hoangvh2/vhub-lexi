@@ -30,6 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Flag
 import com.vh.lexi.core.forgotNotes
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
@@ -112,7 +113,7 @@ data class LessonProgress(val tag: String, val started: Int, val count: Int)
 internal fun TodayPanel(
     cards: List<Card>, notesById: Map<String, Note>, queue: Queue, daily: List<Daily>, dayStartHour: Int, newPerDay: Int, now: Long,
     lessons: List<LessonProgress>, onStart: () -> Unit, onLesson: (String) -> Unit, onImport: () -> Unit = {}, newMix: String? = null, onTestSets: () -> Unit = {},
-    onForgot: () -> Unit = {},
+    onForgot: () -> Unit = {}, wrongDue: Int = 0, onWrong: () -> Unit = {},
 ) {
     val c = Lexi.colors
     // Cards, not answers: a card answered today and not waiting again is done; one in the queue is left.
@@ -252,6 +253,22 @@ internal fun TodayPanel(
             Text("Chụp câu sai ở Voca Prep hoặc dán văn bản: AI đọc câu hỏi, bạn kiểm tra rồi mới lưu thành thẻ. Có thể chia sẻ ảnh thẳng vào Lexi.", fontSize = 13.sp, color = c.muted)
             SoftPill("Nhập câu sai từ đề thi", onImport, Modifier.fillMaxWidth().testTag("open-import"))
             SoftPill("Bộ đề: làm cả đề PDF trong Lexi", onTestSets, Modifier.fillMaxWidth().testTag("open-testsets"))
+        }
+
+        // "Ôn câu sai": questions of the Bộ đề due today, from this device's files (no cloud read).
+        if (wrongDue > 0) Panel(Modifier.enter(4).testTag("today-wrong-panel")) {
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(c.roseSoft).clickable(role = Role.Button, onClick = onWrong)
+                    .padding(horizontal = 14.dp, vertical = 12.dp).testTag("today-wrong"),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(Icons.Filled.Flag, null, tint = c.roseDeep, modifier = Modifier.size(20.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("$wrongDue câu sai đến hạn ôn", fontWeight = FontWeight.ExtraBold, color = c.roseDeep)
+                    Text("Từ các bộ đề, làm lại câu gốc, không tính vào lịch ôn thẻ", fontSize = 12.sp, color = c.ink.copy(alpha = 0.7f))
+                }
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = c.roseDeep, modifier = Modifier.size(18.dp))
+            }
         }
 
         // Words to watch: FSRS's most forgotten, and the words the learner marked (ForgotUi.kt).

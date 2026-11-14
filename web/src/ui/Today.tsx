@@ -4,6 +4,8 @@ import { CardState, dayId, nextDayStart } from "@shared/model.ts";
 import { isMaterial, noteType } from "@shared/notetypes.ts";
 import { forgotNotes, wordsToWatch } from "@shared/drill.ts";
 import { cards, daily, decks, loaded, notes, prefs } from "../data/state.ts";
+import { loadTestSets, testSets } from "../data/testsets.ts";
+import { dayNumber, dueOf } from "../lib/testreview.ts";
 import { isLesson, lessonName } from "../lib/lessons.ts";
 import { buildQueue, deckWeights, tagCounts } from "../lib/queue.ts";
 import { eligibility } from "../lib/select.ts";
@@ -58,6 +60,10 @@ export function Today() {
   // Words to watch: forgotten most often, recently forgotten first; and the words the learner marked.
   const watch = useMemo(() => wordsToWatch(allCards, allNotes, 5), [allCards, allNotes]);
   const marked = useMemo(() => forgotNotes(allNotes).length, [allNotes]);
+  // "Ôn câu sai": read from this device's Bộ đề (IndexedDB), so it costs no Firestore read.
+  const sets = useStore(testSets);
+  useEffect(() => void loadTestSets().catch(() => undefined), []);
+  const wrongDue = useMemo(() => sets.reduce((n, s) => n + dueOf(s.marks ?? {}, dayNumber(Date.now())).length, 0), [sets]);
   const heat = useMemo(() => heatmap(dailies, now, p.dayStartHour, 18), [dailies, p.dayStartHour]);
 
   if (!ready) return <div class="page"><p class="muted">Đang tải dữ liệu…</p></div>;
@@ -240,6 +246,15 @@ export function Today() {
               ))}
             </svg>
           </section>
+          {wrongDue > 0 && (
+            <section class="panel" data-in>
+              <button type="button" class="watch-marked" onClick={() => go("/practice?tab=sets")} data-testid="today-wrong">
+                <Icon n="flag" size={18} />
+                <span class="grow"><b>{wrongDue} câu sai đến hạn ôn</b><small>Từ các bộ đề, làm lại câu gốc, không tính vào lịch ôn thẻ</small></span>
+                <Icon n="arrow" size={16} />
+              </button>
+            </section>
+          )}
           {(watch.length > 0 || marked > 0) && (
             <section class="panel" data-testid="today-watch" data-in>
               <div class="panel-head">

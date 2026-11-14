@@ -1478,6 +1478,12 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await page.reload();
     await page.waitForSelector('[data-testid=wrong-entry]');
     assert.match(await page.textContent('[data-testid=wrong-entry-count]'), /9 câu đến hạn/);
+    // The Today screen says so too and leads here.
+    await page.click('[data-testid=practice] .page-head button');
+    await page.waitForSelector('[data-testid=today-wrong]');
+    assert.match(await page.textContent('[data-testid=today-wrong]'), /9 câu sai đến hạn/);
+    await page.click('[data-testid=today-wrong]');
+    await page.waitForSelector('[data-testid=wrong-entry]');
     await page.click('[data-testid=wrong-open]');
     await page.waitForSelector('[data-testid=wrong-card]');
     assert.match(await page.textContent('[data-testid=wrong-count]'), /1\/9/);

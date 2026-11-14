@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -79,6 +80,16 @@ import com.vh.lexi.LexiApp
 import com.vh.lexi.cloud.Account
 import com.vh.lexi.core.AiError
 import com.vh.lexi.core.Attempt
+import com.vh.lexi.core.Mark
+import com.vh.lexi.core.Marks
+import com.vh.lexi.core.dayNumber
+import com.vh.lexi.core.dueOf
+import com.vh.lexi.core.enqueue
+import com.vh.lexi.core.queuedCount
+import com.vh.lexi.core.release
+import com.vh.lexi.core.review
+import com.vh.lexi.core.setCause
+import com.vh.lexi.core.toggleFlag
 import com.vh.lexi.core.PartState
 import com.vh.lexi.core.attemptOf
 import com.vh.lexi.core.canLogScope
@@ -150,7 +161,7 @@ import java.util.UUID
  * sai". Signed in, the test is in the account too, so every device lists it and continues the attempt (data/TestSets.kt).
  */
 @Composable
-fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
+fun TestSetsScreen(app: LexiApp, startReview: Boolean = false, onClose: () -> Unit) {
     val store = app.testSets
     val toast = LocalToaster.current
     val sets by store.sets.collectAsState()
@@ -162,6 +173,8 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
     var running by rememberSaveable { mutableStateOf<String?>(null) }
     var runScope by rememberSaveable { mutableStateOf(WHOLE) }
     var cards by remember { mutableStateOf<Pair<String, WrongDrafts>?>(null) }
+    // "Ôn câu sai": the questions due today from every set (opened from here, or straight from the Today screen).
+    var reviewing by rememberSaveable { mutableStateOf(startReview) }
     LaunchedEffect(Unit) {
         try { store.load() } catch (e: CancellationException) { throw e } catch (_: Exception) { toast("Không mở được kho bộ đề trên máy này") }
         ready = true
@@ -185,6 +198,11 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
         ImportScreen(app, preset = cardsFor.second, presetTest = cardsFor.first) { cards = null }
         return
     }
+    if (reviewing && ready) {
+        BackHandler { reviewing = false }
+        WrongReview(app, onExit = { reviewing = false }, onCards = { name, d -> cards = name to d })
+        return
+    }
     val current = sets.firstOrNull { it.id == running }
     if (current != null) {
         BackHandler { running = null }
@@ -205,6 +223,7 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
     Column(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { focus.clearFocus() } }.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp).testTag("testsets-screen"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeader("Bộ đề") { TextButton(onClick = onClose) { Text("Đóng") } }
         PdfImport(app) { s -> toast("Đã lưu bộ đề “${s.name}”") }
+        WrongEntry(sets) { reviewing = true }
         Panel(Modifier.testTag("sets")) {
             // Title, then the pill under it: side by side they squeeze the title to three lines on a 320 dp phone.
             Text("Bộ đề của bạn", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
@@ -223,6 +242,17 @@ fun TestSetsScreen(app: LexiApp, onClose: () -> Unit) {
         }
     }
 }
+
+/** Change a set's "Ôn câu sai" marks in the stored set (not the copy a screen started with). */
+private fun updateMarks(app: LexiApp, id: String, change: (Marks) -> Marks) {
+    val s = app.testSets.sets.value.firstOrNull { it.id == id } ?: return
+    val m = change(s.marks)
+    if (m != s.marks) app.testSets.saveSoon(app.scope, s.copy(marks = m))
+}
+
+private fun todayNo() = dayNumber(System.currentTimeMillis())
+
+private val CAUSE_LABELS = listOf("v" to "Từ vựng", "g" to "Ngữ pháp", "p" to "Diễn đạt lại", "t" to "Thời gian")
 
 /** `runScope` while the whole test is being taken (a Part is its number). */
 private const val WHOLE = -1
@@ -834,13 +864,13 @@ private fun Runner(app: LexiApp, set: TestSet, part: Int?, onExit: () -> Unit, o
         DisposableEffect(player) { onDispose { player.release() } }
     }
 
-    fun persist(a: Attempt, rebase: Boolean = false) {
+    fun persist(a: Attempt, rebase: Boolean = false, marksFn: ((Marks) -> Marks)? = null) {
         if (rebase) resumed = System.currentTimeMillis()
         attempt = a
         // The app's scope, not the screen's: the last answer is still written when the screen closes.
-        // The stored set, not the one this screen started with: another Part's attempt or the replay clips may have changed meanwhile.
-        val latest = app.testSets.sets.value.firstOrNull { it.id == set.id } ?: set
-        app.testSets.saveSoon(app.scope, latest.withAttempt(part, a))
+        // The stored set, not the one this screen started with: another Part's attempt, the marks or the replay clips may have changed meanwhile.
+        val latest = (app.testSets.sets.value.firstOrNull { it.id == set.id } ?: set).withAttempt(part, a)
+        app.testSets.saveSoon(app.scope, if (marksFn != null) latest.copy(marks = marksFn(latest.marks)) else latest)
     }
     // Leaving the screen (or the app) pauses the clock and keeps the answers.
     fun pause() {
@@ -870,13 +900,14 @@ private fun Runner(app: LexiApp, set: TestSet, part: Int?, onExit: () -> Unit, o
         }
         if (player != null && !perQuestion) ListenBar(set, player)
         if (finished) Result(app, set, part, attempt, player, onCards = onCards, onAgain = { restarting = true }, onSaved = { id -> persist(attempt.copy(resultNoteId = id)) })
-        else Questions(app, view, attempt.answers, review = false, player = player) { q, l -> persist(attempt.copy(answers = attempt.answers + (q.i to l))) }
+        else Questions(app, view, attempt.answers, review = false, player = player, marks = set.marks, onFlag = { q -> updateMarks(app, set.id) { it.toggleFlag(q.i) } }) { q, l -> persist(attempt.copy(answers = attempt.answers + (q.i to l))) }
     }
     if (submitting) {
         val left = view.questions.size - attempt.answers.size
         ConfirmDialog(
             title = "Nộp bài?", message = if (left > 0) "Còn $left câu chưa làm, sẽ tính là sai." else "Lexi chấm ngay theo bảng đáp án.", confirm = "Nộp bài",
-            onConfirm = { submitting = false; player?.pause(); persist(attempt.copy(elapsedMs = elapsed, finishedAt = System.currentTimeMillis()), rebase = true) },
+            // Wrong, blank and ⚑ questions join "Ôn câu sai", due tomorrow.
+            onConfirm = { submitting = false; player?.pause(); persist(attempt.copy(elapsedMs = elapsed, finishedAt = System.currentTimeMillis()), rebase = true) { m -> m.enqueue(view.questions, attempt.answers, todayNo()) } },
             onDismiss = { submitting = false },
         )
     }
@@ -888,7 +919,10 @@ private fun Runner(app: LexiApp, set: TestSet, part: Int?, onExit: () -> Unit, o
 }
 
 @Composable
-private fun Questions(app: LexiApp, set: TestSet, answers: Map<Int, String>, review: Boolean, player: ListenPlayer?, shown: List<SetQuestion> = set.questions, onNudge: ((SetQuestion, Long) -> Unit)? = null, header: @Composable () -> Unit = {}, onChoose: (SetQuestion, String) -> Unit = { _, _ -> }) {
+private fun Questions(app: LexiApp, set: TestSet, answers: Map<Int, String>, review: Boolean, player: ListenPlayer?, shown: List<SetQuestion> = set.questions, onNudge: ((SetQuestion, Long) -> Unit)? = null, header: @Composable () -> Unit = {},
+    marks: Marks = emptyMap(), onFlag: ((SetQuestion) -> Unit)? = null, onCause: ((SetQuestion, String?) -> Unit)? = null, onRelease: ((SetQuestion) -> Unit)? = null,
+    onChoose: (SetQuestion, String) -> Unit = { _, _ -> },
+) {
     val c = Lexi.colors
     // Taking the test: Part 1 photos next to their questions. A review of some questions shows them under the heading.
     val interleave = !review && shown === set.questions
@@ -910,14 +944,21 @@ private fun Questions(app: LexiApp, set: TestSet, answers: Map<Int, String>, rev
                     if (p.label.isNotEmpty()) Text(p.label, fontSize = 12.sp, color = c.muted, fontWeight = FontWeight.Bold)
                     Text(reflow(p.text), fontSize = 15.sp, lineHeight = 22.sp)
                 }
-                is Line.Question -> QuestionCard(l.q, answers[l.q.i], review, player, if (review) replayOf(set.questions, l.q) else null, onNudge) { onChoose(l.q, it) }
+                is Line.Question -> QuestionCard(
+                    l.q, answers[l.q.i], review, player, if (review) replayOf(set.questions, l.q) else null, onNudge,
+                    mark = marks[l.q.i], onFlag = onFlag?.let { f -> { f(l.q) } }, onCause = onCause?.let { f -> { c2: String? -> f(l.q, c2) } }, onRelease = onRelease?.let { f -> { f(l.q) } },
+                ) { onChoose(l.q, it) }
             }
         }
     }
 }
 
 @Composable
-private fun QuestionCard(q: SetQuestion, pick: String?, review: Boolean, player: ListenPlayer?, replay: Clip?, onNudge: ((SetQuestion, Long) -> Unit)?, onChoose: (String) -> Unit) {
+private fun QuestionCard(
+    q: SetQuestion, pick: String?, review: Boolean, player: ListenPlayer?, replay: Clip?, onNudge: ((SetQuestion, Long) -> Unit)?,
+    mark: Mark? = null, onFlag: (() -> Unit)? = null, onCause: ((String?) -> Unit)? = null, onRelease: (() -> Unit)? = null,
+    onChoose: (String) -> Unit,
+) {
     val c = Lexi.colors
     val wrong = review && q.correct != null && pick != q.correct
     Column(
@@ -927,6 +968,10 @@ private fun QuestionCard(q: SetQuestion, pick: String?, review: Boolean, player:
         val own = q.track
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("${q.number ?: (q.i + 1)}. " + q.stem.ifEmpty { "Nghe và chọn đáp án" }, Modifier.weight(1f), fontSize = 15.sp, lineHeight = 21.sp)
+            if (!review && onFlag != null) TextButton(onClick = onFlag, Modifier.testTag("q-flag")) {
+                Icon(Icons.Filled.Flag, null, tint = if (mark?.flag == true) c.hard else c.muted)
+                Text(if (mark?.flag == true) " Đã đánh dấu" else " Chưa chắc", color = if (mark?.flag == true) c.hard else c.muted)
+            }
             if (player != null && own != null) {
                 val on = player.track == own && player.playing
                 TextButton(onClick = { if (on) player.pause() else player.play(own) }, Modifier.testTag("q-play")) {
@@ -965,6 +1010,12 @@ private fun QuestionCard(q: SetQuestion, pick: String?, review: Boolean, player:
                 Text("chỉnh điểm bắt đầu", Modifier.align(Alignment.CenterVertically), fontSize = 12.sp, color = c.muted)
             }
         }
+        // Why it was missed, and "leave the queue": for a question that is waiting in "Ôn câu sai".
+        if (review && mark != null && !mark.done && onCause != null) FlowRow(Modifier.testTag("q-causes"), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            for ((k, label) in CAUSE_LABELS) FilterChip(selected = mark.cause == k, onClick = { onCause(if (mark.cause == k) null else k) }, label = { Text(label) }, modifier = Modifier.testTag("q-cause-$k"))
+            if (onRelease != null) TextButton(onClick = onRelease, Modifier.testTag("q-release")) { Text("Bỏ khỏi ôn") }
+        }
+        if (review && mark?.done == true) Pill("Đã nắm", PillKind.OK, Modifier.testTag("q-learnt"))
         if (review && q.correct == null) Pill("Chưa có đáp án, không chấm")
         if (wrong && pick == null) Pill("Bỏ trống", PillKind.BAD)
         if (review && q.rule.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1038,7 +1089,9 @@ private fun Result(app: LexiApp, set: TestSet, part: Int?, attempt: Attempt, pla
         }
     }
 
-    Questions(app, view, attempt.answers, review = true, player = player, shown = shown, onNudge = ::nudge, header = {
+    Questions(app, view, attempt.answers, review = true, player = player, shown = shown, onNudge = ::nudge,
+        marks = set.marks, onCause = { q, cause -> updateMarks(app, set.id) { it.setCause(q.i, cause) } },
+        onRelease = { q -> updateMarks(app, set.id) { it.release(q.i) }; toast("Đã bỏ khỏi Ôn câu sai") }, header = {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Panel(Modifier.testTag("runner-result")) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1121,6 +1174,118 @@ private fun Pictures(app: LexiApp, set: TestSet, part: Int, only: List<SetPictur
             val b = img
             if (b != null) Image(b, "Trang ${p.page}", Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).border(1.dp, Lexi.colors.line, RoundedCornerShape(14.dp)).testTag("runner-picture"), contentScale = ContentScale.FillWidth)
             else Text("Trang ${p.page}…", fontSize = 13.sp, color = Lexi.colors.muted)
+        }
+    }
+}
+
+/** What "Ôn câu sai" has for today, across every set: (set id, question position), oldest first. */
+private fun wrongQueue(sets: List<TestSet>, today: Int): List<Pair<String, Int>> =
+    sets.flatMap { s -> s.marks.dueOf(today).filter { i -> s.questions.any { it.i == i } }.map { s.id to it } }
+
+/** The way into "Ôn câu sai" from the list of sets. Shown once there is something in the queue. */
+@Composable
+private fun WrongEntry(sets: List<TestSet>, onOpen: () -> Unit) {
+    val waiting = sets.sumOf { it.marks.queuedCount() }
+    if (waiting == 0) return
+    val due = wrongQueue(sets, todayNo()).size
+    val c = Lexi.colors
+    Panel(Modifier.testTag("wrong-entry")) {
+        Text("Ôn câu sai", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+        Text("${if (due > 0) "$due câu đến hạn" else "Hôm nay không còn câu nào đến hạn"} · $waiting câu đang theo dõi", Modifier.testTag("wrong-entry-count"), fontSize = 13.sp, color = c.muted)
+        Button(onClick = onOpen, Modifier.fillMaxWidth().testTag("wrong-open")) { Text(if (due > 0) "Ôn ngay" else "Xem") }
+    }
+}
+
+/** One question of the queue: do it again from the original, then see the answer and say why it was missed. */
+@Composable
+private fun ReviewCard(app: LexiApp, set: TestSet, q: SetQuestion, pick: String?, onChoose: (String) -> Unit, onCause: (String?) -> Unit, onRelease: () -> Unit, onCard: () -> Unit) {
+    val c = Lexi.colors
+    val toast = LocalToaster.current
+    val player = remember(set.id) { if (set.tracks.isEmpty()) null else ListenPlayer(set.tracks, app.testSets::mediaFile) { toast(it) } }
+    if (player != null) DisposableEffect(player) { onDispose { player.release() } }
+    val replay = remember(set.questions, q.i) { replayOf(set.questions, q) }
+    val mark = set.marks[q.i]
+    val wrong = pick != null && q.correct != null && pick != q.correct
+    Column(Modifier.testTag("wrong-card"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        val last = mark?.cause?.let { k -> CAUSE_LABELS.firstOrNull { it.first == k }?.second }
+        Text(set.name + (q.part?.let { " · Part $it" } ?: "") + (last?.let { " · lần trước: $it" } ?: ""), Modifier.testTag("wrong-source"), fontSize = 12.sp, color = c.muted)
+        q.passage?.let { pi ->
+            Panel(Modifier.testTag("runner-passage")) {
+                val p = set.passages[pi]
+                if (p.label.isNotEmpty()) Text(p.label, fontSize = 12.sp, color = c.muted, fontWeight = FontWeight.Bold)
+                Text(reflow(p.text), fontSize = 15.sp, lineHeight = 22.sp)
+            }
+        }
+        val part = q.part
+        if (part != null && part <= 4) Pictures(app, set, part)
+        if (pick == null && player != null && replay != null && q.track == null) {
+            TextButton(onClick = { player.playRange(replay.track, replay.from, replay.to) }, Modifier.testTag("wrong-play")) {
+                Icon(Icons.Filled.PlayArrow, null)
+                Text(" Nghe câu ${q.number ?: (q.i + 1)}")
+            }
+        }
+        QuestionCard(q, pick, review = pick != null, player = player, replay = if (pick != null) replay else null, onNudge = null,
+            mark = if (pick != null) mark else null, onCause = onCause, onRelease = onRelease) { onChoose(it) }
+        if (pick != null) {
+            Pill(if (wrong) "Chưa đúng, đáp án ${q.correct}" else "Đúng", if (wrong) PillKind.BAD else PillKind.OK, Modifier.testTag("wrong-verdict"))
+            if (q.kind != "listen") OutlinedButton(onClick = onCard, Modifier.fillMaxWidth().testTag("wrong-card-make")) { Icon(Icons.Filled.AutoAwesome, null); Text("  Tạo thẻ từ câu này") }
+        }
+    }
+}
+
+/** "Ôn câu sai": the questions due today from every set, one at a time. The answer moves the question along its 1/3/7/14 days; none of it touches the FSRS cards. */
+@Composable
+private fun WrongReview(app: LexiApp, onExit: () -> Unit, onCards: (String, WrongDrafts) -> Unit) {
+    val c = Lexi.colors
+    val toast = LocalToaster.current
+    val sets by app.testSets.sets.collectAsState()
+    val notes by app.data.notes.collectAsState()
+    // The day's list is fixed when the screen opens, so answering does not reshuffle it. Coming back from making a card
+    // builds it again, without what was answered (those are no longer due today).
+    val queue = remember { wrongQueue(app.testSets.sets.value, todayNo()) }
+    var at by remember { mutableStateOf(0) }
+    var right by remember { mutableStateOf(0) }
+    var pick by remember { mutableStateOf<String?>(null) }
+    val existing = remember(notes) { existingSentences(notes) }
+    val item = queue.getOrNull(at)
+    val set = item?.let { (id, _) -> sets.firstOrNull { it.id == id } }
+    val q = item?.let { (_, i) -> set?.questions?.firstOrNull { it.i == i } }
+    val left = sets.sumOf { it.marks.queuedCount() }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp).testTag("wrong-review"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onExit, Modifier.testTag("wrong-exit")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Bộ đề") }
+            Text("Ôn câu sai", Modifier.weight(1f), fontWeight = FontWeight.Bold)
+            if (queue.isNotEmpty()) Pill("${minOf(at + 1, queue.size)}/${queue.size}", modifier = Modifier.testTag("wrong-count"))
+        }
+        fun next() { pick = null; at += 1 }
+        if (item == null) Panel(Modifier.testTag("wrong-done")) {
+            Text(if (queue.isNotEmpty()) "Xong ${queue.size} câu, đúng $right." else "Hôm nay không còn câu nào đến hạn.", fontWeight = FontWeight.ExtraBold)
+            Text("Còn $left câu đang theo dõi; mỗi câu quay lại sau 1, 3, 7 rồi 14 ngày, đúng 2 lần liền là đã nắm.", fontSize = 13.sp, color = c.muted)
+            OutlinedButton(onClick = onExit, Modifier.fillMaxWidth()) { Text("Về danh sách bộ đề") }
+        } else if (set == null || q == null) Panel {
+            Text("Câu này không còn trên máy (bộ đề đã xoá).", fontSize = 13.sp, color = c.muted)
+            OutlinedButton(onClick = ::next) { Text("Câu tiếp") }
+        } else {
+            key(set.id, q.i) {
+                ReviewCard(
+                    app, set, q, pick,
+                    onChoose = { l ->
+                        if (pick == null) {
+                            pick = l
+                            val ok = l == q.correct
+                            if (ok) right += 1
+                            updateMarks(app, set.id) { it.review(q.i, ok, todayNo()) }
+                        }
+                    },
+                    onCause = { cause -> updateMarks(app, set.id) { it.setCause(q.i, cause) } },
+                    onRelease = { updateMarks(app, set.id) { it.release(q.i) }; toast("Đã bỏ khỏi Ôn câu sai"); next() },
+                    onCard = {
+                        val w = wrongDrafts(listOf(q), set.passages, grade(listOf(q), emptyMap()), existing)
+                        if (w.drafts.isEmpty() && w.passages.isEmpty()) toast("Câu này không tạo được thẻ") else onCards(set.name, w)
+                    },
+                )
+            }
+            if (pick != null) Button(onClick = ::next, Modifier.fillMaxWidth().testTag("wrong-next")) { Text(if (at + 1 < queue.size) "Câu tiếp" else "Xong") }
         }
     }
 }

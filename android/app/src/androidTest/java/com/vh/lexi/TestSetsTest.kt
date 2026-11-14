@@ -395,6 +395,77 @@ class TestSetsTest {
         assertTrue(app.testSets.sets.value.single().parts[5]?.answers.orEmpty().isEmpty())
     }
 
+    @Test
+    fun wrongQueue() {
+        openSets()
+        waitFor("sets-empty") { count("sets-empty") > 0 }
+        importFixture("reading-test.pdf")
+        rule.onNodeWithTag("pdf-read").performScrollTo().performClick()
+        waitFor("pdf-preview") { count("pdf-preview") > 0 }
+        rule.onNodeWithTag("pdf-save").performScrollTo().performClick()
+        waitFor("set-row") { count("set-row") > 0 }
+        assertEquals(0, count("wrong-entry")) // nothing to review yet
+        val name = app.testSets.sets.value.single().name
+        val today = com.vh.lexi.core.dayNumber(System.currentTimeMillis())
+
+        // Part 5: 101 right but flagged ⚑, 102 wrong. Submitting queues both for tomorrow.
+        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        waitFor("part list") { count("set-home") > 0 }
+        rule.onNodeWithTag("home-run-5").performScrollTo().performClick()
+        waitFor("part 5 runner") { count("runner-list") > 0 }
+        pick(101, "A")
+        val card = hasTestTag("runner-q") and hasAnyDescendant(startsWith("101. "))
+        rule.onAllNodes(hasTestTag("q-flag") and hasAnyAncestor(card))[0].performClick()
+        waitFor("flagged") { app.testSets.sets.value.single().marks[0]?.flag == true }
+        waitFor("flag shown") { countText("Đã đánh dấu") > 0 }
+        pick(102, "B")
+        waitFor("count-2") { textOf("runner-count").contains("2/2") }
+        rule.onNodeWithTag("runner-submit").performClick()
+        waitFor("submit-dialog") { countText("Lexi chấm ngay theo bảng đáp án.") > 0 }
+        dialogButton("Nộp bài").performClick()
+        waitFor("part result") { count("runner-result") > 0 }
+        waitFor("queued") { app.testSets.sets.value.single().marks.keys == setOf(0, 1) }
+        assertEquals(today + 1, app.testSets.sets.value.single().marks[1]?.due)
+        assertEquals(today + 1, app.testSets.sets.value.single().marks[0]?.due)
+
+        // Why it was missed: one tap on a cause chip, kept with the mark.
+        rule.onNodeWithTag("runner-list").performScrollToNode(hasTestTag("q-cause-g"))
+        rule.onAllNodes(hasTestTag("q-cause-g"))[0].performClick()
+        waitFor("cause kept") { app.testSets.sets.value.single().marks[1]?.cause == "g" }
+        shot("sets-30-cause")
+        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("part list after submit") { count("set-home") > 0 }
+        rule.onNodeWithTag("home-back").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("sets list") { count("set-row") > 0 }
+        waitFor("entry") { count("wrong-entry") > 0 }
+        assertTrue(textOf("wrong-entry-count"), textOf("wrong-entry-count").contains("Hôm nay không còn câu nào đến hạn · 2 câu đang theo dõi"))
+
+        // Tomorrow comes: both are due.
+        val s = app.testSets.sets.value.single()
+        app.testSets.saveSoon(app.scope, s.copy(marks = s.marks.mapValues { it.value.copy(due = today) }))
+        waitFor("due") { textOf("wrong-entry-count").contains("2 câu đến hạn") }
+        rule.onNodeWithTag("wrong-open").performScrollTo().performClick()
+        waitFor("review card") { count("wrong-card") > 0 }
+        assertTrue(textOf("wrong-count"), textOf("wrong-count").contains("1/2"))
+        assertTrue(textOf("wrong-source"), textOf("wrong-source").contains("$name · Part 5"))
+        shot("sets-31-review")
+
+        // 101 again: right; then 102 again, wrong again, with the cause from last time shown.
+        rule.onAllNodes(hasTestTag("opt-A"))[0].performClick()
+        waitFor("right") { count("wrong-verdict") > 0 && textOf("wrong-verdict") == "Đúng" }
+        waitFor("101 moved on") { app.testSets.sets.value.single().marks[0]?.box == 1 }
+        assertEquals(today + 3, app.testSets.sets.value.single().marks[0]?.due)
+        rule.onNodeWithTag("wrong-next").performScrollTo().performClick()
+        waitFor("second card") { textOf("wrong-count").contains("2/2") && textOf("wrong-source").contains("lần trước: Ngữ pháp") }
+        rule.onAllNodes(hasTestTag("opt-B"))[0].performClick()
+        waitFor("wrong") { count("wrong-verdict") > 0 && textOf("wrong-verdict").contains("Chưa đúng") }
+        waitFor("102 starts again") { app.testSets.sets.value.single().marks[1]?.let { it.box == 0 && it.due == today + 1 } == true }
+        shot("sets-32-review-wrong")
+        rule.onNodeWithTag("wrong-next").performScrollTo().performClick()
+        waitFor("done") { count("wrong-done") > 0 }
+        assertEquals(0, app.data.cards.value.count { (it.lastReview ?: 0L) > 0 }) // no FSRS review was made
+    }
+
     /**
      * Ends typing in "Trang cần đọc" with a tap on the answer-key pill right above it (always on screen with it): the
      * Listening fields further down are reached by scrolling, and a focused field pulls the page back to itself.
