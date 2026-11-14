@@ -223,7 +223,7 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
                 if (notes.none { isMaterial(it) }) Button(onClick = onAdd) { Text("Thêm từ") }
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize()) {
+            LazyColumn(Modifier.fillMaxSize().testTag("lib-list")) {
                 items(rows, key = { it.id }) { n ->
                     val def = noteType(n.type)!!
                     val cs = byNote[n.id].orEmpty()

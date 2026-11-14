@@ -3,6 +3,7 @@ package com.vh.lexi
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
@@ -62,6 +63,7 @@ class ForgotTest {
             rule.waitUntil(ms, cond)
         } catch (e: Throwable) {
             shot("fail-forgot-" + label.replace(' ', '-'))
+            rule.onAllNodes(isRoot()).printToString(maxDepth = 14).take(6000).lines().forEach { Log.i("LEXI_PERF", "dump $label: $it") }
             throw AssertionError("timeout waiting for $label\n" + rule.onAllNodes(isRoot()).printToString(maxDepth = 14).take(6000), e)
         }
     }
@@ -243,9 +245,16 @@ class ForgotTest {
         rule.runOnUiThread { WindowCompat.getInsetsController(rule.activity.window, rule.activity.window.decorView).hide(WindowInsetsCompat.Type.ime()) }
         rule.waitForIdle()
         rule.onNodeWithText("Hay quên").performScrollTo().performClick()
-        waitFor("forgot filter") { rule.onAllNodes(hasTestTag("lib-item"), useUnmergedTree = true).fetchSemanticsNodes().size == 3 }
-        assertEquals(3, rule.onAllNodes(hasTestTag("lib-forgot"), useUnmergedTree = true).fetchSemanticsNodes().size)
+        // The list composes only the rows on screen, so the rows shown must all be marked, and each marked word must be
+        // reachable by scrolling; an unmarked word is not in the list at all.
+        fun count(tag: String) = rule.onAllNodes(hasTestTag(tag), useUnmergedTree = true).fetchSemanticsNodes().size
+        waitFor("forgot filter") { count("lib-item") > 0 && count("lib-item") == count("lib-forgot") }
         shot("24-library-filter")
+        for (w in listOf("postpone", "receipt", "venue")) {
+            rule.onNodeWithTag("lib-list").performScrollToNode(hasText(w))
+            waitFor("filter row $w") { rule.onAllNodes(hasText(w), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        }
+        assertTrue("an unmarked word is filtered out", runCatching { rule.onNodeWithTag("lib-list").performScrollToNode(hasText("attend")) }.isFailure)
         assertEquals(before, fsrsState(app))
     }
 }
