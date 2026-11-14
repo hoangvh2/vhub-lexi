@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.uiautomator.UiDevice
@@ -18,6 +19,7 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.printToString
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -152,7 +154,9 @@ class ForgotTest {
         waitFor("menu closed") { !exists("forgot-pop") }
 
         // Today: the panel leads to the list; a word FSRS says is forgotten often is suggested and marked with one tap.
+        // Coming back resumes the session on its card; a second tap on the tab opens Today.
         rule.onNodeWithTag("nav-library").performClick()
+        rule.onNodeWithTag("nav-study").performClick()
         rule.onNodeWithTag("nav-study").performClick()
         waitFor("today-watch", 20_000) { exists("open-forgot") }
         rule.onNodeWithTag("open-forgot").performScrollTo().performClick()
@@ -182,18 +186,20 @@ class ForgotTest {
                     if (!wrongDone) { shot("19-drill-meaning"); rule.onAllNodes(hasTestTag("drill-opt")).onFirst().performScrollTo().performClick(); wrongDone = true; waitFor("wrong") { exists("drill-answer") }; shot("20-drill-wrong") }
                     else rule.onNodeWithTag("drill-opt-right").performScrollTo().performClick()
                 }
+                // "Kiểm tra" by its click action: right after typing, the keyboard slides in and resizes the screen, and a
+                // touch sent meanwhile missed the button (CI: the word stayed typed in the field, no answer shown).
                 exists("drill-meaning") -> {
                     waitFor("recall input $steps") { exists("drill-input") }
                     val w = byMeaning.getValue(textOf("drill-meaning"))
                     rule.onNodeWithTag("drill-input").performTextInput(w)
                     if (seen.add("recall")) shot("21-drill-recall")
-                    rule.onNodeWithTag("drill-check").performScrollTo().performClick()
+                    rule.onNodeWithTag("drill-check").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
                 }
                 exists("drill-play") -> {
                     waitFor("listen input $steps") { exists("drill-input") }
                     rule.onNodeWithTag("drill-input").performTextInput("postpone")
                     if (seen.add("listen")) shot("21b-drill-listen")
-                    rule.onNodeWithTag("drill-check").performScrollTo().performClick()
+                    rule.onNodeWithTag("drill-check").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
                 }
                 exists("drill-hear") -> {
                     rule.onNodeWithTag("drill-hear").performScrollTo().performClick()

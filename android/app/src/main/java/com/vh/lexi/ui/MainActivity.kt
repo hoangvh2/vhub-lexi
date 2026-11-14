@@ -45,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -132,6 +133,10 @@ private fun Main(app: LexiApp) {
     var importing by rememberSaveable { mutableStateOf(false) }
     var testSets by rememberSaveable { mutableStateOf(false) }
     var forgot by rememberSaveable { mutableStateOf(false) }
+    // A study session left with a card on screen: coming back to the tab resumes it instead of opening Today.
+    // Tapping the tab while already on it goes back to Today (studyHome remounts the screen).
+    var studyResume by rememberSaveable { mutableStateOf(false) }
+    var studyHome by rememberSaveable { mutableStateOf(0) }
     val shared by app.pendingShare.collectAsState()
     LaunchedEffect(shared) { if (shared.isNotEmpty()) importing = true }
     val snackbar = remember { SnackbarHostState() }
@@ -190,7 +195,10 @@ private fun Main(app: LexiApp) {
                         containerColor = Color.Transparent, tonalElevation = 0.dp, windowInsets = WindowInsets(0, 0, 0, 0),
                     ) {
                         for (t in Tab.entries) NavigationBarItem(
-                            selected = tab == t && !importing && !testSets && !forgot, onClick = { tab = t; importing = false; testSets = false; forgot = false }, modifier = Modifier.testTag("nav-${t.name.lowercase()}"),
+                            selected = tab == t && !importing && !testSets && !forgot, onClick = {
+                                if (t == Tab.STUDY && tab == Tab.STUDY && !importing && !testSets && !forgot) { studyResume = false; studyHome++ }
+                                tab = t; importing = false; testSets = false; forgot = false
+                            }, modifier = Modifier.testTag("nav-${t.name.lowercase()}"),
                             label = { Text(t.label, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = c.accent, selectedTextColor = c.accent, indicatorColor = c.accentSoft, unselectedIconColor = c.muted, unselectedTextColor = c.muted,
@@ -219,7 +227,7 @@ private fun Main(app: LexiApp) {
                     }
                     Box(Modifier.weight(1f)) {
                         if (importing) ImportScreen(app) { importing = false } else if (testSets) TestSetsScreen(app) { testSets = false } else if (forgot) ForgotScreen(app) { forgot = false } else when (tab) {
-                            Tab.STUDY -> StudyScreen(app, onAdd = { tab = Tab.ADD }, onImport = { importing = true }, onTestSets = { testSets = true }, onForgot = { forgot = true })
+                            Tab.STUDY -> key(studyHome) { StudyScreen(app, onAdd = { tab = Tab.ADD }, onImport = { importing = true }, onTestSets = { testSets = true }, onForgot = { forgot = true }, resume = studyResume, onResume = { studyResume = it }) }
                             Tab.ADD -> AddScreen(app)
                             Tab.LIBRARY -> LibraryScreen(app) { tab = Tab.ADD }
                             Tab.STATS -> StatsScreen(app)

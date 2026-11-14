@@ -103,6 +103,53 @@ describe("core flow (local-only mode)", () => {
     await ctx.close();
   });
 
+  it("auto-speak reads only the card on screen, and the tab resumes a session left on a card", async () => {
+    const { ctx, page, errors } = await open(browser, base);
+    // Record what would be said instead of speaking.
+    await page.addInitScript(() => {
+      window.__spoken = [];
+      window.__cancels = 0;
+      const fake = { speak: (u) => window.__spoken.push(u.text), cancel: () => { window.__cancels++; }, getVoices: () => [], addEventListener() {} };
+      Object.defineProperty(window, "speechSynthesis", { value: fake, configurable: true });
+      if (typeof window.SpeechSynthesisUtterance === "undefined") window.SpeechSynthesisUtterance = class { constructor(t) { this.text = t; } };
+    });
+    const spoken = () => page.evaluate(() => window.__spoken.slice());
+    await addWord(page, base, "resilient", "kiên cường");
+    await page.goto(`${base}/#/settings`);
+    await page.click('button:has-text("Khi hiện thẻ")');
+    await page.waitForSelector('button[aria-pressed=true]:has-text("Khi hiện thẻ")');
+
+    // Today: nothing is read.
+    await page.click('[data-testid=nav-today]');
+    await page.waitForSelector('[data-testid=today]');
+    await page.waitForTimeout(500);
+    assert.deepEqual(await spoken(), []);
+    // The card on screen is read, once.
+    await page.click('[data-testid=start-study]');
+    await page.waitForSelector('[data-testid=study-card][data-template=recognize]');
+    await page.waitForFunction(() => window.__spoken.length > 0);
+    assert.deepEqual(await spoken(), ["resilient"]);
+
+    // Leaving silences it; the tab brings the session back on its card, and from the study screen it leads to Today.
+    const cancels = await page.evaluate(() => window.__cancels);
+    await page.click('[data-testid=nav-library]');
+    await page.waitForSelector('[data-testid=lib-item]');
+    await page.waitForFunction((n) => window.__cancels > n, cancels);
+    await page.click('[data-testid=nav-today]');
+    await page.waitForSelector('[data-testid=study-card]');
+    await page.click('[data-testid=nav-today]');
+    await page.waitForSelector('[data-testid=today]');
+
+    // A reload straight onto the study screen reads the card only once it shows, and it is the card shown.
+    await page.goto(`${base}/#/study`);
+    await page.reload();
+    await page.waitForSelector('[data-testid=study-card][data-template=recognize]');
+    await page.waitForFunction(() => window.__spoken.length > 0);
+    assert.deepEqual(await spoken(), ["resilient"]);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
   it("typed templates: recall and cloze check the answer and suggest a rating", async () => {
     const { ctx, page } = await open(browser, base);
     await page.goto(`${base}/#/settings`);

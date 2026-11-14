@@ -16,7 +16,7 @@ import { eligibility, notesById } from "../lib/select.ts";
 import { speak, stopSpeaking } from "../lib/speech.ts";
 import { useStore } from "../lib/store.ts";
 import { Blocks } from "./Blocks.tsx";
-import { Icon, go, toast } from "./common.tsx";
+import { Icon, go, route, studyResume, toast } from "./common.tsx";
 import { Ladder } from "./Ladder.tsx";
 import { HintBoxes, HintButtons, MemoryEditor, MemoryPanel, type HintKind } from "./Hints.tsx";
 import { NoteEditor } from "./NoteEditor.tsx";
@@ -181,14 +181,20 @@ export function Study({ deckId, initialTag = "" }: { deckId: Id | null; initialT
   // "Hay quên" mark: on both sides of a word card (shared/drill.ts); never part of the answer or its rating.
   const markable = !!note && note.type === "vocab";
 
-  // Read the front aloud when a card appears: always on listening cards, otherwise if the learner chose that.
+  // Read the front aloud once the card is on screen (not while "Đang tải dữ liệu…" shows): always on listening cards,
+  // otherwise if the learner chose that. Leaving the card or the screen silences it.
+  const onScreen = ready && !!card && !!note && !!tpl;
   useEffect(() => {
-    if (card && note && tpl && (p.autoSpeak === "front" || tpl.id === "listen")) {
-      const t = tpl.speak?.front?.(shown ?? note);
+    if (onScreen && (p.autoSpeak === "front" || tpl!.id === "listen")) {
+      const t = tpl!.speak?.front?.(shown ?? note!);
       if (t) speak(t);
     }
     return () => stopSpeaking();
-  }, [turn]);
+  }, [turn, onScreen]);
+  // A session left with a card on screen resumes from the tab; once it is done the tab opens Today again.
+  useEffect(() => {
+    if (ready) studyResume.set(onScreen ? route.get() : null);
+  }, [ready, onScreen]);
 
   const reveal = (v?: AnswerVerdict) => {
     if (!card || !note || !tpl || revealed) return;

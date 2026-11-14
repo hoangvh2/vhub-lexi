@@ -48,6 +48,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -144,7 +145,10 @@ private const val DAY_MS = 86_400_000L
 private fun lessonLabel(t: String, started: Int, total: Int) = "${lessonTitle(t)} · $started/$total" + if (started >= total) " ✓" else ""
 
 @Composable
-fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTestSets: () -> Unit = {}, onForgot: () -> Unit = {}) {
+fun StudyScreen(
+    app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTestSets: () -> Unit = {}, onForgot: () -> Unit = {},
+    resume: Boolean = false, onResume: (Boolean) -> Unit = {},
+) {
     val data = app.data
     val toast = LocalToaster.current
     val scope = rememberCoroutineScope()
@@ -161,8 +165,10 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTe
     var extraNew by remember { mutableStateOf(0) }
     // Like Anki's "learn ahead limit": when nothing else is left, a learning card due within 20 minutes is shown now.
     var ahead by remember { mutableLongStateOf(LEARN_AHEAD_MS) }
-    // The tab opens on Today; the session starts from its button (or a lesson picked there).
-    var started by remember { mutableStateOf(false) }
+    // The tab opens on Today; the session starts from its button (or a lesson picked there). A session left with a card on
+    // screen resumes when the learner comes back to the tab ([resume]).
+    var started by remember { mutableStateOf(resume) }
+    val resumedEntry = remember { resume }
     // Custom study: one lesson/topic tag, and review cards due in the next N days.
     var tag by remember { mutableStateOf<String?>(null) }
     var aheadDays by remember { mutableStateOf(0) }
@@ -221,8 +227,10 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTe
         )
     }
 
-    // Keep showing the same card until it is answered, even if the queue changes underneath.
-    val card: Card? = holder[0]?.let { id -> queue.all.firstOrNull { it.id == id } }
+    // Keep showing the same card until it is answered, even if the queue changes underneath. No card is picked before the
+    // session starts: Today shows counts only, and a card picked there was read aloud while the learner saw Today, then
+    // replaced by another one when the session started (the word heard belonged to the next card).
+    val card: Card? = if (!loaded || !started) null else holder[0]?.let { id -> queue.all.firstOrNull { it.id == id } }
         ?: pickNext(queue, SessionState(session.shown, session.shownNew), now).also { holder[0] = it?.id }
     val note = card?.let { notesById[it.noteId] }
     val tpl = if (card != null && note != null) template(note.type, card.template) else null
@@ -241,8 +249,6 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTe
         if (note != null && note.type == "vocab" && (note.fields["mnemonic"].str().isNotEmpty() || note.fields["notes"].str().isNotEmpty())) {
             leaning = hintDependent(data.hintLogsOfNote(note.id))
         }
-        // Listening cards always play the sentence; others read the front aloud if the learner chose that.
-        if (tpl != null && note != null && (prefs.autoSpeak == "front" || tpl.id == "listen")) tpl.speakFront(shown ?: note)?.let { app.speech.speak(it) }
     }
 
     fun reveal(v: Verdict? = null) {
@@ -318,6 +324,7 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTe
     }
 
     if (!started) {
+        LaunchedEffect(Unit) { onResume(false) }
         TodayPanel(
             cards = cards, notesById = notesById, queue = queue, daily = daily, dayStartHour = prefs.dayStartHour, newPerDay = prefs.newPerDay, now = now,
             lessons = tags.filter { isLesson(it.first) }.map { LessonProgress(it.first, startedByTag[it.first] ?: 0, it.second) },
@@ -378,6 +385,11 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTe
                     if ((startedByTag[t] ?: 0) < (tags.getOrNull(i)?.second ?: 0)) null
                     else tags.drop(i + 1).firstOrNull { isLesson(it.first) && (startedByTag[it.first] ?: 0) < it.second }?.first
                 }
+                LaunchedEffect(Unit) {
+                    onResume(false)
+                    // Came back to resume, but the cards were answered elsewhere meanwhile: Today, not an empty recap.
+                    if (resumedEntry && session.shown == 0) started = false
+                }
                 DoneCard(
                     streak = streak(daily, now, prefs.dayStartHour), dueTomorrow = dueWithin(cards, eligible, now, prefs.dayStartHour, 1, deckId, tagNotes),
                     nextLesson = nextLesson, onLesson = { t -> tag = t; aheadDays = 0; holder[0] = null },
@@ -391,8 +403,16 @@ fun StudyScreen(app: LexiApp, onAdd: () -> Unit, onImport: () -> Unit = {}, onTe
                 // Each new card eases in (fade + small rise) instead of popping, so a long session feels calmer.
                 val appear = remember(card.id, session.shown) { Animatable(0f) }
                 LaunchedEffect(card.id, session.shown) { appear.animateTo(1f, tween(280)) }
+                // Read the front aloud only once this card is on screen (listening cards always, others if the learner chose
+                // that), and silence it when the card changes or the screen goes away: a cloze card must never play the
+                // word of the card before it.
+                DisposableEffect(card.id, session.shown) {
+                    onResume(true)
+                    if (prefs.autoSpeak == "front" || tpl.id == "listen") tpl.speakFront(shown ?: note)?.let { app.speech.speak(it) }
+                    onDispose { app.speech.stop() }
+                }
                 Box(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp)
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp).testTag("study-card-${tpl.id}")
                         .graphicsLayer { alpha = appear.value; translationY = (1f - appear.value) * 28f; val s = 0.97f + 0.03f * appear.value; scaleX = s; scaleY = s }
                         .clay(c, RoundedCornerShape(32.dp)).clip(RoundedCornerShape(32.dp))
                         .then(if (!revealed && tpl.mode == AnswerMode.FLIP) Modifier.clickable { reveal() } else Modifier),
