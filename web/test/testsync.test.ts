@@ -91,3 +91,16 @@ describe("Bộ đề sync: attempts per Part", () => {
     expect("attempt" in c || "parts" in c || "syncedAt" in c).toBe(false);
   });
 });
+
+describe("marks in state", () => {
+  it("round-trips, sorted, and drops malformed", () => {
+    const set = syncSet();
+    const marks = { "2": { box: 1, streak: 1, due: 5, flag: true as const, cause: "g" as const }, "0": { box: 0, streak: 0, done: true as const } };
+    const state = progressOf({ ...set, marks });
+    expect(Object.keys(JSON.parse(state).marks)).toEqual(["0", "2"]);
+    expect(withProgress({ ...set }, state).marks).toEqual(marks);
+    expect(withProgress({ ...set, marks }, '{"clips":{}}').marks).toBeUndefined();
+    expect(withProgress({ ...set, marks }, '{"clips":{},"marks":{"1":{"box":7,"streak":0}}}')).toEqual({ ...set, marks });
+    expect(progressOf(set)).not.toContain("marks");
+  });
+});

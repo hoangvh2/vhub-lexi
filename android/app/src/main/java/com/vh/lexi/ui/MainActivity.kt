@@ -132,6 +132,8 @@ private fun Main(app: LexiApp) {
     // "Nhập từ đề thi" is a screen over the tabs, opened from Today or by sharing a screenshot to Lexi.
     var importing by rememberSaveable { mutableStateOf(false) }
     var testSets by rememberSaveable { mutableStateOf(false) }
+    // The Bộ đề screen opened on "Ôn câu sai" (from the Today screen).
+    var wrongFirst by rememberSaveable { mutableStateOf(false) }
     var forgot by rememberSaveable { mutableStateOf(false) }
     // A study session left with a card on screen: coming back to the tab resumes it instead of opening Today.
     // Tapping the tab while already on it goes back to Today (studyHome remounts the screen).
@@ -226,8 +228,8 @@ private fun Main(app: LexiApp) {
                         else Pill(syncLabel(SyncState.OFF))
                     }
                     Box(Modifier.weight(1f)) {
-                        if (importing) ImportScreen(app) { importing = false } else if (testSets) TestSetsScreen(app) { testSets = false } else if (forgot) ForgotScreen(app) { forgot = false } else when (tab) {
-                            Tab.STUDY -> key(studyHome) { StudyScreen(app, onAdd = { tab = Tab.ADD }, onImport = { importing = true }, onTestSets = { testSets = true }, onForgot = { forgot = true }, resume = studyResume, onResume = { studyResume = it }) }
+                        if (importing) ImportScreen(app) { importing = false } else if (testSets) TestSetsScreen(app, startReview = wrongFirst) { testSets = false; wrongFirst = false } else if (forgot) ForgotScreen(app) { forgot = false } else when (tab) {
+                            Tab.STUDY -> key(studyHome) { StudyScreen(app, onAdd = { tab = Tab.ADD }, onImport = { importing = true }, onTestSets = { testSets = true }, onForgot = { forgot = true }, onWrong = { wrongFirst = true; testSets = true }, resume = studyResume, onResume = { studyResume = it }) }
                             Tab.ADD -> AddScreen(app)
                             Tab.LIBRARY -> LibraryScreen(app) { tab = Tab.ADD }
                             Tab.STATS -> StatsScreen(app)

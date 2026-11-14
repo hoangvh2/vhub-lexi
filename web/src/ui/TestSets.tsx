@@ -8,10 +8,11 @@ import type { CloudMeta } from "../lib/testsync.ts";
 import { LETTERS, existingSentences, type Extracted, type Letter } from "../lib/import.ts";
 import { decodeLevels, findGaps, mmss as clipTime, placeQuestions } from "../lib/audio.ts";
 import { openPdf, readPages, renderPage, type PdfDoc } from "../lib/pdf.ts";
-import { PARTS, formatScore } from "../lib/practice.ts";
+import { CAUSES, PARTS, formatScore } from "../lib/practice.ts";
+import { dayNumber, dueOf, enqueue, queuedCount, release, review as reviewMark, setCause, toggleFlag, type Mark, type MarkCause, type Marks } from "../lib/testreview.ts";
 import { useStore } from "../lib/store.ts";
 import { LC_LAYOUT, LC_PARTS, attemptOf, canLogScope, findPhotoPages, lettersOf, partStates, partsOf, photoNumbers, photoSlots, parseNumberRange, scopeName, scopeView, sortTracks, withAttempt, type LcLayout, type Scope, type SetTrack } from "../lib/testset.ts";
-import { chunkPages, findKey, formatPages, grade, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, reflow, resultFields, summary, wrongDrafts, type Chunk, type PdfPage, type SetQuestion, type TestSet } from "../lib/testset.ts";
+import { chunkPages, findKey, formatPages, grade, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, reflow, resultFields, summary, wrongDrafts, type Chunk, type Graded, type PdfPage, type SetQuestion, type TestSet } from "../lib/testset.ts";
 import { Icon, confirmDialog, toast } from "./common.tsx";
 import { DraftReview, type Review } from "./ImportPanel.tsx";
 import type { DeckSink } from "./Practice.tsx";
@@ -33,6 +34,18 @@ const todayIso = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
+/** One mark change at a time: each reads the stored set after the one before it was written (a quick second tap must not undo the first). */
+let marksQueue: Promise<void> = Promise.resolve();
+/** Change a set's "Ôn câu sai" marks in the stored set (not the copy a screen started with). */
+function updateMarks(id: string, fn: (m: Marks) => Marks): void {
+  marksQueue = marksQueue.then(async () => {
+    const stored = testSets.get().find((x) => x.id === id);
+    if (!stored) return;
+    const marks = fn(stored.marks ?? {});
+    if (marks !== (stored.marks ?? {})) await saveTestSet({ ...stored, marks });
+  }).catch(() => toast("Không lưu được trên máy này"));
+}
+const todayNo = () => dayNumber(Date.now());
 const mb = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0).replace(".", ",")} MB`);
 const clock = (ms: number) => {
   const s = Math.floor(ms / 1000);
@@ -55,6 +68,7 @@ export function TestSetsTab({ deck, deckPicker, onPassage }: { deck: DeckSink; d
   // The set whose Parts are listed, and what is being taken now: the whole set (scope null) or one Part.
   const [home, setHome] = useState<string | null>(null);
   const [running, setRunning] = useState<{ id: string; scope: Scope } | null>(null);
+  const [reviewing, setReviewing] = useState(false);
   useEffect(() => {
     loadTestSets().then(() => setReady(true), () => (setReady(true), toast("Không mở được kho bộ đề trên máy này")));
   }, []);
@@ -83,11 +97,13 @@ export function TestSetsTab({ deck, deckPicker, onPassage }: { deck: DeckSink; d
   }
   const current = sets.find((s) => s.id === running?.id);
   if (current && running) return <Runner key={`${running.id}:${running.scope}`} set={current} scope={running.scope} deck={deck} deckPicker={deckPicker} onPassage={onPassage} onExit={() => setRunning(null)} />;
+  if (reviewing) return <WrongReview deck={deck} deckPicker={deckPicker} onPassage={onPassage} onExit={() => setReviewing(false)} />;
   const homeSet = sets.find((s) => s.id === home);
   if (homeSet) return <SetHome set={homeSet} onBack={() => setHome(null)} onRun={(scope) => setRunning({ id: homeSet.id, scope })} />;
   return (
     <div class="col">
       <PdfImport onSaved={(s) => toast(`Đã lưu bộ đề “${s.name}”`)} />
+      <WrongEntry sets={sets} onOpen={() => setReviewing(true)} />
       <section class="panel col" data-testid="sets">
         <div class="panel-head">
           <h2>Bộ đề của bạn</h2>
@@ -808,12 +824,13 @@ function Runner({ set, scope, deck, deckPicker, onPassage, onExit }: { set: Test
   const latest = useRef(attempt);
   latest.current = attempt;
 
-  function persist(a: typeof attempt, rebase = false) {
+  function persist(a: typeof attempt, rebase = false, marksFn?: (m: Marks) => Marks) {
     if (rebase) resumed.current = Date.now();
     latest.current = a;
     setAttempt(a);
-    // The stored set, not the one this render started with: another Part's attempt or the replay clips may have changed meanwhile.
-    void saveTestSet(withAttempt(testSets.get().find((x) => x.id === set.id) ?? set, scope, a));
+    // The stored set, not the one this render started with: another Part's attempt, the marks or the replay clips may have changed meanwhile.
+    const stored = withAttempt(testSets.get().find((x) => x.id === set.id) ?? set, scope, a);
+    void saveTestSet(marksFn ? { ...stored, marks: marksFn(stored.marks ?? {}) } : stored);
   }
 
   const choose = (q: SetQuestion, l: Letter) => persist({ ...attempt, answers: { ...attempt.answers, [q.i]: l } });
@@ -826,7 +843,8 @@ function Runner({ set, scope, deck, deckPicker, onPassage, onExit }: { set: Test
     const ok = await confirmDialog({ title: "Nộp bài?", message: left ? `Còn ${left} câu chưa làm, sẽ tính là sai.` : "Lexi chấm ngay theo bảng đáp án.", confirm: "Nộp bài" });
     if (!ok) return;
     player?.pause();
-    persist({ ...attempt, elapsedMs: elapsed, finishedAt: Date.now() }, true);
+    // Wrong, blank and ⚑ questions join "Ôn câu sai", due tomorrow.
+    persist({ ...attempt, elapsedMs: elapsed, finishedAt: Date.now() }, true, (m) => enqueue(m, view.questions, attempt.answers, todayNo()));
     window.scrollTo?.({ top: 0 });
   }
 
@@ -849,14 +867,14 @@ function Runner({ set, scope, deck, deckPicker, onPassage, onExit }: { set: Test
       {finished ? (
         <Result set={set} scope={scope} attempt={attempt} deck={deck} deckPicker={deckPicker} onPassage={onPassage} onAgain={() => void again()} onSaved={(id) => persist({ ...attempt, resultNoteId: id })} player={player} />
       ) : (
-        <Questions set={view} answers={attempt.answers} onChoose={choose} player={player} />
+        <Questions set={view} answers={attempt.answers} onChoose={choose} player={player} marks={set.marks} onFlag={(q) => updateMarks(set.id, (m) => toggleFlag(m, q.i))} />
       )}
     </div>
   );
 }
 
 /** The test in order: a part heading where the part changes, each passage once above its first question. */
-function Questions({ set, answers, onChoose, review, player, onNudge, all }: {
+function Questions({ set, answers, onChoose, review, player, onNudge, all, marks, onFlag, onCause, onRelease }: {
   set: TestSet;
   answers: Record<number, Letter>;
   onChoose?(q: SetQuestion, l: Letter): void;
@@ -865,6 +883,11 @@ function Questions({ set, answers, onChoose, review, player, onNudge, all }: {
   onNudge?(q: SetQuestion, ms: number): void;
   /** Every question of the set, when `set` shows only some (a Part 3 question replays from its group's first). */
   all?: readonly SetQuestion[];
+  /** "Ôn câu sai" marks of the set: ⚑ while taking the test, the cause chips and "Bỏ khỏi ôn" in review. */
+  marks?: Marks;
+  onFlag?(q: SetQuestion): void;
+  onCause?(q: SetQuestion, c: MarkCause | null): void;
+  onRelease?(q: SetQuestion): void;
 }) {
   let lastPart: number | null | undefined;
   let lastPassage: number | null = null;
@@ -895,7 +918,7 @@ function Questions({ set, answers, onChoose, review, player, onNudge, all }: {
                 <p lang="en">{reflow(set.passages[q.passage!].text)}</p>
               </article>
             )}
-            <QuestionCard q={q} pick={answers[q.i]} onChoose={onChoose} review={review} player={player} replay={review ? replayOf(all ?? set.questions, q) : null} onNudge={onNudge} />
+            <QuestionCard q={q} pick={answers[q.i]} onChoose={onChoose} review={review} player={player} replay={review ? replayOf(all ?? set.questions, q) : null} onNudge={onNudge} mark={marks?.[String(q.i)]} onFlag={onFlag} onCause={onCause} onRelease={onRelease} />
           </div>
         );
       })}
@@ -903,7 +926,7 @@ function Questions({ set, answers, onChoose, review, player, onNudge, all }: {
   );
 }
 
-function QuestionCard({ q, pick, onChoose, review, player, replay, onNudge }: {
+function QuestionCard({ q, pick, onChoose, review, player, replay, onNudge, mark, onFlag, onCause, onRelease }: {
   q: SetQuestion;
   pick: Letter | undefined;
   onChoose?(q: SetQuestion, l: Letter): void;
@@ -912,6 +935,10 @@ function QuestionCard({ q, pick, onChoose, review, player, replay, onNudge }: {
   /** In review: the stretch to hear again (a Part 3–4 question starts with its conversation). */
   replay?: { track: number; from: number; to: number } | null;
   onNudge?(q: SetQuestion, ms: number): void;
+  mark?: Mark;
+  onFlag?(q: SetQuestion): void;
+  onCause?(q: SetQuestion, c: MarkCause | null): void;
+  onRelease?(q: SetQuestion): void;
 }) {
   const wrong = review && q.correct && pick !== q.correct;
   const letters = lettersOf(q);
@@ -921,6 +948,11 @@ function QuestionCard({ q, pick, onChoose, review, player, replay, onNudge }: {
     <section class={`panel col qcard${wrong ? " missed" : ""}${q.kind === "listen" ? " listen" : ""}`} data-testid="runner-q">
       <div class="row between" style={{ gap: "10px" }}>
         <p class="stem"><b>{q.number ?? q.i + 1}.</b> {q.stem ? <span lang="en">{q.stem}</span> : <span class="muted">Nghe và chọn đáp án</span>}</p>
+        {!review && onFlag && (
+          <button type="button" class={`btn ghost sm flag${mark?.flag ? " on" : ""}`} aria-pressed={!!mark?.flag} title="Đánh dấu để ôn lại" onClick={() => onFlag(q)} data-testid="q-flag">
+            <Icon n="flag" size={16} /> {mark?.flag ? "Đã đánh dấu" : "Chưa chắc"}
+          </button>
+        )}
         {own && (
           <button type="button" class="btn ghost sm" onClick={() => (mine && player.playing ? player.pause() : void player.play(q.track!))} data-testid="q-play">
             <Icon n={mine && player.playing ? "pause" : "play"} size={16} /> {mine && player.playing ? "Dừng" : "Nghe"}
@@ -952,6 +984,15 @@ function QuestionCard({ q, pick, onChoose, review, player, replay, onNudge }: {
       )}
       {review && !q.correct && <span class="pill">Chưa có đáp án, không chấm</span>}
       {review && wrong && !pick && <span class="pill bad">Bỏ trống</span>}
+      {review && mark && !mark.done && (
+        <div class="chips cause-chips" role="group" aria-label="Vì sao sai" data-testid="q-causes">
+          {CAUSES.map((c) => (
+            <button type="button" key={c.key} class={`cause-chip${mark.cause === c.key ? " on" : ""}`} aria-pressed={mark.cause === c.key} title={c.hint} onClick={() => onCause?.(q, mark.cause === c.key ? null : c.key)} data-testid={`q-cause-${c.key}`}>{c.label}</button>
+          ))}
+          {onRelease && <button type="button" class="btn ghost sm" onClick={() => onRelease(q)} data-testid="q-release">Bỏ khỏi ôn</button>}
+        </div>
+      )}
+      {review && mark?.done && <span class="pill ok" data-testid="q-learnt">Đã nắm</span>}
       {review && q.rule && <p class="muted small"><span class="ai-tag">AI</span> {q.rule}</p>}
     </section>
   );
@@ -1088,7 +1129,150 @@ function Result({ set, scope, attempt, deck, deckPicker, onPassage, onAgain, onS
         <h3 class="part-head">{onlyWrong ? `Câu sai (${g.wrong.length})` : `Tất cả (${view.questions.length})`}</h3>
         <button type="button" class="btn ghost sm" onClick={() => setOnlyWrong(!onlyWrong)} data-testid="result-toggle">{onlyWrong ? "Xem cả bài" : "Chỉ câu sai"}</button>
       </div>
-      <Questions set={shown} answers={attempt.answers} review player={player} all={set.questions} onNudge={(q, ms) => void nudge(q, ms)} />
+      <Questions
+        set={shown} answers={attempt.answers} review player={player} all={set.questions} onNudge={(q, ms) => void nudge(q, ms)}
+        marks={set.marks} onCause={(q, c) => updateMarks(set.id, (m) => setCause(m, q.i, c))} onRelease={(q) => { updateMarks(set.id, (m) => release(m, q.i)); toast("Đã bỏ khỏi Ôn câu sai"); }}
+      />
+    </div>
+  );
+}
+
+/** What "Ôn câu sai" has for today, across every set. */
+function wrongQueue(sets: readonly TestSet[], today: number): Array<{ set: TestSet; q: SetQuestion }> {
+  const out: Array<{ set: TestSet; q: SetQuestion }> = [];
+  for (const set of sets) {
+    for (const i of dueOf(set.marks ?? {}, today)) {
+      const q = set.questions.find((x) => x.i === i);
+      if (q) out.push({ set, q });
+    }
+  }
+  return out;
+}
+
+/** The way into "Ôn câu sai" from the list of sets. Shown once there is something in the queue. */
+function WrongEntry({ sets, onOpen }: { sets: readonly TestSet[]; onOpen(): void }) {
+  const today = todayNo();
+  const waiting = sets.reduce((n, s) => n + queuedCount(s.marks ?? {}), 0);
+  if (!waiting) return null;
+  const due = wrongQueue(sets, today).length;
+  return (
+    <section class="panel row between" data-testid="wrong-entry">
+      <div class="col" style={{ gap: "2px" }}>
+        <b>Ôn câu sai</b>
+        <span class="muted small" data-testid="wrong-entry-count">{due ? `${due} câu đến hạn` : "Hôm nay không còn câu nào đến hạn"} · {waiting} câu đang theo dõi</span>
+      </div>
+      <button type="button" class="btn primary" onClick={onOpen} data-testid="wrong-open">{due ? "Ôn ngay" : "Xem"}</button>
+    </section>
+  );
+}
+
+/** One question of the queue: do it again from the original, then see the answer and say why it was missed. */
+function ReviewCard({ set, q, pick, onChoose, onCause, onRelease, onCard }: {
+  set: TestSet;
+  q: SetQuestion;
+  pick: Letter | undefined;
+  onChoose(l: Letter): void;
+  onCause(c: MarkCause | null): void;
+  onRelease(): void;
+  onCard(): void;
+}) {
+  const player = usePlayer(set);
+  const replay = replayOf(set.questions, q);
+  const mark = (set.marks ?? {})[String(q.i)];
+  const wrong = isWrongPick(q, pick);
+  return (
+    <div class="col" data-testid="wrong-card">
+      <p class="muted small" data-testid="wrong-source">{set.name}{q.part ? ` · Part ${q.part}` : ""}{mark?.cause ? ` · lần trước: ${CAUSES.find((c) => c.key === mark.cause)?.label}` : ""}</p>
+      {q.passage !== null && (
+        <article class="panel passage" data-testid="runner-passage">
+          {set.passages[q.passage].label && <b class="muted small">{set.passages[q.passage].label}</b>}
+          <p lang="en">{reflow(set.passages[q.passage].text)}</p>
+        </article>
+      )}
+      {q.part !== null && q.part <= 4 && <Pictures set={set} part={q.part} />}
+      {!pick && player && replay && q.track === undefined && (
+        <button type="button" class="btn ghost sm" onClick={() => void player.playRange(replay.track, replay.from, replay.to)} data-testid="wrong-play"><Icon n="play" size={16} /> Nghe câu {q.number ?? q.i + 1}</button>
+      )}
+      <QuestionCard q={q} pick={pick} review={!!pick} onChoose={(_, l) => onChoose(l)} player={player} replay={pick ? replay : null} mark={pick ? mark : undefined} onCause={(_, c) => onCause(c)} onRelease={() => onRelease()} />
+      {pick && (
+        <div class="row" style={{ flexWrap: "wrap", gap: "8px" }}>
+          <span class={`pill ${wrong ? "bad" : "ok"}`} data-testid="wrong-verdict">{wrong ? `Chưa đúng, đáp án ${q.correct}` : "Đúng"}</span>
+          {q.kind !== "listen" && <button type="button" class="btn" onClick={onCard} data-testid="wrong-card-make"><Icon n="sparkle" /> Tạo thẻ từ câu này</button>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const isWrongPick = (q: SetQuestion, pick: Letter | undefined) => !!q.correct && !!pick && pick !== q.correct;
+
+/** "Ôn câu sai": the questions due today from every set, one at a time. The answer moves the question along its 1/3/7/14 days; none of it touches the FSRS cards. */
+function WrongReview({ deck, deckPicker, onPassage, onExit }: { deck: DeckSink; deckPicker: ComponentChildren; onPassage(text: string): void; onExit(): void }) {
+  const sets = useStore(testSets);
+  const allNotes = useStore(notes);
+  // The day's list is fixed when the screen opens, so answering does not reshuffle it.
+  const [queue] = useState(() => wrongQueue(testSets.get(), todayNo()).map((x) => ({ id: x.set.id, i: x.q.i })));
+  const [at, setAt] = useState(0);
+  const [picks, setPicks] = useState<Record<number, Letter>>({});
+  const [cards, setCards] = useState<Review | null>(null);
+  const [right, setRight] = useState(0);
+  const existing = useMemo(() => existingSentences(allNotes), [allNotes]);
+  const item = queue[at];
+  const set = item && sets.find((s) => s.id === item.id);
+  const q = set?.questions.find((x) => x.i === item.i);
+  const pick = picks[at];
+  const left = sets.reduce((n, s) => n + queuedCount(s.marks ?? {}), 0);
+
+  function choose(l: Letter) {
+    if (!set || !q || pick) return;
+    setPicks({ ...picks, [at]: l });
+    const ok = l === q.correct;
+    if (ok) setRight(right + 1);
+    updateMarks(set.id, (m) => reviewMark(m, q.i, ok, todayNo()));
+  }
+  function makeCard() {
+    if (!set || !q) return;
+    const one = { questions: [q], passages: set.passages };
+    const w = wrongDrafts(one, { wrong: [q.i] } as Graded, existing);
+    if (!w.drafts.length && !w.passages.length) return toast("Câu này không tạo được thẻ");
+    setCards({ drafts: w.drafts, passages: w.passages, skipped: w.skipped });
+  }
+  const next = () => (setCards(null), setAt(at + 1));
+
+  return (
+    <div class="col runner" data-testid="wrong-review">
+      <div class="runner-bar panel row between">
+        <button type="button" class="btn ghost sm" onClick={onExit} data-testid="wrong-exit"><Icon n="arrow" size={16} /> Bộ đề</button>
+        <b class="grow name">Ôn câu sai</b>
+        {queue.length > 0 && <span class="pill" data-testid="wrong-count">{Math.min(at + 1, queue.length)}/{queue.length}</span>}
+      </div>
+      {!item && (
+        <section class="panel col" data-testid="wrong-done">
+          <b>{queue.length ? `Xong ${queue.length} câu, đúng ${right}.` : "Hôm nay không còn câu nào đến hạn."}</b>
+          <span class="muted small">Còn {left} câu đang theo dõi; mỗi câu quay lại sau 1, 3, 7 rồi 14 ngày, đúng 2 lần liền là đã nắm.</span>
+          <button type="button" class="btn" onClick={onExit}>Về danh sách bộ đề</button>
+        </section>
+      )}
+      {item && (!set || !q) && (
+        <section class="panel col"><span class="muted small">Câu này không còn trên máy (bộ đề đã xoá).</span><button type="button" class="btn" onClick={next}>Câu tiếp</button></section>
+      )}
+      {set && q && (
+        <>
+          <ReviewCard
+            key={`${set.id}:${q.i}`} set={set} q={q} pick={pick} onChoose={choose}
+            onCause={(c) => updateMarks(set.id, (m) => setCause(m, q.i, c))}
+            onRelease={() => { updateMarks(set.id, (m) => release(m, q.i)); toast("Đã bỏ khỏi Ôn câu sai"); next(); }}
+            onCard={makeCard}
+          />
+          {cards && (
+            <section class="panel col">
+              {deckPicker}
+              <DraftReview result={cards} setResult={setCards} existing={existing} deck={deck} testName={set.name} onPassage={onPassage} onDone={() => setCards(null)} />
+            </section>
+          )}
+          {pick && <button type="button" class="btn primary" onClick={next} data-testid="wrong-next">{at + 1 < queue.length ? "Câu tiếp" : "Xong"}</button>}
+        </>
+      )}
     </div>
   );
 }

@@ -1434,6 +1434,81 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await ctx.close();
   });
 
+  it("Ôn câu sai: flag while doing, wrong and blank join the queue on submit, come back the next day, answering moves them on", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    const shot = async (name) => shots && (await page.waitForTimeout(400), await page.screenshot({ path: join(shots, `${name}.png`), fullPage: false }));
+    await page.exposeFunction("__stubExtract", (input) => fakeRead(input.text));
+    await page.addInitScript(() => { window.__lexiExtract = (input) => window.__stubExtract(input); });
+    await importPdf(page, "reading-test.pdf");
+    await page.fill('[data-testid=set-name]', "Đề ôn câu sai");
+    await page.click('[data-testid=pdf-read]');
+    await page.waitForSelector('[data-testid=pdf-preview]');
+    await page.click('[data-testid=pdf-save]');
+    await page.waitForSelector('[data-testid=set-row]');
+    assert.equal(await page.locator('[data-testid=wrong-entry]').count(), 0); // nothing to review yet
+
+    const q = (n) => page.locator('[data-testid=runner-q]', { hasText: new RegExp(`^${n}\\.`) });
+    const pick = async (n, text) => q(n).locator('label.opt', { hasText: text }).first().click();
+    await page.click('[data-testid=set-open]');
+    await page.click('[data-testid=home-run-5]');
+    await page.waitForSelector('[data-testid=runner]');
+    await pick(101, "receipts"); // right, but flagged
+    await pick(102, "very"); // wrong
+    await pick(103, "Despite"); // right, not flagged
+    await q(101).locator('[data-testid=q-flag]').click();
+    await page.waitForFunction(() => document.querySelector('[data-testid=q-flag]')?.getAttribute('aria-pressed') === 'true');
+    await q(103).locator('[data-testid=q-flag]').click();
+    await q(103).locator('[data-testid=q-flag]').click(); // flag off again
+    await shot("review-1-flag");
+    await page.click('[data-testid=runner-submit]');
+    await page.click('[data-testid=confirm-ok]');
+    await page.waitForSelector('[data-testid=runner-result]');
+
+    // In the result a missed question asks why; the answer is kept.
+    await page.locator('[data-testid=q-cause-g]').first().click();
+    await page.waitForFunction(() => document.querySelector('[data-testid=q-cause-g]')?.getAttribute('aria-pressed') === 'true');
+    await shot("review-2-cause");
+    await exitRunner(page);
+
+    // Queued: 101 (flag), 102 (wrong) and the seven blanks, but none due until tomorrow.
+    assert.match(await page.textContent('[data-testid=wrong-entry-count]'), /Hôm nay không còn câu nào đến hạn · 9 câu đang theo dõi/);
+    await page.reload();
+    await page.waitForSelector('[data-testid=wrong-entry]'); // survives a reload
+    await page.clock.setFixedTime(Date.now() + 86_400_000 + 60_000);
+    await page.reload();
+    await page.waitForSelector('[data-testid=wrong-entry]');
+    assert.match(await page.textContent('[data-testid=wrong-entry-count]'), /9 câu đến hạn/);
+    // The Today screen says so too and leads here.
+    await page.click('[data-testid=practice] .page-head button');
+    await page.waitForSelector('[data-testid=today-wrong]');
+    assert.match(await page.textContent('[data-testid=today-wrong]'), /9 câu sai đến hạn/);
+    await page.click('[data-testid=today-wrong]');
+    await page.waitForSelector('[data-testid=wrong-entry]');
+    await page.click('[data-testid=wrong-open]');
+    await page.waitForSelector('[data-testid=wrong-card]');
+    assert.match(await page.textContent('[data-testid=wrong-count]'), /1\/9/);
+    assert.match(await page.textContent('[data-testid=wrong-source]'), /Đề ôn câu sai · Part 5/);
+    await shot("review-3-card");
+
+    // Right answer: shows the verdict and goes on; a wrong one remembers why it was missed last time.
+    await page.locator('[data-testid=wrong-card] label.opt', { hasText: "receipts" }).first().click();
+    assert.equal(await page.textContent('[data-testid=wrong-verdict]'), "Đúng");
+    await page.click('[data-testid=wrong-next]');
+    assert.match(await page.textContent('[data-testid=wrong-source]'), /lần trước: Ngữ pháp/);
+    await page.locator('[data-testid=wrong-card] label.opt', { hasText: "very" }).first().click();
+    assert.match(await page.textContent('[data-testid=wrong-verdict]'), /Chưa đúng/);
+    assert.equal(await page.locator('[data-testid=wrong-card-make]').count(), 1);
+    await shot("review-4-wrong");
+    await page.click('[data-testid=wrong-exit]');
+
+    // 101 went to the 3-day box; 102 (wrong) and the blanks are due again tomorrow, so 7 are still due today.
+    await page.waitForSelector('[data-testid=wrong-entry]');
+    assert.match(await page.textContent('[data-testid=wrong-entry-count]'), /7 câu đến hạn · 9 câu đang theo dõi/);
+    assert.equal(await noOverflow(page), true);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
   it("a scanned PDF goes to the function as page pictures, two at a time, and a pasted key fills the answers", async () => {
     const { ctx, page, errors } = await open(browser, base, { viewport: { width: 1280, height: 800 } });
     const shot = async (name) => shots && (await page.waitForTimeout(400), await page.screenshot({ path: join(shots, `${name}.png`) }));

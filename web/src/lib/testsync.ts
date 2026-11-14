@@ -8,6 +8,7 @@
  *
  * Pure: the Kotlin port (android/core TestSetSync.kt) replays shared/vectors/testsync.json.
  */
+import { CAUSE_KEYS, type Mark, type Marks } from "./testreview.ts";
 import type { Attempt, SetQuestion, TestSet } from "./testset.ts";
 
 export const SET_FILE = "set.json";
@@ -33,6 +34,8 @@ interface Progress {
   attempt?: Attempt;
   /** One attempt per Part taken on its own, by part number. Absent when there is none. */
   parts?: Record<string, Attempt>;
+  /** "Ôn câu sai" marks by question position. Absent when there is none. */
+  marks?: Marks;
   clips: Record<string, Clip>;
 }
 
@@ -56,7 +59,7 @@ const attemptJson = (a: Attempt): Attempt => {
 };
 
 /** What changes while the learner works, as stored in `state`. Clips by question position. */
-export function progressOf(set: Pick<TestSet, "attempt" | "parts" | "questions">): string {
+export function progressOf(set: Pick<TestSet, "attempt" | "parts" | "marks" | "questions">): string {
   const clips: Record<string, Clip> = {};
   for (const q of set.questions) if (q.clip) clips[String(q.i)] = { track: q.clip.track, from: q.clip.from, to: q.clip.to };
   const p: Progress = { clips };
@@ -66,7 +69,32 @@ export function progressOf(set: Pick<TestSet, "attempt" | "parts" | "questions">
     p.parts = {};
     for (const k of keys) p.parts[k] = attemptJson(set.parts![k]);
   }
+  const mk = Object.keys(set.marks ?? {}).filter((k) => /^\d+$/.test(k)).sort((x, y) => Number(x) - Number(y));
+  if (mk.length) {
+    p.marks = {};
+    for (const k of mk) p.marks[k] = markJson(set.marks![k]);
+  }
   return JSON.stringify(p);
+}
+
+const markJson = (m: Mark): Mark => {
+  const out: Mark = { box: m.box, streak: m.streak };
+  if (m.flag) out.flag = true;
+  if (m.cause) out.cause = m.cause;
+  if (m.due !== undefined) out.due = m.due;
+  if (m.done) out.done = true;
+  return out;
+};
+
+/** One mark as `state` has it; null when it is not one. */
+function readMark(x: Record<string, unknown>): Mark | null {
+  if (!isInt(x.box) || x.box < 0 || x.box > 3 || !isInt(x.streak) || x.streak < 0) return null;
+  const m: Mark = { box: x.box, streak: x.streak };
+  if (x.flag === true) m.flag = true;
+  if (typeof x.cause === "string" && (CAUSE_KEYS as readonly string[]).includes(x.cause)) m.cause = x.cause as Mark["cause"];
+  if (isInt(x.due)) m.due = x.due;
+  if (x.done === true) m.done = true;
+  return m;
 }
 
 const isInt = (x: unknown): x is number => typeof x === "number" && Number.isInteger(x);
@@ -91,7 +119,7 @@ function readAttempt(x: Record<string, unknown>): Attempt | null {
  * replaced (or gone), every question's clip as `state` has it. Text that does not parse, or has the wrong shape,
  * changes nothing.
  */
-export function withProgress<T extends Pick<TestSet, "attempt" | "parts" | "questions">>(set: T, state: string): T {
+export function withProgress<T extends Pick<TestSet, "attempt" | "parts" | "marks" | "questions">>(set: T, state: string): T {
   let p: unknown;
   try {
     p = JSON.parse(state);
@@ -118,6 +146,16 @@ export function withProgress<T extends Pick<TestSet, "attempt" | "parts" | "ques
       (parts ??= {})[k] = r;
     }
   }
+  let marks: Marks | undefined;
+  if (p.marks !== undefined) {
+    if (!isObj(p.marks)) return set;
+    for (const [k, v] of Object.entries(p.marks)) {
+      if (!/^\d+$/.test(k)) continue;
+      const r = isObj(v) ? readMark(v) : null;
+      if (!r) return set;
+      (marks ??= {})[k] = r;
+    }
+  }
   const questions = set.questions.map((q) => {
     const v = c[String(q.i)];
     const clip = isObj(v) && isInt(v.track) && isInt(v.from) && isInt(v.to) ? { track: v.track, from: v.from, to: v.to } : undefined;
@@ -129,12 +167,14 @@ export function withProgress<T extends Pick<TestSet, "attempt" | "parts" | "ques
   else delete out.attempt;
   if (parts) out.parts = parts;
   else delete out.parts;
+  if (marks) out.marks = marks;
+  else delete out.marks;
   return out;
 }
 
 /** The set as uploaded in set.json: without what only this device knows or what `state` carries (the attempts). */
 export function contentOf(set: TestSet): TestSet {
-  const { attempt: _a, parts: _p, syncedAt: _s, ...rest } = set;
+  const { attempt: _a, parts: _p, marks: _m, syncedAt: _s, ...rest } = set;
   return rest;
 }
 
