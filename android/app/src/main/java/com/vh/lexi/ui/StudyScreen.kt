@@ -325,6 +325,8 @@ fun StudyScreen(
             Text("Chưa có từ nào", style = MaterialTheme.typography.titleLarge)
             Text("Thêm từ đầu tiên: chỉ cần gõ từ tiếng Anh, thẻ sẽ tự điền phiên âm, nghĩa và ví dụ.", Modifier.padding(vertical = 12.dp), color = Lexi.colors.muted, textAlign = TextAlign.Center)
             Button(onClick = onAdd) { Icon(Icons.Filled.Add, null); Text("  Thêm từ") }
+            // Only test sets, no words yet: the questions due today are still one tap away.
+            if (wrongDue > 0) TextButton(onClick = onWrong, Modifier.testTag("today-wrong")) { Text("$wrongDue câu sai đến hạn ôn", fontWeight = FontWeight.Bold) }
         }
         return
     }
