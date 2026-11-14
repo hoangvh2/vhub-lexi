@@ -18,6 +18,8 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.printToString
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vh.lexi.core.ForgotKind
 import com.vh.lexi.core.forgotOf
@@ -59,7 +61,7 @@ class ForgotTest {
         try {
             rule.waitUntil(ms, cond)
         } catch (e: Throwable) {
-            shot("fail-forgot-$label")
+            shot("fail-forgot-" + label.replace(' ', '-'))
             throw AssertionError("timeout waiting for $label\n" + rule.onAllNodes(isRoot()).printToString(maxDepth = 14).take(6000), e)
         }
     }
@@ -225,6 +227,9 @@ class ForgotTest {
         rule.onNodeWithTag("view-close").performClick()
         waitFor("view closed") { !exists("note-view") }
         rule.onAllNodes(hasSetTextAction()).onFirst().performTextClearance()
+        // The search keyboard leaves room for one or two rows on a 320x640 screen, and the list composes only what it shows.
+        rule.runOnUiThread { WindowCompat.getInsetsController(rule.activity.window, rule.activity.window.decorView).hide(WindowInsetsCompat.Type.ime()) }
+        rule.waitForIdle()
         rule.onNodeWithText("Hay quên").performScrollTo().performClick()
         waitFor("forgot filter") { rule.onAllNodes(hasTestTag("lib-item"), useUnmergedTree = true).fetchSemanticsNodes().size == 3 }
         assertEquals(3, rule.onAllNodes(hasTestTag("lib-forgot"), useUnmergedTree = true).fetchSemanticsNodes().size)
