@@ -172,18 +172,23 @@ class ForgotTest {
         val seen = HashSet<String>()
         while (!exists("drill-done")) {
             assertTrue("round ends", steps++ < 30)
+            // "Tiếp" must have moved on: the answer panel still showing means the old card, whose typing field is gone.
+            waitFor("question $steps") { exists("drill-done") || (exists("drill-card") && !exists("drill-answer")) }
+            if (exists("drill-done")) break
             when {
                 exists("drill-opt-right") -> {
                     if (!wrongDone) { shot("19-drill-meaning"); rule.onAllNodes(hasTestTag("drill-opt")).onFirst().performScrollTo().performClick(); wrongDone = true; waitFor("wrong") { exists("drill-answer") }; shot("20-drill-wrong") }
                     else rule.onNodeWithTag("drill-opt-right").performScrollTo().performClick()
                 }
                 exists("drill-meaning") -> {
+                    waitFor("recall input $steps") { exists("drill-input") }
                     val w = byMeaning.getValue(textOf("drill-meaning"))
                     rule.onNodeWithTag("drill-input").performTextInput(w)
                     if (seen.add("recall")) shot("21-drill-recall")
                     rule.onNodeWithTag("drill-check").performScrollTo().performClick()
                 }
                 exists("drill-play") -> {
+                    waitFor("listen input $steps") { exists("drill-input") }
                     rule.onNodeWithTag("drill-input").performTextInput("postpone")
                     if (seen.add("listen")) shot("21b-drill-listen")
                     rule.onNodeWithTag("drill-check").performScrollTo().performClick()
