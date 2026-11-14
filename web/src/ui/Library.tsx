@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "preact/hooks";
 import { CardState, type Card, type Id, type Note } from "@shared/model.ts";
 import { isMaterial, noteType } from "@shared/notetypes.ts";
+import { compareHits, searchHit, type SearchHit } from "@shared/search.ts";
 import { createDeck, deleteDeckAndContents, moveNotes, renameDeck, updateNote } from "../data/actions.ts";
 import { callEnrich, firebaseConfigured } from "../data/firebase.ts";
 import { cards, decks, loaded, notes, prefs } from "../data/state.ts";
@@ -85,18 +86,23 @@ export function Library() {
   }, [allCards]);
 
   const rows = useMemo(() => {
-    const needle = q.trim().toLowerCase();
+    // Search ranks the matches (shared/search.ts): the word itself first, then words starting with it, then meanings,
+    // then words that only mention it in an example. Within a rank the chosen order applies.
+    const hits = new Map<Id, SearchHit>();
     const list = allNotes.filter((n) => {
       const def = noteType(n.type);
       if (!def || !isMaterial(n)) return false;
       if (deck && n.deckId !== deck) return false;
-      if (needle && !def.searchText(n).includes(needle)) return false;
+      const hit = searchHit(n, q);
+      if (!hit) return false;
+      hits.set(n.id, hit);
       return matches(filter, n, cardsByNote.get(n.id) ?? []);
     });
     const nextDue = (n: Note) => Math.min(...(cardsByNote.get(n.id) ?? []).filter((c) => c.state !== CardState.New).map((c) => c.due), Infinity);
     list.sort((a, b) =>
       sort === "alpha" ? (noteType(a.type)!.title(a) < noteType(b.type)!.title(b) ? -1 : 1) : sort === "due" ? nextDue(a) - nextDue(b) : b.createdAt - a.createdAt,
     );
+    if (q.trim()) list.sort((a, b) => compareHits(hits.get(a.id)!, hits.get(b.id)!));
     return list;
   }, [allNotes, cardsByNote, q, deck, filter, sort]);
 

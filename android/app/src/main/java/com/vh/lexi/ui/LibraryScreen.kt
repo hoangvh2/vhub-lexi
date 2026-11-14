@@ -75,6 +75,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.filled.Bookmark
 import com.vh.lexi.core.isMaterial
 import com.vh.lexi.core.noteType
+import com.vh.lexi.core.SearchHit
+import com.vh.lexi.core.searchHit
 import com.vh.lexi.ui.theme.Lexi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -145,16 +147,21 @@ fun LibraryScreen(app: LexiApp, onAdd: () -> Unit) {
 
     val byNote = remember(cards) { cards.groupBy { it.noteId } }
     val rows = remember(notes, byNote, q, deck, filter, sort) {
-        val needle = q.trim().lowercase()
+        // Search ranks the matches (core Search.kt): the word itself first, then words starting with it, then meanings,
+        // then words that only mention it in an example. Within a rank the chosen order applies.
+        val hits = HashMap<String, SearchHit>()
         val list = notes.filter { n ->
-            val def = noteType(n.type) ?: return@filter false
-            isMaterial(n) && (deck == null || n.deckId == deck) && (needle.isEmpty() || def.searchText(n).contains(needle)) && matches(filter, n, byNote[n.id].orEmpty())
+            if (noteType(n.type) == null || !isMaterial(n) || (deck != null && n.deckId != deck)) return@filter false
+            val hit = searchHit(n, q) ?: return@filter false
+            hits[n.id] = hit
+            matches(filter, n, byNote[n.id].orEmpty())
         }
-        when (sort) {
+        val sorted = when (sort) {
             Sort.RECENT -> list.sortedByDescending { it.createdAt }
             Sort.ALPHA -> list.sortedBy { noteType(it.type)!!.title(it).lowercase() }
             Sort.DUE -> list.sortedBy { n -> byNote[n.id].orEmpty().filter { it.state != CardState.NEW }.minOfOrNull { it.due } ?: Long.MAX_VALUE }
         }
+        if (q.isBlank()) sorted else sorted.sortedBy { hits.getValue(it.id) }
     }
     val c = Lexi.colors
 

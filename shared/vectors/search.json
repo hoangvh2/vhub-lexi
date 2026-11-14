@@ -1,0 +1,497 @@
+{
+ "notes": [
+  {
+   "id": "n1",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "research",
+    "vi": "sự nghiên cứu",
+    "en": "a careful study",
+    "examples": [
+     "Research helps us determine the cause."
+    ]
+   },
+   "createdAt": 9,
+   "updatedAt": 1
+  },
+  {
+   "id": "n2",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "experiment",
+    "vi": "(v) làm thí nghiệm",
+    "en": "a test to determine something",
+    "examples": []
+   },
+   "createdAt": 8,
+   "updatedAt": 1
+  },
+  {
+   "id": "n3",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "bargain",
+    "vi": "mặc cả, thỏa thuận",
+    "en": "",
+    "examples": [
+     "The price was determined by bargaining."
+    ]
+   },
+   "createdAt": 7,
+   "updatedAt": 1
+  },
+  {
+   "id": "n4",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "success",
+    "vi": "thành công",
+    "en": "",
+    "examples": [
+     "Hard work determines success."
+    ]
+   },
+   "createdAt": 6,
+   "updatedAt": 1
+  },
+  {
+   "id": "n5",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "evaluate",
+    "vi": "ước lượng, định giá",
+    "en": "to determine the value of",
+    "examples": []
+   },
+   "createdAt": 5,
+   "updatedAt": 1
+  },
+  {
+   "id": "n6",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "resolve",
+    "vi": "quyết tâm, giải quyết",
+    "en": "",
+    "examples": [
+     "She resolved to determine the truth."
+    ]
+   },
+   "createdAt": 4,
+   "updatedAt": 1
+  },
+  {
+   "id": "n7",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "determine",
+    "vi": "định, xác định, định rõ",
+    "en": "to find out",
+    "examples": []
+   },
+   "createdAt": 3,
+   "updatedAt": 1
+  },
+  {
+   "id": "n8",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "determination",
+    "vi": "sự quyết tâm",
+    "en": "",
+    "examples": []
+   },
+   "createdAt": 2,
+   "updatedAt": 1
+  },
+  {
+   "id": "n9",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "predetermine",
+    "vi": "định trước",
+    "en": "",
+    "examples": []
+   },
+   "createdAt": 1,
+   "updatedAt": 1
+  },
+  {
+   "id": "n10",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "Determined",
+    "vi": "kiên quyết",
+    "en": "",
+    "examples": []
+   },
+   "createdAt": 10,
+   "updatedAt": 1
+  },
+  {
+   "id": "n11",
+   "type": "vocab",
+   "deckId": "d1",
+   "fields": {
+    "word": "identify",
+    "vi": "nhận dạng, xác định",
+    "en": "",
+    "examples": []
+   },
+   "createdAt": 11,
+   "updatedAt": 1
+  },
+  {
+   "id": "g1",
+   "type": "grammar",
+   "deckId": "d1",
+   "fields": {
+    "sentence": "We need to [determine] the budget.",
+    "answer": "determine",
+    "translation": "Chúng ta cần xác định ngân sách."
+   },
+   "createdAt": 12,
+   "updatedAt": 1
+  },
+  {
+   "id": "p1",
+   "type": "pattern",
+   "deckId": "d1",
+   "fields": {
+    "title": "Đại từ quan hệ",
+    "topic": "Mệnh đề quan hệ",
+    "items": []
+   },
+   "createdAt": 13,
+   "updatedAt": 1
+  }
+ ],
+ "fold": [
+  [
+   "Xác Định",
+   "xac dinh"
+  ],
+  [
+   "ĐẠI  TỪ  ",
+   "dai tu"
+  ],
+  [
+   "café au lait",
+   "cafe au lait"
+  ],
+  [
+   "Ước lượng",
+   "uoc luong"
+  ],
+  [
+   "naïve",
+   "naive"
+  ]
+ ],
+ "queries": [
+  {
+   "q": "determine",
+   "order": [
+    "n7",
+    "n10",
+    "n9",
+    "g1",
+    "n2",
+    "n5",
+    "n1",
+    "n3",
+    "n4",
+    "n6"
+   ],
+   "ranks": [
+    0,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    4,
+    4
+   ],
+   "lens": [
+    0,
+    10,
+    12,
+    34,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "q": "  DETERMINE ",
+   "order": [
+    "n7",
+    "n10",
+    "n9",
+    "g1",
+    "n2",
+    "n5",
+    "n1",
+    "n3",
+    "n4",
+    "n6"
+   ],
+   "ranks": [
+    0,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    4,
+    4
+   ],
+   "lens": [
+    0,
+    10,
+    12,
+    34,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "q": "determ",
+   "order": [
+    "n7",
+    "n10",
+    "n8",
+    "n9",
+    "g1",
+    "n2",
+    "n5",
+    "n1",
+    "n3",
+    "n4",
+    "n6"
+   ],
+   "ranks": [
+    1,
+    1,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    4,
+    4
+   ],
+   "lens": [
+    9,
+    10,
+    13,
+    12,
+    34,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "q": "xac dinh",
+   "order": [
+    "g1",
+    "n11",
+    "n7"
+   ],
+   "ranks": [
+    3,
+    3,
+    3
+   ],
+   "lens": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "q": "XÁC  ĐỊNH",
+   "order": [
+    "g1",
+    "n11",
+    "n7"
+   ],
+   "ranks": [
+    3,
+    3,
+    3
+   ],
+   "lens": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "q": "dai tu",
+   "order": [
+    "p1"
+   ],
+   "ranks": [
+    1
+   ],
+   "lens": [
+    14
+   ]
+  },
+  {
+   "q": "quan he",
+   "order": [
+    "p1"
+   ],
+   "ranks": [
+    2
+   ],
+   "lens": [
+    14
+   ]
+  },
+  {
+   "q": "nghiên",
+   "order": [
+    "n1"
+   ],
+   "ranks": [
+    3
+   ],
+   "lens": [
+    0
+   ]
+  },
+  {
+   "q": "zzz",
+   "order": [],
+   "ranks": [],
+   "lens": []
+  },
+  {
+   "q": "",
+   "order": [
+    "p1",
+    "g1",
+    "n11",
+    "n10",
+    "n1",
+    "n2",
+    "n3",
+    "n4",
+    "n5",
+    "n6",
+    "n7",
+    "n8",
+    "n9"
+   ],
+   "ranks": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "lens": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "q": "đ",
+   "order": [
+    "n7",
+    "n10",
+    "n8",
+    "p1",
+    "n11",
+    "n9",
+    "g1",
+    "n1",
+    "n2",
+    "n5",
+    "n3",
+    "n4",
+    "n6"
+   ],
+   "ranks": [
+    1,
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    3,
+    3,
+    3,
+    4,
+    4,
+    4
+   ],
+   "lens": [
+    9,
+    10,
+    13,
+    14,
+    8,
+    12,
+    34,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  }
+ ]
+}

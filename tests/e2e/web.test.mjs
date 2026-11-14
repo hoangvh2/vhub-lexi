@@ -290,6 +290,37 @@ describe("core flow (local-only mode)", () => {
     await ctx.close();
   });
 
+  it("library search puts the word itself first, then meanings, then mentions; tone marks are optional", async () => {
+    const { ctx, page, errors } = await open(browser, base);
+    // Oldest first: the default order (newest first) used to bury the word under newer words that only mention it.
+    // The offline pack suggests a meaning a moment after the word: wait for it, so it cannot replace the one typed here.
+    const add = async (word, vi) => {
+      await page.goto(`${base}/#/add`);
+      await page.fill('[data-testid=word-input]', word);
+      await page.waitForSelector('[data-testid=vi-source]');
+      await page.fill('[data-testid=vi-input]', vi);
+      await page.click('[data-testid=save-word]');
+      await page.waitForFunction(() => document.querySelector('[data-testid=word-input]').value === "");
+    };
+    await add("determine", "xác định");
+    await add("resolve", "quyết tâm (determine)");
+    await add("identify", "nhận dạng, xác định");
+    await page.goto(`${base}/#/library`);
+    const titles = () => page.$$eval('[data-testid=lib-item] .t', (els) => els.map((e) => e.textContent.trim()));
+    await page.fill('[data-testid=lib-search]', "determine");
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid=lib-item]').length >= 2);
+    let t = await titles();
+    assert.equal(t[0], "determine", t.join(" | "));
+    assert.ok(t.includes("resolve"), t.join(" | "));
+    // Without tone marks, in capitals: both words meaning "xác định" are found.
+    await page.fill('[data-testid=lib-search]', "XAC DINH");
+    await page.waitForFunction(() => !document.querySelector('[data-testid=lib-item] .t')?.textContent?.includes("resolve"));
+    t = await titles();
+    assert.ok(t.includes("determine") && t.includes("identify"), t.join(" | "));
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
   it("deleting needs confirmation: Cancel keeps the word, Delete removes it", async () => {
     const { ctx, page } = await open(browser, base);
     await addWord(page, base, "leverage", "đòn bẩy");
