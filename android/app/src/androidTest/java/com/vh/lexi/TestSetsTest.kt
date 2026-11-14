@@ -390,7 +390,9 @@ class TestSetsTest {
         rule.waitForIdle()
         rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
         waitFor("part list 5") { count("set-home") > 0 && textOf("home-part-5").contains("Chưa làm") }
-        assertTrue(app.testSets.sets.value.single().attempt == null)
+        // The whole-test attempt (opened and left earlier) is untouched by the Part: no answers, and Part 5 is the only one cleared.
+        assertTrue(app.testSets.sets.value.single().attempt?.answers.orEmpty().isEmpty())
+        assertTrue(app.testSets.sets.value.single().parts[5]?.answers.orEmpty().isEmpty())
     }
 
     /**
