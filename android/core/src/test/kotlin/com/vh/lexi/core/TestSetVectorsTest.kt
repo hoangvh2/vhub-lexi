@@ -26,6 +26,50 @@ class TestSetVectorsTest {
     private fun score(s: Score?): Any = s?.let { JSONObject().put("right", it.right).put("total", it.total) } ?: JSONObject.NULL
     private fun scores(m: Map<String, Score?>) = JSONObject().apply { m.forEach { (k, s) -> put(k, score(s)) } }
 
+    private fun setOf(o: JSONObject): TestSet = TestSet(
+        id = "x", name = "x", createdAt = 1, updatedAt = 1, section = "rc", source = SetSource("f", 1), passages = emptyList(),
+        questions = o.getJSONArray("questions").objects().map(::setQuestionFromJson),
+        attempt = o.optJSONObject("attempt")?.let(::attemptFromJson),
+        parts = o.optJSONObject("parts")?.let { ps -> ps.keys().asSequence().associate { k -> k.toInt() to attemptFromJson(ps.getJSONObject(k)) } } ?: emptyMap(),
+    )
+    private fun attemptJson(a: Attempt?): Any = a?.toJson() ?: JSONObject.NULL
+    private fun partsJson(set: TestSet): Any = if (set.parts.isEmpty()) JSONObject.NULL else JSONObject().apply { set.parts.toSortedMap().forEach { (k, a) -> put(k.toString(), a.toJson()) } }
+    private fun other(c: JSONObject, k: String): Pair<Any, Any> = (if (c.getJSONObject(k).has("parts")) c.getJSONObject(k).getJSONObject("parts") else JSONObject.NULL) to
+        (if (c.getJSONObject(k).has("attempt")) c.getJSONObject(k).getJSONObject("attempt") else JSONObject.NULL)
+
+    @Test
+    fun onePartAtATime() {
+        val cases = v.getJSONArray("scopes").objects()
+        assertTrue(cases.size >= 5)
+        for (c in cases) {
+            val set = setOf(c.getJSONObject("set"))
+            assertEquals(c.getJSONArray("parts").ints(), partsOf(set.questions), "partsOf")
+            val states = c.getJSONArray("states").objects()
+            assertEquals(states.size, partStates(set).size)
+            for ((e, a) in states.zip(partStates(set))) {
+                assertEquals(e.getInt("part"), a.part)
+                assertEquals(e.getInt("total"), a.total)
+                assertEquals(e.getInt("answered"), a.answered, "answered of part ${a.part}")
+                assertEquals(e.getString("state"), a.state, "state of part ${a.part}")
+                assertJson(e.get("score"), score(a.score), "score of part ${a.part}")
+            }
+            for (sc in c.getJSONArray("scopes").objects()) {
+                val scope = if (sc.isNull("scope")) null else sc.getInt("scope")
+                assertEquals(sc.getJSONArray("view").ints(), scopeQuestions(set.questions, scope).map { it.i }, "view $scope")
+                assertJson(sc.get("attempt"), attemptJson(set.attemptOf(scope)), "attemptOf $scope")
+            }
+            assertEquals(listOf(null, 2, 5).map { scopeName("Test 1", it) }, c.getJSONArray("names").let { a -> List(a.length()) { a.getString(it) } })
+            assertEquals(c.getJSONArray("canLog").let { a -> List(a.length()) { a.getBoolean(it) } }, listOf(null, 1, 4, 5, 7).map { canLogScope(it) })
+            // Replacing or removing one scope's attempt leaves every other scope as it was.
+            fun a(answers: Map<Int, String>, finished: Long? = null) = Attempt(1, 5000, answers, finished)
+            for ((key, made) in listOf("set5" to set.withAttempt(5, a(mapOf(1 to "C"), 77)), "set0" to set.withAttempt(null, a(mapOf(2 to "D"))), "drop6" to set.withAttempt(6, null), "drop0" to set.withAttempt(null, null))) {
+                val (parts, attempt) = other(c, key)
+                assertJson(parts, partsJson(made), "$key parts")
+                assertJson(attempt, attemptJson(made.attempt), "$key attempt")
+            }
+        }
+    }
+
     @Test
     fun answerKeys() {
         for (c in v.getJSONArray("keys").objects()) {

@@ -199,6 +199,20 @@ class TestSetsTest {
         rule.onAllNodes(hasTestTag("opt-$letter") and hasAnyAncestor(card))[0].performClick()
     }
 
+    /** A set with several Parts opens on its Part list: "Làm cả bộ" is the whole test as before. */
+    private fun openWhole() {
+        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        waitFor("part list or runner") { count("set-home") > 0 || count("runner") > 0 }
+        if (count("set-home") > 0) rule.onNodeWithTag("home-full").performScrollTo().performClick()
+    }
+
+    /** Leaves the test with a semantics click (a toast may cover the arrow); a set with several Parts goes back to its Part list, then to the list. */
+    private fun leaveRunner() {
+        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("part list or sets") { count("set-home") > 0 || count("set-row") > 0 }
+        if (count("set-home") > 0) rule.onNodeWithTag("home-back").performSemanticsAction(SemanticsActions.OnClick)
+    }
+
     private fun dialogButton(text: String) = rule.onAllNodes(hasText(text) and hasClickAction()).onLast()
 
     @Test
@@ -228,7 +242,7 @@ class TestSetsTest {
         waitFor("set-row") { count("set-row") > 0 }
 
         // Take it; leaving keeps the answers.
-        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        openWhole()
         waitFor("runner") { count("runner-list") > 0 }
         assertTrue(textOf("runner-clock").matches(Regex("\\d\\d:\\d\\d")))
         pick(101, "A") // right
@@ -236,9 +250,9 @@ class TestSetsTest {
         waitFor("count-2") { textOf("runner-count").contains("2/3") }
         shot("sets-03-runner")
         // A semantics click: a toast at the top of the screen may still cover the back arrow for a few seconds.
-        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
+        leaveRunner()
         waitFor("in-progress") { countText("Đang làm · 2/3 câu") > 0 }
-        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        openWhole()
         waitFor("runner-again") { count("runner-list") > 0 }
         rule.onNodeWithTag("runner-submit").performClick()
         waitFor("submit-dialog") { countText("Còn 1 câu chưa làm") > 0 }
@@ -276,7 +290,7 @@ class TestSetsTest {
         waitFor("fresh") { count("runner-count") > 0 && textOf("runner-count").contains("0/3") && countText("Làm lại từ đầu?") == 0 }
         rule.waitForIdle()
         // A semantics click: a toast at the top of the screen may still cover the back arrow for a few seconds.
-        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
+        leaveRunner()
 
         // Deleting asks first: "Huỷ" keeps the set, "Xoá" removes it and its file.
         waitFor("list") { count("set-row") > 0 }
@@ -291,6 +305,92 @@ class TestSetsTest {
         dialogButton("Xoá").performClick()
         waitFor("deleted") { count("sets-empty") > 0 }
         assertEquals(0, File(app.filesDir, "testsets").listFiles { f -> f.name.endsWith(".json") }!!.size)
+    }
+
+    @Test
+    fun onePartAtATime() {
+        openSets()
+        waitFor("sets-empty") { count("sets-empty") > 0 }
+        importFixture("reading-test.pdf")
+        rule.onNodeWithTag("pdf-read").performScrollTo().performClick()
+        waitFor("pdf-preview") { count("pdf-preview") > 0 }
+        rule.onNodeWithTag("pdf-save").performScrollTo().performClick()
+        waitFor("set-row") { count("set-row") > 0 }
+        val name = app.testSets.sets.value.single().name
+
+        // Parts 5 and 7: the set opens on its Part list and nothing is started.
+        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        waitFor("part list") { count("set-home") > 0 }
+        assertTrue(textOf("home-part-5"), textOf("home-part-5").contains("Chưa làm · 2 câu"))
+        assertTrue(textOf("home-part-7"), textOf("home-part-7").contains("Chưa làm · 1 câu"))
+        assertTrue(textOf("home-full"), textOf("home-full").contains("Làm cả bộ"))
+        shot("sets-20-part-list")
+
+        // Part 5 alone: only its two questions, its own counter and name.
+        rule.onNodeWithTag("home-run-5").performScrollTo().performClick()
+        waitFor("part 5 runner") { count("runner-list") > 0 }
+        assertEquals("Part 5", textOf("runner-name"))
+        assertTrue(textOf("runner-count"), textOf("runner-count").contains("0/2"))
+        assertEquals(2, count("runner-q"))
+        pick(101, "A") // right
+        waitFor("count-1") { textOf("runner-count").contains("1/2") }
+        shot("sets-21-part-runner")
+        // Leaving goes back to the Part list (not the list of sets), where Part 5 is in progress and the rest untouched.
+        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("back on the part list") { count("set-home") > 0 && textOf("home-part-5").contains("Đang làm · 1/2") }
+        assertTrue(textOf("home-part-7"), textOf("home-part-7").contains("Chưa làm"))
+        assertTrue(textOf("home-full"), textOf("home-full").contains("Làm cả bộ")) // the whole-test attempt is not started
+
+        // Resume Part 5 and submit it: it grades only its own questions, and has no other Part's score.
+        rule.onNodeWithTag("home-run-5").performScrollTo().performClick()
+        waitFor("part 5 again") { count("runner-list") > 0 && textOf("runner-count").contains("1/2") }
+        pick(102, "B") // wrong
+        waitFor("count-2") { textOf("runner-count").contains("2/2") }
+        rule.onNodeWithTag("runner-submit").performClick()
+        waitFor("submit-dialog") { countText("Lexi chấm ngay theo bảng đáp án.") > 0 }
+        dialogButton("Nộp bài").performClick()
+        waitFor("part result") { count("runner-result") > 0 }
+        assertEquals("1/2", textOf("result-score"))
+        assertTrue(textOf("result-p5"), textOf("result-p5").contains("1/2"))
+        assertEquals(0, count("result-p7"))
+        shot("sets-22-part-result")
+
+        // Logged on its own line, named with its Part, and only with the Part taken.
+        rule.onNodeWithTag("result-save").performClick()
+        waitFor("part logged") { app.data.notes.value.any { it.type == "test" && it.fields["name"].str() == "$name · Part 5" && it.fields["p5"].str() == "1/2" && it.fields["p7"] == null } }
+
+        // Back on the Part list Part 5 is submitted; the list of sets says so; the whole test is a separate attempt.
+        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("part list after submit") { count("set-home") > 0 && textOf("home-part-5").contains("Đã nộp · 1/2") }
+        assertTrue(textOf("home-part-7"), textOf("home-part-7").contains("Chưa làm"))
+        rule.onNodeWithTag("home-back").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("sets list") { count("set-row") > 0 }
+        waitFor("parts summary") { countText("Đã nộp 1/2 Part") > 0 }
+        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        waitFor("part list 3") { count("set-home") > 0 }
+        rule.onNodeWithTag("home-full").performScrollTo().performClick()
+        waitFor("whole runner") { count("runner-list") > 0 }
+        assertTrue(textOf("runner-count"), textOf("runner-count").contains("0/3"))
+        assertEquals(name, textOf("runner-name"))
+        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("part list 4") { count("set-home") > 0 }
+
+        // Part 5 again: "Làm lại" asks first; "Huỷ" keeps the result, "Làm lại" starts a clean Part 5 and leaves the rest.
+        rule.onNodeWithTag("home-run-5").performScrollTo().performClick()
+        waitFor("part 5 result") { count("runner-result") > 0 }
+        rule.onNodeWithTag("result-again").performClick()
+        waitFor("again-dialog") { countText("Làm lại từ đầu?") > 0 }
+        dialogButton("Huỷ").performClick()
+        waitFor("kept") { count("runner-result") > 0 && countText("Làm lại từ đầu?") == 0 }
+        assertEquals("1/2", textOf("result-score"))
+        rule.onNodeWithTag("result-again").performClick()
+        waitFor("again-dialog-2") { countText("Làm lại từ đầu?") > 0 }
+        dialogButton("Làm lại").performClick()
+        waitFor("fresh part") { count("runner-count") > 0 && textOf("runner-count").contains("0/2") && countText("Làm lại từ đầu?") == 0 }
+        rule.waitForIdle()
+        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("part list 5") { count("set-home") > 0 && textOf("home-part-5").contains("Chưa làm") }
+        assertTrue(app.testSets.sets.value.single().attempt == null)
     }
 
     /**
@@ -372,7 +472,7 @@ class TestSetsTest {
         assertTrue(textOf("set-lc"), textOf("set-lc").contains("Listening · 3 file nghe"))
         assertEquals(4, media())
 
-        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        openWhole()
         waitFor("lc-runner") { count("runner-list") > 0 }
         waitFor("picture", 20_000) { count("runner-picture") > 0 }
         assertEquals(1, count("runner-picture"))
@@ -402,7 +502,7 @@ class TestSetsTest {
         assertTrue(textOf("result-p3"), textOf("result-p3").contains("Part 3: 1/3"))
         assertEquals(0, count("result-p5"))
         shot("sets-08-lc-result")
-        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
+        leaveRunner()
 
         // Deleting asks first; "Xoá" takes the audio and the photo off the device too.
         waitFor("lc-list") { count("set-row") > 0 }
@@ -447,7 +547,7 @@ class TestSetsTest {
         waitFor("photo-preview") { count("pdf-preview") > 0 }
         rule.onNodeWithTag("pdf-save").performScrollTo().performClick()
         waitFor("photo-row") { count("set-row") > 0 }
-        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        openWhole()
         waitFor("photo-runner") { count("runner-list") > 0 }
         // Each photo page sits above its own questions (page 1 above 1, page 2 above 2): the list composes what is on screen.
         waitFor("pictures", 20_000) { count("runner-picture") > 0 }
@@ -476,7 +576,7 @@ class TestSetsTest {
         assertTrue(textOf("pdf-audio"), textOf("pdf-audio").contains("mỗi câu một file"))
         rule.onNodeWithTag("pdf-save").performScrollTo().performClick()
         waitFor("p1-row") { count("set-row") > 0 }
-        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        openWhole()
         waitFor("p1-runner") { count("runner-list") > 0 }
         assertEquals(0, count("listen-bar"))
         // The photo page sits above question 1, so the questions may be below the fold: each is scrolled to first.
@@ -526,7 +626,7 @@ class TestSetsTest {
         waitFor("p2-preview") { count("pdf-preview") > 0 }
         rule.onNodeWithTag("pdf-save").performScrollTo().performClick()
         waitFor("p2-row") { count("set-row") > 0 }
-        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        openWhole()
         waitFor("p2-runner") { count("runner-list") > 0 && count("listen-bar") > 0 }
         pick(3, "B")
         rule.onNodeWithTag("runner-submit").performClick()
@@ -564,10 +664,10 @@ class TestSetsTest {
             val q4 = com.vh.lexi.core.testSetFromJson(org.json.JSONObject(f.readText())).questions.first { it.number == 4 }
             q4.clip != null && q4.clip!!.from / 1000 == (from - 2).toLong()
         }
-        rule.onNodeWithTag("runner-exit").performSemanticsAction(SemanticsActions.OnClick)
+        leaveRunner()
         waitFor("p2-list") { count("set-row") > 0 }
         runBlockingLoad()
-        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        openWhole()
         waitFor("p2-reopen") { count("runner-result") > 0 }
         assertEquals(0, count("result-split"))
         assertEquals(id, app.testSets.sets.value.first().id)
