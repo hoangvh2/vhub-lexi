@@ -5,6 +5,7 @@
  * can read in one call, merging what it returns, and scoring an attempt. The PDF reading itself is in pdf.ts.
  */
 import { str } from "@shared/notetypes.ts";
+import type { Marks } from "./testreview.ts";
 import { LETTERS, draftsFrom, type Draft, type Extracted, type ExtractedPassage, type ExtractedQuestion, type Letter } from "./import.ts";
 import { PARTS, formatScore, type PartKey, type Score } from "./practice.ts";
 
@@ -308,6 +309,8 @@ export interface TestSet {
   attempt?: Attempt;
   /** "Làm theo Part": the attempt at one Part on its own, keyed by the part number as text ("5"). Independent of `attempt`. */
   parts?: Record<string, Attempt>;
+  /** "Ôn câu sai": ⚑ flags and the review queue, by question position (lib/testreview.ts). */
+  marks?: Marks;
   /** This device only: when the set was last known to be in the account (lib/testsync.ts). Never uploaded. */
   syncedAt?: number;
 }

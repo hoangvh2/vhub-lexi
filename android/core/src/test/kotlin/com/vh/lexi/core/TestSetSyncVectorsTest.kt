@@ -45,6 +45,7 @@ class TestSetSyncVectorsTest {
             same(c.get("attempt"), attemptJson(out.attempt).let { if (it == JSONObject.NULL) null else it }, "attempt for $state")
             val parts = if (out.parts.isEmpty()) null else JSONObject().apply { out.parts.toSortedMap().forEach { (k, a) -> put(k.toString(), attemptJson(a)) } }
             same(c.get("parts"), parts, "parts for $state")
+            same(c.get("marks"), if (out.marks.isEmpty()) null else JSONObject(out.marks.toJson().toString()), "marks for $state")
             same(c.getJSONArray("clips"), JSONArray(out.questions.map { clipJson(it.clip) }), "clips for $state")
         }
     }

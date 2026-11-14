@@ -1,0 +1,675 @@
+{
+ "questions": [
+  {
+   "i": 0,
+   "correct": "B"
+  },
+  {
+   "i": 1,
+   "correct": "B"
+  },
+  {
+   "i": 2,
+   "correct": "B"
+  },
+  {
+   "i": 3,
+   "correct": null
+  }
+ ],
+ "scripts": [
+  {
+   "steps": [
+    {
+     "op": "flag",
+     "i": 1
+    },
+    {
+     "op": "flag",
+     "i": 1
+    },
+    {
+     "op": "cause",
+     "i": 2,
+     "cause": "g"
+    },
+    {
+     "op": "cause",
+     "i": 2,
+     "cause": null
+    }
+   ],
+   "out": [
+    {
+     "1": {
+      "box": 0,
+      "streak": 0,
+      "flag": true
+     }
+    },
+    {},
+    {
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "cause": "g"
+     }
+    },
+    {}
+   ]
+  },
+  {
+   "steps": [
+    {
+     "op": "flag",
+     "i": 2
+    },
+    {
+     "op": "enqueue",
+     "answers": {
+      "0": "A",
+      "2": "B",
+      "3": "A"
+     },
+     "today": 100
+    },
+    {
+     "op": "enqueue",
+     "answers": {
+      "0": "B",
+      "1": "B",
+      "2": "B"
+     },
+     "today": 101
+    }
+   ],
+   "out": [
+    {
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "flag": true
+     }
+    },
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "due": 101
+     },
+     "1": {
+      "box": 0,
+      "streak": 0,
+      "due": 101
+     },
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "flag": true,
+      "due": 101
+     }
+    },
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "due": 101
+     },
+     "1": {
+      "box": 0,
+      "streak": 0,
+      "due": 101
+     },
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "flag": true,
+      "due": 101
+     }
+    }
+   ]
+  },
+  {
+   "steps": [
+    {
+     "op": "enqueue",
+     "answers": {
+      "0": "A",
+      "1": "B",
+      "2": "B"
+     },
+     "today": 10
+    },
+    {
+     "op": "review",
+     "i": 0,
+     "correct": true,
+     "today": 11
+    },
+    {
+     "op": "review",
+     "i": 0,
+     "correct": true,
+     "today": 14
+    },
+    {
+     "op": "review",
+     "i": 0,
+     "correct": true,
+     "today": 21
+    },
+    {
+     "op": "enqueue",
+     "answers": {
+      "0": "C"
+     },
+     "today": 30
+    }
+   ],
+   "out": [
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "due": 11
+     }
+    },
+    {
+     "0": {
+      "box": 1,
+      "streak": 1,
+      "due": 14
+     }
+    },
+    {
+     "0": {
+      "box": 2,
+      "streak": 2,
+      "done": true
+     }
+    },
+    {
+     "0": {
+      "box": 2,
+      "streak": 2,
+      "done": true
+     }
+    },
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "due": 31
+     },
+     "1": {
+      "box": 0,
+      "streak": 0,
+      "due": 31
+     },
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "due": 31
+     }
+    }
+   ]
+  },
+  {
+   "steps": [
+    {
+     "op": "enqueue",
+     "answers": {
+      "0": "A"
+     },
+     "today": 5
+    },
+    {
+     "op": "review",
+     "i": 0,
+     "correct": true,
+     "today": 6
+    },
+    {
+     "op": "review",
+     "i": 0,
+     "correct": false,
+     "today": 9
+    },
+    {
+     "op": "review",
+     "i": 1,
+     "correct": true,
+     "today": 9
+    },
+    {
+     "op": "cause",
+     "i": 0,
+     "cause": "p"
+    }
+   ],
+   "out": [
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "due": 6
+     },
+     "1": {
+      "box": 0,
+      "streak": 0,
+      "due": 6
+     },
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "due": 6
+     }
+    },
+    {
+     "0": {
+      "box": 1,
+      "streak": 1,
+      "due": 9
+     },
+     "1": {
+      "box": 0,
+      "streak": 0,
+      "due": 6
+     },
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "due": 6
+     }
+    },
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "due": 10
+     },
+     "1": {
+      "box": 0,
+      "streak": 0,
+      "due": 6
+     },
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "due": 6
+     }
+    },
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "due": 10
+     },
+     "1": {
+      "box": 1,
+      "streak": 1,
+      "due": 12
+     },
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "due": 6
+     }
+    },
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "due": 10,
+      "cause": "p"
+     },
+     "1": {
+      "box": 1,
+      "streak": 1,
+      "due": 12
+     },
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "due": 6
+     }
+    }
+   ]
+  },
+  {
+   "steps": [
+    {
+     "op": "flag",
+     "i": 0
+    },
+    {
+     "op": "enqueue",
+     "answers": {},
+     "today": 1
+    },
+    {
+     "op": "release",
+     "i": 0
+    },
+    {
+     "op": "release",
+     "i": 3
+    },
+    {
+     "op": "enqueue",
+     "answers": {
+      "1": "D"
+     },
+     "today": 2
+    },
+    {
+     "op": "flag",
+     "i": 0
+    }
+   ],
+   "out": [
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "flag": true
+     }
+    },
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "flag": true,
+      "due": 2
+     },
+     "1": {
+      "box": 0,
+      "streak": 0,
+      "due": 2
+     },
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "due": 2
+     }
+    },
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "done": true
+     },
+     "1": {
+      "box": 0,
+      "streak": 0,
+      "due": 2
+     },
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "due": 2
+     }
+    },
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "done": true
+     },
+     "1": {
+      "box": 0,
+      "streak": 0,
+      "due": 2
+     },
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "due": 2
+     }
+    },
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "due": 3
+     },
+     "1": {
+      "box": 0,
+      "streak": 0,
+      "due": 2
+     },
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "due": 2
+     }
+    },
+    {
+     "0": {
+      "box": 0,
+      "streak": 0,
+      "due": 3,
+      "flag": true
+     },
+     "1": {
+      "box": 0,
+      "streak": 0,
+      "due": 2
+     },
+     "2": {
+      "box": 0,
+      "streak": 0,
+      "due": 2
+     }
+    }
+   ]
+  }
+ ],
+ "due": [
+  {
+   "marks": {
+    "1": {
+     "box": 0,
+     "streak": 0,
+     "flag": true
+    },
+    "2": {
+     "box": 1,
+     "streak": 1,
+     "due": 10
+    },
+    "4": {
+     "box": 0,
+     "streak": 0,
+     "due": 8
+    },
+    "5": {
+     "box": 0,
+     "streak": 0,
+     "due": 10
+    },
+    "7": {
+     "box": 3,
+     "streak": 2,
+     "done": true
+    },
+    "9": {
+     "box": 2,
+     "streak": 1,
+     "due": 12
+    }
+   },
+   "today": 9,
+   "ids": [
+    4
+   ],
+   "queued": 4
+  },
+  {
+   "marks": {
+    "1": {
+     "box": 0,
+     "streak": 0,
+     "flag": true
+    },
+    "2": {
+     "box": 1,
+     "streak": 1,
+     "due": 10
+    },
+    "4": {
+     "box": 0,
+     "streak": 0,
+     "due": 8
+    },
+    "5": {
+     "box": 0,
+     "streak": 0,
+     "due": 10
+    },
+    "7": {
+     "box": 3,
+     "streak": 2,
+     "done": true
+    },
+    "9": {
+     "box": 2,
+     "streak": 1,
+     "due": 12
+    }
+   },
+   "today": 10,
+   "ids": [
+    4,
+    2,
+    5
+   ],
+   "queued": 4
+  },
+  {
+   "marks": {
+    "1": {
+     "box": 0,
+     "streak": 0,
+     "flag": true
+    },
+    "2": {
+     "box": 1,
+     "streak": 1,
+     "due": 10
+    },
+    "4": {
+     "box": 0,
+     "streak": 0,
+     "due": 8
+    },
+    "5": {
+     "box": 0,
+     "streak": 0,
+     "due": 10
+    },
+    "7": {
+     "box": 3,
+     "streak": 2,
+     "done": true
+    },
+    "9": {
+     "box": 2,
+     "streak": 1,
+     "due": 12
+    }
+   },
+   "today": 11,
+   "ids": [
+    4,
+    2,
+    5
+   ],
+   "queued": 4
+  },
+  {
+   "marks": {
+    "1": {
+     "box": 0,
+     "streak": 0,
+     "flag": true
+    },
+    "2": {
+     "box": 1,
+     "streak": 1,
+     "due": 10
+    },
+    "4": {
+     "box": 0,
+     "streak": 0,
+     "due": 8
+    },
+    "5": {
+     "box": 0,
+     "streak": 0,
+     "due": 10
+    },
+    "7": {
+     "box": 3,
+     "streak": 2,
+     "done": true
+    },
+    "9": {
+     "box": 2,
+     "streak": 1,
+     "due": 12
+    }
+   },
+   "today": 12,
+   "ids": [
+    4,
+    2,
+    5,
+    9
+   ],
+   "queued": 4
+  },
+  {
+   "marks": {
+    "1": {
+     "box": 0,
+     "streak": 0,
+     "flag": true
+    },
+    "2": {
+     "box": 1,
+     "streak": 1,
+     "due": 10
+    },
+    "4": {
+     "box": 0,
+     "streak": 0,
+     "due": 8
+    },
+    "5": {
+     "box": 0,
+     "streak": 0,
+     "due": 10
+    },
+    "7": {
+     "box": 3,
+     "streak": 2,
+     "done": true
+    },
+    "9": {
+     "box": 2,
+     "streak": 1,
+     "due": 12
+    }
+   },
+   "today": 13,
+   "ids": [
+    4,
+    2,
+    5,
+    9
+   ],
+   "queued": 4
+  }
+ ]
+}

@@ -346,6 +346,8 @@ data class TestSet(
     val syncedAt: Long? = null,
     /** "Làm theo Part": the attempt at one Part on its own, by part number. Independent of [attempt]. */
     val parts: Map<Int, Attempt> = emptyMap(),
+    /** "Ôn câu sai": ⚑ flags and the review queue, by question position (TestReview.kt). */
+    val marks: Map<Int, Mark> = emptyMap(),
 )
 
 /** Question numbers of the Listening parts printed with nothing but their number (Part 1, Part 2). */
@@ -738,6 +740,7 @@ fun TestSet.toJson(): JSONObject = JSONObject()
     .apply {
         attempt?.let { put("attempt", it.toJson()) }
         if (parts.isNotEmpty()) put("parts", JSONObject().apply { parts.toSortedMap().forEach { (k, a) -> put(k.toString(), a.toJson()) } })
+        if (marks.isNotEmpty()) put("marks", marks.toJson())
         syncedAt?.let { put("syncedAt", it) }
     }
 
@@ -767,6 +770,7 @@ fun testSetFromJson(o: JSONObject): TestSet {
         pictures = o.optJSONArray("pictures")?.objs()?.map { p -> SetPicture(p.intOrNull("part"), p.getInt("page"), p.getString("key"), p.optJSONArray("numbers")?.let { a -> List(a.length()) { a.getInt(it) } } ?: emptyList()) } ?: emptyList(),
         attempt = a?.let(::attemptFromJson),
         parts = o.optJSONObject("parts")?.let { ps -> ps.keys().asSequence().filter { k -> DIGITS_ONLY.matches(k) }.associate { k -> k.toInt() to attemptFromJson(ps.getJSONObject(k)) } } ?: emptyMap(),
+        marks = o.optJSONObject("marks")?.let { ms -> ms.keys().asSequence().filter { k -> DIGITS_ONLY.matches(k) }.mapNotNull { k -> ms.optJSONObject(k)?.let(::markFromJson)?.let { k.toInt() to it } }.toMap() } ?: emptyMap(),
         syncedAt = o.longOrNull("syncedAt"),
     )
 }

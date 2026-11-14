@@ -49,6 +49,7 @@ fun progressOf(set: TestSet): String {
     val p = JSONObject().put("clips", clips)
     set.attempt?.let { p.put("attempt", attemptState(it)) }
     if (set.parts.isNotEmpty()) p.put("parts", JSONObject().apply { set.parts.toSortedMap().forEach { (k, a) -> put(k.toString(), attemptState(a)) } })
+    if (set.marks.isNotEmpty()) p.put("marks", set.marks.toJson())
     return p.toString()
 }
 
@@ -104,16 +105,25 @@ fun withProgress(set: TestSet, state: String): TestSet {
         }
         else -> return set
     }
+    val marks = sortedMapOf<Int, Mark>()
+    when (val x = p.opt("marks")) {
+        null -> {}
+        is JSONObject -> x.keys().forEach { k ->
+            if (!DIGITS.matches(k)) return@forEach
+            marks[k.toInt()] = markFromJson(x.opt(k) as? JSONObject ?: return set) ?: return set
+        }
+        else -> return set
+    }
     val questions = set.questions.map { q ->
         val v = clips.opt(q.i.toString()) as? JSONObject
         val t = v?.int("track"); val f = v?.int("from"); val e = v?.int("to")
         q.copy(clip = if (t != null && f != null && e != null) Clip(t.toInt(), f, e) else null)
     }
-    return set.copy(questions = questions, attempt = attempt, parts = parts)
+    return set.copy(questions = questions, attempt = attempt, parts = parts, marks = marks)
 }
 
 /** The set as uploaded in set.json: without the attempts (in `state`) and this device's sync mark. */
-fun contentOf(set: TestSet): TestSet = set.copy(attempt = null, parts = emptyMap(), syncedAt = null)
+fun contentOf(set: TestSet): TestSet = set.copy(attempt = null, parts = emptyMap(), marks = emptyMap(), syncedAt = null)
 
 fun metaOf(set: TestSet, bytes: Long): CloudMeta = CloudMeta(
     id = set.id, name = set.name.take(200).ifEmpty { "Bộ đề" }, section = set.section.ifEmpty { "rc" }, createdAt = set.createdAt,
