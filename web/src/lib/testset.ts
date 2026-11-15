@@ -5,6 +5,7 @@
  * can read in one call, merging what it returns, and scoring an attempt. The PDF reading itself is in pdf.ts.
  */
 import { str } from "@shared/notetypes.ts";
+import type { PartCuts } from "./partmarks.ts";
 import type { Marks } from "./testreview.ts";
 import { LETTERS, draftsFrom, type Draft, type Extracted, type ExtractedPassage, type ExtractedQuestion, type Letter } from "./import.ts";
 import { PARTS, formatScore, type PartKey, type Score } from "./practice.ts";
@@ -311,6 +312,8 @@ export interface TestSet {
   parts?: Record<string, Attempt>;
   /** "Ôn câu sai": ⚑ flags and the review queue, by question position (lib/testreview.ts). */
   marks?: Marks;
+  /** Listening in one long file: where each Part starts and ends in the audio, set by the learner (lib/partmarks.ts). */
+  cuts?: PartCuts;
   /** This device only: when the set was last known to be in the account (lib/testsync.ts). Never uploaded. */
   syncedAt?: number;
 }

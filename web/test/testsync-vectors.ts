@@ -39,6 +39,13 @@ const states = [
   '{"clips":{},"marks":{"2":{"box":4,"streak":0}}}',
   '{"clips":{},"marks":{"2":{"box":1,"streak":-1}}}',
   '{"clips":{},"marks":[]}',
+  '{"clips":{},"cuts":{"3":{"track":0,"start":1290000,"end":2290000},"4":{"track":1,"start":5}}}',
+  '{"clips":{},"cuts":{"3":{"track":0,"start":-1}}}',
+  '{"clips":{},"cuts":{"3":{"track":0.5}}}',
+  '{"clips":{},"cuts":{"3":{"track":0,"end":1.5}}}',
+  '{"clips":{},"cuts":{"x":{"track":9},"2":{"track":0}}}',
+  '{"clips":{},"cuts":[]}',
+  '{"clips":{},"cuts":{"3":5}}',
   '{"clips":{},"marks":{"1":{"box":2,"streak":1,"cause":"z","flag":false,"due":1.5}}}',
   '{"attempt":{"startedAt":7,"elapsedMs":1,"answers":{"2":"A"}},"clips":{},"parts":{"6":{"startedAt":2,"elapsedMs":3,"answers":{"1":"C"}}}}',
 ];
@@ -48,10 +55,10 @@ export function testsyncVectors() {
   const { attempt: _a, ...noAttempt } = set;
   return {
     set,
-    progress: ([set, noAttempt, { ...set, attempt: { ...set.attempt!, finishedAt: 70, resultNoteId: "r" } }, { ...set, parts: { "7": { startedAt: 2, elapsedMs: 5, answers: { 1: "B", 0: "A" }, finishedAt: 9, resultNoteId: "r7" }, "5": { startedAt: 1, elapsedMs: 4, answers: {} } } }, { ...noAttempt, parts: { "2": { startedAt: 3, elapsedMs: 6, answers: { 2: "C" } } } }, { ...set, marks: { "2": { box: 1, streak: 1, due: 20400, flag: true, cause: "g" }, "0": { box: 0, streak: 0 }, "x": { box: 0, streak: 0 }, "1": { box: 3, streak: 2, done: true } } }] as TestSet[]).map((s) => ({ set: s, out: JSON.parse(progressOf(s)) })),
+    progress: ([set, noAttempt, { ...set, attempt: { ...set.attempt!, finishedAt: 70, resultNoteId: "r" } }, { ...set, parts: { "7": { startedAt: 2, elapsedMs: 5, answers: { 1: "B", 0: "A" }, finishedAt: 9, resultNoteId: "r7" }, "5": { startedAt: 1, elapsedMs: 4, answers: {} } } }, { ...noAttempt, parts: { "2": { startedAt: 3, elapsedMs: 6, answers: { 2: "C" } } } }, { ...set, marks: { "2": { box: 1, streak: 1, due: 20400, flag: true, cause: "g" }, "0": { box: 0, streak: 0 }, "x": { box: 0, streak: 0 }, "1": { box: 3, streak: 2, done: true } } }, { ...set, cuts: { "4": { track: 1, end: 9000, start: 100 }, "3": { track: 0, start: 5 } } }] as TestSet[]).map((s) => ({ set: s, out: JSON.parse(progressOf(s)) })),
     withProgress: states.map((state) => {
       const out = withProgress(set, state);
-      return { state, attempt: out.attempt ?? null, parts: out.parts ?? null, marks: out.marks ?? null, clips: out.questions.map((x) => x.clip ?? null) };
+      return { state, attempt: out.attempt ?? null, parts: out.parts ?? null, marks: out.marks ?? null, cuts: out.cuts ?? null, clips: out.questions.map((x) => x.clip ?? null) };
     }),
     files: filesOf(set),
     meta: metaOf(set, 1234),

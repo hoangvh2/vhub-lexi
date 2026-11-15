@@ -19,6 +19,7 @@ import { aiFieldsOf, draftsFrom, grammarFields, problems, type ExtractedQuestion
 import { analyze, sentenceAround } from "../src/lib/readcheck.ts";
 import { testTag } from "../src/lib/practice.ts";
 import { testsetVectors } from "./testset-vectors.ts";
+import { partmarksVectors } from "./partmarks-vectors.ts";
 import { testreviewVectors } from "./testreview-vectors.ts";
 import { testsyncVectors } from "./testsync-vectors.ts";
 import { roadmapVectors } from "./roadmap-vectors.ts";
@@ -595,6 +596,7 @@ it("cross-platform vectors are up to date", () => {
     ["views.json", JSON.stringify(viewVectors(), null, 1)],
     ["testtag.json", JSON.stringify(["Test 1 TOEIC NEW 2026", "Đề ETS 2026 — Test #2", "   ", "Kiểm tra giữa kỳ: Ôn tập rất dài của năm học 2026 lần thứ ba", "ĐĐ ñandú", "a--b"].map((n) => [n, testTag(n)]), null, 1)],
     ["testset.json", JSON.stringify(testsetVectors(), null, 1)],
+    ["partmarks.json", JSON.stringify(partmarksVectors(), null, 1)],
     ["testreview.json", JSON.stringify(testreviewVectors(), null, 1)],
     ["testsync.json", JSON.stringify(testsyncVectors(), null, 1)],
     ["roadmap.json", JSON.stringify(roadmapVectors())],
