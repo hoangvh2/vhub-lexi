@@ -887,8 +887,8 @@ class TestSetsTest {
         dialogButton("Nộp bài").performClick()
         waitFor("split-result") { count("runner-result") > 0 }
         rule.onNodeWithTag("result-split").performScrollTo().performClick()
-        // The button stays (the other Parts have no clips yet); what shows the split is the replay range on each missed question.
-        waitFor("split-done", 30_000) { count("q-replay-range") > 0 }
+        // The button stays (the other Parts have no clips yet); what shows the split is a clip on each question of the Part (the cards below are composed only when scrolled to).
+        waitFor("split-done", 30_000) { app.testSets.sets.value.single().questions.count { it.clip != null } == 3 }
         assertTrue(rangeOf(3), Regex("^File 1 · 0:0[67]–0:1[01]$").matches(rangeOf(3)))
         assertTrue(rangeOf(4), Regex("^File 1 · 0:1[56]–0:(19|20)$").matches(rangeOf(4)))
         assertTrue(rangeOf(5), Regex("^File 1 · 0:2[345]–0:2[789]$").matches(rangeOf(5)))
