@@ -125,4 +125,49 @@ object AudioSplit {
         }
         return out
     }
+
+    /** Where a Part is heard in a file (PartWindow.Ok): [to] null = to the end of the file. */
+    data class PartSpot(val track: Int, val from: Long, val to: Long?)
+
+    /**
+     * Each question's place when the learner has told where each Part is: every Listening Part is split on its own, from the
+     * answer pauses inside its window, with its own question count (web: placeQuestionsByPart). A question whose Part has no
+     * window, or whose window does not hold that many pauses, gets null.
+     */
+    fun placeQuestionsByPart(tracks: List<TrackLevels>, parts: List<Int?>, windows: Map<Int, PartSpot>): List<Clip?> {
+        val out = MutableList<Clip?>(parts.size) { null }
+        for (p in parts.filterNotNull().distinct()) {
+            val w = windows[p] ?: continue
+            val t = tracks.getOrNull(w.track) ?: continue
+            val end = w.to ?: t.durationMs
+            val gaps = t.gaps.mapNotNull { (a, b) ->
+                val x = maxOf(a, w.from)
+                val y = minOf(b, end)
+                if (y > x) (x - w.from) to (y - w.from) else null
+            }
+            val qs = parts.indices.filter { parts[it] == p }
+            val spans = questionSpans(gaps, end - w.from, qs.size) ?: continue
+            qs.forEachIndexed { k, qi -> out[qi] = Clip(w.track, w.from + spans[k].first, w.from + spans[k].second) }
+        }
+        return out
+    }
+
+    /** The loudest level of each [binMs] of the file: what the waveform strip draws (web: envelope). */
+    fun envelope(levels: FloatArray, frameMs: Int = FRAME_MS, binMs: Int = 1000): List<Double> {
+        val per = maxOf(1, Math.round(binMs.toDouble() / frameMs).toInt())
+        val out = mutableListOf<Double>()
+        var i = 0
+        while (i < levels.size) {
+            var m = -100.0
+            for (j in i until minOf(levels.size, i + per)) if (levels[j] > m) m = levels[j].toDouble()
+            out += Math.round(m * 10) / 10.0
+            i += per
+        }
+        return out
+    }
+
+    /** The ends of the long silences nearest [ms], nearest first: where a mark may be. Only a suggestion to listen to (web: snapCandidates). */
+    fun snapCandidates(gaps: List<Pair<Long, Long>>, ms: Long, count: Int = 3, minMs: Long = ANSWER_PAUSE_MS): List<Long> =
+        gaps.filter { (a, b) -> b - a >= minMs }.map { it.second }
+            .sortedWith(compareBy<Long> { Math.abs(it - ms) }.thenBy { it }).take(count)
 }

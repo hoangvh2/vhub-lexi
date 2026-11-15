@@ -110,3 +110,61 @@ export function placeQuestions(tracks: readonly TrackLevels[], parts: ReadonlyAr
   });
   return out;
 }
+
+/** Where a Part is heard in a file (lib/partmarks.ts `partWindow`): `to` null = to the end of the file. */
+export interface PartSpot {
+  track: number;
+  from: number;
+  to: number | null;
+}
+
+/**
+ * Each question's place when the learner has told where each Part is (the Part marks): every Listening Part is split on its
+ * own, from the answer pauses inside its window, with its own question count. That is far more reliable than one count over
+ * a 45-minute file, where the pauses of Part 1–2 (5 s) and Part 3–4 (8 s) and the directions all compete. A question whose
+ * Part has no window, or whose window does not hold that many pauses, gets null.
+ */
+export function placeQuestionsByPart(tracks: readonly TrackLevels[], parts: ReadonlyArray<number | null>, windows: Readonly<Record<number, PartSpot | undefined>>): Array<{ track: number; from: number; to: number } | null> {
+  const out: Array<{ track: number; from: number; to: number } | null> = parts.map(() => null);
+  for (const p of new Set(parts)) {
+    const w = p === null ? undefined : windows[p];
+    if (p === null || !w || !tracks[w.track]) continue;
+    const t = tracks[w.track];
+    const end = w.to ?? t.durationMs;
+    // The gaps inside the window, from its start.
+    const gaps: Array<[number, number]> = [];
+    for (const [a, b] of t.gaps) {
+      const x = Math.max(a, w.from);
+      const y = Math.min(b, end);
+      if (y > x) gaps.push([x - w.from, y - w.from]);
+    }
+    const qs = parts.flatMap((x, i) => (x === p ? [i] : []));
+    const spans = questionSpans(gaps, end - w.from, qs.length);
+    if (spans) qs.forEach((qi, k) => (out[qi] = { track: w.track, from: w.from + spans[k][0], to: w.from + spans[k][1] }));
+  }
+  return out;
+}
+
+/** The loudest level of each `binMs` of the file: what the waveform strip draws. */
+export function envelope(levels: ArrayLike<number>, frameMs = FRAME_MS, binMs = 1000): number[] {
+  const per = Math.max(1, Math.round(binMs / frameMs));
+  const out: number[] = [];
+  for (let i = 0; i < levels.length; i += per) {
+    let m = -100;
+    for (let j = i; j < Math.min(levels.length, i + per); j++) if (levels[j] > m) m = levels[j];
+    out.push(Math.round(m * 10) / 10);
+  }
+  return out;
+}
+
+/**
+ * Where a mark near `ms` may be: the ends of the long silences (an answer pause ends where the next directions or question
+ * begin), nearest first. Only a suggestion to listen to; the learner confirms by ear.
+ */
+export function snapCandidates(gaps: ReadonlyArray<[number, number]>, ms: number, count = 3, minMs = ANSWER_PAUSE_MS): number[] {
+  return gaps
+    .filter(([a, b]) => b - a >= minMs)
+    .map(([, b]) => b)
+    .sort((x, y) => Math.abs(x - ms) - Math.abs(y - ms) || x - y)
+    .slice(0, count);
+}

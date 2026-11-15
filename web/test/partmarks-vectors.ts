@@ -2,6 +2,7 @@
  * Inputs and TypeScript outputs of the Listening Part marks (lib/partmarks.ts), replayed by the Kotlin port
  * (android/core PartMarksVectorsTest). Written to shared/vectors/partmarks.json by vectors.test.ts.
  */
+import { envelope, placeQuestionsByPart, snapCandidates, type PartSpot } from "../src/lib/audio.ts";
 import { clearMark, formatClock, markParts, needsPartMarks, parseClock, partWindow, setMark, type Field, type PartCuts } from "../src/lib/partmarks.ts";
 
 type Step =
@@ -80,8 +81,32 @@ const sets = [
   { tracks: 1, parts: [1, 2, 5], perQuestionTrack: false },
 ];
 
+const g = (a: number, b: number) => [a, b] as [number, number];
+/** One 60 s file: Part 1 0–20 s (2 questions, 5 s pauses), Part 2 20–60 s (2 questions, 8 s pauses), directions before each. */
+const bigTrack = { gaps: [g(0, 500), g(4000, 9000), g(11000, 12000), g(15000, 20000), g(24000, 25000), g(32000, 40000), g(41000, 42000), g(50000, 58000)], durationMs: 60000 };
+const spotCases: Array<{ tracks: Array<{ gaps: Array<[number, number]>; durationMs: number }>; parts: Array<number | null>; windows: Record<string, PartSpot> }> = [
+  { tracks: [bigTrack], parts: [1, 1, 2, 2], windows: { 1: { track: 0, from: 0, to: 20000 }, 2: { track: 0, from: 20000, to: null } } },
+  // One Part has no window: its questions are left alone, the other still splits.
+  { tracks: [bigTrack], parts: [1, 1, 2, 2], windows: { 2: { track: 0, from: 20000, to: 60000 } } },
+  // Too many questions for the pauses inside the window.
+  { tracks: [bigTrack], parts: [1, 1, 1, 2, 2], windows: { 1: { track: 0, from: 0, to: 20000 }, 2: { track: 0, from: 20000, to: null } } },
+  // A window that starts inside a silence keeps only the part of it that is inside.
+  { tracks: [bigTrack], parts: [2, 2], windows: { 2: { track: 0, from: 28000, to: 60000 } } },
+  { tracks: [bigTrack], parts: [null, 2], windows: { 2: { track: 5, from: 0, to: null } } },
+];
+const envLevels = [-20, -30, -100, -45, -50, -10, -60, -60, -60, -25, -90];
+const snapCases: Array<{ gaps: Array<[number, number]>; ms: number; count: number }> = [
+  { gaps: bigTrack.gaps, ms: 21000, count: 3 },
+  { gaps: bigTrack.gaps, ms: 0, count: 2 },
+  { gaps: bigTrack.gaps, ms: 59000, count: 5 },
+  { gaps: [g(1000, 1500)], ms: 1000, count: 3 },
+];
+
 export function partmarksVectors() {
   return {
+    byPart: spotCases.map((c) => ({ ...c, out: placeQuestionsByPart(c.tracks, c.parts, c.windows) })),
+    envelope: [[envLevels, 50, 100], [envLevels, 50, 250], [[], 50, 1000]].map(([levels, frameMs, binMs]) => ({ levels, frameMs, binMs, out: envelope(levels as number[], frameMs as number, binMs as number) })),
+    snap: snapCases.map((c) => ({ ...c, out: snapCandidates(c.gaps, c.ms, c.count) })),
     scripts: scripts.map((c) => ({ order: c.order, steps: c.steps, out: run(c.steps, c.order) })),
     parse: times.map((text) => ({ text, ms: parseClock(text) })),
     format: formats.map((ms) => ({ ms, text: formatClock(ms) })),
