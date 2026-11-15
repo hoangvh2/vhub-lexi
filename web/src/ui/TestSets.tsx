@@ -15,6 +15,9 @@ import { LC_LAYOUT, LC_PARTS, attemptOf, canLogScope, findPhotoPages, lettersOf,
 import { chunkPages, findKey, formatPages, grade, keyNote, keyPairs, mergeExtracted, numbersIn, parsePageRange, reflow, resultFields, summary, wrongDrafts, type Chunk, type Graded, type PdfPage, type SetQuestion, type TestSet } from "../lib/testset.ts";
 import { Icon, confirmDialog, toast } from "./common.tsx";
 import { DraftReview, type Review } from "./ImportPanel.tsx";
+import { usePlayer, type Player } from "./listen.tsx";
+import { PartMarksEditor, PartPlayer } from "./PartMarks.tsx";
+import { formatClock, markParts, needsPartMarks, partWindow } from "../lib/partmarks.ts";
 import type { DeckSink } from "./Practice.tsx";
 
 /** Tests replace the Cloud Function with a canned answer (there is no Gemini in CI); same hook as "Nhập nhanh". */
@@ -69,6 +72,8 @@ export function TestSetsTab({ deck, deckPicker, onPassage }: { deck: DeckSink; d
   const [home, setHome] = useState<string | null>(null);
   const [running, setRunning] = useState<{ id: string; scope: Scope } | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  // The Listening Part marks screen: which set, and the Part that asked for it.
+  const [marking, setMarking] = useState<{ id: string; part?: number } | null>(null);
   useEffect(() => {
     loadTestSets().then(() => setReady(true), () => (setReady(true), toast("Không mở được kho bộ đề trên máy này")));
   }, []);
@@ -96,10 +101,11 @@ export function TestSetsTab({ deck, deckPicker, onPassage }: { deck: DeckSink; d
     }
   }
   const current = sets.find((s) => s.id === running?.id);
-  if (current && running) return <Runner key={`${running.id}:${running.scope}`} set={current} scope={running.scope} deck={deck} deckPicker={deckPicker} onPassage={onPassage} onExit={() => setRunning(null)} />;
+  if (marking) return <PartMarksEditor setId={marking.id} part={marking.part} onClose={() => setMarking(null)} />;
+  if (current && running) return <Runner key={`${running.id}:${running.scope}`} set={current} scope={running.scope} deck={deck} deckPicker={deckPicker} onPassage={onPassage} onExit={() => setRunning(null)} onMarks={(part) => (setRunning(null), setMarking({ id: current.id, part }))} />;
   if (reviewing) return <WrongReview deck={deck} deckPicker={deckPicker} onPassage={onPassage} onExit={() => setReviewing(false)} />;
   const homeSet = sets.find((s) => s.id === home);
-  if (homeSet) return <SetHome set={homeSet} onBack={() => setHome(null)} onRun={(scope) => setRunning({ id: homeSet.id, scope })} />;
+  if (homeSet) return <SetHome set={homeSet} onBack={() => setHome(null)} onRun={(scope) => setRunning({ id: homeSet.id, scope })} onMarks={(part) => setMarking({ id: homeSet.id, part })} />;
   return (
     <div class="col">
       <PdfImport onSaved={(s) => toast(`Đã lưu bộ đề “${s.name}”`)} />
@@ -128,8 +134,13 @@ export function TestSetsTab({ deck, deckPicker, onPassage }: { deck: DeckSink; d
 }
 
 /** The Parts of a set: one row each (not started, in progress, submitted with its score), and the whole set as before. */
-function SetHome({ set, onBack, onRun }: { set: TestSet; onBack(): void; onRun(scope: Scope): void }) {
+function SetHome({ set, onBack, onRun, onMarks }: { set: TestSet; onBack(): void; onRun(scope: Scope): void; onMarks(part?: number): void }) {
   const states = partStates(set);
+  // One long audio file for several Parts: each Part needs to be told where it is in it (lib/partmarks.ts).
+  const marked = needsPartMarks(set);
+  const order = markParts(set);
+  const windows = new Map(order.map((p) => [p, partWindow(set.cuts ?? {}, order, p)] as const));
+  const ready = order.filter((p) => windows.get(p)?.ok).length;
   const full = set.attempt;
   const fullGraded = full?.finishedAt ? grade(set, full.answers) : null;
   return (
@@ -139,6 +150,16 @@ function SetHome({ set, onBack, onRun }: { set: TestSet; onBack(): void; onRun(s
         <b class="grow name">{set.name}</b>
         <span class="pill">{set.questions.length} câu</span>
       </div>
+      {marked && (
+        <section class="panel col" data-testid="home-marks">
+          <div class="row between">
+            <b>Mốc bắt đầu Part nghe</b>
+            <span class={`pill ${ready === order.length ? "ok" : "warn"}`} data-testid="home-marks-count">{ready}/{order.length} Part</span>
+          </div>
+          <p class="muted small">File nghe là một file dài. Đặt mốc từng Part một lần: Lexi nhớ, đồng bộ cho máy khác, không cần dò lại.</p>
+          <button type="button" class={`btn${ready === order.length ? "" : " primary"}`} onClick={() => onMarks()} data-testid="home-marks-open">{ready === order.length ? "Chỉnh mốc" : "Đặt mốc Part"}</button>
+        </section>
+      )}
       <section class="panel col">
         <div class="row between">
           <h2>Làm theo Part</h2>
@@ -155,10 +176,16 @@ function SetHome({ set, onBack, onRun }: { set: TestSet; onBack(): void; onRun(s
                   <span class="small">
                     {p.state === "done" ? <b>Đã nộp · {p.score ? `${p.score.right}/${p.score.total}` : "chưa có đáp án"}</b> : p.state === "doing" ? <b>Đang làm · {p.answered}/{p.total}</b> : <span>Chưa làm · {p.total} câu</span>}
                     {a && a.elapsedMs > 0 && <span class="muted"> · {clock(a.elapsedMs)}</span>}
+                    {marked && p.part <= 4 && (() => {
+                      const w = windows.get(p.part);
+                      return w?.ok ? <span class="muted" data-testid={`home-window-${p.part}`}> · {formatClock(w.from)} → {w.to === null ? "hết file" : formatClock(w.to)}</span> : <span class="warn-text" data-testid={`home-window-${p.part}`}> · chưa đặt mốc</span>;
+                    })()}
                   </span>
                   <div class="meter"><i style={{ width: `${pct}%` }} /></div>
                 </div>
-                <button type="button" class={`btn sm${p.state === "done" ? "" : " primary"}`} onClick={() => onRun(p.part)} data-testid={`home-run-${p.part}`}>{p.state === "done" ? "Xem" : p.state === "doing" ? "Tiếp" : "Bắt đầu"}</button>
+                {marked && p.part <= 4 && !windows.get(p.part)?.ok && p.state !== "done"
+                  ? <button type="button" class="btn sm" onClick={() => onMarks(p.part)} data-testid={`home-run-${p.part}`}>Đặt mốc</button>
+                  : <button type="button" class={`btn sm${p.state === "done" ? "" : " primary"}`} onClick={() => onRun(p.part)} data-testid={`home-run-${p.part}`}>{p.state === "done" ? "Xem" : p.state === "doing" ? "Tiếp" : "Bắt đầu"}</button>}
               </li>
             );
           })}
@@ -645,99 +672,6 @@ function PdfImport({ onSaved }: { onSaved(s: TestSet): void }) {
 
 // ------------------------------------------------------------------ taking the test
 
-interface Player {
-  /** The track playing or paused on, null before the first play. */
-  track: number | null;
-  playing: boolean;
-  at: number;
-  duration: number;
-  play(track: number, chain?: boolean): Promise<void>;
-  /** Plays one stretch of a file (ms), then stops: a question heard again. */
-  playRange(track: number, from: number, to: number): Promise<void>;
-  toggle(): void;
-  pause(): void;
-}
-
-/**
- * One audio element for the set. `chain` plays the next file when one ends (a test whose Part is split over files);
- * a file is read from the device store once and kept as an object URL while the test is open.
- */
-function usePlayer(set: TestSet): Player | null {
-  const audio = useRef<HTMLAudioElement | null>(null);
-  const urls = useRef(new Map<number, string>());
-  const chain = useRef(false);
-  const stopAt = useRef<number | null>(null);
-  const [state, setState] = useState({ track: null as number | null, playing: false, at: 0, duration: 0 });
-  const tracks = set.tracks ?? [];
-
-  useEffect(() => {
-    const a = new Audio();
-    a.preload = "auto";
-    audio.current = a;
-    const sync = () => setState((s) => ({ ...s, playing: !a.paused, at: a.currentTime, duration: Number.isFinite(a.duration) ? a.duration : 0 }));
-    for (const ev of ["play", "pause", "timeupdate", "loadedmetadata"]) a.addEventListener(ev, sync);
-    a.addEventListener("timeupdate", () => {
-      if (stopAt.current !== null && a.currentTime * 1000 >= stopAt.current) {
-        stopAt.current = null;
-        a.pause();
-      }
-    });
-    a.addEventListener("ended", () => {
-      const i = Number(a.dataset.track);
-      if (chain.current && i + 1 < tracks.length) void play(i + 1, true);
-      else sync();
-    });
-    const onHide = () => document.visibilityState === "hidden" && a.pause();
-    document.addEventListener("visibilitychange", onHide);
-    return () => {
-      a.pause();
-      document.removeEventListener("visibilitychange", onHide);
-      for (const u of urls.current.values()) URL.revokeObjectURL(u);
-      urls.current.clear();
-    };
-  }, [set.id]);
-
-  async function play(track: number, keepGoing = false, from?: number, to?: number) {
-    const a = audio.current;
-    const t = tracks[track];
-    if (!a || !t) return;
-    chain.current = keepGoing;
-    stopAt.current = to ?? null;
-    let url = urls.current.get(track);
-    if (!url) {
-      const blob = await loadMedia(t.key);
-      if (!blob) return toast(`Không thấy file nghe “${t.name}” trên máy này`);
-      url = URL.createObjectURL(blob);
-      urls.current.set(track, url);
-    }
-    if (a.dataset.track !== String(track)) {
-      a.src = url;
-      a.dataset.track = String(track);
-    } else if (a.ended) a.currentTime = 0;
-    if (from !== undefined) {
-      if (a.readyState < 1) await new Promise((r) => a.addEventListener("loadedmetadata", r, { once: true }));
-      a.currentTime = from / 1000;
-    }
-    setState((s) => ({ ...s, track }));
-    await a.play().catch(() => toast("Trình duyệt chặn phát âm thanh: bấm phát lại"));
-  }
-
-  if (!tracks.length) return null;
-  return {
-    ...state,
-    play: (track, keepGoing) => play(track, keepGoing),
-    playRange: (track, from, to) => play(track, false, from, to),
-    toggle: () => {
-      const a = audio.current;
-      if (!a) return;
-      if (state.track === null) void play(0, true);
-      else if (a.paused) void a.play();
-      else a.pause();
-    },
-    pause: () => audio.current?.pause(),
-  };
-}
-
 const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
 
 /** The test's audio played straight through, as in the exam room: play and pause, no seeking. */
@@ -796,7 +730,7 @@ function Pictures({ set, part, keys }: { set: TestSet; part: number; keys?: read
   );
 }
 
-function Runner({ set, scope, deck, deckPicker, onPassage, onExit }: { set: TestSet; scope: Scope; deck: DeckSink; deckPicker: ComponentChildren; onPassage(text: string): void; onExit(): void }) {
+function Runner({ set, scope, deck, deckPicker, onPassage, onExit, onMarks }: { set: TestSet; scope: Scope; deck: DeckSink; deckPicker: ComponentChildren; onPassage(text: string): void; onExit(): void; onMarks(part: number): void }) {
   // One Part on its own sees only its questions; its attempt is kept apart from the whole-set attempt.
   const view = useMemo(() => scopeView(set, scope), [set, scope]);
   const [attempt, setAttempt] = useState(() => attemptOf(set, scope) ?? { startedAt: Date.now(), elapsedMs: 0, answers: {} });
@@ -863,7 +797,9 @@ function Runner({ set, scope, deck, deckPicker, onPassage, onExit }: { set: Test
         {!finished && <span class="pill" data-testid="runner-count">{answered}/{view.questions.length}</span>}
         {!finished && <button type="button" class="btn primary sm" onClick={() => void submit()} data-testid="runner-submit">Nộp bài</button>}
       </div>
-      {player && !perQuestion && <ListenBar set={set} player={player} />}
+      {player && !perQuestion && (scope !== null && scope <= 4 && needsPartMarks(set) && !finished
+        ? <PartPlayer set={set} part={scope} player={player} onEdit={() => onMarks(scope)} />
+        : <ListenBar set={set} player={player} />)}
       {finished ? (
         <Result set={set} scope={scope} attempt={attempt} deck={deck} deckPicker={deckPicker} onPassage={onPassage} onAgain={() => void again()} onSaved={(id) => persist({ ...attempt, resultNoteId: id })} player={player} />
       ) : (

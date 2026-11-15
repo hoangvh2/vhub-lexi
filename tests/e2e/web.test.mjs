@@ -1872,6 +1872,111 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await ctx.close();
   });
 
+  it("listening, one long file: Part marks are set by typing and nudging, kept, and the Part plays only its own stretch", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    const shot = async (name) => shots && (await page.waitForTimeout(400), await page.screenshot({ path: join(shots, `${name}.png`), fullPage: false }));
+    const PART3 = [
+      [32, "Where most likely are the speakers?", ["At a bank", "At a hotel", "At a train station", "At a bookstore"]],
+      [33, "What does the woman ask for?", ["A receipt", "A gift bag", "A discount", "A catalog"]],
+      [34, "What will the man do next?", ["Check the storage room", "Call a manager", "Print a coupon", "Close the store"]],
+    ];
+    await page.exposeFunction("__stubExtract", () => ({
+      passages: [],
+      questions: PART3.map(([n, stem, o]) => ({ number: n, part: 5, kind: "reading", stem, options: { A: o[0], B: o[1], C: o[2], D: o[3] }, correct: null, result: "unknown", passage: null, topic: "", rule: "", translation: "", flags: [] })),
+    }));
+    await page.addInitScript(() => { window.__lexiExtract = (input) => window.__stubExtract(input); });
+    await importPdf(page, "listening-test.pdf");
+    await page.click('[data-testid=set-section] >> text=Listening');
+    await page.waitForSelector('[data-testid=lc-setup]');
+    await page.fill('[data-testid=lc-p1]', "1-2");
+    await page.fill('[data-testid=lc-p2]', "3-5");
+    await page.fill('[data-testid=set-range]', "2-4");
+    await page.setInputFiles('[data-testid=lc-audio]', join(FIXTURES, "listening-part2.mp3")); // one file for all three Parts
+    await page.click('[data-testid=pdf-read]');
+    await page.waitForSelector('[data-testid=pdf-preview]');
+    await page.click('[data-testid=pdf-save]');
+    await page.waitForSelector('[data-testid=set-row]');
+
+    // Three Parts in one file: the Part list asks for marks, and a Part without them says so instead of playing from 0:00.
+    await page.click('[data-testid=set-open]');
+    await page.waitForSelector('[data-testid=set-home]');
+    assert.match(await page.textContent('[data-testid=home-marks-count]'), /0\/3 Part/);
+    assert.match(await page.textContent('[data-testid=home-window-2]'), /chưa đặt mốc/);
+    assert.match(await page.textContent('[data-testid=home-run-3]'), /Đặt mốc/);
+    await shot("marks-1-list");
+    await page.click('[data-testid=home-run-3]');
+    await page.waitForSelector('[data-testid=marks-editor]');
+    assert.equal(await page.getAttribute('[data-testid=mark-pick-b2]', 'aria-pressed'), 'true'); // Part 3 asked: its boundary is selected
+
+    // Boundary Part 2 | Part 3 at 0:20 (typed), then Part 1 | Part 2 at 0:10: the neighbouring sides follow.
+    await page.fill('[data-testid=marks-typed]', "0:20");
+    await page.click('[data-testid=marks-apply]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=mark-time-b2]')?.textContent === "0:20");
+    await page.click('[data-testid=mark-pick-b1]');
+    await page.fill('[data-testid=marks-typed]', "0:10");
+    await page.click('[data-testid=marks-apply]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=mark-time-b1]')?.textContent === "0:10");
+    assert.match(await page.textContent('[data-testid=marks-count]'), /3\/3 Part/);
+    // A boundary before the earlier one is refused and the mark stays.
+    await page.click('[data-testid=mark-pick-b2]');
+    await page.fill('[data-testid=marks-typed]', "0:05");
+    await page.click('[data-testid=marks-apply]');
+    await page.waitForSelector('text=Mốc phải tăng dần');
+    assert.equal(await page.textContent('[data-testid=mark-time-b2]'), "0:20");
+    await page.fill('[data-testid=marks-typed]', "abc");
+    await page.click('[data-testid=marks-apply]');
+    await page.waitForSelector('text=Nhập dạng mm:ss');
+
+    // Nudge by ear: from 0:10, +5 s is 0:15, and "Đặt tại" takes that moment.
+    await page.click('[data-testid=mark-pick-b1]');
+    await page.click('[data-testid="skip+5000"]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=marks-at]')?.textContent === "0:15");
+    await page.click('[data-testid=marks-here]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=mark-time-b1]')?.textContent === "0:15");
+    await shot("marks-2-editor");
+
+    // Removing a mark asks first: "Không" keeps it, "Xoá mốc" removes it.
+    await page.click('[data-testid=mark-pick-b2]');
+    await page.click('[data-testid=marks-clear]');
+    await page.click('[data-testid=confirm-cancel]');
+    assert.equal(await page.textContent('[data-testid=mark-time-b2]'), "0:20");
+    await page.click('[data-testid=marks-clear]');
+    await page.click('[data-testid=confirm-ok]');
+    await page.waitForFunction(() => /chưa đặt/.test(document.querySelector('[data-testid=mark-time-b2]')?.textContent ?? ""));
+    await page.fill('[data-testid=marks-typed]', "0:20");
+    await page.click('[data-testid=marks-apply]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=mark-time-b2]')?.textContent === "0:20");
+    await page.click('[data-testid=marks-close]');
+
+    // Kept: the Part list shows each stretch, also after a reload.
+    await page.waitForSelector('[data-testid=set-home]');
+    for (const [p, w] of [[1, /0:00 → 0:15/], [2, /0:15 → 0:20/], [3, /0:20 → hết file/]]) assert.match(await page.textContent(`[data-testid=home-window-${p}]`), w);
+    await page.reload();
+    await page.waitForSelector('[data-testid=set-row]');
+    await page.click('[data-testid=set-open]');
+    await page.waitForSelector('[data-testid=set-home]');
+    assert.match(await page.textContent('[data-testid=home-window-2]'), /0:15 → 0:20/);
+
+    // Part 3 alone: only its stretch of the file (0:20 to the end), with ±10 s to hear a bit again.
+    await page.click('[data-testid=home-run-3]');
+    await page.waitForSelector('[data-testid=part-player]');
+    assert.equal(await page.locator('[data-testid=listen-bar]').count(), 0);
+    assert.match(await page.textContent('[data-testid=part-window]'), /0:20 → hết file/);
+    await page.click('[data-testid=part-play]');
+    await page.waitForFunction(() => /^0:0[1-9]/.test(document.querySelector('[data-testid=part-pos]')?.textContent ?? ""), null, { timeout: 10_000 });
+    await page.click('[data-testid=part-back10]'); // cannot go before the start of the Part
+    await page.waitForFunction(() => document.querySelector('[data-testid=part-pos]')?.textContent === "0:00" || /^0:0[0-2]/.test(document.querySelector('[data-testid=part-pos]')?.textContent ?? ""));
+    await shot("marks-3-part-player");
+    assert.equal(await noOverflow(page), true);
+    // Fixing the marks from the test leads to the editor for that Part.
+    await page.click('[data-testid=part-edit]');
+    await page.waitForSelector('[data-testid=marks-editor]');
+    assert.equal(await page.getAttribute('[data-testid=mark-pick-b2]', 'aria-pressed'), 'true');
+    assert.equal(await noOverflow(page), true);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
   it("the JSON backup says it is private and holds no imported test", async () => {
     const { ctx, page } = await open(browser, base);
     await page.goto(`${base}/#/settings`);

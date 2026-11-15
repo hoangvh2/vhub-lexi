@@ -34,6 +34,9 @@ function tracksOf(cuts: PartCuts, order: readonly number[]): number[] {
   return out;
 }
 
+/** The file `part` is in. */
+export const trackOf = (cuts: PartCuts, order: readonly number[], part: number): number => tracksOf(cuts, order)[order.indexOf(part)] ?? 0;
+
 /** The Parts in `order` that share a file with the one at `at`, with their positions in `order`. */
 function inTrack(cuts: PartCuts, order: readonly number[], track: number): number[] {
   const t = tracksOf(cuts, order);

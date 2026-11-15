@@ -984,3 +984,17 @@ input[type="range"] { width: 100%; }
 .cause-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .cause-chip { font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line, currentColor); background: transparent; color: inherit; cursor: pointer; }
 .cause-chip.on { background: var(--hard-soft); border-color: var(--hard); color: var(--hard); }
+
+/* Listening Part marks */
+.marks-time { font: 800 38px/1 var(--f-display, inherit); text-align: center; letter-spacing: .5px; padding: 4px 0; }
+.tnum { font-variant-numeric: tabular-nums; }
+.marks-seek { width: 100%; accent-color: var(--accent); height: 28px; }
+.skip-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.skip-row.part { grid-template-columns: repeat(5, 1fr); }
+.skip-row .skip { padding: 10px 0; min-height: 44px; justify-content: center; font-variant-numeric: tabular-nums; }
+.skip-row .play { font-size: 16px; }
+.mark-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 14px; background: var(--surface-2); list-style: none; }
+.mark-row.on { outline: 2px solid var(--accent); background: var(--accent-soft); }
+.mark-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: none; border: 0; color: inherit; font: inherit; padding: 8px 4px; text-align: left; cursor: pointer; }
+.time-input { width: 96px; text-align: center; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: inherit; font-weight: 800; }
+.warn-text { color: var(--hard); }
