@@ -851,7 +851,8 @@ class TestSetsTest {
         shot("marks-4-wave")
         val before = timeOf("b2")
         rule.onNodeWithTag("marks-suggest-0").performScrollTo().performSemanticsAction(SemanticsActions.OnClick) // nearest 0:20 in the fixture: 0:24 (question 5 begins)
-        waitFor("suggest-typed") { Regex("^0:2[34]").containsMatchIn(textOf("marks-typed")) }
+        // The playhead moves there; the box (read by "Đặt" below) holds the same moment.
+        waitFor("suggest-typed") { Regex("^0:2[34]").containsMatchIn(textOf("marks-at")) }
         assertEquals(before, timeOf("b2"))
         rule.onNodeWithTag("marks-apply").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         waitFor("suggest-applied") { Regex("^0:2[34]").containsMatchIn(timeOf("b2")) }
@@ -886,7 +887,8 @@ class TestSetsTest {
         dialogButton("Nộp bài").performClick()
         waitFor("split-result") { count("runner-result") > 0 }
         rule.onNodeWithTag("result-split").performScrollTo().performClick()
-        waitFor("split-done", 30_000) { count("result-split") == 0 }
+        // The button stays (the other Parts have no clips yet); what shows the split is the replay range on each missed question.
+        waitFor("split-done", 30_000) { count("q-replay-range") > 0 }
         assertTrue(rangeOf(3), Regex("^File 1 · 0:0[67]–0:1[01]$").matches(rangeOf(3)))
         assertTrue(rangeOf(4), Regex("^File 1 · 0:1[56]–0:(19|20)$").matches(rangeOf(4)))
         assertTrue(rangeOf(5), Regex("^File 1 · 0:2[345]–0:2[789]$").matches(rangeOf(5)))
