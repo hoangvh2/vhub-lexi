@@ -844,6 +844,55 @@ class TestSetsTest {
         // Fixing the marks from the test leads to the editor.
         rule.onNodeWithTag("part-edit").performClick()
         waitFor("editor-from-part") { count("marks-editor") > 0 }
+
+        // The file drawn with its silences: the ones nearest the mark are suggested, to listen to and confirm, never set by Lexi.
+        rule.onNodeWithTag("marks-wave-draw").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("wave", 30_000) { count("marks-wave") > 0 }
+        shot("marks-4-wave")
+        val before = timeOf("b2")
+        rule.onNodeWithTag("marks-suggest-0").performScrollTo().performSemanticsAction(SemanticsActions.OnClick) // nearest 0:20 in the fixture: 0:24 (question 5 begins)
+        waitFor("suggest-typed") { Regex("^0:2[34]").containsMatchIn(textOf("marks-typed")) }
+        assertEquals(before, timeOf("b2"))
+        rule.onNodeWithTag("marks-apply").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        waitFor("suggest-applied") { Regex("^0:2[34]").containsMatchIn(timeOf("b2")) }
+    }
+
+    /**
+     * One file, three Parts with their marks already set: the questions of Part 2 are found inside its own window (0:01 to
+     * 0:32 of the 32.5 s fixture, whose questions begin at 0:07, 0:15 and 0:24), and the Part-less Parts are left alone.
+     */
+    @Test
+    fun questionsAreFoundInsideThePartWindow() {
+        fun lq(i: Int, part: Int) = SetQuestion(
+            i = i, number = i + 1, part = part, kind = "reading", stem = "Question ${i + 1}?", options = mapOf("A" to "one", "B" to "two", "C" to "three", "D" to "four"),
+            correct = "A", passage = null, topic = "Khác", rule = "", translation = "", flags = emptyList(),
+        )
+        val key = "split-set:long.mp3"
+        InstrumentationRegistry.getInstrumentation().context.assets.open("listening-part2.mp3").use { i -> app.testSets.mediaFile(key).outputStream().use { i.copyTo(it) } }
+        val set = TestSet(
+            id = "split-set", name = "Đề tách theo Part", createdAt = 1_000, updatedAt = 1_000, section = "lc", source = SetSource("ets.pdf", 2),
+            passages = emptyList(), questions = listOf(lq(0, 1), lq(1, 1), lq(2, 2), lq(3, 2), lq(4, 2), lq(5, 3), lq(6, 3), lq(7, 3)),
+            tracks = listOf(com.vh.lexi.core.SetTrack(key, "long.mp3", app.testSets.mediaFile(key).length())),
+            cuts = mapOf(1 to com.vh.lexi.core.PartCut(0, end = 1_000), 2 to com.vh.lexi.core.PartCut(0, start = 1_000, end = 32_000), 3 to com.vh.lexi.core.PartCut(0, start = 32_000)),
+        )
+        kotlinx.coroutines.runBlocking { app.testSets.save(set) }
+        openSets()
+        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        waitFor("split-home") { count("set-home") > 0 }
+        rule.onNodeWithTag("home-run-2").performScrollTo().performClick()
+        waitFor("split-part-player") { count("part-player") > 0 }
+        rule.onNodeWithTag("runner-submit").performClick()
+        waitFor("split-submit") { countText("Còn 3 câu chưa làm") > 0 }
+        dialogButton("Nộp bài").performClick()
+        waitFor("split-result") { count("runner-result") > 0 }
+        rule.onNodeWithTag("result-split").performScrollTo().performClick()
+        waitFor("split-done", 30_000) { count("result-split") == 0 }
+        assertTrue(rangeOf(3), Regex("^File 1 · 0:0[67]–0:1[01]$").matches(rangeOf(3)))
+        assertTrue(rangeOf(4), Regex("^File 1 · 0:1[56]–0:(19|20)$").matches(rangeOf(4)))
+        assertTrue(rangeOf(5), Regex("^File 1 · 0:2[345]–0:2[789]$").matches(rangeOf(5)))
+        // Only Part 2 had a window with its pauses: the other Parts' questions are not given a guess.
+        val clips = app.testSets.sets.value.single().questions.map { it.clip != null }
+        assertEquals(listOf(false, false, true, true, true, false, false, false), clips)
     }
 
     @Test
