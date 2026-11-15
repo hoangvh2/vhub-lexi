@@ -1078,7 +1078,8 @@ private fun Result(app: LexiApp, set: TestSet, part: Int?, attempt: Attempt, pla
     val shown = if (onlyWrong) view.questions.filter { it.i in wrongSet } else view.questions
     // Long files (a whole Part per file): found once on request, kept with the set.
     val splittable = set.tracks.isNotEmpty() && set.questions.none { it.track != null }
-    val split = set.questions.any { it.clip != null }
+    // A one-file test with marks is split Part by Part: it can be done again once more Parts have their marks.
+    val split = if (needsPartMarks(set.tracks.size, set.questions)) set.questions.filter { it.part != null && it.part!! <= 4 }.all { it.clip != null } else set.questions.any { it.clip != null }
     var splitting by remember { mutableStateOf(false) }
 
     /** The set as shown now (the attempt is written as it changes), with [change] applied, written to the device. */
@@ -1098,10 +1099,17 @@ private fun Result(app: LexiApp, set: TestSet, part: Int?, attempt: Attempt, pla
                         AudioSplit.TrackLevels(AudioSplit.findGaps(l.levels), l.durationMs)
                     }
                 }
-                val placed = AudioSplit.placeQuestions(levels, set.questions.map { it.part })
+                // One file for several Parts: each Part is split inside its own window (the Part marks), not over the whole file.
+                val byPart = needsPartMarks(set.tracks.size, set.questions)
+                val order = markParts(set.questions)
+                val placed = if (byPart) {
+                    val windows = order.mapNotNull { p -> (partWindow(set.cuts, order, p) as? PartWindow.Ok)?.let { p to AudioSplit.PartSpot(it.track, it.from, it.to) } }.toMap()
+                    AudioSplit.placeQuestionsByPart(levels, set.questions.map { it.part }, windows)
+                } else AudioSplit.placeQuestions(levels, set.questions.map { it.part })
                 val found = placed.count { it != null }
+                val missing = byPart && order.any { partWindow(set.cuts, order, it) !is PartWindow.Ok }
                 if (found > 0) update { s -> s.copy(questions = s.questions.mapIndexed { i, q -> placed.getOrNull(i)?.let { q.copy(clip = it) } ?: q }) }
-                toast(if (found > 0) "Đã tách $found/${set.questions.size} câu trong file nghe" else "Không tách được: file nghe không có khoảng nghỉ rõ sau mỗi câu")
+                toast(if (found > 0) "Đã tách $found/${set.questions.size} câu trong file nghe" else if (missing) "Chưa tách được: đặt mốc cho từng Part trước (Chỉnh mốc ở danh sách Part)" else "Không tách được: file nghe không có khoảng nghỉ rõ sau mỗi câu")
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {

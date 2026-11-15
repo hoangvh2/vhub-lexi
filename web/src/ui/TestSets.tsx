@@ -6,7 +6,7 @@ import { notes, prefs } from "../data/state.ts";
 import { deleteTestSet, downloadTestSet, loadMedia, loadTestSets, remoteSets, saveMedia, saveTestSet, setsSync, syncTestSets, testSets } from "../data/testsets.ts";
 import type { CloudMeta } from "../lib/testsync.ts";
 import { LETTERS, existingSentences, type Extracted, type Letter } from "../lib/import.ts";
-import { decodeLevels, findGaps, mmss as clipTime, placeQuestions } from "../lib/audio.ts";
+import { decodeLevels, findGaps, mmss as clipTime, placeQuestions, placeQuestionsByPart, type PartSpot } from "../lib/audio.ts";
 import { openPdf, readPages, renderPage, type PdfDoc } from "../lib/pdf.ts";
 import { CAUSES, PARTS, formatScore } from "../lib/practice.ts";
 import { dayNumber, dueOf, enqueue, queuedCount, release, review as reviewMark, setCause, toggleFlag, type Mark, type MarkCause, type Marks } from "../lib/testreview.ts";
@@ -958,7 +958,17 @@ async function splitAudio(set: TestSet): Promise<number> {
     const { levels: l, durationMs } = await decodeLevels(blob);
     levels.push({ gaps: findGaps(l), durationMs });
   }
-  const placed = placeQuestions(levels, set.questions.map((q) => q.part));
+  // One file for several Parts: each Part is split inside its own window (the Part marks), not over the whole file.
+  let placed;
+  if (needsPartMarks(set)) {
+    const order = markParts(set);
+    const windows: Record<number, PartSpot> = {};
+    for (const p of order) {
+      const w = partWindow(set.cuts ?? {}, order, p);
+      if (w.ok) windows[p] = { track: w.track, from: w.from, to: w.to };
+    }
+    placed = placeQuestionsByPart(levels, set.questions.map((q) => q.part), windows);
+  } else placed = placeQuestions(levels, set.questions.map((q) => q.part));
   const found = placed.filter(Boolean).length;
   if (found) await saveTestSet({ ...set, questions: set.questions.map((q, i) => (placed[i] ? { ...q, clip: placed[i]! } : q)) });
   return found;
@@ -1000,13 +1010,15 @@ function Result({ set, scope, attempt, deck, deckPicker, onPassage, onAgain, onS
   const shown = onlyWrong ? { ...view, questions: view.questions.filter((q) => g.wrong.includes(q.i)) } : view;
   // Long files (a whole Part per file): found once on request, kept with the set.
   const splittable = !!set.tracks?.length && !set.questions.some((q) => q.track !== undefined);
-  const split = set.questions.some((q) => q.clip);
+  // A one-file test with marks is split Part by Part: it can be done again once more Parts have their marks.
+  const split = needsPartMarks(set) ? set.questions.filter((q) => q.part !== null && q.part <= 4).every((q) => q.clip) : set.questions.some((q) => q.clip);
   const [splitting, setSplitting] = useState(false);
   async function runSplit() {
     setSplitting(true);
     try {
       const n = await splitAudio(set);
-      toast(n ? `Đã tách ${n}/${set.questions.length} câu trong file nghe` : "Không tách được: file nghe không có khoảng nghỉ rõ sau mỗi câu");
+      const missing = needsPartMarks(set) && markParts(set).some((p) => !partWindow(set.cuts ?? {}, markParts(set), p).ok);
+      toast(n ? `Đã tách ${n}/${set.questions.length} câu trong file nghe` : missing ? "Chưa tách được: đặt mốc cho từng Part trước (Chỉnh mốc ở danh sách Part)" : "Không tách được: file nghe không có khoảng nghỉ rõ sau mỗi câu");
     } catch {
       toast("Không đọc được file nghe trên máy này");
     } finally {

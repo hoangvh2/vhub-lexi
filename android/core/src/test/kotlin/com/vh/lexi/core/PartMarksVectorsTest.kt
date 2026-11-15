@@ -61,4 +61,31 @@ class PartMarksVectorsTest {
             assertEquals(ints(c.getJSONArray("order")), markParts(qs), "order $c")
         }
     }
+
+    private fun gapsOf(a: JSONArray) = List(a.length()) { a.getJSONArray(it).let { g -> g.getLong(0) to g.getLong(1) } }
+
+    @Test
+    fun questionsAreFoundInsideEachPart() {
+        for (c in objs(v.getJSONArray("byPart"))) {
+            val tracks = objs(c.getJSONArray("tracks")).map { AudioSplit.TrackLevels(gapsOf(it.getJSONArray("gaps")), it.getLong("durationMs")) }
+            val parts = c.getJSONArray("parts").let { a -> List(a.length()) { if (a.isNull(it)) null else a.getInt(it) } }
+            val w = c.getJSONObject("windows")
+            val windows = w.keys().asSequence().associate { k -> k.toInt() to w.getJSONObject(k).let { x -> AudioSplit.PartSpot(x.getInt("track"), x.getLong("from"), if (x.isNull("to")) null else x.getLong("to")) } }
+            val out = c.getJSONArray("out").let { o -> List(o.length()) { if (o.isNull(it)) null else o.getJSONObject(it).let { x -> Clip(x.getInt("track"), x.getLong("from"), x.getLong("to")) } } }
+            assertEquals(out, AudioSplit.placeQuestionsByPart(tracks, parts, windows), "byPart $c")
+        }
+    }
+
+    @Test
+    fun waveformAndSuggestions() {
+        for (c in objs(v.getJSONArray("envelope"))) {
+            val lv = c.getJSONArray("levels").let { a -> FloatArray(a.length()) { a.getDouble(it).toFloat() } }
+            val want = c.getJSONArray("out").let { a -> List(a.length()) { a.getDouble(it) } }
+            assertEquals(want, AudioSplit.envelope(lv, c.getInt("frameMs"), c.getInt("binMs")), "envelope $c")
+        }
+        for (c in objs(v.getJSONArray("snap"))) {
+            val want = c.getJSONArray("out").let { a -> List(a.length()) { a.getLong(it) } }
+            assertEquals(want, AudioSplit.snapCandidates(gapsOf(c.getJSONArray("gaps")), c.getLong("ms"), c.getInt("count")), "snap $c")
+        }
+    }
 }

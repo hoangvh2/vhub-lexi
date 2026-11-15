@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ANSWER_PAUSE_MS, findGaps, frameLevels, placeQuestions, questionSpans } from "../src/lib/audio.ts";
+import { ANSWER_PAUSE_MS, envelope, findGaps, frameLevels, placeQuestions, placeQuestionsByPart, questionSpans, snapCandidates } from "../src/lib/audio.ts";
 
 /** A recording at 1 kHz: [seconds, loud?] pieces. */
 function track(pieces: Array<[number, boolean]>): Float32Array {
@@ -43,5 +43,32 @@ describe("finding the questions in a Listening file", () => {
     expect(placeQuestions([one, one], [2, 2, 2])).toEqual([null, null, null]);
     // More questions than the file has pauses for: nothing is guessed.
     expect(placeQuestions([one], [2, 2, 2, 2])).toEqual([null, null, null, null]);
+  });
+
+  it("with Part marks each Part is split on its own, with its own pauses, and a Part without a window is left alone", () => {
+    // Part 1: two questions with 5 s pauses; Part 2: two questions with 8 s pauses, one file.
+    const p1 = exam(2, 5);
+    const p2 = exam(2, 8);
+    const gaps = findGaps(levels([...p1, ...p2]));
+    const dur = 1000 * [...p1, ...p2].reduce((n, [sec]) => n + sec, 0);
+    const split = 1000 * p1.reduce((n, [sec]) => n + sec, 0);
+    const parts = [1, 1, 2, 2];
+    const t = [{ gaps, durationMs: dur }];
+    const placed = placeQuestionsByPart(t, parts, { 1: { track: 0, from: 0, to: split }, 2: { track: 0, from: split, to: null } });
+    expect(placed.every(Boolean)).toBe(true);
+    // Each question lies inside its own Part's window and the Parts do not overlap.
+    expect(placed[1]!.to).toBeLessThanOrEqual(split);
+    expect(placed[2]!.from).toBeGreaterThanOrEqual(split);
+    expect(placed.map((c) => c!.from)).toEqual([...placed.map((c) => c!.from)].sort((a, b) => a - b));
+    expect(placeQuestionsByPart(t, parts, { 2: { track: 0, from: split, to: null } }).map(Boolean)).toEqual([false, false, true, true]);
+    expect(placeQuestionsByPart(t, parts, {})).toEqual([null, null, null, null]);
+  });
+
+  it("draws the loudest level per second and suggests the nearest silences", () => {
+    expect(envelope([-20, -30, -100, -45], 500, 1000)).toEqual([-20, -45]);
+    expect(envelope([], 50)).toEqual([]);
+    const gaps: Array<[number, number]> = [[0, 500], [4000, 9000], [15000, 20000]];
+    expect(snapCandidates(gaps, 19000, 1)).toEqual([20000]);
+    expect(snapCandidates(gaps, 0, 5)).toEqual([9000, 20000]); // the 0.5 s gap is not a pause
   });
 });

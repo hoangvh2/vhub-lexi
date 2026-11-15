@@ -1,6 +1,8 @@
 package com.vh.lexi.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,6 +43,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -56,6 +62,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vh.lexi.LexiApp
+import androidx.compose.runtime.rememberCoroutineScope
+import com.vh.lexi.core.AudioSplit
 import com.vh.lexi.core.MarkError
 import com.vh.lexi.core.MarkField
 import com.vh.lexi.core.PartCuts
@@ -69,6 +77,11 @@ import com.vh.lexi.core.partWindow
 import com.vh.lexi.core.setMark
 import com.vh.lexi.core.trackOf
 import com.vh.lexi.ui.theme.Lexi
+import com.vh.lexi.util.AudioLevels
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /*
  * Where each Part of a one-file Listening test is in the audio: the learner plays the file, taps "Đặt … tại" at the moment
@@ -127,6 +140,39 @@ private fun MarkRow.partAndField(): Pair<Int, MarkField> = when (this) {
 
 private fun MarkRow.firstPart(): Int = when (this) { is MarkRow.Start -> part; is MarkRow.End -> part; is MarkRow.Bound -> a }
 
+/** What a file looks like: its loudest level per second and its long silences. Kept while the app runs (decoding is the cost). */
+private class Wave(val env: List<Double>, val gaps: List<Pair<Long, Long>>, val durationMs: Long)
+
+private val waves = mutableMapOf<String, Wave>()
+
+/**
+ * The file drawn as a strip of bars (one per second) with its long silences shaded, the marks as lines and the playhead:
+ * tap to move there. The silences are where a Part may begin or end, shown for the learner to judge, not decided for them.
+ */
+@Composable
+private fun Waveform(wave: Wave, marks: List<Long>, at: Long, onSeek: (Long) -> Unit) {
+    val c = Lexi.colors
+    val accent = c.accent
+    val ink = c.ink
+    Canvas(
+        Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(12.dp)).background(c.surface2)
+            .pointerInput(wave) { detectTapGestures { o -> onSeek((o.x / size.width * wave.durationMs).toLong().coerceIn(0, wave.durationMs)) } }
+            .testTag("marks-wave"),
+    ) {
+        val w = size.width
+        val h = size.height
+        fun x(ms: Long) = ms.toFloat() / maxOf(1L, wave.durationMs) * w
+        for ((a, b) in wave.gaps) if (b - a >= AudioSplit.ANSWER_PAUSE_MS) drawRect(accent.copy(alpha = 0.16f), Offset(x(a), 0f), Size(maxOf(2f, x(b) - x(a)), h))
+        val bar = w / maxOf(1, wave.env.size)
+        wave.env.forEachIndexed { i, db ->
+            val k = ((db + 60) / 60).coerceIn(0.04, 1.0).toFloat()
+            drawRect(accent.copy(alpha = 0.85f), Offset(i * bar + bar * 0.1f, h / 2 - h * k / 2), Size(maxOf(1f, bar * 0.8f), h * k))
+        }
+        for (m in marks) drawLine(ink, Offset(x(m), 0f), Offset(x(m), h), strokeWidth = 3f)
+        drawLine(Color(0xFFE5484D), Offset(x(at), 0f), Offset(x(at), h), strokeWidth = 3f)
+    }
+}
+
 private val SKIPS = listOf(-10_000, -5_000, -1_000, 1_000, 5_000, 10_000)
 private fun skipLabel(ms: Int) = (if (ms < 0) "−" else "+") + (kotlin.math.abs(ms) / 1000)
 
@@ -174,6 +220,9 @@ fun PartMarksEditor(app: LexiApp, set: TestSet, part: Int?, onClose: () -> Unit)
     var typed by rememberSaveable { mutableStateOf(valueOf(cuts, firstRow)?.let(::formatClock) ?: "") }
     var drag by remember { mutableStateOf<Float?>(null) }
     var clearing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    var wave by remember { mutableStateOf<Wave?>(null) }
+    var drawing by remember { mutableStateOf(false) }
     val trackNow = player.track ?: trackOf(cuts, order, row.firstPart())
     // The playhead is shown (and set as a mark) in whole seconds: what is read is what is saved.
     val atMs: Long = if (player.track != null) (drag?.toLong() ?: player.atMs.toLong()) / 1000 * 1000 else 0L
@@ -205,6 +254,35 @@ fun PartMarksEditor(app: LexiApp, set: TestSet, part: Int?, onClose: () -> Unit)
         keyboard?.hide()
         val ms = parseClock(typed) ?: return toast("Nhập dạng mm:ss, ví dụ 21:34 (hoặc 1:02:03, hoặc số giây).")
         if (apply(ms)) player.seekTo(trackNow, ms)
+    }
+
+    fun drawWave() {
+        val t = set.tracks.getOrNull(trackNow) ?: return
+        waves[t.key]?.let { wave = it; return }
+        drawing = true
+        scope.launch {
+            try {
+                val w = withContext(Dispatchers.IO) {
+                    val l = AudioLevels.read(app.testSets.mediaFile(t.key).takeIf { it.exists() } ?: error("missing audio"))
+                    Wave(AudioSplit.envelope(l.levels), AudioSplit.findGaps(l.levels), l.durationMs)
+                }
+                waves[t.key] = w
+                wave = w
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                toast("Không đọc được file nghe để vẽ sóng âm")
+            } finally {
+                drawing = false
+            }
+        }
+    }
+
+    /** Playhead and box go to a suggested moment, to be listened to and confirmed with "Đặt". */
+    fun goTo(ms: Long) {
+        val t = Math.round(ms / 100.0) * 100
+        typed = formatClock(t)
+        player.seekTo(trackNow, t)
     }
 
     fun nudgeBy(ms: Int) = player.skip(ms)
@@ -243,6 +321,21 @@ fun PartMarksEditor(app: LexiApp, set: TestSet, part: Int?, onClose: () -> Unit)
             }
             Button(onClick = { apply(atMs) }, Modifier.fillMaxWidth().testTag("marks-here")) { Text("Đặt “${row.label}” tại ${formatClock(atMs)}", maxLines = 2) }
             Text("Nghe tới lúc Part bắt đầu (hoặc kết thúc), tua từng giây cho đúng, rồi bấm đặt.", fontSize = 12.sp, color = c.muted)
+        }
+        Panel(Modifier.testTag("marks-wave-panel")) {
+            val wv = wave
+            if (wv != null) {
+                Waveform(wv, rows.mapNotNull { valueOf(cuts, it) }, atMs, ::goTo)
+                Text("Khoảng lặng gần ${row.label}:", fontSize = 12.sp, color = c.muted)
+                FlowRow(Modifier.testTag("marks-suggest"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AudioSplit.snapCandidates(wv.gaps, valueOf(cuts, row) ?: atMs).forEachIndexed { i, ms ->
+                        OutlinedButton(onClick = { goTo(ms) }, Modifier.testTag("marks-suggest-$i")) { Text(formatClock(Math.round(ms / 100.0) * 100)) }
+                    }
+                }
+                Text("Vùng tô đậm là khoảng lặng từ 2,5 giây. Chạm vào một gợi ý để nghe lại, đúng thì bấm “Đặt”. Lexi không tự đặt mốc.", fontSize = 12.sp, color = c.muted)
+            } else OutlinedButton(onClick = ::drawWave, enabled = !drawing, modifier = Modifier.fillMaxWidth().testTag("marks-wave-draw")) {
+                Text(if (drawing) "Đang đọc file nghe…" else "Vẽ sóng âm và gợi ý khoảng lặng")
+            }
         }
         Panel(Modifier.testTag("marks-rows")) {
             for (r in rows) {

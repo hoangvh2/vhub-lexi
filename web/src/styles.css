@@ -998,3 +998,9 @@ input[type="range"] { width: 100%; }
 .mark-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: none; border: 0; color: inherit; font: inherit; padding: 8px 4px; text-align: left; cursor: pointer; }
 .time-input { width: 96px; text-align: center; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: inherit; font-weight: 800; }
 .warn-text { color: var(--hard); }
+
+.wave { width: 100%; height: 72px; border-radius: 12px; background: var(--surface2, rgba(127,127,127,.12)); cursor: pointer; display: block; }
+.wave-bar { fill: var(--accent); opacity: .85; }
+.wave-gap { fill: var(--accent); opacity: .16; }
+.wave-mark { stroke: var(--text, currentColor); stroke-width: .5; vector-effect: non-scaling-stroke; stroke-width: 2px; }
+.wave-at { stroke: #e5484d; vector-effect: non-scaling-stroke; stroke-width: 2px; }
