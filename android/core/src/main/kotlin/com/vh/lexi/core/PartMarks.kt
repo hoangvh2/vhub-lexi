@@ -30,6 +30,9 @@ private fun tracksOf(cuts: PartCuts, order: List<Int>): List<Int> {
     return out
 }
 
+/** The file [part] is in (web: trackOf). */
+fun trackOf(cuts: PartCuts, order: List<Int>, part: Int): Int = tracksOf(cuts, order).getOrNull(order.indexOf(part)) ?: 0
+
 private fun inTrack(cuts: PartCuts, order: List<Int>, track: Int): List<Int> {
     val t = tracksOf(cuts, order)
     return order.filterIndexed { i, _ -> t[i] == track }

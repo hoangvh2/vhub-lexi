@@ -748,6 +748,103 @@ class TestSetsTest {
         assertEquals(id, app.testSets.sets.value.first().id)
     }
 
+    /**
+     * One long audio file for three Parts: each Part is told where it is (typed, nudged by ear), the marks are kept, a refused or
+     * removed mark leaves the rest alone, and one Part plays only its own stretch.
+     */
+    @Test
+    fun partMarksAreSetKeptAndPlayOnlyThePart() {
+        fun lq(i: Int, part: Int) = SetQuestion(
+            i = i, number = 30 + i, part = part, kind = "reading", stem = "Question ${30 + i}?", options = mapOf("A" to "one", "B" to "two", "C" to "three", "D" to "four"),
+            correct = "A", passage = null, topic = "Khác", rule = "", translation = "", flags = emptyList(),
+        )
+        val key = "marks-set:long.mp3"
+        InstrumentationRegistry.getInstrumentation().context.assets.open("listening-part2.mp3").use { i -> app.testSets.mediaFile(key).outputStream().use { i.copyTo(it) } }
+        val set = TestSet(
+            id = "marks-set", name = "Đề nghe một file", createdAt = 1_000, updatedAt = 1_000, section = "lc", source = SetSource("ets.pdf", 2),
+            passages = emptyList(), questions = listOf(lq(0, 1), lq(1, 2), lq(2, 3)), tracks = listOf(com.vh.lexi.core.SetTrack(key, "long.mp3", app.testSets.mediaFile(key).length())),
+        )
+        kotlinx.coroutines.runBlocking { app.testSets.save(set) }
+
+        openSets()
+        rule.onNodeWithTag("set-open").performScrollTo().performClick()
+        waitFor("marks-home") { count("set-home") > 0 }
+        // Three Parts in one file: the Part list asks for marks, and a Part without them says so instead of playing from 0:00.
+        assertTrue(textOf("home-marks-count"), textOf("home-marks-count").contains("0/3 Part"))
+        assertTrue(textOf("home-window-2"), textOf("home-window-2").contains("chưa đặt mốc"))
+        assertTrue(textOf("home-run-3"), textOf("home-run-3").contains("Đặt mốc"))
+        shot("marks-1-list")
+        rule.onNodeWithTag("home-run-3").performScrollTo().performClick()
+        waitFor("marks-editor") { count("marks-editor") > 0 }
+
+        fun setTyped(row: String, text: String) {
+            rule.onNodeWithTag("mark-pick-$row").performScrollTo().performClick()
+            rule.onNodeWithTag("marks-typed").performScrollTo().performTextReplacement(text)
+            rule.onNodeWithTag("marks-apply").performScrollTo().performClick()
+        }
+        fun timeOf(row: String) = textOf("mark-time-$row")
+
+        // Boundary Part 2 | Part 3 at 0:20, then Part 1 | Part 2 at 0:10: the neighbouring sides follow.
+        setTyped("b2", "0:20")
+        waitFor("b2-set") { timeOf("b2") == "0:20" }
+        setTyped("b1", "0:10")
+        waitFor("b1-set") { timeOf("b1") == "0:10" }
+        assertTrue(textOf("marks-count"), textOf("marks-count").contains("3/3 Part"))
+        // A boundary before the earlier one is refused, and the mark stays.
+        setTyped("b2", "0:05")
+        waitFor("order-refused") { countText("Mốc phải tăng dần") > 0 }
+        assertEquals("0:20", timeOf("b2"))
+        // Not a time: told so, nothing changes.
+        setTyped("b2", "abc")
+        waitFor("not-a-time") { countText("Nhập dạng mm:ss") > 0 }
+        assertEquals("0:20", timeOf("b2"))
+
+        // Nudge by ear: from 0:10, +5 s is 0:15, and "Đặt tại" takes that moment.
+        rule.onNodeWithTag("mark-pick-b1").performScrollTo().performClick()
+        rule.onNodeWithTag("skip+5000").performScrollTo().performClick()
+        waitFor("nudged-to-15") { textOf("marks-at") == "0:15" }
+        rule.onNodeWithTag("marks-here").performScrollTo().performClick()
+        waitFor("b1-nudged") { timeOf("b1") == "0:15" }
+        shot("marks-2-editor")
+
+        // Removing a mark asks first: "Huỷ" keeps it, "Xoá mốc" removes it.
+        rule.onNodeWithTag("mark-pick-b2").performScrollTo().performClick()
+        rule.onNodeWithTag("marks-clear").performScrollTo().performClick()
+        waitFor("clear-dialog") { countText("Xoá mốc này?") > 0 }
+        dialogButton("Huỷ").performClick()
+        waitFor("clear-dialog-closed") { countText("Xoá mốc này?") == 0 }
+        assertEquals("0:20", timeOf("b2"))
+        rule.onNodeWithTag("marks-clear").performScrollTo().performClick()
+        waitFor("clear-dialog-2") { countText("Xoá mốc này?") > 0 }
+        dialogButton("Xoá mốc").performClick()
+        waitFor("b2-cleared") { timeOf("b2").contains("chưa đặt") }
+        setTyped("b2", "0:20")
+        waitFor("b2-again") { timeOf("b2") == "0:20" }
+        rule.onNodeWithTag("marks-close").performSemanticsAction(SemanticsActions.OnClick)
+
+        // Kept: the Part list shows each stretch, and the stored set holds them after a reload.
+        waitFor("home-after-marks") { count("set-home") > 0 }
+        waitFor("windows") { textOf("home-window-1").contains("0:00 → 0:15") && textOf("home-window-2").contains("0:15 → 0:20") && textOf("home-window-3").contains("0:20 → hết file") }
+        waitFor("marks-written") { File(app.filesDir, "testsets").listFiles { x -> x.name.endsWith(".json") }!!.any { it.readText().contains("\"cuts\"") } }
+        runBlockingLoad()
+        val cuts = app.testSets.sets.value.single().cuts
+        assertEquals(mapOf(1 to com.vh.lexi.core.PartCut(0, end = 15_000), 2 to com.vh.lexi.core.PartCut(0, start = 15_000, end = 20_000), 3 to com.vh.lexi.core.PartCut(0, start = 20_000)), cuts)
+
+        // Part 3 alone: only its stretch of the file (0:20 to the end), ±10 s to hear a bit again, and no way back past its start.
+        rule.onNodeWithTag("home-run-3").performScrollTo().performClick()
+        waitFor("part-player") { count("part-player") > 0 }
+        assertEquals(0, count("listen-bar"))
+        assertTrue(textOf("part-window"), textOf("part-window").contains("0:20 → hết file"))
+        rule.onNodeWithTag("part-play").performClick()
+        waitFor("part-playing", 10_000) { Regex("^0:0[1-9]").containsMatchIn(textOf("part-pos")) }
+        rule.onNodeWithTag("part-back10").performClick()
+        waitFor("part-not-before-start") { Regex("^0:0[0-2]").containsMatchIn(textOf("part-pos")) }
+        shot("marks-3-part-player")
+        // Fixing the marks from the test leads to the editor.
+        rule.onNodeWithTag("part-edit").performClick()
+        waitFor("editor-from-part") { count("marks-editor") > 0 }
+    }
+
     @Test
     fun copierScanIsDrawnAndTurned() {
         openSets()
