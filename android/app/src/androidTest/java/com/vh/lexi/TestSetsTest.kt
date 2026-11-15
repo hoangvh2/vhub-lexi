@@ -801,9 +801,10 @@ class TestSetsTest {
 
         // Nudge by ear: from 0:10, +5 s is 0:15, and "Đặt tại" takes that moment.
         rule.onNodeWithTag("mark-pick-b1").performScrollTo().performClick()
-        rule.onNodeWithTag("skip+5000").performScrollTo().performClick()
+        rule.onNodeWithTag("skip+5000").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         waitFor("nudged-to-15") { textOf("marks-at") == "0:15" }
-        rule.onNodeWithTag("marks-here").performScrollTo().performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag("marks-here").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         waitFor("b1-nudged") { timeOf("b1") == "0:15" }
         shot("marks-2-editor")
 

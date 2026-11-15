@@ -41,6 +41,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -160,6 +162,8 @@ private fun rememberPlayer(app: LexiApp, set: TestSet): ListenPlayer {
 fun PartMarksEditor(app: LexiApp, set: TestSet, part: Int?, onClose: () -> Unit) {
     val toast = LocalToaster.current
     val c = Lexi.colors
+    val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     val player = rememberPlayer(app, set)
     val cuts = set.cuts
     val order = remember(set.questions) { markParts(set.questions) }
@@ -196,6 +200,9 @@ fun PartMarksEditor(app: LexiApp, set: TestSet, part: Int?, onClose: () -> Unit)
     }
 
     fun applyTyped() {
+        // The keyboard closes: it would cover the seek keys just below the field.
+        focus.clearFocus()
+        keyboard?.hide()
         val ms = parseClock(typed) ?: return toast("Nhập dạng mm:ss, ví dụ 21:34 (hoặc 1:02:03, hoặc số giây).")
         if (apply(ms)) player.seekTo(trackNow, ms)
     }
