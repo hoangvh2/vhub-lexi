@@ -1972,7 +1972,67 @@ describe("bộ đề: a test PDF -> questions on this device -> timed attempt ->
     await page.click('[data-testid=part-edit]');
     await page.waitForSelector('[data-testid=marks-editor]');
     assert.equal(await page.getAttribute('[data-testid=mark-pick-b2]', 'aria-pressed'), 'true');
+    // The file drawn with its silences: the nearest ones to the mark are suggested, to listen to and confirm, never set by Lexi.
+    await page.click('[data-testid=marks-wave-draw]');
+    await page.waitForSelector('[data-testid=marks-wave]', { timeout: 20_000 });
+    await shot("marks-4-wave");
+    const before = await page.textContent('[data-testid=mark-time-b2]');
+    await page.click('[data-testid=marks-suggest-0]'); // the silence ends nearest 0:20 in the fixture: 0:24 (question 5 begins)
+    assert.match(await page.inputValue('[data-testid=marks-typed]'), /^0:2[34]/);
+    assert.equal(await page.textContent('[data-testid=mark-time-b2]'), before);
+    await page.click('[data-testid=marks-apply]');
+    await page.waitForFunction(() => /^0:2[34]/.test(document.querySelector('[data-testid=mark-time-b2]')?.textContent ?? ""));
     assert.equal(await noOverflow(page), true);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("listening, one long file with Part marks: the questions of a Part are found inside its own window", async () => {
+    const { ctx, page, errors } = await open(browser, base, { viewport: { width: 390, height: 844 } });
+    const PART3 = [[32, "Where most likely are the speakers?"], [33, "What does the woman ask for?"], [34, "What will the man do next?"]];
+    await page.exposeFunction("__stubExtract", () => ({
+      passages: [],
+      questions: PART3.map(([n, stem]) => ({ number: n, part: 5, kind: "reading", stem, options: { A: "a", B: "b", C: "c", D: "d" }, correct: null, result: "unknown", passage: null, topic: "", rule: "", translation: "", flags: [] })),
+    }));
+    await page.addInitScript(() => { window.__lexiExtract = (input) => window.__stubExtract(input); });
+    await importPdf(page, "listening-test.pdf");
+    await page.click('[data-testid=set-section] >> text=Listening');
+    await page.waitForSelector('[data-testid=lc-setup]');
+    await page.fill('[data-testid=lc-p1]', "1-2");
+    await page.fill('[data-testid=lc-p2]', "3-5");
+    await page.fill('[data-testid=set-range]', "2-4");
+    await page.setInputFiles('[data-testid=lc-audio]', join(FIXTURES, "listening-part2.mp3"));
+    await page.click('[data-testid=pdf-read]');
+    await page.waitForSelector('[data-testid=pdf-preview]');
+    await page.click('[data-testid=pdf-save]');
+    await page.waitForSelector('[data-testid=set-row]');
+    await page.click('[data-testid=set-open]');
+    await page.waitForSelector('[data-testid=set-home]');
+    // Part 2 is the stretch 0:01 to 0:32 of the file (the fixture is 32.5 s with three questions in it).
+    await page.click('[data-testid=home-run-2]');
+    await page.waitForSelector('[data-testid=marks-editor]');
+    await page.fill('[data-testid=marks-typed]', "0:01");
+    await page.click('[data-testid=marks-apply]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=mark-time-b1]')?.textContent === "0:01");
+    await page.click('[data-testid=mark-pick-b2]');
+    await page.fill('[data-testid=marks-typed]', "0:32");
+    await page.click('[data-testid=marks-apply]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=mark-time-b2]')?.textContent === "0:32");
+    await page.click('[data-testid=marks-close]');
+    await page.waitForSelector('[data-testid=set-home]');
+    await page.click('[data-testid=home-run-2]');
+    await page.waitForSelector('[data-testid=part-player]');
+    await page.click('[data-testid=runner-submit]');
+    await page.click('[data-testid=confirm-ok]');
+    await page.waitForSelector('[data-testid=runner-result]');
+    await page.click('[data-testid=result-split]');
+    await page.waitForSelector('[data-testid=q-replay]', { timeout: 20_000 });
+    // Part 2 alone has 3 questions, all left blank: each is found inside the window, at 0:07, 0:15 and 0:24.
+    const ranges = await page.$$eval('[data-testid=q-replay-range]', (els) => els.map((e) => e.textContent));
+    assert.equal(ranges.length, 3);
+    assert.match(ranges[0], /^File 1 · 0:07–0:10$/);
+    assert.match(ranges[1], /^File 1 · 0:15–0:19$/);
+    assert.match(ranges[2], /^File 1 · 0:24–0:2[78]$/);
     assert.deepEqual(errors, []);
     await ctx.close();
   });

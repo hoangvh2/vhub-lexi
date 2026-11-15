@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
-import { saveTestSet, testSets } from "../data/testsets.ts";
+import { loadMedia, saveTestSet, testSets } from "../data/testsets.ts";
+import { ANSWER_PAUSE_MS, decodeLevels, envelope, findGaps, snapCandidates } from "../lib/audio.ts";
 import { useStore } from "../lib/store.ts";
 import { clearMark, formatClock, markParts, parseClock, partWindow, setMark, trackOf, type Field, type MarkError, type PartCuts } from "../lib/partmarks.ts";
 import type { TestSet } from "../lib/testset.ts";
@@ -58,6 +59,38 @@ function valueOf(cuts: PartCuts, r: Row): number | undefined {
   return cuts[String(r.a)]?.end ?? cuts[String(r.b)]?.start;
 }
 
+/** What a file looks like: its loudest level per second and its long silences. Kept while the screen is open (decoding is the cost). */
+interface Wave {
+  env: number[];
+  gaps: Array<[number, number]>;
+  durationMs: number;
+}
+const waves = new Map<string, Wave>();
+
+/**
+ * The file drawn as a strip of bars (one per second) with its long silences shaded, the marks as lines and the playhead:
+ * tap to move there. The silences are where a Part may begin or end, shown for the learner to judge, not decided for them.
+ */
+function Waveform({ wave, marks, at, onSeek }: { wave: Wave; marks: number[]; at: number; onSeek(ms: number): void }) {
+  const W = Math.max(1, wave.env.length);
+  const x = (ms: number) => (ms / Math.max(1, wave.durationMs)) * W;
+  const h = (db: number) => Math.max(0.04, Math.min(1, (db + 60) / 60));
+  return (
+    <svg
+      viewBox={`0 0 ${W} 40`} preserveAspectRatio="none" class="wave" role="img" aria-label="Sóng âm của file nghe" data-testid="marks-wave"
+      onClick={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        onSeek(Math.round(((e.clientX - r.left) / r.width) * wave.durationMs));
+      }}
+    >
+      {wave.gaps.filter(([a, b]) => b - a >= ANSWER_PAUSE_MS).map(([a, b]) => <rect key={a} x={x(a)} y={0} width={Math.max(0.2, x(b) - x(a))} height={40} class="wave-gap" />)}
+      {wave.env.map((db, i) => <rect key={i} x={i + 0.1} y={20 - 18 * h(db)} width={0.8} height={36 * h(db)} class="wave-bar" />)}
+      {marks.map((m) => <line key={m} x1={x(m)} x2={x(m)} y1={0} y2={40} class="wave-mark" />)}
+      <line x1={x(at)} x2={x(at)} y1={0} y2={40} class="wave-at" />
+    </svg>
+  );
+}
+
 const SKIPS = [-10_000, -5_000, -1_000, 1_000, 5_000, 10_000];
 const skipLabel = (ms: number) => `${ms < 0 ? "−" : "+"}${Math.abs(ms) / 1000}`;
 
@@ -85,6 +118,8 @@ function Editor({ set, part, onClose }: { set: TestSet; part?: number; onClose()
     return v !== undefined ? formatClock(v) : "";
   });
   const tracks = set.tracks ?? [];
+  const [wave, setWave] = useState<Wave | null>(null);
+  const [drawing, setDrawing] = useState(false);
   const trackNow = player?.track ?? (row.kind === "bound" ? trackOf(cuts, order, row.a) : trackOf(cuts, order, row.part));
   // The playhead is shown (and set as a mark) in whole seconds: what is read is what is saved.
   const atMs = player && player.track !== null ? Math.floor(player.at) * 1000 : 0;
@@ -115,6 +150,34 @@ function Editor({ set, part, onClose }: { set: TestSet; part?: number; onClose()
     const ms = parseClock(typed);
     if (ms === null) return toast("Nhập dạng mm:ss, ví dụ 21:34 (hoặc 1:02:03, hoặc số giây).");
     if (apply(ms)) void player?.seekTo(trackNow, ms);
+  }
+
+  async function drawWave() {
+    const key = tracks[trackNow]?.key;
+    if (!key) return;
+    setDrawing(true);
+    try {
+      let w = waves.get(key);
+      if (!w) {
+        const blob = await loadMedia(key);
+        if (!blob) throw new Error("missing");
+        const { levels, durationMs } = await decodeLevels(blob);
+        w = { env: envelope(levels), gaps: findGaps(levels), durationMs };
+        waves.set(key, w);
+      }
+      setWave(w);
+    } catch {
+      toast("Không đọc được file nghe để vẽ sóng âm");
+    } finally {
+      setDrawing(false);
+    }
+  }
+
+  /** Playhead and box go to a suggested moment, to be listened to and confirmed with "Đặt". */
+  function goTo(ms: number) {
+    const t = Math.round(ms / 100) * 100;
+    setTyped(formatClock(t));
+    void player?.seekTo(trackNow, t);
   }
 
   async function nudgeBy(ms: number) {
@@ -195,6 +258,23 @@ function Editor({ set, part, onClose }: { set: TestSet; part?: number; onClose()
         </div>
         <button type="button" class="btn primary" onClick={() => apply(atMs)} data-testid="marks-here">Đặt “{row.label}” tại {formatClock(atMs)}</button>
         <p class="muted small">Nghe tới lúc Part bắt đầu (hoặc kết thúc), tua từng giây cho đúng, rồi bấm đặt. Phím tắt: Space phát/dừng, ←/→ 1 giây, Shift 5 giây, Alt 10 giây, M đặt mốc.</p>
+      </section>
+
+      <section class="panel col" data-testid="marks-wave-panel">
+        {wave ? (
+          <>
+            <Waveform wave={wave} marks={rows.map((r) => valueOf(cuts, r)).filter((v): v is number => v !== undefined)} at={atMs} onSeek={goTo} />
+            <div class="row" style={{ flexWrap: "wrap", gap: "6px" }} data-testid="marks-suggest">
+              <span class="small muted">Khoảng lặng gần {row.label}:</span>
+              {snapCandidates(wave.gaps, valueOf(cuts, row) ?? atMs).map((ms, i) => (
+                <button type="button" class="btn ghost sm tnum" key={ms} onClick={() => goTo(ms)} data-testid={`marks-suggest-${i}`}>{formatClock(Math.round(ms / 100) * 100)}</button>
+              ))}
+            </div>
+            <p class="muted small">Vùng tô đậm là khoảng lặng từ 2,5 giây. Chạm vào một gợi ý để nghe lại, đúng thì bấm “Đặt”. Lexi không tự đặt mốc.</p>
+          </>
+        ) : (
+          <button type="button" class="btn" disabled={drawing || tracks.length === 0} onClick={() => void drawWave()} data-testid="marks-wave-draw">{drawing ? "Đang đọc file nghe…" : "Vẽ sóng âm và gợi ý khoảng lặng"}</button>
+        )}
       </section>
 
       <section class="panel col" data-testid="marks-rows">
