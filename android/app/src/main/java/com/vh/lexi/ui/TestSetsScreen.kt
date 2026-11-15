@@ -121,6 +121,11 @@ import com.vh.lexi.core.RC_PARTS
 import com.vh.lexi.core.SetQuestion
 import com.vh.lexi.core.SetSource
 import com.vh.lexi.core.TestSet
+import com.vh.lexi.core.PartWindow
+import com.vh.lexi.core.formatClock
+import com.vh.lexi.core.markParts
+import com.vh.lexi.core.needsPartMarks
+import com.vh.lexi.core.partWindow
 import com.vh.lexi.core.WrongDrafts
 import com.vh.lexi.core.chunkPages
 import com.vh.lexi.core.cost
@@ -172,6 +177,9 @@ fun TestSetsScreen(app: LexiApp, startReview: Boolean = false, onClose: () -> Un
     var home by rememberSaveable { mutableStateOf<String?>(null) }
     var running by rememberSaveable { mutableStateOf<String?>(null) }
     var runScope by rememberSaveable { mutableStateOf(WHOLE) }
+    // The Part marks screen of a one-file Listening set: which set, and the Part that asked for it (WHOLE = none).
+    var marking by rememberSaveable { mutableStateOf<String?>(null) }
+    var markPart by rememberSaveable { mutableStateOf(WHOLE) }
     var cards by remember { mutableStateOf<Pair<String, WrongDrafts>?>(null) }
     // "Ôn câu sai": the questions due today from every set (opened from here, or straight from the Today screen).
     var reviewing by rememberSaveable { mutableStateOf(startReview) }
@@ -203,17 +211,25 @@ fun TestSetsScreen(app: LexiApp, startReview: Boolean = false, onClose: () -> Un
         WrongReview(app, onExit = { reviewing = false }, onCards = { name, d -> cards = name to d })
         return
     }
+    val markSet = sets.firstOrNull { it.id == marking }
+    if (markSet != null) {
+        BackHandler { marking = null }
+        PartMarksEditor(app, markSet, markPart.takeIf { it != WHOLE }, onClose = { marking = null })
+        return
+    }
     val current = sets.firstOrNull { it.id == running }
     if (current != null) {
         BackHandler { running = null }
         val part = runScope.takeIf { it != WHOLE }
-        key(current.id, runScope) { Runner(app, current, part, onExit = { running = null }, onCards = { cards = current.name to it }) }
+        key(current.id, runScope) {
+            Runner(app, current, part, onExit = { running = null }, onCards = { cards = current.name to it }, onMarks = { p -> running = null; markPart = p; marking = current.id })
+        }
         return
     }
     val homeSet = sets.firstOrNull { it.id == home }
     if (homeSet != null) {
         BackHandler { home = null }
-        SetHome(homeSet, onBack = { home = null }, onRun = { scopeOrNull -> runScope = scopeOrNull ?: WHOLE; running = homeSet.id })
+        SetHome(homeSet, onBack = { home = null }, onRun = { scopeOrNull -> runScope = scopeOrNull ?: WHOLE; running = homeSet.id }, onMarks = { p -> markPart = p ?: WHOLE; marking = homeSet.id })
         return
     }
     BackHandler(onBack = onClose)
@@ -302,9 +318,14 @@ private fun SetRow(app: LexiApp, set: TestSet, cloud: Boolean, onOpen: () -> Uni
 
 /** The Parts of a set: one row each (not started, in progress, submitted with its score), and the whole set as before. */
 @Composable
-private fun SetHome(set: TestSet, onBack: () -> Unit, onRun: (Int?) -> Unit) {
+private fun SetHome(set: TestSet, onBack: () -> Unit, onRun: (Int?) -> Unit, onMarks: (Int?) -> Unit) {
     val c = Lexi.colors
     val states = remember(set) { partStates(set) }
+    // One long audio file for several Parts: each Part needs to be told where it is in it (core/PartMarks.kt).
+    val marked = remember(set) { needsPartMarks(set.tracks.size, set.questions) }
+    val order = remember(set) { markParts(set.questions) }
+    val windows = remember(set) { order.associateWith { partWindow(set.cuts, order, it) } }
+    val ready = windows.values.count { it is PartWindow.Ok }
     val full = set.attempt
     val fullGraded = remember(set) { if (full?.finishedAt != null) grade(set.questions, full.answers) else null }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp).testTag("set-home"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -312,10 +333,19 @@ private fun SetHome(set: TestSet, onBack: () -> Unit, onRun: (Int?) -> Unit) {
             IconButton(onClick = onBack, Modifier.testTag("home-back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Bộ đề") }
             Text(set.name, Modifier.weight(1f), fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
+        if (marked) Panel(Modifier.testTag("home-marks")) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Mốc bắt đầu Part nghe", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                Pill("$ready/${order.size} Part", if (ready == order.size) PillKind.OK else PillKind.WARN, Modifier.testTag("home-marks-count"))
+            }
+            Text("File nghe là một file dài. Đặt mốc từng Part một lần: Lexi nhớ, đồng bộ cho máy khác, không cần dò lại.", fontSize = 13.sp, color = c.muted)
+            if (ready == order.size) OutlinedButton(onClick = { onMarks(null) }, Modifier.fillMaxWidth().testTag("home-marks-open")) { Text("Chỉnh mốc") }
+            else Button(onClick = { onMarks(null) }, Modifier.fillMaxWidth().testTag("home-marks-open")) { Text("Đặt mốc Part") }
+        }
         Panel {
             Text("Làm theo Part", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
             Text("khi rảnh, không cần làm hết một lần", fontSize = 13.sp, color = c.muted)
-            for (p in states) PartRow(set, p) { onRun(p.part) }
+            for (p in states) PartRow(set, p, window = if (marked && p.part <= 4) windows[p.part] else null, onMarks = { onMarks(p.part) }) { onRun(p.part) }
         }
         Panel {
             Text("Cả bộ", fontWeight = FontWeight.Bold)
@@ -329,7 +359,7 @@ private fun SetHome(set: TestSet, onBack: () -> Unit, onRun: (Int?) -> Unit) {
 }
 
 @Composable
-private fun PartRow(set: TestSet, p: PartState, onRun: () -> Unit) {
+private fun PartRow(set: TestSet, p: PartState, window: PartWindow?, onMarks: () -> Unit, onRun: () -> Unit) {
     val c = Lexi.colors
     val a = set.attemptOf(p.part)
     val pct = if (p.state == "done") 1f else p.answered.toFloat() / maxOf(1, p.total)
@@ -342,9 +372,12 @@ private fun PartRow(set: TestSet, p: PartState, onRun: () -> Unit) {
         Text("Part ${p.part}", fontWeight = FontWeight.ExtraBold)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(text, fontSize = 13.sp, fontWeight = if (p.state == "new") FontWeight.Normal else FontWeight.Bold)
+            if (window is PartWindow.Ok) Text("${formatClock(window.from)} → ${window.to?.let(::formatClock) ?: "hết file"}", Modifier.testTag("home-window-${p.part}"), fontSize = 12.sp, color = c.muted)
+            else if (window != null) Text("chưa đặt mốc", Modifier.testTag("home-window-${p.part}"), fontSize = 12.sp, color = c.hard)
             Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(c.line)) { Box(Modifier.fillMaxWidth(pct).height(6.dp).background(c.accent)) }
         }
-        if (p.state == "done") OutlinedButton(onClick = onRun, Modifier.testTag("home-run-${p.part}")) { Text("Xem") }
+        if (window != null && window !is PartWindow.Ok && p.state != "done") OutlinedButton(onClick = onMarks, Modifier.testTag("home-run-${p.part}")) { Text("Đặt mốc") }
+        else if (p.state == "done") OutlinedButton(onClick = onRun, Modifier.testTag("home-run-${p.part}")) { Text("Xem") }
         else Button(onClick = onRun, Modifier.testTag("home-run-${p.part}")) { Text(if (p.state == "doing") "Tiếp" else "Bắt đầu") }
     }
 }
@@ -845,7 +878,7 @@ private fun linesOf(questions: List<SetQuestion>, photos: List<SetPicture> = emp
 }
 
 @Composable
-private fun Runner(app: LexiApp, set: TestSet, part: Int?, onExit: () -> Unit, onCards: (WrongDrafts) -> Unit) {
+private fun Runner(app: LexiApp, set: TestSet, part: Int?, onExit: () -> Unit, onCards: (WrongDrafts) -> Unit, onMarks: (Int) -> Unit) {
     val scope = rememberCoroutineScope()
     val c = Lexi.colors
     // One Part on its own sees only its questions; its attempt is kept apart from the whole-set attempt.
@@ -898,7 +931,10 @@ private fun Runner(app: LexiApp, set: TestSet, part: Int?, onExit: () -> Unit, o
             Box(Modifier.weight(1f))
             if (!finished) Button(onClick = { submitting = true }, Modifier.testTag("runner-submit")) { Text("Nộp bài") }
         }
-        if (player != null && !perQuestion) ListenBar(set, player)
+        if (player != null && !perQuestion) {
+            if (part != null && part <= 4 && !finished && needsPartMarks(set.tracks.size, set.questions)) PartPlayer(set, part, player) { onMarks(part) }
+            else ListenBar(set, player)
+        }
         if (finished) Result(app, set, part, attempt, player, onCards = onCards, onAgain = { restarting = true }, onSaved = { id -> persist(attempt.copy(resultNoteId = id)) })
         else Questions(app, view, attempt.answers, review = false, player = player, marks = set.marks, onFlag = { q -> updateMarks(app, set.id) { it.toggleFlag(q.i) } }) { q, l -> persist(attempt.copy(answers = attempt.answers + (q.i to l))) }
     }

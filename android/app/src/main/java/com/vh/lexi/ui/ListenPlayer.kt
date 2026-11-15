@@ -79,6 +79,34 @@ class ListenPlayer(private val tracks: List<SetTrack>, private val fileOf: (Stri
 
     fun play(i: Int, chain: Boolean = false) = start(i, chain, null, null)
 
+    /** Plays a Part's window: [fromMs] to [toMs], or to the end of the file when [toMs] is null. */
+    fun playWindow(i: Int, fromMs: Long, toMs: Long?) = start(i, false, fromMs.toInt(), toMs?.toInt())
+
+    /** Moves to [ms] in track [i] without playing (marking a Part). */
+    fun seekTo(i: Int, ms: Long) {
+        if (i !in tracks.indices) return
+        val p = load(i) ?: return
+        stopAt = null
+        chain = false
+        seek(p, ms.toInt())
+        track = i
+        atMs = ms.toInt().coerceIn(0, durationMs.coerceAtLeast(0))
+    }
+
+    /** Moves the position by [deltaMs] (negative = back), playing or not, kept inside [minMs]..[maxMs] (a Part's window) and the file. */
+    fun skip(deltaMs: Int, minMs: Int = 0, maxMs: Int? = null) {
+        val p = mp ?: return
+        // Paused, the position is the one last set (a frame-exact seek may read back a few ms early); playing, the player's own.
+        val pos = if (playing) runCatching { p.currentPosition }.getOrDefault(atMs) else atMs
+        val hi = minOf(maxMs ?: durationMs, durationMs).coerceAtLeast(minMs)
+        val target = (pos + deltaMs).coerceIn(minMs, hi)
+        seek(p, target)
+        atMs = target
+    }
+
+    /** The exact frame, not the nearest earlier sync point: a mark set by ear must replay at the same moment. */
+    private fun seek(p: MediaPlayer, ms: Int) = p.seekTo(ms.toLong(), MediaPlayer.SEEK_CLOSEST)
+
     /** Plays [fromMs]..[toMs] of track [i], then pauses. */
     fun playRange(i: Int, fromMs: Long, toMs: Long) = start(i, false, fromMs.toInt(), toMs.toInt())
 
@@ -88,7 +116,7 @@ class ListenPlayer(private val tracks: List<SetTrack>, private val fileOf: (Stri
         chain = keepGoing
         stopAt = to
         // The position shown moves with the seek at once, not a tick later.
-        if (from != null) { p.seekTo(from); atMs = from } else if (atMs >= durationMs && durationMs > 0 && !p.isPlaying) { p.seekTo(0); atMs = 0 }
+        if (from != null) { seek(p, from); atMs = from } else if (atMs >= durationMs && durationMs > 0 && !p.isPlaying) { p.seekTo(0); atMs = 0 }
         track = i
         p.start()
         playing = true

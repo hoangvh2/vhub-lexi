@@ -8,6 +8,7 @@
  *
  * Pure: the Kotlin port (android/core TestSetSync.kt) replays shared/vectors/testsync.json.
  */
+import type { PartCut, PartCuts } from "./partmarks.ts";
 import { CAUSE_KEYS, type Mark, type Marks } from "./testreview.ts";
 import type { Attempt, SetQuestion, TestSet } from "./testset.ts";
 
@@ -36,6 +37,8 @@ interface Progress {
   parts?: Record<string, Attempt>;
   /** "Ôn câu sai" marks by question position. Absent when there is none. */
   marks?: Marks;
+  /** Where each Listening Part is in the audio, by part number. Absent when there is none. */
+  cuts?: PartCuts;
   clips: Record<string, Clip>;
 }
 
@@ -59,7 +62,7 @@ const attemptJson = (a: Attempt): Attempt => {
 };
 
 /** What changes while the learner works, as stored in `state`. Clips by question position. */
-export function progressOf(set: Pick<TestSet, "attempt" | "parts" | "marks" | "questions">): string {
+export function progressOf(set: Pick<TestSet, "attempt" | "parts" | "marks" | "cuts" | "questions">): string {
   const clips: Record<string, Clip> = {};
   for (const q of set.questions) if (q.clip) clips[String(q.i)] = { track: q.clip.track, from: q.clip.from, to: q.clip.to };
   const p: Progress = { clips };
@@ -74,7 +77,32 @@ export function progressOf(set: Pick<TestSet, "attempt" | "parts" | "marks" | "q
     p.marks = {};
     for (const k of mk) p.marks[k] = markJson(set.marks![k]);
   }
+  const ck = Object.keys(set.cuts ?? {}).filter((k) => /^\d+$/.test(k)).sort((x, y) => Number(x) - Number(y));
+  if (ck.length) {
+    p.cuts = {};
+    for (const k of ck) p.cuts[k] = cutJson(set.cuts![k]);
+  }
   return JSON.stringify(p);
+}
+
+const cutJson = (c: PartCut): PartCut => {
+  const out: PartCut = { track: c.track };
+  if (c.start !== undefined) out.start = c.start;
+  if (c.end !== undefined) out.end = c.end;
+  return out;
+};
+
+/** One Part's cut as `state` has it; null when it is not one. */
+function readCut(x: Record<string, unknown>): PartCut | null {
+  if (!isInt(x.track) || x.track < 0) return null;
+  const c: PartCut = { track: x.track };
+  for (const f of ["start", "end"] as const) {
+    const v = x[f];
+    if (v === undefined) continue;
+    if (!isInt(v) || v < 0) return null;
+    c[f] = v;
+  }
+  return c;
 }
 
 const markJson = (m: Mark): Mark => {
@@ -119,7 +147,7 @@ function readAttempt(x: Record<string, unknown>): Attempt | null {
  * replaced (or gone), every question's clip as `state` has it. Text that does not parse, or has the wrong shape,
  * changes nothing.
  */
-export function withProgress<T extends Pick<TestSet, "attempt" | "parts" | "marks" | "questions">>(set: T, state: string): T {
+export function withProgress<T extends Pick<TestSet, "attempt" | "parts" | "marks" | "cuts" | "questions">>(set: T, state: string): T {
   let p: unknown;
   try {
     p = JSON.parse(state);
@@ -156,6 +184,16 @@ export function withProgress<T extends Pick<TestSet, "attempt" | "parts" | "mark
       (marks ??= {})[k] = r;
     }
   }
+  let cuts: PartCuts | undefined;
+  if (p.cuts !== undefined) {
+    if (!isObj(p.cuts)) return set;
+    for (const [k, v] of Object.entries(p.cuts)) {
+      if (!/^\d+$/.test(k)) continue;
+      const r = isObj(v) ? readCut(v) : null;
+      if (!r) return set;
+      (cuts ??= {})[k] = r;
+    }
+  }
   const questions = set.questions.map((q) => {
     const v = c[String(q.i)];
     const clip = isObj(v) && isInt(v.track) && isInt(v.from) && isInt(v.to) ? { track: v.track, from: v.from, to: v.to } : undefined;
@@ -169,12 +207,14 @@ export function withProgress<T extends Pick<TestSet, "attempt" | "parts" | "mark
   else delete out.parts;
   if (marks) out.marks = marks;
   else delete out.marks;
+  if (cuts) out.cuts = cuts;
+  else delete out.cuts;
   return out;
 }
 
 /** The set as uploaded in set.json: without what only this device knows or what `state` carries (the attempts). */
 export function contentOf(set: TestSet): TestSet {
-  const { attempt: _a, parts: _p, marks: _m, syncedAt: _s, ...rest } = set;
+  const { attempt: _a, parts: _p, marks: _m, cuts: _c, syncedAt: _s, ...rest } = set;
   return rest;
 }
 

@@ -1,0 +1,1128 @@
+{
+ "scripts": [
+  {
+   "order": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "steps": [
+    {
+     "op": "set",
+     "part": 1,
+     "field": "end",
+     "ms": 400000
+    },
+    {
+     "op": "set",
+     "part": 2,
+     "field": "end",
+     "ms": 1293000
+    },
+    {
+     "op": "set",
+     "part": 3,
+     "field": "end",
+     "ms": 2290000
+    }
+   ],
+   "out": [
+    {
+     "cuts": {
+      "1": {
+       "track": 0,
+       "end": 400000
+      },
+      "2": {
+       "track": 0,
+       "start": 400000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": true,
+       "track": 0,
+       "from": 0,
+       "to": 400000
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "1": {
+       "track": 0,
+       "end": 400000
+      },
+      "2": {
+       "track": 0,
+       "start": 400000,
+       "end": 1293000
+      },
+      "3": {
+       "track": 0,
+       "start": 1293000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": true,
+       "track": 0,
+       "from": 0,
+       "to": 400000
+      },
+      {
+       "ok": true,
+       "track": 0,
+       "from": 400000,
+       "to": 1293000
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "1": {
+       "track": 0,
+       "end": 400000
+      },
+      "2": {
+       "track": 0,
+       "start": 400000,
+       "end": 1293000
+      },
+      "3": {
+       "track": 0,
+       "start": 1293000,
+       "end": 2290000
+      },
+      "4": {
+       "track": 0,
+       "start": 2290000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": true,
+       "track": 0,
+       "from": 0,
+       "to": 400000
+      },
+      {
+       "ok": true,
+       "track": 0,
+       "from": 400000,
+       "to": 1293000
+      },
+      {
+       "ok": true,
+       "track": 0,
+       "from": 1293000,
+       "to": 2290000
+      },
+      {
+       "ok": true,
+       "track": 0,
+       "from": 2290000,
+       "to": null
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "order": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "steps": [
+    {
+     "op": "set",
+     "part": 3,
+     "field": "start",
+     "ms": 1300000
+    },
+    {
+     "op": "set",
+     "part": 2,
+     "field": "end",
+     "ms": 1290000,
+     "link": false
+    },
+    {
+     "op": "set",
+     "part": 3,
+     "field": "start",
+     "ms": 1310000,
+     "link": false
+    }
+   ],
+   "out": [
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 1300000
+      },
+      "3": {
+       "track": 0,
+       "start": 1300000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 1290000
+      },
+      "3": {
+       "track": 0,
+       "start": 1300000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 1290000
+      },
+      "3": {
+       "track": 0,
+       "start": 1310000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "order": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "steps": [
+    {
+     "op": "set",
+     "part": 2,
+     "field": "end",
+     "ms": 900000
+    },
+    {
+     "op": "set",
+     "part": 1,
+     "field": "end",
+     "ms": 950000
+    },
+    {
+     "op": "set",
+     "part": 3,
+     "field": "end",
+     "ms": 800000
+    },
+    {
+     "op": "set",
+     "part": 2,
+     "field": "start",
+     "ms": -5
+    },
+    {
+     "op": "set",
+     "part": 2,
+     "field": "start",
+     "ms": 12.5
+    }
+   ],
+   "out": [
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 900000
+      },
+      "3": {
+       "track": 0,
+       "start": 900000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 900000
+      },
+      "3": {
+       "track": 0,
+       "start": 900000
+      }
+     },
+     "error": "order",
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 900000
+      },
+      "3": {
+       "track": 0,
+       "start": 900000
+      }
+     },
+     "error": "order",
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 900000
+      },
+      "3": {
+       "track": 0,
+       "start": 900000
+      }
+     },
+     "error": "negative",
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 900000
+      },
+      "3": {
+       "track": 0,
+       "start": 900000
+      }
+     },
+     "error": "negative",
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "order": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "steps": [
+    {
+     "op": "set",
+     "part": 2,
+     "field": "start",
+     "ms": 100000,
+     "link": false
+    },
+    {
+     "op": "set",
+     "part": 2,
+     "field": "end",
+     "ms": 100000,
+     "link": false
+    },
+    {
+     "op": "set",
+     "part": 2,
+     "field": "end",
+     "ms": 600000,
+     "link": false
+    },
+    {
+     "op": "clear",
+     "part": 2,
+     "field": "start"
+    },
+    {
+     "op": "clear",
+     "part": 2,
+     "field": "end"
+    },
+    {
+     "op": "clear",
+     "part": 4,
+     "field": "end"
+    }
+   ],
+   "out": [
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "start": 100000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": true,
+       "track": 0,
+       "from": 0,
+       "to": 100000
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "start": 100000
+      }
+     },
+     "error": "order",
+     "windows": [
+      {
+       "ok": true,
+       "track": 0,
+       "from": 0,
+       "to": 100000
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "start": 100000,
+       "end": 600000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": true,
+       "track": 0,
+       "from": 0,
+       "to": 100000
+      },
+      {
+       "ok": true,
+       "track": 0,
+       "from": 100000,
+       "to": 600000
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 600000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {},
+     "error": null,
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {},
+     "error": null,
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "order": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "steps": [
+    {
+     "op": "set",
+     "part": 2,
+     "field": "end",
+     "ms": 900000,
+     "track": 0
+    },
+    {
+     "op": "set",
+     "part": 3,
+     "field": "start",
+     "ms": 30000,
+     "track": 1
+    },
+    {
+     "op": "set",
+     "part": 3,
+     "field": "end",
+     "ms": 800000,
+     "track": 1
+    }
+   ],
+   "out": [
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 900000
+      },
+      "3": {
+       "track": 0,
+       "start": 900000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 900000
+      },
+      "3": {
+       "track": 1,
+       "start": 30000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 900000
+      },
+      "3": {
+       "track": 1,
+       "start": 30000,
+       "end": 800000
+      },
+      "4": {
+       "track": 1,
+       "start": 800000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": false,
+       "missing": "end"
+      },
+      {
+       "ok": false,
+       "missing": "start"
+      },
+      {
+       "ok": true,
+       "track": 1,
+       "from": 30000,
+       "to": 800000
+      },
+      {
+       "ok": true,
+       "track": 1,
+       "from": 800000,
+       "to": null
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "order": [
+    2,
+    4
+   ],
+   "steps": [
+    {
+     "op": "set",
+     "part": 2,
+     "field": "end",
+     "ms": 700000
+    },
+    {
+     "op": "set",
+     "part": 4,
+     "field": "end",
+     "ms": 1500000
+    }
+   ],
+   "out": [
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 700000
+      },
+      "4": {
+       "track": 0,
+       "start": 700000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": true,
+       "track": 0,
+       "from": 0,
+       "to": 700000
+      },
+      {
+       "ok": true,
+       "track": 0,
+       "from": 700000,
+       "to": null
+      }
+     ]
+    },
+    {
+     "cuts": {
+      "2": {
+       "track": 0,
+       "end": 700000
+      },
+      "4": {
+       "track": 0,
+       "start": 700000,
+       "end": 1500000
+      }
+     },
+     "error": null,
+     "windows": [
+      {
+       "ok": true,
+       "track": 0,
+       "from": 0,
+       "to": 700000
+      },
+      {
+       "ok": true,
+       "track": 0,
+       "from": 700000,
+       "to": 1500000
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "parse": [
+  {
+   "text": "21:34",
+   "ms": 1294000
+  },
+  {
+   "text": "1:02:03",
+   "ms": 3723000
+  },
+  {
+   "text": "94",
+   "ms": 94000
+  },
+  {
+   "text": "0:05",
+   "ms": 5000
+  },
+  {
+   "text": "21:34.5",
+   "ms": 1294500
+  },
+  {
+   "text": "21:34,25",
+   "ms": 1294250
+  },
+  {
+   "text": "00:00",
+   "ms": 0
+  },
+  {
+   "text": " 7:30 ",
+   "ms": 450000
+  },
+  {
+   "text": "",
+   "ms": null
+  },
+  {
+   "text": "abc",
+   "ms": null
+  },
+  {
+   "text": "12:75",
+   "ms": null
+  },
+  {
+   "text": "1:2:3:4",
+   "ms": null
+  },
+  {
+   "text": "-3",
+   "ms": null
+  },
+  {
+   "text": "21:",
+   "ms": null
+  },
+  {
+   "text": ":30",
+   "ms": null
+  },
+  {
+   "text": "1.5",
+   "ms": 1500
+  },
+  {
+   "text": "100:00",
+   "ms": 6000000
+  }
+ ],
+ "format": [
+  {
+   "ms": 0,
+   "text": "0:00"
+  },
+  {
+   "ms": 999,
+   "text": "0:00"
+  },
+  {
+   "ms": 1000,
+   "text": "0:01"
+  },
+  {
+   "ms": 94000,
+   "text": "1:34"
+  },
+  {
+   "ms": 1294000,
+   "text": "21:34"
+  },
+  {
+   "ms": 1294500,
+   "text": "21:34.5"
+  },
+  {
+   "ms": 3723000,
+   "text": "1:02:03"
+  },
+  {
+   "ms": 59999,
+   "text": "0:59"
+  },
+  {
+   "ms": 600000,
+   "text": "10:00"
+  },
+  {
+   "ms": 3599950,
+   "text": "59:59"
+  }
+ ],
+ "needs": [
+  {
+   "tracks": 1,
+   "parts": [
+    1,
+    1,
+    2,
+    3,
+    4,
+    4
+   ],
+   "perQuestionTrack": false,
+   "needs": true,
+   "order": [
+    1,
+    2,
+    3,
+    4
+   ]
+  },
+  {
+   "tracks": 4,
+   "parts": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "perQuestionTrack": false,
+   "needs": false,
+   "order": [
+    1,
+    2,
+    3,
+    4
+   ]
+  },
+  {
+   "tracks": 2,
+   "parts": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "perQuestionTrack": false,
+   "needs": true,
+   "order": [
+    1,
+    2,
+    3,
+    4
+   ]
+  },
+  {
+   "tracks": 1,
+   "parts": [
+    3
+   ],
+   "perQuestionTrack": false,
+   "needs": false,
+   "order": [
+    3
+   ]
+  },
+  {
+   "tracks": 0,
+   "parts": [
+    1,
+    2
+   ],
+   "perQuestionTrack": false,
+   "needs": false,
+   "order": [
+    1,
+    2
+   ]
+  },
+  {
+   "tracks": 1,
+   "parts": [
+    1,
+    2
+   ],
+   "perQuestionTrack": true,
+   "needs": false,
+   "order": [
+    1,
+    2
+   ]
+  },
+  {
+   "tracks": 1,
+   "parts": [
+    5,
+    6,
+    7
+   ],
+   "perQuestionTrack": false,
+   "needs": false,
+   "order": []
+  },
+  {
+   "tracks": 1,
+   "parts": [
+    1,
+    2,
+    5
+   ],
+   "perQuestionTrack": false,
+   "needs": true,
+   "order": [
+    1,
+    2
+   ]
+  }
+ ]
+}
