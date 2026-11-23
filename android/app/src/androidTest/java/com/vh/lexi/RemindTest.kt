@@ -191,11 +191,10 @@ class RemindTest {
         seedReminderWords(app)
         Reminders.setSettings(app, RemindSettings(on = true))
 
-        // A tap on the notification ("Ôn ngay" carries the same intent) reaches the activity on top of Lexi's task
-        // through onNewIntent and opens practice for that word.
-        val tap = android.content.Intent(app, MainActivity::class.java).putExtra(Reminders.EXTRA_DRILL, "r0")
-            .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        rule.runOnUiThread { rule.activity.startActivity(tap) }
+        // A tap on the notification ("Ôn ngay" carries the same intent) hands the word to the app (MainActivity
+        // handleRemind sets this); the Từ hay quên screen opens on a round of it. (Starting the intent from the test
+        // opens a second MainActivity over the test rule's own, which the rule then cannot close.)
+        Reminders.pendingDrill.value = "r0"
         waitFor("drill for the word", 20_000) { exists("drill-card") }
         shot("27-remind-tap-drill")
         rule.onNodeWithTag("drill-quit").performClick()
