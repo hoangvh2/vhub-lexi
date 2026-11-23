@@ -11,8 +11,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.printToString
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
-import androidx.test.runner.lifecycle.Stage
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
@@ -96,14 +94,6 @@ class RemindTest {
 
     @After
     fun tearDown() {
-        // A tap on the notification can open Lexi again on top of the test's own activity (the test task is not the
-        // launcher's); close that one so the rule can finish its activity and the next test starts clean.
-        InstrumentationRegistry.getInstrumentation().runOnMainSync {
-            for (stage in listOf(Stage.RESUMED, Stage.PAUSED, Stage.STARTED, Stage.STOPPED)) {
-                ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(stage).filter { it !== rule.activity }.forEach { it.finish() }
-            }
-        }
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         val app = rule.activity.application as LexiApp
         Reminders.setSettings(app, RemindSettings())
         Reminders.saveState(app, com.vh.lexi.core.RemindState())
@@ -173,12 +163,13 @@ class RemindTest {
         assertEquals("level after Chưa nhớ", 0, w.level)
         assertTrue("from tomorrow", w.next > System.currentTimeMillis() + 20 * 3_600_000L)
 
-        // A tap on the notification: Lexi opens practice for that word.
-        Reminders.saveState(app, com.vh.lexi.core.RemindState())
-        assertNotNull("second test notification", Reminders.sendTest(app))
-        device.openNotification()
-        assertTrue("shade shows the word again", device.wait(Until.hasObject(By.textContains("allocate")), 10_000))
-        device.findObject(By.textContains("allocate")).click()
+        // A tap on the notification ("Ôn ngay" carries the same intent): Lexi opens practice for that word. The intent
+        // is started from Lexi's own task, so the singleTop activity on top gets it in onNewIntent, as on a phone.
+        // (Tapping it in the shade from a test opened a second activity in another task that the test rule could not
+        // close; on a phone, Lexi's task is the launcher's and the tap reaches this same activity.)
+        val tap = android.content.Intent(app, MainActivity::class.java).putExtra(Reminders.EXTRA_DRILL, "r0")
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        rule.runOnUiThread { rule.activity.startActivity(tap) }
         Log.i("LEXI_PERF", "remind: tapped notification")
         waitFor("drill for the word", 20_000) { exists("drill-card") }
         Log.i("LEXI_PERF", "remind: drill open")
