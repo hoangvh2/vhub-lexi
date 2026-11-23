@@ -171,7 +171,7 @@ class RemindTest {
         Log.i("LEXI_PERF", "remind: drill open")
         shot("27-remind-tap-drill")
         rule.onNodeWithTag("drill-quit").performClick()
-        waitFor("list") { exists("remind-panel") }
+        waitFor("list") { exists("forgot-screen") && !exists("drill-card") }
 
         // The settings on the Từ hay quên screen, and "Đã nhớ" in the list.
         rule.onNodeWithTag("forgot-screen").performScrollToNode(hasTestTag("remind-panel"))
