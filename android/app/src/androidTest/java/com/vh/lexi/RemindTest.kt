@@ -21,6 +21,7 @@ import com.vh.lexi.core.RemindSettings
 import com.vh.lexi.core.forgotOf
 import com.vh.lexi.remind.Reminders
 import com.vh.lexi.ui.MainActivity
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -123,7 +124,7 @@ class RemindTest {
         assertEquals(listOf("Đã nhớ", "Chưa nhớ", "Ôn ngay"), posted.actions.map { it.title.toString() })
         assertEquals(1, Reminders.loadState(app).words["r0"]?.level)
         // The next check is queued for tomorrow's slot.
-        val infos = WorkManager.getInstance(app).getWorkInfosForUniqueWork(Reminders.WORK).get()
+        val infos = runBlocking { WorkManager.getInstance(app).getWorkInfosForUniqueWorkFlow(Reminders.WORK).first() }
         assertTrue("next check queued", infos.any { it.state == WorkInfo.State.ENQUEUED })
         // The same slot is never shown twice.
         app.getSystemService(NotificationManager::class.java).cancel(Reminders.NOTIFICATION_ID)
