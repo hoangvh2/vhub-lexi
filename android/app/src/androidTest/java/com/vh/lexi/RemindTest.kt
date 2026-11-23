@@ -73,6 +73,19 @@ class RemindTest {
         }
     }
 
+    /** Closes the notification shade and waits until Lexi is in front again (the shade pauses the activity). */
+    private fun closeShade() {
+        repeat(4) {
+            if (device.currentPackageName != "com.android.systemui") return@repeat
+            device.pressBack()
+            device.waitForIdle()
+        }
+        sh("cmd statusbar collapse")
+        val pkg = InstrumentationRegistry.getInstrumentation().targetContext.packageName
+        device.wait(Until.hasObject(By.pkg(pkg).depth(0)), 5_000)
+        Log.i("LEXI_PERF", "remind: shade closed, front = ${device.currentPackageName}")
+    }
+
     private fun ours(app: LexiApp) = app.getSystemService(NotificationManager::class.java).activeNotifications.filter { it.id == Reminders.NOTIFICATION_ID }
 
     private fun seed(app: LexiApp) {
@@ -98,7 +111,7 @@ class RemindTest {
         Reminders.setSettings(app, RemindSettings())
         Reminders.saveState(app, com.vh.lexi.core.RemindState())
         app.getSystemService(NotificationManager::class.java).cancel(Reminders.NOTIFICATION_ID)
-        sh("cmd statusbar collapse")
+        closeShade()
         runBlocking { app.data.deleteDeckAndContents("dr") }
         rule.waitUntil(10_000) { app.data.notes.value.none { it.deckId == "dr" } }
     }
@@ -154,7 +167,7 @@ class RemindTest {
         waitFor("mark back", 15_000) { forgotOf(app.data.notes.value.first { it.id == "r0" }) == listOf(ForgotKind.MEANING, ForgotKind.SOUND) }
         Log.i("LEXI_PERF", "remind: undo done")
         assertEquals("mark time back", app.data.notes.value.first { it.id == "r1" }.forgotAt!! - 1000, app.data.notes.value.first { it.id == "r0" }.forgotAt)
-        sh("cmd statusbar collapse")
+        closeShade()
 
         // "Chưa nhớ": back from tomorrow, level 0, the notification goes away.
         Reminders.saveState(app, com.vh.lexi.core.RemindState(mapOf("r1" to com.vh.lexi.core.RemindWord(3, 0)), 0))
