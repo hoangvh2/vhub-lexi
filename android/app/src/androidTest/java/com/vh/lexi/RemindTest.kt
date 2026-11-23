@@ -98,7 +98,7 @@ class RemindTest {
         Reminders.setSettings(app, RemindSettings())
         Reminders.saveState(app, com.vh.lexi.core.RemindState())
         app.getSystemService(NotificationManager::class.java).cancel(Reminders.NOTIFICATION_ID)
-        device.pressHome()
+        sh("cmd statusbar collapse")
         runBlocking { app.data.deleteDeckAndContents("dr") }
         rule.waitUntil(10_000) { app.data.notes.value.none { it.deckId == "dr" } }
     }
@@ -166,7 +166,9 @@ class RemindTest {
         device.openNotification()
         assertTrue("shade shows the word again", device.wait(Until.hasObject(By.textContains("allocate")), 10_000))
         device.findObject(By.textContains("allocate")).click()
+        Log.i("LEXI_PERF", "remind: tapped notification")
         waitFor("drill for the word", 20_000) { exists("drill-card") }
+        Log.i("LEXI_PERF", "remind: drill open")
         shot("27-remind-tap-drill")
         rule.onNodeWithTag("drill-quit").performClick()
         waitFor("list") { exists("remind-panel") }
@@ -179,5 +181,6 @@ class RemindTest {
         rule.onAllNodes(hasTestTag("row-done"))[0].performClick()
         waitFor("removed from list", 10_000) { app.data.notes.value.count { it.deckId == "dr" && forgotOf(it).isNotEmpty() } == 1 }
         shot("29-remind-list-done")
+        Log.i("LEXI_PERF", "remind: body done")
     }
 }
