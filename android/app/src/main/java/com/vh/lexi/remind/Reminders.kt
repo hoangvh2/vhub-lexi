@@ -135,8 +135,9 @@ object Reminders {
             val slot = dueSlot(now, s, tz(now), st.lastSlot) ?: return null
             val n = pickWord(notes, st, now)
             if (n == null) { saveState(app, slotHandled(st, slot)); return null }
-            post(app, n, st)
+            // Saved first: a second check (another job, the app starting) never shows this slot again.
             saveState(app, afterShown(st, n.id, now, slot))
+            post(app, n, st)
             return n
         }
     }

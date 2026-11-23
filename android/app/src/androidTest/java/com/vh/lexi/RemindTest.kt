@@ -122,7 +122,7 @@ class RemindTest {
         assertEquals("Nghĩa và cách đọc của từ này là gì?", posted.extras.getCharSequence("android.text").toString())
         assertTrue("meaning in the expanded text", posted.extras.getCharSequence("android.bigText").toString().endsWith("phân bổ"))
         assertEquals(listOf("Đã nhớ", "Chưa nhớ", "Ôn ngay"), posted.actions.map { it.title.toString() })
-        assertEquals(1, Reminders.loadState(app).words["r0"]?.level)
+        assertEquals("level after the first show", 1, Reminders.loadState(app).words["r0"]?.level)
         // The next check is queued for tomorrow's slot.
         val wm = WorkManager.getInstance(app)
         waitFor("next check queued", 15_000) {
@@ -130,8 +130,8 @@ class RemindTest {
         }
         // The same slot is never shown twice.
         app.getSystemService(NotificationManager::class.java).cancel(Reminders.NOTIFICATION_ID)
-        assertNull(runBlocking { Reminders.check(app) })
-        assertTrue(ours(app).isEmpty())
+        assertNull("same slot not shown twice", runBlocking { Reminders.check(app) })
+        assertTrue("nothing posted again", ours(app).isEmpty())
 
         // In the system shade, as the learner sees it; "Đã nhớ" pressed there. (A fresh schedule, so the test sends
         // "allocate" again rather than the word that has waited longest.)
@@ -140,6 +140,7 @@ class RemindTest {
         device.openNotification()
         assertTrue("shade shows the word", device.wait(Until.hasObject(By.textContains("allocate")), 10_000))
         shot("25-remind-shade")
+        Log.i("LEXI_PERF", "remind: shade open")
         val done = device.wait(Until.findObject(By.text(Pattern.compile("(?i)đã nhớ"))), 5_000)
         assertNotNull("Đã nhớ button", done)
         done.click()
@@ -148,21 +149,22 @@ class RemindTest {
         shot("26-remind-done-undo")
         device.wait(Until.findObject(By.text(Pattern.compile("(?i)hoàn tác"))), 5_000).click()
         waitFor("mark back", 15_000) { forgotOf(app.data.notes.value.first { it.id == "r0" }) == listOf(ForgotKind.MEANING, ForgotKind.SOUND) }
+        Log.i("LEXI_PERF", "remind: undo done")
         assertEquals("mark time back", app.data.notes.value.first { it.id == "r1" }.forgotAt!! - 1000, app.data.notes.value.first { it.id == "r0" }.forgotAt)
-        device.pressBack()
+        sh("cmd statusbar collapse")
 
         // "Chưa nhớ": back from tomorrow, level 0, the notification goes away.
         Reminders.saveState(app, com.vh.lexi.core.RemindState(mapOf("r1" to com.vh.lexi.core.RemindWord(3, 0)), 0))
         runBlocking { Reminders.handle(app, Reminders.ACTION_NOT_YET, "r1", emptyList(), null) }
         val w = Reminders.loadState(app).words.getValue("r1")
-        assertEquals(0, w.level)
+        assertEquals("level after Chưa nhớ", 0, w.level)
         assertTrue("from tomorrow", w.next > System.currentTimeMillis() + 20 * 3_600_000L)
 
         // A tap on the notification: Lexi opens practice for that word.
         Reminders.saveState(app, com.vh.lexi.core.RemindState())
-        assertNotNull(Reminders.sendTest(app))
+        assertNotNull("second test notification", Reminders.sendTest(app))
         device.openNotification()
-        assertTrue(device.wait(Until.hasObject(By.textContains("allocate")), 10_000))
+        assertTrue("shade shows the word again", device.wait(Until.hasObject(By.textContains("allocate")), 10_000))
         device.findObject(By.textContains("allocate")).click()
         waitFor("drill for the word", 20_000) { exists("drill-card") }
         shot("27-remind-tap-drill")
