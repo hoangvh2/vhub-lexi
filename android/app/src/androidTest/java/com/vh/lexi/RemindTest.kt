@@ -11,6 +11,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.printToString
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
@@ -94,6 +96,14 @@ class RemindTest {
 
     @After
     fun tearDown() {
+        // A tap on the notification can open Lexi again on top of the test's own activity (the test task is not the
+        // launcher's); close that one so the rule can finish its activity and the next test starts clean.
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            for (stage in listOf(Stage.RESUMED, Stage.PAUSED, Stage.STARTED, Stage.STOPPED)) {
+                ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(stage).filter { it !== rule.activity }.forEach { it.finish() }
+            }
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         val app = rule.activity.application as LexiApp
         Reminders.setSettings(app, RemindSettings())
         Reminders.saveState(app, com.vh.lexi.core.RemindState())
