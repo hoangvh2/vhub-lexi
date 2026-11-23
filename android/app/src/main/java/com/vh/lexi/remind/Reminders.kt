@@ -113,13 +113,15 @@ object Reminders {
     }
 
     /** Queues the next check at the next slot (or now, when [checkNow]); cancels it when reminders are off. */
-    fun schedule(ctx: Context, checkNow: Boolean = false) {
+    fun schedule(ctx: Context, checkNow: Boolean = false, fromWorker: Boolean = false) {
         val wm = WorkManager.getInstance(ctx)
         val now = System.currentTimeMillis()
         val next = nextSlot(now, settings.value, tz(now))
         if (next == null) { wm.cancelUniqueWork(WORK); return }
         val delay = if (checkNow) 0L else (next - now + 30_000).coerceAtLeast(0)
-        wm.enqueueUniqueWork(WORK, ExistingWorkPolicy.REPLACE, OneTimeWorkRequestBuilder<RemindWorker>().setInitialDelay(delay, TimeUnit.MILLISECONDS).build())
+        // From the running job itself, REPLACE would cancel it mid-run: queue the next one behind it instead.
+        val policy = if (fromWorker) ExistingWorkPolicy.APPEND_OR_REPLACE else ExistingWorkPolicy.REPLACE
+        wm.enqueueUniqueWork(WORK, policy, OneTimeWorkRequestBuilder<RemindWorker>().setInitialDelay(delay, TimeUnit.MILLISECONDS).build())
     }
 
     /** Shows the current slot's word if that slot has not been handled yet; returns the note shown. */
@@ -244,7 +246,7 @@ class RemindWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
     override suspend fun doWork(): Result {
         val app = applicationContext as LexiApp
         Reminders.check(app)
-        Reminders.schedule(app)
+        Reminders.schedule(app, fromWorker = true)
         return Result.success()
     }
 }

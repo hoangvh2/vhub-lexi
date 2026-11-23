@@ -124,8 +124,10 @@ class RemindTest {
         assertEquals(listOf("Đã nhớ", "Chưa nhớ", "Ôn ngay"), posted.actions.map { it.title.toString() })
         assertEquals(1, Reminders.loadState(app).words["r0"]?.level)
         // The next check is queued for tomorrow's slot.
-        val infos = runBlocking { WorkManager.getInstance(app).getWorkInfosForUniqueWorkFlow(Reminders.WORK).first() }
-        assertTrue("next check queued", infos.any { it.state == WorkInfo.State.ENQUEUED })
+        val wm = WorkManager.getInstance(app)
+        waitFor("next check queued", 15_000) {
+            runBlocking { wm.getWorkInfosForUniqueWorkFlow(Reminders.WORK).first() }.let { l -> l.any { it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.BLOCKED } && l.none { it.state == WorkInfo.State.RUNNING } }
+        }
         // The same slot is never shown twice.
         app.getSystemService(NotificationManager::class.java).cancel(Reminders.NOTIFICATION_ID)
         assertNull(runBlocking { Reminders.check(app) })
