@@ -271,41 +271,42 @@ private fun ForgotRow(app: LexiApp, n: Note) {
     val kinds = forgotOf(n)
     val word = n.fields["word"].str()
     val ipa = n.fields["ipa"].str()
-    Row(
-        Modifier.fillMaxWidth().background(c.surface, RoundedCornerShape(20.dp)).padding(start = 4.dp, end = 10.dp, top = 6.dp, bottom = 6.dp).testTag("forgot-row"),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        IconButton(onClick = { app.speech.speak(word) }) { Icon(Icons.AutoMirrored.Filled.VolumeUp, "Nghe $word", tint = c.accent) }
-        Column(Modifier.weight(1f)) {
-            // The word gets the whole first line; the IPA goes with the meaning on the second, so a narrow phone never
-            // squeezes the word to "…".
-            Text(word, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(listOf(shortMeaning(n).ifEmpty { "Chưa có nghĩa" }, ipa).filter { it.isNotEmpty() }.joinToString(" · "), fontSize = 13.sp, color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    // Two lines: the word and its meaning get the full width, the mark chips and "Đã nhớ" sit under them on the right,
+    // so a narrow phone never squeezes the word to "…".
+    Column(Modifier.fillMaxWidth().background(c.surface, RoundedCornerShape(20.dp)).padding(start = 4.dp, end = 10.dp, top = 6.dp, bottom = 8.dp).testTag("forgot-row")) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            IconButton(onClick = { app.speech.speak(word) }) { Icon(Icons.AutoMirrored.Filled.VolumeUp, "Nghe $word", tint = c.accent) }
+            Column(Modifier.weight(1f)) {
+                Text(word, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(listOf(shortMeaning(n).ifEmpty { "Chưa có nghĩa" }, ipa).filter { it.isNotEmpty() }.joinToString(" · "), fontSize = 13.sp, color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
-        for (k in ForgotKind.entries) {
-            val on = k in kinds
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
+            for (k in ForgotKind.entries) {
+                val on = k in kinds
+                Box(
+                    Modifier.heightIn(min = 34.dp).clip(RoundedCornerShape(50)).background(if (on) c.roseSoft else c.surface2)
+                        .clickable(role = Role.Checkbox) { scope.launch { app.data.setForgot(n, k, !on) } }
+                        .semantics { selected = on }.testTag("row-${k.key}").padding(horizontal = 9.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Text(k.short, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = if (on) c.roseDeep else c.muted, maxLines = 1) }
+            }
             Box(
-                Modifier.heightIn(min = 34.dp).clip(RoundedCornerShape(50)).background(if (on) c.roseSoft else c.surface2)
-                    .clickable(role = Role.Checkbox) { scope.launch { app.data.setForgot(n, k, !on) } }
-                    .semantics { selected = on }.testTag("row-${k.key}").padding(horizontal = 9.dp),
-                contentAlignment = Alignment.Center,
-            ) { Text(k.short, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = if (on) c.roseDeep else c.muted, maxLines = 1) }
-        }
-        Box(
-            Modifier.heightIn(min = 34.dp).clip(RoundedCornerShape(50)).background(c.accentSoft)
-                .clickable(role = Role.Button) {
-                    scope.launch {
-                        val r = Reminders.remember(app, n.id) ?: return@launch
-                        toast.show("Đã bỏ “$word” khỏi Từ hay quên", "Hoàn tác") { scope.launch { Reminders.undo(app, n.id, r.second.first, r.second.second) } }
+                Modifier.heightIn(min = 34.dp).clip(RoundedCornerShape(50)).background(c.accentSoft)
+                    .clickable(role = Role.Button) {
+                        scope.launch {
+                            val r = Reminders.remember(app, n.id) ?: return@launch
+                            toast.show("Đã bỏ “$word” khỏi Từ hay quên", "Hoàn tác") { scope.launch { Reminders.undo(app, n.id, r.second.first, r.second.second) } }
+                        }
                     }
+                    .semantics { contentDescription = "Đã nhớ $word" }.testTag("row-done").padding(horizontal = 9.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Check, null, tint = c.accent, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(2.dp))
+                    Text("Đã nhớ", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = c.accent, maxLines = 1)
                 }
-                .semantics { contentDescription = "Đã nhớ $word" }.testTag("row-done").padding(horizontal = 9.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Check, null, tint = c.accent, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(2.dp))
-                Text("Nhớ", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = c.accent, maxLines = 1)
             }
         }
     }
@@ -365,10 +366,10 @@ private fun RemindPanel(app: LexiApp) {
                 OutlinedButton(onClick = { Reminders.setSettings(app, s.copy(perDay = s.perDay + 1)) }, enabled = s.perDay < REMIND_MAX_PER_DAY, modifier = Modifier.testTag("remind-more")) { Text("+") }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Khung giờ", fontSize = 13.sp, color = c.muted, modifier = Modifier.weight(1f))
-                OutlinedButton(onClick = { pickTime(s.start) { Reminders.setSettings(app, s.copy(start = it)) } }, modifier = Modifier.testTag("remind-from")) { Text(hhmm(s.start)) }
+                Text("Khung giờ", fontSize = 13.sp, color = c.muted, maxLines = 1, modifier = Modifier.weight(1f))
+                OutlinedButton(onClick = { pickTime(s.start) { Reminders.setSettings(app, s.copy(start = it)) } }, contentPadding = PaddingValues(horizontal = 12.dp), modifier = Modifier.testTag("remind-from")) { Text(hhmm(s.start)) }
                 Text("–", color = c.muted)
-                OutlinedButton(onClick = { pickTime(s.end) { Reminders.setSettings(app, s.copy(end = if (it == 0) 1440 else it)) } }, modifier = Modifier.testTag("remind-to")) { Text(hhmm(s.end)) }
+                OutlinedButton(onClick = { pickTime(s.end) { Reminders.setSettings(app, s.copy(end = if (it == 0) 1440 else it)) } }, contentPadding = PaddingValues(horizontal = 12.dp), modifier = Modifier.testTag("remind-to")) { Text(hhmm(s.end)) }
             }
             TextButton(onClick = {
                 val n = Reminders.sendTest(app)
