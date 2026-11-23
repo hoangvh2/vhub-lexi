@@ -131,8 +131,10 @@ class RemindTest {
         assertNull(runBlocking { Reminders.check(app) })
         assertTrue(ours(app).isEmpty())
 
-        // In the system shade, as the learner sees it; "Đã nhớ" pressed there.
-        assertNotNull(Reminders.sendTest(app))
+        // In the system shade, as the learner sees it; "Đã nhớ" pressed there. (A fresh schedule, so the test sends
+        // "allocate" again rather than the word that has waited longest.)
+        Reminders.saveState(app, com.vh.lexi.core.RemindState())
+        assertEquals("r0", Reminders.sendTest(app)?.id)
         device.openNotification()
         assertTrue("shade shows the word", device.wait(Until.hasObject(By.textContains("allocate")), 10_000))
         shot("25-remind-shade")

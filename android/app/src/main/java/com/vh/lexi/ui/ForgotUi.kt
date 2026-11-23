@@ -218,7 +218,6 @@ internal fun ForgotScreen(app: LexiApp, onClose: () -> Unit) {
                 }
             }
         }
-        item { RemindPanel(app) }
         if (marked.isNotEmpty()) item {
             Row(Modifier.fillMaxWidth().background(c.surface2, RoundedCornerShape(50)).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 for (f in ForgotFilter.entries) {
@@ -239,6 +238,8 @@ internal fun ForgotScreen(app: LexiApp, onClose: () -> Unit) {
             }
         }
         items(shown, key = { it.id }) { n -> ForgotRow(app, n) }
+        // After the list, so the words stay first on a small screen.
+        item { RemindPanel(app) }
         if (suggested.isNotEmpty()) item {
             Panel(Modifier.testTag("forgot-suggested")) {
                 Text("Quên nhiều trong lịch ôn", fontFamily = Quicksand, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = c.ink)

@@ -131,8 +131,6 @@ export function ForgotPage({ drill = "" }: { drill?: string }) {
         </button>
       </section>
 
-      <RemindPanel />
-
       {marked.length > 0 && (
         <div class="seg" role="group" aria-label="Lọc">
           {(["all", "meaning", "sound"] as const).map((f) => (
@@ -153,6 +151,8 @@ export function ForgotPage({ drill = "" }: { drill?: string }) {
           {shown.map((n) => <ForgotRow key={n.id} note={n} />)}
         </ul>
       )}
+
+      <RemindPanel />
 
       {suggested.length > 0 && (
         <section class="panel" data-testid="forgot-suggested">
