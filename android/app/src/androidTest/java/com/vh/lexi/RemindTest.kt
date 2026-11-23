@@ -130,7 +130,10 @@ class RemindTest {
         }
         // The same slot is never shown twice.
         app.getSystemService(NotificationManager::class.java).cancel(Reminders.NOTIFICATION_ID)
+        // Cancelling is handled by the system asynchronously: wait for it, then check the slot again.
+        waitFor("cancelled") { ours(app).isEmpty() }
         assertNull("same slot not shown twice", runBlocking { Reminders.check(app) })
+        Thread.sleep(500)
         assertTrue("nothing posted again", ours(app).isEmpty())
 
         // In the system shade, as the learner sees it; "Đã nhớ" pressed there. (A fresh schedule, so the test sends
