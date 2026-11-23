@@ -5,6 +5,8 @@ import { cards, daily, decks, notes, prefs, sync, warnings } from "../data/state
 import { buildQueue, deckWeights } from "../lib/queue.ts";
 import { eligibility } from "../lib/select.ts";
 import { useStore } from "../lib/store.ts";
+import { handleAction, remindEvents, startReminders, type RemindAction } from "../lib/remind.ts";
+import { str } from "@shared/notetypes.ts";
 import { Add } from "./Add.tsx";
 import { ConfirmHost, Icon, Toasts, route, studyResume, syncLabel, toast } from "./common.tsx";
 import { ForgotPage } from "./Forgot.tsx";
@@ -42,6 +44,30 @@ export function App({ email }: { email: string | null }) {
   }, [p.theme, p.accent]);
 
   useEffect(() => {
+    startReminders();
+    return remindEvents.subscribe(() => {
+      const e = remindEvents.get();
+      if (!e) return;
+      remindEvents.set(null);
+      const word = str(e.note.fields.word);
+      if (e.action === "done") toast(`Đã bỏ “${word}” khỏi Từ hay quên`, e.undo && { label: "Hoàn tác", run: () => void e.undo!() }, 6000);
+      else if (e.action === "notyet") toast(`Sẽ nhắc lại “${word}” từ ngày mai`);
+      else location.hash = `/forgot?drill=${encodeURIComponent(e.note.id)}`;
+    });
+  }, []);
+
+  // A notification button pressed with no Lexi tab open: the service worker opened Lexi with the action in the address.
+  useEffect(() => {
+    const q = new URLSearchParams(r.split("?")[1] ?? "");
+    const action = q.get("remind") as RemindAction | null;
+    const id = q.get("id");
+    if (!action || !id) return;
+    history.replaceState(null, "", "#/forgot");
+    route.set("/forgot");
+    void handleAction(action, id);
+  }, [r]);
+
+  useEffect(() => {
     if (warning) {
       toast(warning, undefined, 6000);
       warnings.set(null);
@@ -65,7 +91,7 @@ export function App({ email }: { email: string | null }) {
     section === "add" ? <Add /> :
     section === "library" ? <Library /> :
     section === "stats" ? <Stats /> :
-    section === "forgot" ? <ForgotPage /> :
+    section === "forgot" ? <ForgotPage drill={new URLSearchParams(query).get("drill") ?? ""} key={r} /> :
     section === "practice" ? <Practice initialTab={new URLSearchParams(query).get("tab") ?? ""} key={r} /> :
     section === "settings" ? <Settings email={email} /> :
     section === "study" ? <Study deckId={arg || null} initialTag={new URLSearchParams(query).get("tag") ?? ""} key={r} /> :

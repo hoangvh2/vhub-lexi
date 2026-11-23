@@ -24,6 +24,7 @@ import { testreviewVectors } from "./testreview-vectors.ts";
 import { testsyncVectors } from "./testsync-vectors.ts";
 import { roadmapVectors } from "./roadmap-vectors.ts";
 import { drillVectors } from "./drill-vectors.ts";
+import { remindVectors } from "./remind-vectors.ts";
 import { searchVectors } from "./search-vectors.ts";
 import { flashWords, lettersShown, nextRung, otherPhrase, rungHint, type Rung } from "@shared/ladder.ts";
 import { hintCue, hintDependent, hintGateMs, maskHint, maxRating, meaningTerms, rotateExamples } from "@shared/hints.ts";
@@ -601,6 +602,7 @@ it("cross-platform vectors are up to date", () => {
     ["testsync.json", JSON.stringify(testsyncVectors(), null, 1)],
     ["roadmap.json", JSON.stringify(roadmapVectors())],
     ["drill.json", JSON.stringify(drillVectors(), null, 1)],
+    ["remind.json", JSON.stringify(remindVectors(), null, 1)],
     ["search.json", JSON.stringify(searchVectors(), null, 1)],
     [join("../../android/core/src/main/kotlin/com/vh/lexi/core/Irregular.kt"), irregularKotlin()],
   ];

@@ -72,6 +72,7 @@ class LexiApp : Application() {
             cloud.account.collect { a -> if (a != Account.Off) testSets.useCloud((a as? Account.SignedIn)?.let { cloud.setsCloud(it.uid) }) }
         }
         speech = Speech(this)
+        com.vh.lexi.remind.Reminders.start(this)
         hasDictionary = try { assets.open("dict/meta.json").close(); true } catch (_: Exception) { false }
         dictionary = Dictionary(ShardSource { key ->
             try {
