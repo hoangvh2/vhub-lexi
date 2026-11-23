@@ -105,6 +105,8 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
+    // "Từ hay quên" reminders: one deferred job per slot, kept across reboots.
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 
     // Cloud sync. Configured in code from BuildConfig (no google-services.json, no plugin).
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))

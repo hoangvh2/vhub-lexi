@@ -4,6 +4,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- "Từ hay quên" reminders (asked for when the learner turns them on). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Text-to-speech engines are bound by the system when the app asks for one. -->
     <queries>
@@ -45,5 +47,8 @@
                 <data android:mimeType="image/*" />
             </intent-filter>
         </activity>
+
+        <!-- Buttons on a "Từ hay quên" reminder (Đã nhớ / Chưa nhớ / Hoàn tác). -->
+        <receiver android:name=".remind.RemindReceiver" android:exported="false" />
     </application>
 </manifest>

@@ -272,6 +272,19 @@ class LexiData(private val db: LexiDb, private val scope: CoroutineScope) {
         put(Col.NOTES, withForgot(latest, kind, on, System.currentTimeMillis()).toDoc())
     }
 
+    /** "Đã nhớ" from a reminder or the list: both marks off in one write. */
+    suspend fun clearForgot(note: Note) {
+        val latest = notes.value.firstOrNull { it.id == note.id } ?: note
+        if (forgotOf(latest).isEmpty()) return
+        put(Col.NOTES, com.vh.lexi.core.restoreForgot(latest, emptyList(), null, System.currentTimeMillis()).toDoc())
+    }
+
+    /** Undo of [clearForgot]: the old marks and mark time back. */
+    suspend fun restoreForgot(note: Note, kinds: List<ForgotKind>, at: Long?) {
+        val latest = notes.value.firstOrNull { it.id == note.id } ?: note
+        put(Col.NOTES, com.vh.lexi.core.restoreForgot(latest, kinds, at, System.currentTimeMillis()).toDoc())
+    }
+
     suspend fun removeNote(note: Note) {
         val ids = cards.value.filter { it.noteId == note.id }.map { it.id }
         db.withTransaction {

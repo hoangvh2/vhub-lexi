@@ -79,3 +79,27 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(cacheFirst(req, SHELL));
   }
 });
+
+/*
+ * "Từ hay quên" reminders. The page decides when and which word (shared/remind.ts) and shows the notification through
+ * this worker so it can carry buttons. A button or a tap is handed back to an open Lexi tab, which writes the change;
+ * with no tab open, Lexi opens with the action in the address, so nothing is written from here.
+ */
+self.addEventListener("notificationclick", (e) => {
+  const n = e.notification;
+  const data = n.data || {};
+  n.close();
+  if (data.kind !== "lexi-remind") return;
+  const action = e.action || "open";
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (list) => {
+      const tab = list.find((c) => new URL(c.url).origin === self.location.origin);
+      if (tab) {
+        tab.postMessage({ type: "lexi-remind", action, noteId: data.noteId });
+        if (action === "open") await tab.focus().catch(() => undefined);
+        return;
+      }
+      await self.clients.openWindow(`/#/forgot?remind=${encodeURIComponent(action)}&id=${encodeURIComponent(data.noteId || "")}`);
+    }),
+  );
+});

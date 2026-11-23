@@ -8,6 +8,8 @@ import { cards, loaded, notes } from "../data/state.ts";
 import { speak } from "../lib/speech.ts";
 import { useStore } from "../lib/store.ts";
 import { Icon, go, toast } from "./common.tsx";
+import { REMIND_MAX_PER_DAY } from "@shared/remind.ts";
+import { nextReminder, notYet, permission, rememberWord, remindSettings, sendTest, setRemindSettings } from "../lib/remind.ts";
 
 const SHORT: Record<ForgotKind, string> = { meaning: "Nghĩa", sound: "Phát âm" };
 
@@ -75,7 +77,7 @@ export function ForgotButton({ note }: { note: Note }) {
 type Filter = "all" | ForgotKind;
 
 /** Its own screen: the marked words, FSRS's most-forgotten words as suggestions, and a practice round. */
-export function ForgotPage() {
+export function ForgotPage({ drill = "" }: { drill?: string }) {
   const ready = useStore(loaded);
   const allNotes = useStore(notes);
   const allCards = useStore(cards);
@@ -86,12 +88,21 @@ export function ForgotPage() {
   const shown = filter === "all" ? marked : marked.filter((n) => forgotOf(n).includes(filter));
   const count = (k: ForgotKind) => marked.filter((n) => forgotOf(n).includes(k)).length;
 
+  // "Ôn ngay" from a notification: a round of that one word.
+  useEffect(() => {
+    if (!ready || !drill) return;
+    const n = marked.find((x) => x.id === drill);
+    const items = n ? drillRound([n], allNotes, String(Date.now())) : [];
+    if (items.length) setRound(items);
+    else toast(n ? "Từ này chưa có bài luyện: thêm nghĩa tiếng Việt trước." : "Từ này không còn trong danh sách.");
+  }, [ready, drill]);
+
   if (!ready) return <div class="page"><p class="muted">Đang tải dữ liệu…</p></div>;
 
   if (round) {
     return (
       <div class="page narrow drill-page" data-testid="forgot-page">
-        <DrillRun items={round} pool={allNotes} onExit={() => setRound(null)} onAgain={() => setRound(drillRound(shown, allNotes, String(Date.now())))} />
+        <DrillRun items={round} pool={allNotes} onExit={() => (drill ? go("/forgot") : setRound(null))} onAgain={() => setRound(drillRound(shown, allNotes, String(Date.now())))} />
       </div>
     );
   }
@@ -119,6 +130,8 @@ export function ForgotPage() {
           <Icon n="bolt" size={18} /> Luyện {Math.min(shown.length, DRILL_ROUND)} từ
         </button>
       </section>
+
+      <RemindPanel />
 
       {marked.length > 0 && (
         <div class="seg" role="group" aria-label="Lọc">
@@ -167,6 +180,83 @@ export function ForgotPage() {
   );
 }
 
+/** "Đã nhớ" from the list: both marks cleared in one write, with an undo. */
+async function remembered(note: Note) {
+  const undo = await rememberWord(note);
+  toast(`Đã bỏ “${str(note.fields.word)}” khỏi Từ hay quên`, { label: "Hoàn tác", run: () => void undo() }, 6000);
+}
+
+const hhmm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+const minutesOf = (v: string) => {
+  const [h, m] = v.split(":").map(Number);
+  return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : NaN;
+};
+
+function whenLabel(t: number | null): string {
+  if (t === null) return "";
+  const d = new Date(t);
+  const today = new Date();
+  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  const day = same(d, today) ? "hôm nay" : same(d, new Date(today.getTime() + 86_400_000)) ? "ngày mai" : d.toLocaleDateString("vi-VN");
+  return `${hhmm(d.getHours() * 60 + d.getMinutes())} ${day}`;
+}
+
+/**
+ * Reminder settings for this browser: on/off, how many a day, the time window, and a test button. Kept on this device
+ * only (each device has its own schedule).
+ */
+export function RemindPanel() {
+  const s = useStore(remindSettings);
+  const [perm, setPerm] = useState(permission());
+  const [, tick] = useState(0);
+  const set = async (patch: Partial<typeof s>) => {
+    const ok = await setRemindSettings({ ...s, ...patch });
+    setPerm(permission());
+    if (!ok) toast(permission() === "unsupported" ? "Trình duyệt này không hỗ trợ thông báo." : "Trình duyệt đang chặn thông báo của Lexi: bật lại trong cài đặt trang (biểu tượng ổ khoá).", undefined, 6000);
+    tick((x) => x + 1);
+  };
+  const test = async () => {
+    const w = await sendTest();
+    toast(w ? `Đã gửi thông báo thử: ${w}` : "Chưa có từ nào để nhắc.");
+  };
+  return (
+    <section class="panel col remind-panel" data-testid="remind-panel">
+      <label class="switch">
+        <span>
+          <b>Nhắc bằng thông báo</b>
+          <br />
+          <span class="muted small" data-testid="remind-status">
+            {s.on
+              ? perm === "granted" ? `Lần tới: ${whenLabel(nextReminder())}` : "Trình duyệt đang chặn thông báo"
+              : "Mỗi lần nhắc một từ, giãn dần khi bạn nhớ. Bấm “Đã nhớ” để bỏ từ khỏi danh sách."}
+          </span>
+        </span>
+        <input type="checkbox" checked={s.on} onChange={(e) => void set({ on: e.currentTarget.checked })} data-testid="remind-on" />
+      </label>
+      {s.on && (
+        <div class="row remind-opts">
+          <div class="field">
+            <label for="remind-per">Mỗi ngày</label>
+            <select id="remind-per" class="input" value={s.perDay} onChange={(e) => void set({ perDay: Number(e.currentTarget.value) })} data-testid="remind-per">
+              {Array.from({ length: REMIND_MAX_PER_DAY }, (_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}
+            </select>
+          </div>
+          <div class="field">
+            <label for="remind-from">Từ</label>
+            <input id="remind-from" class="input" type="time" value={hhmm(s.start)} onChange={(e) => { const m = minutesOf(e.currentTarget.value); if (m >= 0) void set({ start: m }); }} data-testid="remind-from" />
+          </div>
+          <div class="field">
+            <label for="remind-to">Đến</label>
+            <input id="remind-to" class="input" type="time" value={hhmm(s.end % 1440)} onChange={(e) => { const m = minutesOf(e.currentTarget.value); if (m >= 0) void set({ end: m === 0 ? 1440 : m }); }} data-testid="remind-to" />
+          </div>
+          <button type="button" class="btn ghost sm" onClick={() => void test()} data-testid="remind-test">Gửi thử</button>
+        </div>
+      )}
+      <p class="muted small">Trên web, Lexi chỉ nhắc khi còn một tab Lexi đang mở (để chạy nền cũng được). App Android nhắc cả khi đã đóng app. Lịch nhắc lưu riêng trên từng máy.</p>
+    </section>
+  );
+}
+
 function ForgotRow({ note }: { note: Note }) {
   const kinds = forgotOf(note);
   const word = str(note.fields.word);
@@ -191,6 +281,9 @@ function ForgotRow({ note }: { note: Note }) {
             {SHORT[k]}
           </button>
         ))}
+        <button type="button" class="kind remembered" onClick={() => void remembered(note)} title="Đã nhớ: bỏ khỏi danh sách" aria-label={`Đã nhớ ${word}`} data-testid="row-done">
+          <Icon n="check" size={14} /> Đã nhớ
+        </button>
       </div>
     </li>
   );
@@ -259,7 +352,10 @@ function DrillRun({ items, pool, onExit, onAgain }: { items: DrillItem[]; pool: 
 
   const finish = (right: boolean, extra: { verdict?: AnswerVerdict; picked?: string; typed?: string } = {}) => {
     setAnswer({ right, ...extra });
-    if (!right) setMissed((m) => new Set(m).add(`${item.noteId}/${item.mode}`));
+    if (!right) {
+      setMissed((m) => new Set(m).add(`${item.noteId}/${item.mode}`));
+      notYet(item.noteId); // the reminder brings it back from tomorrow
+    }
     if (item.mode !== "listen" && item.mode !== "say") speak(word);
   };
   const next = () => {

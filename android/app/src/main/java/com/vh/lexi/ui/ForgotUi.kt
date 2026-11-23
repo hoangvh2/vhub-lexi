@@ -85,6 +85,19 @@ import com.vh.lexi.ui.theme.Lexi
 import com.vh.lexi.ui.theme.Quicksand
 import com.vh.lexi.ui.theme.clay
 import kotlinx.coroutines.launch
+import android.Manifest
+import android.app.TimePickerDialog
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.Switch
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import com.vh.lexi.core.REMIND_MAX_PER_DAY
+import com.vh.lexi.core.nextSlot
+import com.vh.lexi.remind.Reminders
+import java.util.Calendar
 
 private val ForgotKind.short get() = if (this == ForgotKind.MEANING) "Nghĩa" else "Phát âm"
 
@@ -165,6 +178,18 @@ internal fun ForgotScreen(app: LexiApp, onClose: () -> Unit) {
     }
     fun count(k: ForgotKind) = marked.count { k in forgotOf(it) }
 
+    // "Ôn ngay" on a reminder: a round of that one word.
+    val pending by Reminders.pendingDrill.collectAsState()
+    val loaded by app.data.loaded.collectAsState()
+    LaunchedEffect(pending, loaded) {
+        val id = pending ?: return@LaunchedEffect
+        if (!loaded) return@LaunchedEffect
+        Reminders.pendingDrill.value = null
+        val n = marked.firstOrNull { it.id == id }
+        val items = n?.let { drillRound(listOf(it), notes, System.currentTimeMillis().toString()) }.orEmpty()
+        if (items.isNotEmpty()) round = items else toast(if (n != null) "Từ này chưa có bài luyện: thêm nghĩa tiếng Việt trước." else "Từ này không còn trong danh sách.")
+    }
+
     round?.let { r ->
         DrillRun(app, r, notesById, onExit = { round = null }, onAgain = { round = drillRound(shown, notes, System.currentTimeMillis().toString()) })
         return
@@ -193,6 +218,7 @@ internal fun ForgotScreen(app: LexiApp, onClose: () -> Unit) {
                 }
             }
         }
+        item { RemindPanel(app) }
         if (marked.isNotEmpty()) item {
             Row(Modifier.fillMaxWidth().background(c.surface2, RoundedCornerShape(50)).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 for (f in ForgotFilter.entries) {
@@ -239,6 +265,7 @@ internal fun ForgotScreen(app: LexiApp, onClose: () -> Unit) {
 @Composable
 private fun ForgotRow(app: LexiApp, n: Note) {
     val c = Lexi.colors
+    val toast = LocalToaster.current
     val scope = rememberCoroutineScope()
     val kinds = forgotOf(n)
     val word = n.fields["word"].str()
@@ -263,6 +290,91 @@ private fun ForgotRow(app: LexiApp, n: Note) {
                 contentAlignment = Alignment.Center,
             ) { Text(k.short, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = if (on) c.roseDeep else c.muted, maxLines = 1) }
         }
+        Box(
+            Modifier.heightIn(min = 34.dp).clip(RoundedCornerShape(50)).background(c.accentSoft)
+                .clickable(role = Role.Button) {
+                    scope.launch {
+                        val r = Reminders.remember(app, n.id) ?: return@launch
+                        toast.show("Đã bỏ “$word” khỏi Từ hay quên", "Hoàn tác") { scope.launch { Reminders.undo(app, n.id, r.second.first, r.second.second) } }
+                    }
+                }
+                .semantics { contentDescription = "Đã nhớ $word" }.testTag("row-done").padding(horizontal = 9.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Check, null, tint = c.accent, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(2.dp))
+                Text("Nhớ", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = c.accent, maxLines = 1)
+            }
+        }
+    }
+}
+
+private fun hhmm(m: Int) = "%02d:%02d".format((m / 60) % 24, m % 60)
+
+private fun whenLabel(t: Long?): String {
+    if (t == null) return ""
+    val d = Calendar.getInstance().apply { timeInMillis = t }
+    val today = Calendar.getInstance()
+    val dayDiff = (d.get(Calendar.YEAR) * 400 + d.get(Calendar.DAY_OF_YEAR)) - (today.get(Calendar.YEAR) * 400 + today.get(Calendar.DAY_OF_YEAR))
+    val day = when (dayDiff) { 0 -> "hôm nay"; 1 -> "ngày mai"; else -> "%02d/%02d".format(d.get(Calendar.DAY_OF_MONTH), d.get(Calendar.MONTH) + 1) }
+    return "${hhmm(d.get(Calendar.HOUR_OF_DAY) * 60 + d.get(Calendar.MINUTE))} $day"
+}
+
+/**
+ * Reminder settings for this phone (web Forgot.tsx RemindPanel): on/off, how many a day, the time window, a test.
+ * Turning it on asks for the notification permission (Android 13+).
+ */
+@Composable
+private fun RemindPanel(app: LexiApp) {
+    val c = Lexi.colors
+    val toast = LocalToaster.current
+    val ctx = LocalContext.current
+    val s by Reminders.settings.collectAsState()
+    val blocked = "Android đang chặn thông báo của Lexi: bật trong Cài đặt › Ứng dụng › VH Lexi › Thông báo."
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        if (ok && Reminders.canNotify(app)) Reminders.setSettings(app, Reminders.settings.value.copy(on = true)) else toast(blocked)
+    }
+    fun turnOn() {
+        when {
+            Reminders.canNotify(app) -> Reminders.setSettings(app, s.copy(on = true))
+            Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED -> ask.launch(Manifest.permission.POST_NOTIFICATIONS)
+            else -> toast(blocked)
+        }
+    }
+    fun pickTime(m: Int, onPick: (Int) -> Unit) = TimePickerDialog(ctx, { _, h, min -> onPick(h * 60 + min) }, (m / 60) % 24, m % 60, true).show()
+    val now = System.currentTimeMillis()
+    val next = remember(s) { nextSlot(now, s, Reminders.tz(now)) }
+    Panel(Modifier.testTag("remind-panel")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Nhắc bằng thông báo", fontWeight = FontWeight.Bold, color = c.ink)
+                Text(
+                    if (s.on) "Lần tới: ${whenLabel(next)}" else "Mỗi lần nhắc một từ, giãn dần khi bạn nhớ. Bấm “Đã nhớ” để bỏ từ khỏi danh sách.",
+                    fontSize = 12.sp, color = c.muted, modifier = Modifier.testTag("remind-status"),
+                )
+            }
+            Switch(checked = s.on, onCheckedChange = { if (it) turnOn() else Reminders.setSettings(app, s.copy(on = false)) }, modifier = Modifier.testTag("remind-on"))
+        }
+        if (s.on) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Mỗi ngày", fontSize = 13.sp, color = c.muted, modifier = Modifier.weight(1f))
+                OutlinedButton(onClick = { Reminders.setSettings(app, s.copy(perDay = s.perDay - 1)) }, enabled = s.perDay > 1, modifier = Modifier.testTag("remind-less")) { Text("−") }
+                Text("${s.perDay} lần", fontWeight = FontWeight.Bold, color = c.ink, modifier = Modifier.testTag("remind-per"))
+                OutlinedButton(onClick = { Reminders.setSettings(app, s.copy(perDay = s.perDay + 1)) }, enabled = s.perDay < REMIND_MAX_PER_DAY, modifier = Modifier.testTag("remind-more")) { Text("+") }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Khung giờ", fontSize = 13.sp, color = c.muted, modifier = Modifier.weight(1f))
+                OutlinedButton(onClick = { pickTime(s.start) { Reminders.setSettings(app, s.copy(start = it)) } }, modifier = Modifier.testTag("remind-from")) { Text(hhmm(s.start)) }
+                Text("–", color = c.muted)
+                OutlinedButton(onClick = { pickTime(s.end) { Reminders.setSettings(app, s.copy(end = if (it == 0) 1440 else it)) } }, modifier = Modifier.testTag("remind-to")) { Text(hhmm(s.end)) }
+            }
+            TextButton(onClick = {
+                val n = Reminders.sendTest(app)
+                toast(if (n != null) "Đã gửi thông báo thử: ${n.fields["word"].str()}" else if (!Reminders.canNotify(app)) blocked else "Chưa có từ nào để nhắc.")
+            }, modifier = Modifier.testTag("remind-test")) { Text("Gửi thử") }
+        }
+        Text("Lịch nhắc lưu riêng trên máy này. Khi máy tiết kiệm pin, Android có thể nhắc trễ vài phút.", fontSize = 12.sp, color = c.muted)
     }
 }
 
@@ -305,7 +417,10 @@ private fun DrillRun(app: LexiApp, items: List<DrillItem>, notesById: Map<String
 
         fun finish(right: Boolean, a: DrillAnswer = DrillAnswer(right)) {
             answer = a.copy(right = right)
-            if (!right) missed = missed + "${item.noteId}/${item.mode.key}"
+            if (!right) {
+                missed = missed + "${item.noteId}/${item.mode.key}"
+                Reminders.notYet(app, item.noteId) // the reminder brings it back from tomorrow
+            }
             if (item.mode != DrillMode.LISTEN && item.mode != DrillMode.SAY) app.speech.speak(word)
         }
         fun next() {

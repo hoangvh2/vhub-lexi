@@ -2418,4 +2418,87 @@ describe("từ hay quên: mark from the card, its own screen, practice outside F
     assert.deepEqual(errors, []);
     await ctx.close();
   });
+
+  it("reminds with a notification at the next slot, once, and Đã nhớ / Chưa nhớ / Ôn ngay act on the word", async () => {
+    // The headless shell always denies notifications; the full Chromium build (new headless) grants them.
+    const full = await chromium.launch({ channel: "chromium" });
+    const { ctx, page, errors } = await open(full, base, { viewport: { width: 390, height: 844 }, deviceScaleFactor: shots ? 2 : 1, timezoneId: "Asia/Ho_Chi_Minh" });
+    await ctx.grantPermissions(["notifications"], { origin: base });
+    // 10:20 in Vietnam: five minutes after the first of the 3 default slots (10:15, 14:45, 19:15).
+    await page.clock.install({ time: new Date("2026-11-23T10:20:00+07:00") });
+    const data = backup();
+    const t = new Date("2026-11-20T09:00:00+07:00").getTime();
+    data.notes[0].forgot = ["meaning", "sound"];
+    data.notes[0].forgotAt = t;
+    data.notes[2].forgot = ["sound"];
+    data.notes[2].forgotAt = t + 1000;
+    const file = join(tmpdir(), `lexi-remind-${process.pid}.json`);
+    writeFileSync(file, JSON.stringify(data));
+    await page.goto(`${base}/#/settings`);
+    await page.setInputFiles("[data-testid=import-file]", file);
+    await page.click("[data-testid=confirm-ok]");
+    await page.waitForFunction(() => !document.querySelector(".scrim"));
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    const shown = () => page.evaluate(async () => (await (await navigator.serviceWorker.ready).getNotifications()).map((n) => ({ title: n.title, body: n.body, tag: n.tag, actions: n.actions.map((a) => a.title), data: n.data })));
+
+    // Off by default: nothing is shown.
+    await page.goto(`${base}/#/forgot`);
+    await page.waitForSelector("[data-testid=remind-panel]");
+    assert.deepEqual(await shown(), []);
+    await page.click("[data-testid=remind-on]");
+    await page.waitForSelector("[data-testid=remind-on]:checked");
+    // Turning it on handles the current slot: the word marked longest ago, both kinds first.
+    await page.waitForFunction(async () => (await (await navigator.serviceWorker.ready).getNotifications()).length === 1);
+    const [n] = await shown();
+    assert.equal(n.title, "postpone /postpone/");
+    assert.match(n.body, /^Nghĩa và cách đọc của từ này là gì\?\nhoãn lại$/);
+    assert.deepEqual(n.actions, ["Đã nhớ", "Chưa nhớ"]);
+    assert.deepEqual(n.data, { kind: "lexi-remind", noteId: "f0" });
+    assert.match(await page.textContent("[data-testid=remind-status]"), /Lần tới: 14:45 hôm nay/);
+    await shot(page, "9-remind-panel");
+
+    // The same slot is never shown twice (reload, a second tab).
+    await page.evaluate(async () => (await (await navigator.serviceWorker.ready).getNotifications()).forEach((x) => x.close()));
+    await page.reload();
+    await page.waitForSelector("[data-testid=remind-panel]");
+    const tab2 = await ctx.newPage();
+    await tab2.goto(`${base}/#/today`);
+    await page.waitForTimeout(800);
+    assert.deepEqual(await shown(), []);
+    await tab2.close();
+    const st = await page.evaluate(() => JSON.parse(localStorage.getItem("lexi.remind.state")));
+    assert.equal(st.words.f0.level, 1);
+    assert.equal(Object.keys(st.words).length, 1, "only the word shown");
+
+    // "Chưa nhớ" handed over by the service worker: back from tomorrow, level 0.
+    await page.evaluate(() => navigator.serviceWorker.dispatchEvent(new MessageEvent("message", { data: { type: "lexi-remind", action: "notyet", noteId: "f0" } })));
+    await page.waitForSelector(".toast:has-text('Sẽ nhắc lại “postpone” từ ngày mai')");
+    assert.equal((await page.evaluate(() => JSON.parse(localStorage.getItem("lexi.remind.state")))).words.f0.level, 0);
+
+    // "Đã nhớ" pressed with no tab open: Lexi opens with the action in the address, clears the mark, offers an undo.
+    await page.goto(`${base}/#/forgot?remind=done&id=f0`);
+    await page.waitForSelector(".toast:has-text('Đã bỏ “postpone” khỏi Từ hay quên')");
+    await page.waitForFunction(() => document.querySelectorAll("[data-testid=forgot-row]").length === 1);
+    assert.equal(await page.evaluate(() => location.hash), "#/forgot");
+    await page.click(".toast button:has-text('Hoàn tác')");
+    await page.waitForFunction(() => document.querySelectorAll("[data-testid=forgot-row]").length === 2);
+    assert.deepEqual(await page.locator("[data-testid=forgot-row]").evaluateAll((r) => r.map((e) => e.dataset.word)), ["venue", "postpone"], "marks and mark time back");
+
+    // A tap on the notification: practice for that one word.
+    await page.goto(`${base}/#/forgot?remind=open&id=f2`);
+    await page.waitForSelector("[data-testid=drill][data-mode=say]");
+    assert.match(await page.textContent("[data-testid=drill-word]"), /venue/);
+    await page.click("[data-testid=drill-quit]");
+    await page.waitForSelector("[data-testid=forgot-list]");
+
+    // "Đã nhớ" from the list.
+    await page.click('[data-testid=forgot-row][data-word=venue] [data-testid=row-done]');
+    await page.waitForFunction(() => document.querySelectorAll("[data-testid=forgot-row]").length === 1);
+    await page.waitForSelector(".toast:has-text('Đã bỏ “venue” khỏi Từ hay quên')");
+    await shot(page, "10-remind-list-done");
+    assert.equal(await noOverflow(page), true);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+    await full.close();
+  });
 });

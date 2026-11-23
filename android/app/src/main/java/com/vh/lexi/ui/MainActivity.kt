@@ -36,6 +36,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -85,6 +86,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val app = application as LexiApp
         handleShare(intent)
+        handleRemind(intent)
         setContent {
             val prefs by app.data.prefs.collectAsState()
             // The status bar icons follow the app's theme, not the system one: with "Tối" chosen on a phone in light
@@ -104,6 +106,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleShare(intent)
+        handleRemind(intent)
     }
 }
 
@@ -116,6 +119,13 @@ private fun MainActivity.handleShare(intent: Intent?) {
         else -> emptyList()
     }
     if (uris.isNotEmpty()) (application as LexiApp).pendingShare.value = uris.take(6)
+}
+
+/** A tap on a "Từ hay quên" reminder: practise that word (the Từ hay quên screen takes it). */
+private fun handleRemind(intent: Intent?) {
+    val id = intent?.getStringExtra(com.vh.lexi.remind.Reminders.EXTRA_DRILL) ?: return
+    intent.removeExtra(com.vh.lexi.remind.Reminders.EXTRA_DRILL)
+    com.vh.lexi.remind.Reminders.pendingDrill.value = id
 }
 
 private enum class Tab(val label: String, val icon: ImageVector) {
@@ -141,13 +151,16 @@ private fun Main(app: LexiApp) {
     var studyHome by rememberSaveable { mutableStateOf(0) }
     val shared by app.pendingShare.collectAsState()
     LaunchedEffect(shared) { if (shared.isNotEmpty()) importing = true }
+    val remindDrill by com.vh.lexi.remind.Reminders.pendingDrill.collectAsState()
+    LaunchedEffect(remindDrill) { if (remindDrill != null) { forgot = true; importing = false; testSets = false } }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val toaster = remember {
         Toaster { message, action, onAction ->
             scope.launch {
                 snackbar.currentSnackbarData?.dismiss()
-                val r = snackbar.showSnackbar(message, actionLabel = action)
+                // With an action (an undo) it stays a while, not until tapped (Material's default for an action).
+                val r = snackbar.showSnackbar(message, actionLabel = action, duration = if (action != null) SnackbarDuration.Long else SnackbarDuration.Short)
                 if (r == SnackbarResult.ActionPerformed) onAction?.invoke()
             }
         }
